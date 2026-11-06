@@ -134,7 +134,7 @@ function ScoreBadge({ score }: { score: Score }) {
 
 export function Scores({ item, max }: { item: BaseItemDto; max?: number }) {
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 max-sm:justify-center">
       {scoresOf(item)
         .slice(0, max)
         .map((score) => (

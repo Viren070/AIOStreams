@@ -34,6 +34,30 @@
   }
 }
 
+/* Several scores on a phone take a row of their own, or a separator would end the row they wrap from. */
+@media (max-width: 639px) {
+  :is([data-ui='item-meta'], [data-ui='hero-meta']):has(
+    > [data-name='score'] [data-ui='score'] + [data-ui='score']
+  ) {
+    row-gap: 1rem;
+  }
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-name='score']:has([data-ui='score'] + [data-ui='score']) {
+    order: 1;
+    flex-basis: 100%;
+    text-align: center;
+  }
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-ui='meta-separator']:has(
+      + [data-name='score'] [data-ui='score'] + [data-ui='score']
+    ),
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-name='score']:first-child:has([data-ui='score'] + [data-ui='score'])
+    + [data-ui='meta-separator'] {
+    display: none;
+  }
+}
+
 [data-ui='item-quick-action']:not([data-shown], [data-name='more']) {
   display: none;
 }

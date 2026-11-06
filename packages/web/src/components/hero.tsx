@@ -3,9 +3,10 @@ import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { BiInfoCircle, BiPlay } from 'react-icons/bi';
-import { Button } from '@aiostreams/ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
 import { settings, useSetting } from '../lib/settings';
 import { currentHost } from '../lib/hosts';
@@ -32,6 +33,10 @@ const FLICK_PX_MS = 0.4;
 const SETTLE_MS = 300;
 /** How long the pointer or focus rests on a card before the hero follows it. */
 const FOLLOW_DELAY_MS = 300;
+const HERO_BOX =
+  'relative -mt-[var(--top-bar,0px)] h-[max(26rem,75svh)] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]';
+const HERO_CONTENT =
+  'absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 max-sm:pb-12 max-sm:text-center lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14';
 
 function Shade() {
   return (
@@ -39,12 +44,12 @@ function Shade() {
       <div
         data-ui="hero-shade"
         data-name="side"
-        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent rtl:bg-gradient-to-l"
+        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent max-sm:hidden rtl:bg-gradient-to-l"
       />
       <div
         data-ui="hero-shade"
         data-name="bottom"
-        className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent max-sm:h-1/2"
       />
     </>
   );
@@ -75,15 +80,15 @@ export function BackdropFrame({
 function HeroTextSkeleton() {
   return (
     <>
-      <Skeleton className="h-12 w-64 lg:h-16 lg:w-96" />
-      <Skeleton className="h-4 w-48" />
+      <Skeleton className="h-12 w-64 max-sm:mx-auto lg:h-16 lg:w-96" />
+      <Skeleton className="h-4 w-48 max-sm:mx-auto" />
       <div className="space-y-2">
         <Skeleton className="h-4 max-w-xl" />
-        <Skeleton className="h-4 w-4/5 max-w-lg" />
+        <Skeleton className="h-4 w-4/5 max-w-lg max-sm:mx-auto" />
       </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-10 w-28 rounded-full" />
-        <Skeleton className="h-10 w-32 rounded-full" />
+      <div className="flex gap-2 max-sm:justify-center">
+        <Skeleton className="h-10 w-40 rounded-full sm:w-28" />
+        <Skeleton className="size-10 rounded-full sm:h-10 sm:w-32" />
       </div>
     </>
   );
@@ -92,15 +97,10 @@ function HeroTextSkeleton() {
 /** The hero's own box and shading, with its text and buttons blocked out. */
 function HeroSkeleton() {
   return (
-    <section
-      aria-hidden
-      data-ui="hero"
-      data-loading
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
-    >
+    <section aria-hidden data-ui="hero" data-loading className={HERO_BOX}>
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
-      <div className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14">
+      <div className={HERO_CONTENT}>
         <HeroTextSkeleton />
       </div>
     </section>
@@ -257,6 +257,7 @@ function HeroDetails({
           held,
         });
   const holdPlay = useHold(() => play(true));
+  const phone = useMediaQuery('(max-width: 639px)');
   const parts: [string, React.ReactNode][] = [
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
@@ -274,7 +275,7 @@ function HeroDetails({
           src={logo}
           alt={item.Name ?? ''}
           onError={() => setFailedLogo(logo)}
-          className="max-h-20 max-w-[min(24rem,75%)] object-contain object-left lg:max-h-28"
+          className="max-h-20 max-w-[min(24rem,75%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-28"
         />
       ) : (
         <h1
@@ -287,7 +288,7 @@ function HeroDetails({
       {meta.length > 0 && (
         <div
           data-ui="hero-meta"
-          className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
+          className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
         >
           {meta.map(([name, part], i) => (
             <React.Fragment key={name}>
@@ -310,13 +311,16 @@ function HeroDetails({
         </p>
       )}
       {actions && (
-        <div data-ui="hero-actions" className="flex flex-wrap gap-2">
+        <div
+          data-ui="hero-actions"
+          className="flex flex-wrap gap-2 max-sm:justify-center"
+        >
           {playable && (
             <Button
               data-ui="hero-action"
               data-name="play"
               intent="white"
-              className="rounded-full"
+              className="rounded-full max-sm:min-w-40"
               leftIcon={<BiPlay className="text-xl" />}
               onClick={() => play()}
               {...holdPlay}
@@ -324,16 +328,28 @@ function HeroDetails({
               <Trans>Play</Trans>
             </Button>
           )}
-          <Button
-            data-ui="hero-action"
-            data-name="info"
-            intent={playable ? 'gray-outline' : 'white'}
-            className="rounded-full"
-            leftIcon={<BiInfoCircle className="text-xl" />}
-            onClick={() => navigate(itemPath(item))}
-          >
-            <Trans>More info</Trans>
-          </Button>
+          {playable && phone ? (
+            <IconButton
+              data-ui="hero-action"
+              data-name="info"
+              intent="gray-outline"
+              className="rounded-full"
+              icon={<BiInfoCircle />}
+              aria-label={t`More info`}
+              onClick={() => navigate(itemPath(item))}
+            />
+          ) : (
+            <Button
+              data-ui="hero-action"
+              data-name="info"
+              intent={playable ? 'gray-outline' : 'white'}
+              className="rounded-full"
+              leftIcon={<BiInfoCircle className="text-xl" />}
+              onClick={() => navigate(itemPath(item))}
+            >
+              <Trans>More info</Trans>
+            </Button>
+          )}
         </div>
       )}
     </>
@@ -624,7 +640,7 @@ export function Hero({
       ref={section}
       data-ui="hero"
       data-nav-top
-      className="relative -mt-[var(--top-bar,0px)] h-[26rem] w-full touch-pan-y touch-pinch-zoom overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]"
+      className={cn(HERO_BOX, 'touch-pan-y touch-pinch-zoom')}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setFocused(true)}
@@ -655,10 +671,7 @@ export function Hero({
           inert={!!role}
           className={slideClass(role)}
         >
-          <div
-            data-ui="hero-content"
-            className="absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14"
-          >
+          <div data-ui="hero-content" className={HERO_CONTENT}>
             <HeroDetails
               item={item}
               overviewClass="line-clamp-2 sm:line-clamp-3 sm:text-base"
@@ -670,7 +683,7 @@ export function Hero({
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"
-          className="absolute bottom-6 end-4 flex gap-1.5 lg:bottom-14"
+          className="absolute bottom-6 end-4 flex gap-1.5 max-sm:inset-x-0 max-sm:justify-center lg:bottom-14"
         >
           {featured.map((f, i) => (
             <button

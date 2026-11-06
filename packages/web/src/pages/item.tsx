@@ -332,7 +332,7 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   return (
     <div
       data-ui="item-meta"
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
     >
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
@@ -439,18 +439,21 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
             src={logo}
             alt={item.Name ?? ''}
             onError={() => setLogoFailed(true)}
-            className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left lg:max-h-32"
+            className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
           />
         ) : (
           <h1
             data-ui="item-title"
-            className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+            className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
           >
             {item.Name}
           </h1>
         )}
         {item.Taglines?.[0] && (
-          <p data-ui="item-tagline" className="text-base italic text-gray-300">
+          <p
+            data-ui="item-tagline"
+            className="text-base italic text-gray-300 max-sm:text-center"
+          >
             {item.Taglines[0]}
           </p>
         )}
@@ -459,7 +462,10 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
           <NextAiring series={item} />
         )}
         {!!item.Genres?.length && (
-          <div data-ui="item-genres" className="flex flex-wrap gap-1.5">
+          <div
+            data-ui="item-genres"
+            className="flex flex-wrap gap-1.5 max-sm:justify-center"
+          >
             {item.Genres.map((genre) => (
               <Badge key={genre} data-ui="item-genre" intent="white" size="md">
                 {genre}
@@ -479,7 +485,7 @@ function Header({ item, season }: { item: BaseItemDto; season?: BaseItemDto }) {
         />
         <div
           data-ui="item-actions"
-          className="flex flex-wrap items-center gap-2"
+          className="flex flex-wrap items-center gap-2 max-sm:justify-center"
         >
           {(target || nextUpPending) && (
             <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -947,7 +953,7 @@ function NextAiring({ series }: { series: BaseItemDto }) {
   return (
     <p
       data-ui="item-next-airing"
-      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm max-sm:justify-center"
     >
       <BiCalendarAlt className="text-lg text-[--muted]" />
       <span className="font-semibold">
