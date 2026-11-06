@@ -16,7 +16,7 @@ import {
   type ItemFilter,
 } from '../lib/queries';
 import { useInView } from '../lib/use-in-view';
-import { libraryLabel } from '../lib/format';
+import { isAnime, libraryLabel } from '../lib/format';
 import { navigate, to } from '../lib/paths';
 import { lastCatalog, rememberCatalog } from '../lib/settings';
 import { useFeature } from '../lib/server-info';
@@ -42,9 +42,10 @@ const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
   },
 ];
 
-export type Kind = 'Movie' | 'Series' | 'BoxSet';
+export type Kind = 'Movie' | 'Series' | 'Anime' | 'BoxSet';
 
-const KINDS: { kind: Kind; label: string; collectionType: string }[] = [
+/** Anime has no library type of its own; its catalogs are told apart by `isAnime`. */
+const KINDS: { kind: Kind; label: string; collectionType?: string }[] = [
   {
     kind: 'Movie',
     collectionType: 'movies',
@@ -57,6 +58,12 @@ const KINDS: { kind: Kind; label: string; collectionType: string }[] = [
     collectionType: 'tvshows',
     get label() {
       return t`Shows`;
+    },
+  },
+  {
+    kind: 'Anime',
+    get label() {
+      return t`Anime`;
     },
   },
   {
@@ -74,8 +81,18 @@ const PILL_CHARACTERS = 120;
 const ALL = '\u0000all';
 
 function kindOf(view: BaseItemDto | undefined): Kind | undefined {
-  return KINDS.find((k) => k.collectionType === view?.CollectionType)?.kind;
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- a Kind, not text
+  if (isAnime(view)) return 'Anime';
+  return KINDS.find(
+    (k) => k.collectionType && k.collectionType === view?.CollectionType
+  )?.kind;
 }
+
+/**
+ * Anime is a kind of catalog rather than of item, so unlike the other tabs it
+ * cannot filter a catalog that has no kind of its own.
+ */
+const filters = (kind: Kind) => kind !== 'Anime';
 
 /**
  * A catalog's genre extra is whatever filter it offers under that name: genres,
@@ -200,13 +217,16 @@ export function DiscoverPage({
   // and filters it.
   const untyped = all.some((v) => !kindOf(v));
   const siblings = all.filter(
-    (v) => kindOf(v) === current || !kindOf(v) || v.Id === viewId
+    (v) =>
+      kindOf(v) === current ||
+      (!kindOf(v) && filters(current)) ||
+      v.Id === viewId
   );
   const offered = KINDS.filter(
     (k) =>
       k.kind === current ||
       all.some((v) => kindOf(v) === k.kind) ||
-      (untyped && k.kind !== 'BoxSet')
+      (untyped && k.kind !== 'BoxSet' && filters(k.kind))
   );
 
   const required = useFeature('genreRequired') && needsGenre(view);
@@ -225,7 +245,10 @@ export function DiscoverPage({
     : opening;
   const pages = useItemPages(viewId, {
     filter,
-    types: view && kindOf(view) === current ? libraryTypes(view) : current,
+    types:
+      view && (kindOf(view) === current || !filters(current))
+        ? libraryTypes(view)
+        : current,
     genreId: genreItem?.Id,
     recursive: true,
     enabled: !!view && !genres.isLoading,
@@ -246,7 +269,8 @@ export function DiscoverPage({
 
   // Collections excepted, which a catalog with no kind rarely holds.
   const kindFor = (target: BaseItemDto | undefined): Kind =>
-    kindOf(target) ?? (current === 'BoxSet' ? 'Movie' : current);
+    kindOf(target) ??
+    (current === 'BoxSet' || !filters(current) ? 'Movie' : current);
 
   const open = (id: string, next: Kind) =>
     navigate(
@@ -267,8 +291,11 @@ export function DiscoverPage({
       (v) => v.Name === view?.Name && kindOf(v) === next && v.Id !== viewId
     );
     if (sibling) return open(sibling.Id!, next);
-    if (view && !kindOf(view)) return open(viewId, next);
-    if (items.some((i) => i.Type === next)) return open(viewId, next);
+    if (view && !kindOf(view) && filters(next)) return open(viewId, next);
+    // An anime catalog holds shows and films too, but leaving its tab means
+    // leaving anime.
+    if (!isAnime(view) && items.some((i) => i.Type === next))
+      return open(viewId, next);
     const previous = lastCatalog(next);
     const target =
       all.find((v) => v.Id === previous && kindOf(v) === next) ??

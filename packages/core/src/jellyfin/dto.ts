@@ -342,6 +342,15 @@ export function requiresGenre(c: Catalog): boolean {
   return !!c.extra?.some((e) => e.name === 'genre' && e.isRequired);
 }
 
+/** Jellyfin has no anime library type, so the catalog's own type is passed on. */
+function viewExtension(c: Catalog) {
+  const extension = {
+    ...(requiresGenre(c) && { genreRequired: true }),
+    ...(c.type === 'anime' && { anime: true }),
+  };
+  return Object.keys(extension).length ? { aiostreams: extension } : {};
+}
+
 export function buildView(
   ctx: ItemBuildContext,
   catalog: Catalog,
@@ -361,7 +370,7 @@ export function buildView(
     ChildCount: 0,
     Path: `/aiostreams/${catalog.type}/${catalog.id}`,
     PrimaryImageAspectRatio: 1.7777,
-    ...(requiresGenre(catalog) && { aiostreams: { genreRequired: true } }),
+    ...viewExtension(catalog),
     _aio: { descriptor: { k: 'view', t: catalog.type, c: catalog.id } },
   };
 }
