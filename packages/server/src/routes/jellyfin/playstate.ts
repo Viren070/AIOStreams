@@ -215,6 +215,7 @@ async function record(
     if (type === 'start')
       await openWatchSession(session, contentRefOf(d), {
         positionMs,
+        live: true,
         ...tracks,
       });
     else if (type === 'stop') await closeWatchSession(session);
