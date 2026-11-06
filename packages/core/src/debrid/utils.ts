@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 import {
   constants,
   createLogger,
@@ -73,9 +73,17 @@ const NZB_URL_SHAPES: ReadonlyArray<{
     keep: ['t', 'id'],
     matches: (params) => ['get', 'g'].includes(params.get('t')!),
   },
+  {
+    // newznab indexers (e.g. Spottarr) that identify releases by `guid`
+    // instead of `id` on t=get / t=g download URLs.
+    pathSuffix: '/api',
+    keep: ['t', 'guid'],
+    matches: (params) => ['get', 'g'].includes(params.get('t')!),
+  },
   // prowlarr nzb urls
   { pathSuffix: '/download', keep: ['link'] },
   { pathSuffix: '/getnzb', keep: ['id'] },
+  { pathSuffix: '/getnzb', keep: ['guid'] },
 ];
 
 const md5 = (value: string): string =>
