@@ -179,12 +179,14 @@ class MainActivity : ComponentActivity() {
             this,
             pause = { player.change(Change(paused = true)) },
             resume = { player.change(Change(paused = false)) },
+            expectedDrop = frameRates::relinking,
         )
         player.start()
         player.session.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) = onPlayerChanged()
         })
         PlaybackService.player = player.session
+        PlaybackService.expectedDrop = frameRates::relinking
         // Connecting starts the service, which takes over the notification once playback starts.
         controller = MediaController.Builder(this, SessionToken(this, ComponentName(this, PlaybackService::class.java)))
             .buildAsync()

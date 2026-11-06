@@ -24,6 +24,7 @@ class FrameRateMatch(
     private var matched = 0.0
     private var original: Int? = null
     private var waiting: Runnable? = null
+    private var switchedAt = -RELINK_MS
 
     fun match(frameRate: Double?) {
         if (frameRate == null || !enabled) return restore()
@@ -36,14 +37,21 @@ class FrameRateMatch(
         if (original == null) original = activity.window.attributes.preferredDisplayModeId
         prefer(best.modeId)
         val held = hold()
-        wait(display, best) { if (held) resume() }
+        wait(display, best) {
+            switchedAt = SystemClock.uptimeMillis()
+            if (held) resume()
+        }
     }
+
+    /** A TV links HDMI again after a mode switch, dropping its audio output a while after the screen settles. */
+    fun relinking() = SystemClock.uptimeMillis() - switchedAt < RELINK_MS
 
     private fun restore() {
         matched = 0.0
         cancelWait()
         prefer(original ?: return)
         original = null
+        switchedAt = SystemClock.uptimeMillis()
     }
 
     /** The screen's fastest rate while the page's controls show: playing, an adaptive screen runs at the video's. */
@@ -92,6 +100,7 @@ class FrameRateMatch(
     private companion object {
         const val POLL_MS = 60L
         const val SWITCH_TIMEOUT_MS = 4000L
+        const val RELINK_MS = 5000L
 
         fun Display.Mode.sameSize(other: Display.Mode) =
             physicalWidth == other.physicalWidth && physicalHeight == other.physicalHeight

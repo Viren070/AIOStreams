@@ -2,7 +2,10 @@ package io.github.viren070.aiostreams
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import androidx.annotation.OptIn
+import androidx.core.content.IntentCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
@@ -34,6 +37,18 @@ class PlaybackService : MediaSessionService() {
         session = MediaSession.Builder(this, player)
             .setSessionActivity(open)
             .setBitmapLoader(CacheBitmapLoader(artwork))
+            .setCallback(object : MediaSession.Callback {
+                // Fire OS presses pause itself when HDMI's audio drops out.
+                override fun onMediaButtonEvent(
+                    session: MediaSession,
+                    controllerInfo: MediaSession.ControllerInfo,
+                    intent: Intent,
+                ): Boolean {
+                    val key = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+                    val systemPause = key?.keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE && key.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
+                    return (systemPause && expectedDrop()) || super.onMediaButtonEvent(session, controllerInfo, intent)
+                }
+            })
             .build()
     }
 
@@ -52,5 +67,8 @@ class PlaybackService : MediaSessionService() {
     companion object {
         /** Set by the activity before it connects. */
         var player: Player? = null
+
+        /** Set by the activity: while true, lost audio is HDMI's own after a display mode switch. */
+        var expectedDrop: () -> Boolean = { false }
     }
 }

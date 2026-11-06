@@ -19,6 +19,7 @@ class AudioFocus(
     private val context: Context,
     private val pause: () -> Unit,
     private val resume: () -> Unit,
+    private val expectedDrop: () -> Boolean,
 ) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private val request = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
@@ -31,7 +32,9 @@ class AudioFocus(
         .setOnAudioFocusChangeListener(::onChange)
         .build()
     private val noisy = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = pause()
+        override fun onReceive(context: Context, intent: Intent) {
+            if (!expectedDrop()) pause()
+        }
     }
     private var playing = false
     private var resumeOnGain = false
