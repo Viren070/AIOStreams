@@ -9,12 +9,20 @@ type Platform = 'ios' | 'android' | 'macos';
 /** Players the desktop app starts and drives itself, as it names them. */
 export const LAUNCHED_PLAYERS = [{ id: 'mpv', name: 'mpv' }] as const;
 
-/** Extras the Android players read (a title, where to start in ms) and the return link the app answers with. */
+/** Extras most Android players read (a title, where to start in ms) and the return link the app answers with. */
 const ANDROID_EXTRAS =
   'S.title={title};i.position={positionMs};S.aiostreams.return={returnUrl}';
 
-const androidIntent = (target: string) =>
-  `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${ANDROID_EXTRAS};end`;
+/**
+ * Vimu reads extras of its own: the start in ms, as an int, `forceresume`
+ * off, so it keeps no place of its own for the address to win over that
+ * start, and one subtitle file, which has to be SRT.
+ */
+const VIMU_EXTRAS =
+  'S.forcename={title};i.startfrom={positionMs};B.forceresume=false;S.forcedsrt={subtitle};S.aiostreams.return={returnUrl}';
+
+const androidIntent = (target: string, extras = ANDROID_EXTRAS) =>
+  `intent://{url}#Intent;${target};type=video/*;scheme={scheme};${extras};end`;
 
 /**
  * Players opened by a link, on the platforms whose apps take one. An id can
@@ -27,6 +35,8 @@ export const LINK_PLAYERS: readonly {
   target?: string;
   template: string;
   platforms: readonly Platform[];
+  /** Made for TVs only, so offered on one. */
+  tvOnly?: boolean;
 }[] = [
   {
     id: 'vlc',
@@ -52,6 +62,14 @@ export const LINK_PLAYERS: readonly {
     name: 'mpv',
     template: androidIntent('package=is.xyz.mpv'),
     platforms: ['android'],
+  },
+  {
+    id: 'vimu',
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- an app's name
+    name: 'Vimu',
+    template: androidIntent('package=net.gtvbox.videoplayer', VIMU_EXTRAS),
+    platforms: ['android'],
+    tvOnly: true,
   },
   {
     id: 'android-app',
@@ -182,7 +200,8 @@ export function playerOptions(
     ...LINK_PLAYERS.filter(
       (p) =>
         p === linkPreset(p.id) &&
-        (p.id === current || (os && p.platforms.includes(os)))
+        (p.id === current ||
+          (os && p.platforms.includes(os) && (!p.tvOnly || !!currentHost().tv)))
     ).map((p) => ({ value: p.id, label: p.name })),
     { value: CUSTOM_LINK, label: t`Custom link` },
   ];
@@ -219,8 +238,9 @@ function fillParam(
  * Fills a player link: `{url}` or `{encodedUrl}`, and optionally `{scheme}`
  * (the address's), `{position}` (seconds to start at) or `{positionMs}`,
  * `{title}` (with the episode for an episode), `{returnUrl}` (where a player
- * that reports back sends the position it stopped at), `{filename}` and
- * `{subtitles}` (its parameter repeated once per external subtitle).
+ * that reports back sends the position it stopped at), `{filename}`,
+ * `{subtitles}` (its parameter repeated once per external subtitle) and
+ * `{subtitle}` (the preferred one alone, as SRT).
  */
 export function playerLink(
   template: string,
@@ -231,6 +251,7 @@ export function playerLink(
     returnUrl?: string;
     filename?: string;
     subtitles?: string[];
+    subtitle?: string;
   } = {}
 ): string {
   const startMs = Math.floor(opts.startMs ?? 0);
@@ -246,6 +267,7 @@ export function playerLink(
   );
   filled = fillParam(filled, 'filename', opts.filename ? [opts.filename] : []);
   filled = fillParam(filled, 'subtitles', opts.subtitles ?? []);
+  filled = fillParam(filled, 'subtitle', opts.subtitle ? [opts.subtitle] : []);
   const link = filled.includes('{encodedUrl}')
     ? filled.replace('{encodedUrl}', encodeURIComponent(url))
     : filled.includes('{url}')

@@ -468,6 +468,7 @@ const LINK_TOKENS = {
   scheme: '{scheme}',
   filename: '{filename}',
   subtitles: '{subtitles}',
+  subtitle: '{subtitle}',
   title: '{title}',
   position: '{position}',
   positionMs: '{positionMs}',
@@ -526,6 +527,7 @@ function PlayerCard() {
     scheme,
     filename,
     subtitles,
+    subtitle,
     title,
     position,
     positionMs,
@@ -596,7 +598,7 @@ function PlayerCard() {
           onValueChange={setLink}
           help={t({
             comment: 'Each {name} is written in the player link as it is here.',
-            message: `${url} is the stream address, ${encodedUrl} the same address URL-encoded, ${scheme} its scheme, ${filename} the file's name, ${subtitles} each external subtitle (its parameter repeats per file), ${title} the title with the episode, ${position} the second to start at (${positionMs} in milliseconds), and ${returnUrl} a link back here for a player that reports where it stopped. Values other than ${url} are URL-encoded. After intent://, ${url} goes without its scheme.`,
+            message: `${url} is the stream address, ${encodedUrl} the same address URL-encoded, ${scheme} its scheme, ${filename} the file's name, ${subtitles} each external subtitle (its parameter repeats per file), ${subtitle} the preferred one alone, as SRT, ${title} the title with the episode, ${position} the second to start at (${positionMs} in milliseconds), and ${returnUrl} a link back here for a player that reports where it stopped. Values other than ${url} are URL-encoded. After intent://, ${url} goes without its scheme.`,
           })}
         />
       )}
