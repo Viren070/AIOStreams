@@ -101,11 +101,28 @@ function sha(text: string): Buffer {
   return createHash('sha256').update(text).digest();
 }
 
+// Ids repeat across requests: a page's channels and genres, and every genre
+// a group's id is checked against while decoding it.
+const hashed = new Map<string, string>();
+const HASHED_MAX = 50_000;
+
+function remembered(key: string, make: () => string): string {
+  let id = hashed.get(key);
+  if (id === undefined) {
+    if (hashed.size >= HASHED_MAX) hashed.clear();
+    id = make();
+    hashed.set(key, id);
+  }
+  return id;
+}
+
 function marked(mark: number, text: string): string {
-  const buf = Buffer.alloc(16);
-  buf[0] = mark;
-  sha(text).copy(buf, 1, 0, 15);
-  return buf.toString('hex');
+  return remembered(`${mark}|${text}`, () => {
+    const buf = Buffer.alloc(16);
+    buf[0] = mark;
+    sha(text).copy(buf, 1, 0, 15);
+    return buf.toString('hex');
+  });
 }
 
 function rebuildBaseId(idType: string, numeric: number): string {
@@ -357,11 +374,16 @@ function programKeyId(id: string): string {
 }
 
 function programId(d: Extract<JellyfinDescriptor, { k: 'program' }>): string {
-  const buf = Buffer.alloc(16);
-  buf[0] = MARK_PROGRAM;
-  sha(`program|${d.t}|${d.i}`).copy(buf, 1, 0, 11);
-  buf.writeUInt32BE(Math.floor(d.at / MINUTE_MS), 12);
-  const id = buf.toString('hex');
+  const channel = remembered(`program|${d.t}|${d.i}`, () => {
+    const buf = Buffer.alloc(12);
+    buf[0] = MARK_PROGRAM;
+    sha(`program|${d.t}|${d.i}`).copy(buf, 1, 0, 11);
+    return buf.toString('hex');
+  });
+  const minute = Math.floor(d.at / MINUTE_MS)
+    .toString(16)
+    .padStart(8, '0');
+  const id = channel + minute;
   rememberHashed(programKeyId(id), { k: 'program', t: d.t, i: d.i, at: 0 });
   return id;
 }
