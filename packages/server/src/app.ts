@@ -49,6 +49,7 @@ import {
   gdrive,
   torboxSearch,
   torznab,
+  jackett,
   newznab,
   prowlarr,
   knaben,
@@ -230,6 +231,7 @@ builtinsRouter.use(internalMiddleware);
 builtinsRouter.use('/gdrive', gdrive);
 builtinsRouter.use('/torbox-search', torboxSearch);
 builtinsRouter.use('/torznab', torznab);
+builtinsRouter.use('/jackett', jackett);
 builtinsRouter.use('/newznab', newznab);
 builtinsRouter.use('/prowlarr', prowlarr);
 builtinsRouter.use('/knaben', knaben);

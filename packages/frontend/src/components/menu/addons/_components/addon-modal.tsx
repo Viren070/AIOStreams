@@ -123,6 +123,7 @@ export function AddonModal({
             <TemplateOption
               option={opt}
               value={values.options?.[opt.id]}
+              siblingValues={values.options}
               onChange={(v: any) =>
                 setValues((val) => ({
                   ...val,
