@@ -203,7 +203,9 @@ export class JackettPreset extends TorznabPreset {
     options: Record<string, any>
   ): Promise<Addon[]> {
     const indexers: string[] = Array.isArray(options.indexers)
-      ? options.indexers.filter((id: unknown) => typeof id === 'string' && id)
+      ? [...new Set<string>(options.indexers)].filter(
+          (id) => typeof id === 'string' && id
+        )
       : [];
     if (indexers.length === 0) {
       // `auto` keeps a single `all` addon with its pre-selection identifier
