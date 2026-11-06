@@ -400,6 +400,50 @@ export function encodeItemId(d: JellyfinDescriptor): string {
   }
 }
 
+/* Jellyfin's provider names, as ProviderIds keys them, to the id types packed. */
+const PROVIDER_ID_TYPES: Record<string, string> = {
+  imdb: 'imdbId',
+  tmdb: 'themoviedbId',
+  tvdb: 'thetvdbId',
+  kitsu: 'kitsuId',
+  myanimelist: 'malId',
+  anilist: 'anilistId',
+  anidb: 'anidbId',
+  simkl: 'simklId',
+};
+
+/* Catalogs serve these under `anime` as well as under the kind's own type. */
+const ANIME_ID_TYPES = new Set(['kitsuId', 'malId', 'anilistId', 'anidbId']);
+
+/**
+ * The ids an `AnyProviderIdEquals` lookup stands for: one per `provider.id`
+ * pair, kind and media type the pair's provider is served under. A pair
+ * naming a provider no id is packed from, or a value its parser rejects,
+ * stands for nothing.
+ */
+export function itemIdsForProviderIds(
+  pairs: string[],
+  kinds: ('movie' | 'series')[]
+): string[] {
+  const out = new Set<string>();
+  for (const pair of pairs) {
+    const dot = pair.indexOf('.');
+    if (dot < 0) continue;
+    const idType = PROVIDER_ID_TYPES[pair.slice(0, dot).trim().toLowerCase()];
+    const value = pair.slice(dot + 1).trim();
+    const digits = idType === 'imdbId' ? value.replace(/^tt/i, '') : value;
+    if (!idType || !/^\d+$/.test(digits)) continue;
+    const i = rebuildBaseId(idType, Number(digits));
+    for (const k of kinds) {
+      for (const t of ANIME_ID_TYPES.has(idType) ? [k, 'anime'] : [k]) {
+        const packed = tryPack({ k, t, i });
+        if (packed) out.add(packed);
+      }
+    }
+  }
+  return [...out];
+}
+
 export interface DecodeScope {
   catalogs?: Manifest['catalogs'];
 }

@@ -88,6 +88,21 @@ export function descriptorOf(
     ?.descriptor;
 }
 
+/** An item built for an id no addon knows, see `ContentBuildOptions`. */
+export function isPlaceholderItem(item: JellyfinItem): boolean {
+  return !!(item as { _aio?: { placeholder?: boolean } })._aio?.placeholder;
+}
+
+/** A meta some addons answer for an id they do not know: nothing but the id. */
+export function isBareMeta(meta: {
+  name?: string | null;
+  poster?: string | null;
+  background?: string | null;
+  description?: string | null;
+}): boolean {
+  return !meta.name && !meta.poster && !meta.background && !meta.description;
+}
+
 /** Set even when the episode is not sent as `Virtual`. */
 export function isUnairedEpisode(item: JellyfinItem): boolean {
   return !!(item as { _aio?: { unaired?: boolean } })._aio?.unaired;
@@ -451,6 +466,8 @@ export interface ContentBuildOptions {
   genreCatalog?: { type: string; id: string };
   /** Plays on its own rather than opening a video list. */
   leaf?: boolean;
+  /** Built for an id no addon knows: from the id alone, or from a bare meta. */
+  placeholder?: boolean;
 }
 
 export function defaultVideoIdOf(entry: unknown): string | undefined {
@@ -628,7 +645,11 @@ export function buildContentItem(
     UserData: userDataFromRow(id, opts.playstate, runtimeMs),
     Path: `/aiostreams/${meta.type}/${meta.id}/${name}${folder ? '' : PLAYABLE_EXT}`,
     ProductionLocations: enrichment.countries,
-    _aio: { descriptor, enrichment },
+    _aio: {
+      descriptor,
+      enrichment,
+      ...(opts.placeholder ? { placeholder: true } : {}),
+    },
   };
   if (jellyfinType === 'Series') {
     if (enrichment.airDays.length) item.AirDays = enrichment.airDays;
