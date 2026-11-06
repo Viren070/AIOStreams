@@ -1,11 +1,10 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
 use std::ffi::{c_char, c_int, c_void};
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
@@ -475,50 +474,52 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
 }
 
-const INHIBIT_IDLE: u32 = 8;
+thread_local! {
+    static AWAKE: RefCell<Option<Awake>> = const { RefCell::new(None) };
+}
 
-/// The portal's handle for the running inhibition, which closing ends.
-static AWAKE: Mutex<Option<String>> = Mutex::new(None);
+struct Awake {
+    app: gtk4::Application,
+    window: gtk4::Window,
+    cookie: Option<u32>,
+}
 
+/// GTK holds idle off for a window of its application: through Wayland's idle
+/// inhibitor where the compositor has one, else through the desktop session.
+pub fn keep_awake_for(window: &gtk4::Window) {
+    let app = gtk4::Application::new(
+        Some("io.github.viren070.aiostreams"),
+        gio::ApplicationFlags::NON_UNIQUE,
+    );
+    if let Err(e) = app.register(None::<&gio::Cancellable>) {
+        return log::warn!("keep awake: {e}");
+    }
+    window.set_application(Some(&app));
+    AWAKE.set(Some(Awake {
+        app,
+        window: window.clone(),
+        cookie: None,
+    }));
+}
+
+/// Called on mpv's thread.
 pub fn keep_awake(on: bool) {
-    let Ok(mut held) = AWAKE.lock() else { return };
-    if on == held.is_some() {
-        return;
-    }
-    let result =
-        gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).and_then(|bus| {
-            let call = |path: &str, interface, method, args: Option<glib::Variant>| {
-                bus.call_sync(
-                    Some("org.freedesktop.portal.Desktop"),
-                    path,
-                    interface,
-                    method,
-                    args.as_ref(),
-                    None,
-                    gio::DBusCallFlags::NONE,
-                    2000,
-                    None::<&gio::Cancellable>,
-                )
-            };
-            match held.take() {
-                Some(handle) => call(&handle, "org.freedesktop.portal.Request", "Close", None),
-                None => {
-                    let args =
-                        ("", INHIBIT_IDLE, HashMap::<String, glib::Variant>::new()).to_variant();
-                    let reply = call(
-                        "/org/freedesktop/portal/desktop",
-                        "org.freedesktop.portal.Inhibit",
-                        "Inhibit",
-                        Some(args),
-                    )?;
-                    *held = reply.child_value(0).str().map(String::from);
-                    Ok(reply)
+    glib::idle_add_once(move || {
+        AWAKE.with_borrow_mut(|awake| {
+            let Some(awake) = awake else { return };
+            match awake.cookie.take() {
+                Some(cookie) if !on => awake.app.uninhibit(cookie),
+                None if on => {
+                    awake.cookie = Some(awake.app.inhibit(
+                        Some(&awake.window),
+                        gtk4::ApplicationInhibitFlags::IDLE,
+                        Some("Playing a video"),
+                    ))
                 }
+                held => awake.cookie = held,
             }
-        });
-    if let Err(e) = result {
-        log::warn!("keep awake: {e}");
-    }
+        })
+    });
 }
 
 pub fn open_external(url: &str) {

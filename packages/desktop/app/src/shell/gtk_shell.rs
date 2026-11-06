@@ -287,6 +287,7 @@ pub fn run(app: App) {
     titlebar.set_visible(false);
     window.set_titlebar(Some(&titlebar));
     add_frame_style(&window);
+    platform::keep_awake_for(&window);
 
     let video = platform::VideoSurface::new().unwrap_or_else(|e| platform::fatal(&e));
     video.widget().set_overflow(gtk4::Overflow::Hidden);
