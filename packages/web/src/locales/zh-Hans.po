@@ -696,6 +696,14 @@ msgstr "黑色"
 msgid "Blue"
 msgstr "蓝色"
 
+#: src/pages/settings/interface.tsx
+msgid "Blur episodes you haven't started"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
 msgstr "粗体"
@@ -4120,6 +4128,11 @@ msgstr "速度 {shown}×"
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
 msgstr "按住时加速播放"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Spoilers"
+msgstr "预告片"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"

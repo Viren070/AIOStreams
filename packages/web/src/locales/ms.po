@@ -694,6 +694,14 @@ msgstr "Hitam"
 msgid "Blue"
 msgstr "Biru"
 
+#: src/pages/settings/interface.tsx
+msgid "Blur episodes you haven't started"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
 msgstr "Tebal"
@@ -4097,6 +4105,11 @@ msgstr "Kelajuan {shown}×"
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
 msgstr "Lajukan semasa ditekan"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Spoilers"
+msgstr "Treler"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
