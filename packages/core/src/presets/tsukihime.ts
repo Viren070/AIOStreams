@@ -13,6 +13,7 @@ export class TsukihimePreset extends TorznabPreset {
       constants.STREMIO_NNTP_SERVICE,
       constants.STREMTHRU_NEWZ_SERVICE,
       constants.AIOSTREAMS_SERVICE,
+      constants.QBITTORRENT_SERVICE,
     ] as constants.ServiceId[];
     const options: Option[] = [
       {

@@ -22,6 +22,7 @@ export class LibraryPreset extends BuiltinAddonPreset {
     constants.ALTMOUNT_SERVICE,
     constants.STREMTHRU_NEWZ_SERVICE,
     constants.AIOSTREAMS_SERVICE,
+    constants.QBITTORRENT_SERVICE,
   ];
 
   static override get METADATA() {

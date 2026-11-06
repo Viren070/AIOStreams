@@ -31,6 +31,7 @@ export const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
     'https://raw.githubusercontent.com/javi11/altmount/refs/heads/main/docs/static/img/logo.png',
   aiostreams: '/logo.png',
   torrin: 'https://torrin.app/favicon.png',
+  qbittorrent: 'https://cdn.jsdelivr.net/gh/selfhst/icons/png/qbittorrent.png',
 };
 
 const USENET_SERVICE_IDS: string[] = [
