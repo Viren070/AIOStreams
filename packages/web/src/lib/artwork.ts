@@ -49,12 +49,25 @@ export interface Drawn {
   height: number;
 }
 
-/** An image's address without the size asked of it, naming it at any size. */
-export function artworkKey(url: string): string {
-  const parsed = new URL(url, location.href);
-  parsed.searchParams.delete('maxWidth');
-  return parsed.href;
+const addresses = new Map<string, { key: string; origin: string }>();
+/** Past this many, the parsed addresses start over. */
+const ADDRESSES_KEPT = 4000;
+
+/** Parsed once, as every card asks again each time it draws. */
+function address(url: string) {
+  let found = addresses.get(url);
+  if (!found) {
+    const parsed = new URL(url, location.href);
+    parsed.searchParams.delete('maxWidth');
+    found = { key: parsed.href, origin: parsed.origin };
+    if (addresses.size >= ADDRESSES_KEPT) addresses.clear();
+    addresses.set(url, found);
+  }
+  return found;
 }
+
+/** An image's address without the size asked of it, naming it at any size. */
+export const artworkKey = (url: string): string => address(url).key;
 
 interface Kept extends Drawn {
   bytes: number;
@@ -244,7 +257,7 @@ export function blobAddress(blob: Blob): Promise<BlobAddress> {
 const reads = new Map<string, { blocked: number; read: number }>();
 
 function readsFor(url: string) {
-  const origin = new URL(url, location.href).origin;
+  const { origin } = address(url);
   let entry = reads.get(origin);
   if (!entry) reads.set(origin, (entry = { blocked: 0, read: 0 }));
   return entry;
