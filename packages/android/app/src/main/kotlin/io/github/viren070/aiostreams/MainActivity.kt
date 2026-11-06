@@ -31,9 +31,10 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
-import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
@@ -199,13 +200,38 @@ class MainActivity : ComponentActivity() {
 
         // The page's own Back closes what is open, leaves the player and goes back, and
         // says `exit` on its first page.
-        onBackPressedDispatcher.addCallback(this) {
-            when {
-                bridge.connected -> bridge.send(buildJsonObject { put("type", "back") })
-                web.canGoBack() -> web.goBack()
-                else -> finish()
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    bridge.connected -> bridge.send(buildJsonObject { put("type", "back") })
+                    web.canGoBack() -> web.goBack()
+                    else -> finish()
+                }
             }
-        }
+
+            override fun handleOnBackStarted(backEvent: BackEventCompat) {
+                bridge.send(buildJsonObject {
+                    put("type", "back-gesture")
+                    put("event", "start")
+                    put("fromRight", backEvent.swipeEdge == BackEventCompat.EDGE_RIGHT)
+                })
+            }
+
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+                bridge.send(buildJsonObject {
+                    put("type", "back-gesture")
+                    put("event", "move")
+                    put("progress", backEvent.progress)
+                })
+            }
+
+            override fun handleOnBackCancelled() {
+                bridge.send(buildJsonObject {
+                    put("type", "back-gesture")
+                    put("event", "cancel")
+                })
+            }
+        })
     }
 
     private fun onMessage(type: String, message: JsonObject) {
