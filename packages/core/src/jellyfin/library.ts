@@ -185,6 +185,7 @@ export function buildExtras(
     similar?: string;
     skip?: number;
     date?: string;
+    ids?: string[];
   }
 ): string | undefined {
   const parts: string[] = [];
@@ -195,6 +196,8 @@ export function buildExtras(
     (opts.search || opts.similar ? undefined : requiredGenreDefault(c));
   if (genre) parts.push(`genre=${encodeURIComponent(genre)}`);
   if (opts.skip) parts.push(`skip=${opts.skip}`);
+  if (opts.ids?.length)
+    parts.push(`ids=${opts.ids.map(encodeURIComponent).join(',')}`);
   if (opts.date) parts.push(`date=${opts.date}`);
   return parts.length ? parts.join('&') : undefined;
 }

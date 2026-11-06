@@ -176,14 +176,16 @@ const placements = Cache.getInstance<string, Placement>(
 const channelKey = (scope: string, c: { type: string; id: string }) =>
   `${scope}|${c.type}|${c.id}`;
 
+/** A page without a date lists the channels alone, which guides answer cheaply. */
 async function readPage(
   engine: AIOStreams,
   catalog: Catalog,
   skip: number,
   genre?: string,
-  date = hasGuide(catalog) ? utcDays(Date.now(), Date.now() + 1)[0] : undefined
+  date?: string,
+  ids?: string[]
 ): Promise<MetaPreview[]> {
-  const extras = buildExtras(catalog, { genre, skip, date });
+  const extras = buildExtras(catalog, { genre, skip, date, ids });
   const res = await limitedCatalog(engine.getUserData().uuid ?? '', () =>
     engine.getCatalog(catalog.type, catalog.id, extras)
   );
@@ -330,9 +332,22 @@ export interface ChannelGuide {
   programmes: Programme[];
 }
 
+/** Channels asked for at once from a guide that takes ids. */
+const IDS_PER_REQUEST = 50;
+
+interface GuideRead {
+  catalog: Catalog;
+  day: string;
+  wanted: Set<string>;
+  skip: number;
+  genre?: string;
+  ids?: Set<string>;
+}
+
 /**
- * Each channel's programmes overlapping a window, keyed `type|id`: from the
- * guide page it was listed on, read once per UTC day, else from its own meta.
+ * Each channel's programmes overlapping a window, keyed `type|id`, read once
+ * per UTC day: by id from a guide that takes ids, else from the guide page it
+ * was listed on, else from its own meta.
  */
 export async function programmesFor(
   engine: AIOStreams,
@@ -342,10 +357,7 @@ export async function programmesFor(
   to: number
 ): Promise<Map<string, ChannelGuide>> {
   const catalogs = new Map(liveCatalogs(engine).map((c) => [catalogKey(c), c]));
-  const pages = new Map<
-    string,
-    { catalog: Catalog; placement: Placement; day: string; wanted: Set<string> }
-  >();
+  const reads = new Map<string, GuideRead>();
   const unplaced: { type: string; id: string }[] = [];
   for (const channel of channels) {
     const placement = await placements
@@ -356,18 +368,32 @@ export async function programmesFor(
       unplaced.push(channel);
       continue;
     }
+    const byId = supportsExtra(catalog, 'ids');
     for (const day of utcDays(from, to)) {
-      const key = `${placement.catalog}|${placement.genre ?? ''}|${placement.skip}|${day}`;
-      const page = pages.get(key) ?? {
+      const key = byId
+        ? `${placement.catalog}|${day}`
+        : `${placement.catalog}|${placement.genre ?? ''}|${placement.skip}|${day}`;
+      const read = reads.get(key) ?? {
         catalog,
-        placement,
         day,
         wanted: new Set<string>(),
+        ...(byId
+          ? { skip: 0, ids: new Set<string>() }
+          : { skip: placement.skip, genre: placement.genre }),
       };
-      page.wanted.add(`${channel.type}|${channel.id}`);
-      pages.set(key, page);
+      read.wanted.add(`${channel.type}|${channel.id}`);
+      read.ids?.add(channel.id);
+      reads.set(key, read);
     }
   }
+  const requests = [...reads.values()].flatMap((read) => {
+    if (!read.ids) return [{ read, ids: undefined }];
+    const ids = [...read.ids].sort();
+    const chunks: { read: GuideRead; ids?: string[] }[] = [];
+    for (let at = 0; at < ids.length; at += IDS_PER_REQUEST)
+      chunks.push({ read, ids: ids.slice(at, at + IDS_PER_REQUEST) });
+    return chunks;
+  });
   const found = new Map<string, ChannelGuide>();
   const add = (key: string, meta: MetaPreview | null | undefined) =>
     found.set(key, {
@@ -378,17 +404,18 @@ export async function programmesFor(
       ],
     });
   await Promise.all([
-    ...[...pages.values()].map(async (page) => {
+    ...requests.map(async ({ read, ids }) => {
       const metas = await readPage(
         engine,
-        page.catalog,
-        page.placement.skip,
-        page.placement.genre,
-        page.day
+        read.catalog,
+        read.skip,
+        read.genre,
+        read.day,
+        ids
       ).catch(() => []);
       for (const meta of metas) {
         const key = `${meta.type}|${meta.id}`;
-        if (page.wanted.has(key)) add(key, meta);
+        if (read.wanted.has(key)) add(key, meta);
       }
     }),
     ...unplaced.map(async (channel) => {
