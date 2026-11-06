@@ -232,6 +232,7 @@ function EmbeddedTrailer({
         src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`}
         allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
         allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
         className="min-h-0 w-full flex-1 border-0"
       />
     </div>
