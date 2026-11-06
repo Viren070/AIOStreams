@@ -30,6 +30,8 @@ export interface SegmentLookup {
   runtimeMs?: number;
   /** TMDB season/episode candidates, best first. Absent: `season`/`episode` already are; empty: none known. */
   tmdbEpisodes?: { season: number; episode: number }[];
+  /** The episode's number inside the resolved anime entry (one MAL record). Absent: unknown, so not asked. */
+  animeEpisode?: number;
 }
 
 export interface SegmentProviderStatus {
