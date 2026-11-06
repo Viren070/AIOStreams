@@ -110,9 +110,16 @@ Stremio also asks without `date` to list the channels alone; answer that as usua
 | `cast`, `directors`    | Names, shown as its people                                                         |
 | `imdbId`               | Its IMDb id                                                                        |
 
-The guide covers a week from today, and as far back as channels keep their programmes. Programmes
-are asked for from the same catalog, group and page a channel was listed on, so keep a channel on
-the same page of every day's answer.
+The guide covers a week from today, and as far back as channels keep their programmes. Channels are
+listed from pages without a date, and their programmes are asked for from the same catalog, group
+and page with one, so keep a channel on the same page with or without a date.
+
+A guide that also declares the `ids` extra is asked for just the channels on screen, by their ids,
+comma-separated. Answer with those channels in `metasDetailed`, whatever page they're on:
+
+```http
+GET {addonBase}/catalog/tv/guide/ids=mytv%3Abbc-news,mytv%3Aitv1&date=2026-11-05.json
+```
 
 ## Catch-up
 
