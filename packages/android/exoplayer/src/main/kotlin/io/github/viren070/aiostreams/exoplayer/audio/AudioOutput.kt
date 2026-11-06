@@ -26,6 +26,7 @@ internal class AudioOutput {
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioOutputPlaybackParameters(enablePlaybackParameters)
             .setAudioProcessors(arrayOf(SoundProcessor(levels)))
+            .setAudioOutputProvider(EarlyStart(context))
             .build()
         ac3 = Ac3Sink(TrueHdSink(sink), levels)
         output = OutputSink(ac3)
