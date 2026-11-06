@@ -256,6 +256,29 @@ interface MiniPlayerProps {
 
 /** A TV has no corner card, so between pages it waits this long for a preview. */
 const DOCK_GAP_MS = 300;
+/** A stall shorter than this keeps its picture. */
+const STALL_MS = 500;
+
+/**
+ * Until the first frame, and through a stall that lasts. The video gives way
+ * to the spinner then, as the apps draw it over the page and it would hold the
+ * last picture, or nothing.
+ */
+function useLoading(player: PlayerController | undefined): boolean {
+  const state = player?.state;
+  const stalled =
+    !!state && !state.paused && (state.waiting || !!state.reconnecting);
+  const [late, setLate] = React.useState(false);
+  React.useEffect(() => {
+    if (!stalled) {
+      setLate(false);
+      return;
+    }
+    const timer = setTimeout(() => setLate(true), STALL_MS);
+    return () => clearTimeout(timer);
+  }, [stalled]);
+  return !state?.started || late;
+}
 
 /** Plays on in a page's preview where one is shown, else in a corner. */
 export function MiniPlayer(props: MiniPlayerProps) {
@@ -304,6 +327,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
     return () => observer.disconnect();
   }, [mode, corner]);
   const covered = useCovered(layout.box);
+  const loading = useLoading(player);
 
   // Pages keep the bar's room free, as they do the navigation's.
   React.useLayoutEffect(() => {
@@ -323,13 +347,13 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
     () => ({
       ...layout.video,
       draggable: mode === 'card',
-      hidden: covered || !!error,
+      hidden: covered || !!error || loading,
       animate,
       radius: mode === 'card' ? CARD_RADIUS : BAR_RADIUS,
       bottomRadius: mode === 'card' ? 0 : BAR_RADIUS,
       subtitles: mode === 'card',
     }),
-    [layout.video, mode, covered, error, animate]
+    [layout.video, mode, covered, error, loading, animate]
   );
   const framed = !!setFrame;
   React.useEffect(() => {
@@ -447,6 +471,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
       transition,
       // eslint-disable-next-line lingui/no-unlocalized-strings -- a CSS value
       borderRadius: `${radius}px ${radius}px ${bottomRadius}px ${bottomRadius}px`,
+      opacity: loading ? 0 : undefined,
     });
   }, [
     onVideoPlace,
@@ -456,6 +481,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
     transition,
     radius,
     bottomRadius,
+    loading,
   ]);
   return (
     <div
@@ -499,7 +525,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
             className="absolute inset-0 h-full w-full object-cover opacity-60"
           />
         )}
-        {!started && !error && (
+        {loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
             <LoadingSpinner className="size-6" />
           </div>
@@ -657,6 +683,7 @@ function DockedPlayer({
 }: MiniPlayerProps & { dock: HTMLElement }) {
   const box = useBoxOf(dock);
   const covered = useCovered(box);
+  const loading = useLoading(player);
   const [radius] = React.useState(
     () => parseFloat(getComputedStyle(dock).borderTopLeftRadius) || 0
   );
@@ -667,13 +694,13 @@ function DockedPlayer({
     () => ({
       ...box,
       draggable: false,
-      hidden: covered || !!error || !box.width,
+      hidden: covered || !!error || !box.width || loading,
       animate: false,
       radius,
       bottomRadius: radius,
       subtitles: true,
     }),
-    [box, covered, error, radius]
+    [box, covered, error, loading, radius]
   );
   const framed = !!setFrame;
   React.useEffect(() => {
@@ -694,9 +721,9 @@ function DockedPlayer({
       height: box.height,
       transform: `translate(${box.x}px, ${box.y}px)`,
       borderRadius: `${radius}px`,
+      opacity: loading ? 0 : undefined,
     });
-  }, [onVideoPlace, box, radius]);
-  const started = !!player?.state.started;
+  }, [onVideoPlace, box, radius, loading]);
   return (
     <div
       data-ui="docked-player"
@@ -715,7 +742,7 @@ function DockedPlayer({
           {t`Playback failed`}
         </p>
       ) : (
-        !started && <LoadingSpinner className="size-8" />
+        loading && <LoadingSpinner className="size-8" />
       )}
     </div>
   );
