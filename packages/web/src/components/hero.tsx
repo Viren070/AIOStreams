@@ -524,6 +524,31 @@ function useSwipeFade(
   };
 }
 
+/**
+ * Android would fling a fast sideways swipe, though nothing scrolls, and take
+ * the next tap anywhere as stopping it. Only a cancelled touch prevents that.
+ */
+function claimSideSwipes(el: HTMLElement): () => void {
+  let from: { x: number; y: number } | null = null;
+  let sideways: boolean | null = null;
+  const start = (e: TouchEvent) => {
+    from = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    sideways = null;
+  };
+  const move = (e: TouchEvent) => {
+    if (!from || e.touches.length > 1) return;
+    const { clientX, clientY } = e.touches[0];
+    sideways ??= Math.abs(clientX - from.x) > Math.abs(clientY - from.y);
+    if (sideways && e.cancelable) e.preventDefault();
+  };
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchmove', move, { passive: false });
+  return () => {
+    el.removeEventListener('touchstart', start);
+    el.removeEventListener('touchmove', move);
+  };
+}
+
 function dotLabel(item: BaseItemDto): string {
   const name = item.Name ?? '';
   return t({
@@ -565,6 +590,10 @@ export function Hero({
     if (!el) return;
     return watch(el, null, '0px', (entry) => setInSight(entry.isIntersecting));
   }, [loading, featured.length]);
+  React.useEffect(() => {
+    const el = section.current;
+    if (el && swipeable) return claimSideSwipes(el);
+  }, [loading, swipeable]);
 
   React.useEffect(() => setIndex(0), [featured.length]);
   React.useEffect(() => {
