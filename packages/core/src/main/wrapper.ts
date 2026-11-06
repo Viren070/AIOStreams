@@ -51,6 +51,10 @@ import {
   type AnalyticsErrorStage,
 } from '../analytics/index.js';
 import { z } from 'zod';
+import {
+  prepareBuiltinStream,
+  startsSearchBeforeMetadata,
+} from '../metadata/preparation.js';
 
 const logger = createLogger('wrappers');
 
@@ -631,6 +635,8 @@ export class Wrapper {
     bypassCache?: boolean;
     /** Set to true when the value came from the cache rather than upstream. */
     hit?: { fromCache: boolean };
+    prepare?: () => Promise<(() => void) | undefined>;
+    concurrentPreparation?: boolean;
   }): Promise<T> {
     const {
       requestFn,
@@ -660,6 +666,39 @@ export class Wrapper {
       }
     }
 
+    // Cached resources need no preparation. On a miss, required shared work
+    // finishes before either the foreground or transport deadline starts.
+    let preparationFinished = false;
+    let releasePreparation: (() => void) | undefined;
+    const finishPreparation = () => {
+      preparationFinished = true;
+      releasePreparation?.();
+      releasePreparation = undefined;
+    };
+    const preparation = options.prepare?.().then((release) => {
+      // Transport can fail before parallel preparation finishes. Its eventual
+      // lease must still be released, even though this caller already left.
+      if (preparationFinished) release?.();
+      else releasePreparation = release;
+    });
+    const preparationFailed = (error: unknown): T => {
+      finishPreparation();
+      if (cached) {
+        logger.warn(
+          { addon: this.getAddonName(this.addon), resource: resourceName },
+          'returning stale cache after metadata preparation failure'
+        );
+        return cached;
+      }
+      throw error;
+    };
+    if (!options.concurrentPreparation) {
+      try {
+        await preparation;
+      } catch (error) {
+        return preparationFailed(error);
+      }
+    }
     const controller = new AbortController();
     const processRequest = async () => {
       const result = await requestFn(controller.signal);
@@ -675,13 +714,63 @@ export class Wrapper {
       ? (appConfig.resources.background.timeout ??
         appConfig.userLimits.timeouts.maxTimeout)
       : timeout;
-    const requestPromise = DistributedLock.getInstance()
+    const preparationBudget = options.concurrentPreparation
+      ? appConfig.userLimits.timeouts.maxTimeout
+      : 0;
+    const work = DistributedLock.getInstance()
       .withLock(cacheKey, processRequest, {
-        timeout,
-        ttl: maxRequestDuration + 1000,
+        timeout: timeout + preparationBudget,
+        ttl: maxRequestDuration + preparationBudget + 1000,
         type: requestLockType(),
       })
       .then(({ result }) => result);
+
+    let transportTimer: NodeJS.Timeout | undefined;
+    let timedWork = work;
+    if (options.concurrentPreparation) {
+      // ID-only searches can run while preparation is pending. Their local
+      // HTTP connection must not spend the execution budget on that wait.
+      try {
+        await Promise.race([
+          preparation,
+          work,
+          new Promise<never>((_, reject) => {
+            transportTimer = setTimeout(() => {
+              reject(
+                new DOMException(
+                  'Required metadata preparation timed out',
+                  'TimeoutError'
+                )
+              );
+            }, appConfig.userLimits.timeouts.maxTimeout);
+          }),
+        ]);
+      } catch (error) {
+        controller.abort(error);
+        return preparationFailed(error);
+      } finally {
+        clearTimeout(transportTimer);
+      }
+      // Lock waiters have no transport of their own to abort. Race their wait
+      // too, so extending the lock lease cannot extend an execution deadline.
+      timedWork = Promise.race([
+        work,
+        new Promise<never>((_, reject) => {
+          transportTimer = setTimeout(() => {
+            const error = new DOMException(
+              'The operation was aborted due to timeout',
+              'TimeoutError'
+            );
+            controller.abort(error);
+            reject(error);
+          }, maxRequestDuration);
+        }),
+      ]);
+    }
+    const requestPromise = timedWork.finally(() => {
+      clearTimeout(transportTimer);
+      finishPreparation();
+    });
 
     if (!doBackground) {
       return await requestPromise;
@@ -740,6 +829,9 @@ export class Wrapper {
     const effectiveCacheKey = cacheKey || url;
     let doBackground = appConfig.resources.background.enabled && cacher;
 
+    const concurrentPreparation =
+      resource === 'stream' && startsSearchBeforeMetadata(this.manifestUrl);
+
     logger.debug(
       {
         addon: this.getAddonName(this.addon),
@@ -758,7 +850,9 @@ export class Wrapper {
         : this.addon.timeout;
       const res = await makeRequest(url, {
         timeout,
-        signal: AbortSignal.any([signal, AbortSignal.timeout(timeout)]),
+        signal: concurrentPreparation
+          ? signal
+          : AbortSignal.any([signal, AbortSignal.timeout(timeout)]),
         headers: this.addon.headers,
         forwardIp: this.addon.ip,
       });
@@ -783,6 +877,11 @@ export class Wrapper {
         shouldCache: (data: T) =>
           resource !== 'stream' || (Array.isArray(data) && data.length > 0),
         hit,
+        concurrentPreparation,
+        prepare:
+          resource === 'stream'
+            ? () => prepareBuiltinStream(this.manifestUrl, type, id)
+            : undefined,
       });
       const count = this.resultCountOf(data);
       track({

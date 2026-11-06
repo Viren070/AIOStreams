@@ -6,6 +6,7 @@ import {
   flattenError,
   stringifyLockResult,
   parseLockResult,
+  DistributedLock,
 } from './distributed-lock.js';
 
 class TestDebridError extends Error {
@@ -157,4 +158,28 @@ describe('distributed-lock error serialization', () => {
     const revived = parseLockResult<{ value: typeof value }>(wire);
     assert.deepEqual(revived.value, value);
   });
+});
+
+test('an expired memory owner cannot release a replacement lock', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 0 });
+  const lock = DistributedLock.getInstance() as any;
+  const first = Promise.withResolvers<string>();
+  const second = Promise.withResolvers<string>();
+  const key = 'expired-owner-cleanup';
+  const owner = lock.withMemoryLock(key, () => first.promise, { ttl: 1000 });
+  t.mock.timers.tick(1001);
+  const replacement = lock.withMemoryLock(key, () => second.promise, {
+    ttl: 10000,
+  });
+  first.resolve('first');
+  assert.equal((await owner).result, 'first');
+  t.mock.timers.tick(2000);
+  const waiter = lock.withMemoryLock(
+    key,
+    () => assert.fail('replacement must remain locked'),
+    { ttl: 10000 }
+  );
+  second.resolve('second');
+  assert.equal((await replacement).result, 'second');
+  assert.equal((await waiter).result, 'second');
 });
