@@ -228,10 +228,12 @@ export function LiveTvPage({
     placed.current = group;
     seeking.current = false;
     const id = lastChannelId() ?? playingId;
-    void indexOf((c) => c.Id === id, far ? NUMBER_PAGES : 0).then((index) => {
-      place(Math.max(0, index));
-      if (typed) focusChannels();
-    });
+    void indexOf((c) => c.Id === id, id && far ? NUMBER_PAGES : 0).then(
+      (index) => {
+        place(Math.max(0, index));
+        if (typed) focusChannels();
+      }
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per group
   }, [pages.data, group]);
 
