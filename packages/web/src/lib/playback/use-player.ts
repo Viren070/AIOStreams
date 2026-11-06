@@ -1,4 +1,3 @@
-import { createLiveText } from './live-text';
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
@@ -48,6 +47,7 @@ import type {
 import { usePlayheadWriter } from './playhead';
 import { thumbnailFeed } from './thumbnails';
 import { chooseTracks, serverFacts, trackFacts } from './track-picks';
+import { createLiveText } from './live-text';
 
 /** How long the player says it is syncing; an answer after that still shows. */
 const ASKED_WAIT_MS = 10_000;
@@ -171,9 +171,7 @@ export function usePlayer(
   // Engines report several things in one go, before the page draws again.
   const live = React.useRef({ ...state, tracks: [] as EngineTrack[] });
   const patch = React.useCallback((next: Partial<PlayerState>) => {
-    // Hosts report their state with every position update (about four times a second),
-    // mostly unchanged. A new state object each time re-rendered the whole player page and
-    // its hidden controls for as long as anything played; only a real change may.
+    // Hosts report unchanged state with every position.
     const current = live.current;
     const keys = Object.keys(next) as (keyof PlayerState)[];
     if (keys.every((k) => Object.is(current[k], next[k]))) return;
@@ -385,7 +383,8 @@ export function usePlayer(
     }
     const start = performance.now();
     let frame = requestAnimationFrame(function step(now) {
-      const done = Math.min(1, (now - start) / SUBTITLE_LIFT_MS);
+      // A busy page runs a frame that began before the effect did.
+      const done = Math.min(1, Math.max(0, now - start) / SUBTITLE_LIFT_MS);
       const value = from + (height - from) * (1 - (1 - done) ** 3);
       shownHeight.current = value;
       set({ subtitleStyle, fit, height: value });

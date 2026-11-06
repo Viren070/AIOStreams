@@ -1,4 +1,3 @@
-import { type LiveText, useLiveText } from '../lib/playback/live-text';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -24,6 +23,7 @@ import {
   useSegments,
 } from '../lib/queries';
 import { lastVersions, playableSources } from '../lib/playback/play';
+import { type LiveText, useLiveText } from '../lib/playback/live-text';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -930,7 +930,6 @@ function Player({
   );
 }
 
-/** The page's own subtitle line: the only part of the page each new line draws again. */
 function PageSubtitle({
   text,
   ...props

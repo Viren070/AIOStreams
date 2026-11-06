@@ -1,11 +1,6 @@
-import * as React from 'react';
+import React from 'react';
 
-/**
- * Text the player pushes often (the subtitle line, the stats overlay), read only by
- * what draws it. Held in React state, every new line re-rendered the whole player
- * page and its controls, hidden or not, several times a second during dialogue,
- * which on slow TV sticks left the remote waiting.
- */
+/** Text that changes often, kept out of the player page's state. */
 export interface LiveText {
   get(): string | undefined;
   subscribe(listener: () => void): () => void;
@@ -34,7 +29,6 @@ export function createLiveText(): LiveTextWriter {
 
 const none = () => () => {};
 
-/** The current text, drawn again only when it changes. */
 export function useLiveText(text: LiveText | undefined): string | undefined {
   return React.useSyncExternalStore(text ? text.subscribe : none, () =>
     text?.get()

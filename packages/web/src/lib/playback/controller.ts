@@ -1,8 +1,8 @@
-import type { LiveText } from './live-text';
 import { t } from '@lingui/core/macro';
 import { storage } from '../storage';
 import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
+import type { LiveText } from './live-text';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
 import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
