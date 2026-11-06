@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build:webos": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs webos",
+    "build:webos:1080p": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs webos --1080p",
     "build:tizen": "pnpm -F @aiostreams/web build:standalone && node scripts/build.mjs tizen"
   },
   "devDependencies": {
