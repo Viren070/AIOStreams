@@ -1,4 +1,4 @@
-import { appBridge } from '../hosts/shell/bridge';
+import { appBridge, type ShellMessage } from '../hosts/shell/bridge';
 import { dispatch, holdable, pressAndHold } from './dispatch';
 import { sendKey } from './focus';
 
@@ -31,6 +31,47 @@ function press(input: string, repeat: boolean): void {
   else dispatch(input, repeat);
 }
 
+/** Presses what goes down, repeats what stays down and lets go of the rest. */
+function presses() {
+  const held = new Map<
+    string,
+    { since: number; last: number; release?: (drop?: boolean) => void }
+  >();
+  return {
+    update(down: ReadonlySet<string>, now: number) {
+      for (const [input, state] of held)
+        if (!down.has(input)) {
+          held.delete(input);
+          state.release?.();
+        }
+      for (const input of down) {
+        const state = held.get(input);
+        if (!state) {
+          const release =
+            !input.startsWith('Arrow') && holdable(input)
+              ? pressAndHold(input, () => dispatch(input))
+              : undefined;
+          held.set(input, { since: now, last: now, release });
+          if (!release) press(input, false);
+        } else if (
+          !state.release &&
+          now - state.since > REPEAT_AFTER_MS &&
+          now - state.last > REPEAT_MS
+        ) {
+          state.last = now;
+          press(input, true);
+        }
+      }
+    },
+    letGo(drop: boolean) {
+      for (const state of held.values()) state.release?.(drop);
+      held.clear();
+    },
+    /** Something held repeats, which needs a clock. */
+    repeating: () => [...held.values()].some((state) => !state.release),
+  };
+}
+
 // Older engines return a GamepadList, which has no array methods.
 const gamepads = () => Array.from(navigator.getGamepads());
 
@@ -50,72 +91,57 @@ function pressed(): Set<string> {
   return down;
 }
 
-/**
- * Polls connected gamepads while the window has focus. The Android app's web
- * view polls on a thread of its own from the first gamepad listener, so there
- * it starts only while the app reports a controller.
- */
 export function startGamepads(): () => void {
+  const bridge = appBridge();
+  if (bridge?.gamepadButtons)
+    return hearButtons((listener) => bridge.subscribe(listener));
   // The Xbox web view turns its controller into keys itself.
   if (!navigator.getGamepads || /Xbox/.test(navigator.userAgent))
     return () => {};
-  const bridge = appBridge();
-  if (bridge?.platform !== 'android') return pollGamepads();
-  let stop: (() => void) | null = null;
-  const update = (connected: boolean) => {
-    if (connected && !stop) stop = pollGamepads();
-    else if (!connected && stop) {
-      stop();
-      stop = null;
+  return pollGamepads();
+}
+
+/**
+ * An app that reads its controllers itself sends their buttons as they change,
+ * so nothing polls, as a web view may from the first gamepad listener on.
+ * Sticks and d-pads come as keys.
+ */
+function hearButtons(
+  subscribe: (listener: (message: ShellMessage) => void) => () => void
+): () => void {
+  const state = presses();
+  const down = new Set<string>();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const tick = () => {
+    clearTimeout(timer);
+    if (!document.hasFocus()) {
+      down.clear();
+      return state.letGo(true);
     }
+    state.update(down, performance.now());
+    if (state.repeating()) timer = setTimeout(tick, REPEAT_MS);
   };
-  update(!!bridge.gamepads);
-  const unsubscribe = bridge.subscribe((m) => {
-    if (m.type === 'gamepads') update(m.connected);
+  const stop = subscribe((m) => {
+    if (m.type !== 'gamepad') return;
+    if (m.down) down.add(m.input);
+    else down.delete(m.input);
+    tick();
   });
   return () => {
-    unsubscribe();
-    stop?.();
+    stop();
+    clearTimeout(timer);
+    state.letGo(true);
   };
 }
 
+/** Polls connected gamepads while the window has focus. */
 function pollGamepads(): () => void {
-  const held = new Map<
-    string,
-    { since: number; last: number; release?: (drop?: boolean) => void }
-  >();
-  const letGo = (drop: boolean) => {
-    for (const state of held.values()) state.release?.(drop);
-    held.clear();
-  };
+  const state = presses();
   let frame = 0;
   const poll = (now: number) => {
     frame = requestAnimationFrame(poll);
-    if (!document.hasFocus()) return letGo(true);
-    const down = pressed();
-    for (const [input, state] of held)
-      if (!down.has(input)) {
-        held.delete(input);
-        state.release?.();
-      }
-    for (const input of down) {
-      const state = held.get(input);
-      if (!state) {
-        const release =
-          !input.startsWith('Arrow') && holdable(input)
-            ? pressAndHold(input, () => dispatch(input))
-            : undefined;
-        held.set(input, { since: now, last: now, release });
-        if (!release) press(input, false);
-      } else if (
-        !state.release &&
-        now - state.since > REPEAT_AFTER_MS &&
-        now - state.last > REPEAT_MS
-      ) {
-        state.last = now;
-        press(input, true);
-      }
-    }
+    if (!document.hasFocus()) return state.letGo(true);
+    state.update(pressed(), now);
   };
   const connected = () => gamepads().some(Boolean);
   const start = () => {
@@ -125,7 +151,7 @@ function pollGamepads(): () => void {
     if (connected()) return;
     cancelAnimationFrame(frame);
     frame = 0;
-    letGo(true);
+    state.letGo(true);
   };
   window.addEventListener('gamepadconnected', start);
   window.addEventListener('gamepaddisconnected', stop);
@@ -134,6 +160,6 @@ function pollGamepads(): () => void {
     window.removeEventListener('gamepadconnected', start);
     window.removeEventListener('gamepaddisconnected', stop);
     cancelAnimationFrame(frame);
-    letGo(true);
+    state.letGo(true);
   };
 }

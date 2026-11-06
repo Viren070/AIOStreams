@@ -156,7 +156,7 @@ export type ShellMessage =
       text: string | null;
       error?: 'no-speech' | 'failed';
     }
-  | { type: 'gamepads'; connected: boolean }
+  | { type: 'gamepad'; input: string; down: boolean }
   | { type: 'media-key'; key: MediaKey }
   | { type: 'error'; message: string }
   | {
@@ -188,12 +188,12 @@ interface ShellBridge {
   tv?: boolean;
   /** The Android app on a device with a speech recogniser. */
   voice?: boolean;
-  /** The Android app with a game controller attached. */
-  gamepads?: boolean;
   /** The Android app on a device with picture-in-picture. */
   pip?: boolean;
   /** The app can draw its video small over the page, with `player-frame`. */
   miniPlayer?: boolean;
+  /** The app sends a controller's buttons as `gamepad` messages. */
+  gamepadButtons?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */
