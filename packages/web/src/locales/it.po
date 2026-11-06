@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-04 13:52+0000\n"
+"PO-Revision-Date: 2026-11-06 22:46+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.1.dev0\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -485,9 +485,8 @@ msgid "All"
 msgstr "Tutti"
 
 #: src/lib/live-tv.ts src/pages/home.tsx
-#, fuzzy
 msgid "All channels"
-msgstr "Canali"
+msgstr "Tutti i canali"
 
 #: src/pages/item.tsx
 msgid "All episodes"
@@ -834,14 +833,12 @@ msgid "Channel"
 msgstr "Canale"
 
 #: src/lib/input/keys.ts
-#, fuzzy
 msgid "Channel down"
-msgstr "Canale"
+msgstr "Canale giù"
 
 #: src/lib/input/keys.ts
-#, fuzzy
 msgid "Channel up"
-msgstr "Canale"
+msgstr "Canale su"
 
 #: src/components/channel-list.tsx src/components/player/live.tsx
 #: src/components/player/options.tsx src/pages/favourites.tsx
@@ -852,7 +849,7 @@ msgstr "Canali"
 
 #: src/pages/live-tv/index.tsx
 msgid "Channels show here once your setup has an addon with live TV."
-msgstr ""
+msgstr "I canali appaiono qui quando nella tua configurazione è presente un addon con TV in diretta."
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1073,9 +1070,8 @@ msgid "Could not list the episodes"
 msgstr "Impossibile elencare gli episodi"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Could not load Live TV"
-msgstr "Impossibile caricare la filmografia"
+msgstr "Impossibile caricare TV in diretta"
 
 #: src/pages/calendar.tsx
 msgid "Could not load the calendar"
@@ -1231,9 +1227,8 @@ msgid "Date not known"
 msgstr "Data sconosciuta"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Day"
-msgstr "Ritardo"
+msgstr "Giorno"
 
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
@@ -1732,7 +1727,7 @@ msgstr "Vai alla home"
 
 #: src/components/player/live.tsx
 msgid "Go live"
-msgstr ""
+msgstr "Vai in diretta"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -1755,13 +1750,12 @@ msgid "Group by day"
 msgstr "Raggruppa per giorno"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Groups"
-msgstr "Raggruppa"
+msgstr "Gruppi"
 
 #: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
 msgid "Guide"
-msgstr ""
+msgstr "Guida"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -2132,12 +2126,12 @@ msgstr "Ascolto…"
 
 #: src/components/player/live.tsx
 msgid "Live"
-msgstr ""
+msgstr "In diretta"
 
 #: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
 #: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
 msgid "Live TV"
-msgstr ""
+msgstr "TV in diretta"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2382,9 +2376,8 @@ msgstr "Traccia audio successiva"
 
 #: src/components/player/controls.tsx src/lib/input/actions.ts
 #: src/pages/player.tsx
-#, fuzzy
 msgid "Next channel"
-msgstr "Capitolo successivo"
+msgstr "Canale successivo"
 
 #: src/lib/input/actions.ts
 msgid "Next chapter"
@@ -2445,11 +2438,11 @@ msgstr "Nessun catalogo presente"
 
 #: src/components/channel-number.tsx
 msgid "No channel {typed}"
-msgstr ""
+msgstr "Nessun canale {typed}"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
-msgstr ""
+msgstr "Nessun canale presente nel gruppo."
 
 #: src/components/no-details.tsx
 msgid "No details for this title"
@@ -2461,7 +2454,7 @@ msgstr "Nessun episodio da scaricare"
 
 #: src/pages/favourites.tsx
 msgid "No favourite channels yet."
-msgstr ""
+msgstr "Nessun canale preferito presente."
 
 #: src/pages/settings/cache.tsx
 msgid "No limit"
