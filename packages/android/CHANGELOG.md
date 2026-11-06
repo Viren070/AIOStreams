@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.14.0](https://github.com/Viren070/AIOStreams/compare/android-v0.13.0...android-v0.14.0) (2026-11-06)
+
+
+### Features
+
+* **android:** load live sources at their live edge ([6e56f20](https://github.com/Viren070/AIOStreams/commit/6e56f20abc587103065257bd0cf984a9dd028819))
+* **android:** offer the mini player on TVs ([c29144a](https://github.com/Viren070/AIOStreams/commit/c29144aa569515f33f3036d526b35a4a694990f9))
+* **android:** send back swipe progress to the page ([f152578](https://github.com/Viren070/AIOStreams/commit/f152578c7b1bd8e1f1fcd112ac3d1cbffd1b9f3b))
+
+
+### Bug Fixes
+
+* **android:** also count button-only pads as gamepads ([77727c2](https://github.com/Viren070/AIOStreams/commit/77727c2cc2a2a87be520ca15c30688777b9cf302))
+* **android:** ignore unplugged audio and system pauses after a frame rate switch ([f50054b](https://github.com/Viren070/AIOStreams/commit/f50054b377133afcf0d9bc1b8ddab017894202da))
+* **android:** only count controllers with a stick or d-pad as gamepads ([31ccc51](https://github.com/Viren070/AIOStreams/commit/31ccc515ce0e337b15f2da3a257b8f274a9239fb))
+* **android:** start a download's video without waiting for its subtitles ([#1720](https://github.com/Viren070/AIOStreams/issues/1720)) ([0dd6e42](https://github.com/Viren070/AIOStreams/commit/0dd6e42f901a8c39d7200bcd09cf51ac43b6c563))
+* **android:** start passthrough audio before its buffer fills ([#1742](https://github.com/Viren070/AIOStreams/issues/1742)) ([14d9d63](https://github.com/Viren070/AIOStreams/commit/14d9d63fad60bc8884f7b390aaff2f0320616799))
+
+
+### Performance Improvements
+
+* **android:** send controller buttons to the page ([6e9ac0e](https://github.com/Viren070/AIOStreams/commit/6e9ac0e9f675c1f72f4c50a105318e320bdab37d))
+
 ## [0.13.0](https://github.com/Viren070/AIOStreams/compare/android-v0.12.0...android-v0.13.0) (2026-11-04)
 
 
