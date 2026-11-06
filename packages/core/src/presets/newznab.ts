@@ -166,6 +166,11 @@ export const NEWZNAB_INDEXERS: {
     remuxDbIndexer: 'pourcesoir',
   },
   {
+    label: 'SearchNZB',
+    value: 'https://api.searchnzb.com/api',
+    apiKeyUrl: 'https://searchnzb.com/account',
+  },
+  {
     label: 'SquareEyed',
     value: 'https://squareeyed.org/api',
     apiKeyUrl: 'https://squareeyed.org/profile',
