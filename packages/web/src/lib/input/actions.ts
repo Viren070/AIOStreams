@@ -116,13 +116,13 @@ export const ACTIONS = {
     label: msg`Previous chapter`,
     group: 'player',
     needs: 'chapters',
-    keys: ['PageDown'],
+    keys: ['PageDown', 'ChannelDown'],
   },
   'player.nextChapter': {
     label: msg`Next chapter`,
     group: 'player',
     needs: 'chapters',
-    keys: ['PageUp'],
+    keys: ['PageUp', 'ChannelUp'],
   },
   'player.skipSegment': {
     label: msg`Skip the intro or credits`,
