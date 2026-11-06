@@ -70,6 +70,7 @@ import { NZBHydraPreset } from './nzbhydra.js';
 import { KnabenPreset } from './knaben.js';
 import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
+import { XtreamPreset } from './xtream.js';
 import { TheRARBGPreset } from './therarbg.js';
 import { ThePirateBayPreset } from './thePirateBay.js';
 import { TsukihimePreset } from './tsukihime.js';
@@ -144,6 +145,7 @@ let PRESET_LIST: string[] = [
   'brazuca-torrents',
   'yastream',
   'streamasia',
+  'xtream',
   'usa-tv',
   'usa-tv-next',
   'argentina-tv',
@@ -341,6 +343,8 @@ export class PresetManager {
         return LibraryPreset;
       case 'eztv':
         return EztvPreset;
+      case 'xtream':
+        return XtreamPreset;
       case 'therarbg':
         return TheRARBGPreset;
       case 'the-pirate-bay':

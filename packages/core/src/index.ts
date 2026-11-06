@@ -72,6 +72,7 @@ export {
   type EasynewsNzbParams,
   SeaDexDataset,
   LibraryAddon,
+  XtreamAddon,
   preWarmLibraryCaches,
   refreshLibraryCacheForService,
   testNabEndpoint,

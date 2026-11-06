@@ -122,6 +122,12 @@ function resolveTtl(
   return resolvedTtl !== undefined ? resolvedTtl : -1;
 }
 
+/**
+ * Builtins that keep their own caches, under any configured TTLs: caching
+ * their answers again only holds copies and serves them stale.
+ */
+const SELF_CACHED: Record<string, number> = { xtream: -1 };
+
 type ResourceParams = {
   type: string;
   id: string;
@@ -420,7 +426,7 @@ export class Wrapper {
     };
 
     const catalogTtl = resolveTtl(
-      appConfig.resources.cache.catalog.ttl,
+      { ...SELF_CACHED, ...appConfig.resources.cache.catalog.ttl },
       this.addon.preset.type,
       this.manifestUrl
     );
@@ -460,7 +466,7 @@ export class Wrapper {
       return parsed.data;
     };
     const metaTtl = resolveTtl(
-      appConfig.resources.cache.meta.ttl,
+      { ...SELF_CACHED, ...appConfig.resources.cache.meta.ttl },
       this.addon.preset.type,
       this.manifestUrl
     );
@@ -842,8 +848,7 @@ export class Wrapper {
     try {
       const known: string[] =
         ((this.preset as unknown as typeof Preset).METADATA?.URL as
-          | string[]
-          | undefined) ?? [];
+          string[] | undefined) ?? [];
       if (known.length === 0) return false;
       const norm = (u: string) => u.replace(/\/+$/, '').toLowerCase();
       const m = norm(this.manifestUrl);
