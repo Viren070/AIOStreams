@@ -1,5 +1,76 @@
-import { parseTorrentTitle, ParsedResult } from '@aiostreams/release-parser';
+import {
+  Parser,
+  handlers as defaultHandlers,
+  transforms,
+  Handler,
+  ParsedResult,
+} from '@aiostreams/release-parser';
 import { DEFAULT_REPOST_SUFFIXES } from '../utils/constants.js';
+
+const turkishSeasonHandlers: Handler[] = [
+  {
+    field: 'seasons',
+    pattern: /\b(\d{1,2})\.[ _-]+sez(?:on)?\b/iu,
+    transform: transforms.toIntArray(),
+    remove: true,
+  },
+];
+
+const turkishEpisodeHandlers: Handler[] = [
+  {
+    field: 'episodes',
+    pattern:
+      /\b(\d{1,4}[ .]*-[ .]*\d{1,4})\.?[ ._-]*(?:blm\.?|b[öo]l[üu]m(?:ler)?)\b/iu,
+    transform: transforms.toIntRange(),
+    remove: true,
+  },
+  {
+    field: 'episodes',
+    pattern: /\b(\d{1,4})\.?[ ._-]*(?:blm\.?|b[öo]l[üu]m)\b/iu,
+    transform: transforms.toIntArray(),
+    remove: true,
+  },
+  {
+    field: 'episodes',
+    pattern:
+      /\b(?:blm\.?|b[öo]l[üu]m(?:ler)?)[. _-]*[-:#№]?[. _-]*(\d{1,4}[ .]*-[ .]*\d{1,4})(?!\d)/iu,
+    transform: transforms.toIntRange(),
+    remove: true,
+  },
+  {
+    field: 'episodes',
+    pattern: /\b(?:blm\.?|b[öo]l[üu]m)[. _-]*[-:#№]?[. _-]*(\d{1,4})(?!\d)/iu,
+    transform: transforms.toIntArray(),
+    remove: true,
+  },
+];
+
+/**
+ * Builds a release-title {@link Parser} instance with default handlers and
+ * additional Turkish season/episode handlers inserted in handler priority order.
+ */
+function createReleaseParser(): Parser {
+  const list = [...defaultHandlers];
+  const firstSeasonIdx = list.findIndex((h) => h.field === 'seasons');
+  if (firstSeasonIdx !== -1) {
+    list.splice(firstSeasonIdx, 0, ...turkishSeasonHandlers);
+  } else {
+    list.push(...turkishSeasonHandlers);
+  }
+
+  const fallbackEpisodeIdx = list.findIndex(
+    (h) => h.field === 'episodes' && h.process !== undefined
+  );
+  if (fallbackEpisodeIdx !== -1) {
+    list.splice(fallbackEpisodeIdx, 0, ...turkishEpisodeHandlers);
+  } else {
+    list.push(...turkishEpisodeHandlers);
+  }
+
+  return new Parser().addHandlers(list);
+}
+
+const releaseParser = createReleaseParser();
 
 // Sized to cover the working set of a busy request without retaining much:
 // entries are small objects and the hit rate comes from repetition, not volume.
@@ -60,7 +131,7 @@ export function parseTorrentTitleCached(title: string): ParsedResult {
     return cached;
   }
 
-  const parsed = parseTorrentTitle(name);
+  const parsed = releaseParser.parse(name);
 
   if (cache.size >= MAX_ENTRIES) {
     const oldest = cache.keys().next().value;

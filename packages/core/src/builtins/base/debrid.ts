@@ -1,4 +1,4 @@
-﻿import {
+import {
   CacheAndPlaySchema,
   Manifest,
   Meta,
@@ -314,10 +314,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       nzbResults.length > 0 &&
       !(
         // allow no true nzb service if all have easynewsUrl and easynews is present as service.
-        (
-          nzbResults.every((nzb) => (nzb.easynewsUrl ? true : false)) &&
-          this.userData.services.some((s) => s.id === 'easynews')
-        )
+        nzbResults.every((nzb) => (nzb.easynewsUrl ? true : false)) &&
+        this.userData.services.some((s) => s.id === 'easynews')
       )
     ) {
       errorStreams.push(
@@ -637,6 +635,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             : `${titlePlaceholder} E${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
           seriesTitles
         );
+        if (!metadata.isAnime && metadata.originalLanguage === 'tr') {
+          addQuery(
+            `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
+            seriesTitles
+          );
+        }
       } else if (parsedId.episode && !parsedId.season) {
         addQuery(
           `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`,
