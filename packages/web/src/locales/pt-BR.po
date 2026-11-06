@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-06 22:46+0000\n"
+"PO-Revision-Date: 2026-11-06 23:26+0000\n"
 "Last-Translator: Daniel Sterzeck Dian <sterzeck@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -2137,7 +2137,7 @@ msgstr "Ao vivo"
 #: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
 #: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
 msgid "Live TV"
-msgstr ""
+msgstr "TV ao vivo"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2445,11 +2445,11 @@ msgstr "Ainda não há catálogos"
 
 #: src/components/channel-number.tsx
 msgid "No channel {typed}"
-msgstr ""
+msgstr "Nenhum canal {typed}"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
-msgstr ""
+msgstr "Não há canais neste grupo."
 
 #: src/components/no-details.tsx
 msgid "No details for this title"
@@ -2461,7 +2461,7 @@ msgstr "Não há episódios disponíveis para baixar nesse local"
 
 #: src/pages/favourites.tsx
 msgid "No favourite channels yet."
-msgstr ""
+msgstr "Ainda não há canais favoritos."
 
 #: src/pages/settings/cache.tsx
 msgid "No limit"
@@ -2473,7 +2473,7 @@ msgstr "Nenhuma linha correspondente."
 
 #: src/pages/live-tv/index.tsx
 msgid "No live TV here"
-msgstr ""
+msgstr "Não há TV ao vivo aqui"
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
