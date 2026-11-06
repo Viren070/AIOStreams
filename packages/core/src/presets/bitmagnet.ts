@@ -76,6 +76,25 @@ export class BitmagnetPreset extends TorznabPreset {
         ],
       },
       {
+        id: 'seasonEpisodeStrategy',
+        name: 'Season/Episode Search Strategy',
+        description:
+          "Controls whether series searches in `Auto` mode query at the episode level, the season level, or both - useful for private trackers where season packs replace individual episodes. A season-level search may return season packs, individual episodes, or both, depending on the indexer. `Dynamic` decides based on whether the season is still airing. Pair with `Season/Episode Matching` in Filters to filter out results that don't match.",
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'episode',
+        options: [
+          { label: 'Episode', value: 'episode' },
+          { label: 'Season', value: 'season' },
+          { label: 'Dynamic (Season Preferred)', value: 'dynamic' },
+          {
+            label: 'Episode First, Season Fallback',
+            value: 'episodeFirst',
+          },
+        ],
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
@@ -146,6 +165,7 @@ export class BitmagnetPreset extends TorznabPreset {
       apiPath: '/api',
       forceQuerySearch: options.forceQuerySearch ?? true,
       paginate: options.paginate ?? false,
+      seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
