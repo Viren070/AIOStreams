@@ -765,17 +765,17 @@ const SERVICE_DETAILS: Record<
         id: 'email',
         name: 'Email',
         description:
-          'Your Offcloud email. (These credentials are necessary for some addons)',
+          'Your Offcloud email. Optional; only needed by a few third-party addons.',
         type: 'password',
-        required: true,
+        required: false,
       },
       {
         id: 'password',
         name: 'Password',
         description:
-          'Your Offcloud password. (These credentials are necessary for some addons)',
+          'Your Offcloud password. Optional; only needed by a few third-party addons.',
         type: 'password',
-        required: true,
+        required: false,
       },
     ],
   },
