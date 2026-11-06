@@ -506,6 +506,9 @@ export function ConfigTemplatesModal({
               status={status}
               currentUserData={hasExistingConfig ? userData : null}
               previewUserData={wizard.previewUserData}
+              updatePlan={wizard.updatePlan}
+              keepMine={wizard.keepMine}
+              setKeepMine={wizard.setKeepMine}
             />
           ),
           footer: (
