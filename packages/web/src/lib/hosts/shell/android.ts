@@ -1,8 +1,8 @@
 import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import type { Host } from '..';
-import { runAction } from '../../input';
 import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
+import { backGesture, backPressed, noteHomeScroll } from './back-slide';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
 import { appEngine, setEngine } from './player';
@@ -33,9 +33,11 @@ export function setupAndroid(): () => void {
   const unsubscribeSettings = onSettingsChange(sendEngine);
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
-    else if (m.type === 'back') runAction('back');
+    else if (m.type === 'back') backPressed();
+    else if (m.type === 'back-gesture') backGesture(m);
     else if (m.type === 'player-engine') setEngine(m.name);
   });
+  const stopNotingHome = bridge?.tv ? undefined : noteHomeScroll();
   // The keyboard opening over a field that already had focus doesn't bring it into view.
   const showField = () => {
     const field = document.activeElement;
@@ -50,6 +52,7 @@ export function setupAndroid(): () => void {
   return () => {
     unsubscribeSettings();
     unsubscribe?.();
+    stopNotingHome?.();
     window.removeEventListener('resize', showField);
     window.visualViewport?.removeEventListener('resize', showField);
   };

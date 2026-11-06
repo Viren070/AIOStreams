@@ -92,6 +92,10 @@ export type ShellMessage =
   | { type: 'player-frame'; event: 'tap' | 'grabbed' }
   | { type: 'player-frame'; event: 'moving' | 'moved'; x: number; y: number }
   | { type: 'back' }
+  /** A system back swipe under way; `back` follows if it lands. */
+  | { type: 'back-gesture'; event: 'start'; fromRight: boolean }
+  | { type: 'back-gesture'; event: 'move'; progress: number }
+  | { type: 'back-gesture'; event: 'cancel' }
   /** The engine the Android app plays with now. */
   | { type: 'player-engine'; name: string }
   | { type: 'mpv-config'; text: string }

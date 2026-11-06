@@ -13,6 +13,7 @@ export {
   type ActionId,
 } from './actions';
 export {
+  backIsFree,
   inputCount,
   isRepeat,
   mediaKeyJustTaken,

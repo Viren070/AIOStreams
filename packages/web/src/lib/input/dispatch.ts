@@ -82,6 +82,10 @@ function runHandlers(
 export const runAction = (id: ActionId, input = ''): boolean =>
   !!runHandlers([id], input);
 
+/** Whether Back would reach its fallback, with no overlay or handler taking it first. */
+export const backIsFree = (): boolean =>
+  !overlayOpen() && ![...entries].some((e) => e.id === 'back' && !e.fallback);
+
 let keys = false;
 
 /** Whether keys, a remote or a gamepad came last, rather than a pointer. */

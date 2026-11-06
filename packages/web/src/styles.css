@@ -26,6 +26,11 @@
       animation-timeline: scroll(root);
       animation-range: 0 100vh;
     }
+    /* Home under a back swipe follows its own scroll, not the page's above it. */
+    [data-page='home'][data-peek] [data-ui='hero-backdrops'] {
+      animation: none;
+      transform: translateY(calc(min(var(--home-y), 100vh) / 2));
+    }
     /* What's over a phone's hero or a title's art fades as it scrolls away. */
     @media (max-width: 639px) {
       :where(:root:not([data-tv]))
@@ -44,7 +49,24 @@
       [data-ui='item-heading'] {
         animation-range: 25vh 60vh;
       }
+      [data-page='home'][data-peek]
+        :is([data-ui='hero-content'], [data-ui='hero-dots']) {
+        animation: none;
+        opacity: var(--home-fade);
+      }
     }
+  }
+}
+/* Only while inert, so it ends in the same frame Home returns to its place. */
+[data-page='home'][inert][data-peek] {
+  visibility: visible;
+  content-visibility: visible;
+  margin-top: var(--home-top);
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-page='home'][data-peek] {
+    transform: none !important;
   }
 }
 /* Opening a title, see page-open.ts. */
@@ -64,6 +86,12 @@
 ::view-transition-old(hero-dots),
 ::view-transition-old(home-rows) {
   animation-duration: 100ms;
+}
+[data-sliding] {
+  will-change: transform;
+  min-height: 100dvh;
+  background-color: var(--background);
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
 }
 @keyframes scroll-lag {
   to {

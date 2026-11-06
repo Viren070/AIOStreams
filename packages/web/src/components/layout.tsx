@@ -712,6 +712,8 @@ export function WebLayout() {
                       : undefined
                 }
                 className={cn(
+                  // A page swiped past the edge mustn't widen the document.
+                  touch && !currentHost().tv && 'overflow-x-clip',
                   shape === 'corner' &&
                     (nav === 'rail'
                       ? 'lg:[--top-bar:calc(1rem+3.875rem)]'
