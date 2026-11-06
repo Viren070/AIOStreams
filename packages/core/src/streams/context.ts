@@ -187,7 +187,7 @@ export class StreamContext {
    * Call this early (e.g., when starting addon fetches) to parallelize.
    */
   public startMetadataFetch(): void {
-    if (this._metadataPromise || this._metadataFetched) {
+    if (this._metadataPromise || this._metadataFetched || !this.parsedId) {
       return;
     }
 
