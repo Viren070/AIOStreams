@@ -74,10 +74,10 @@ export function keyboardFocus(): HTMLElement | null {
 
 export const overlayOpen = () => !!document.querySelector(OPEN_OVERLAY);
 
+/** A list that pops up from a page sits outside it, unlike the page's own lists. */
 export const inOverlay = (el: Element) =>
-  !!el.closest(
-    '[role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
-  );
+  !!el.closest('[role=dialog], [role=alertdialog], [role=menu]') ||
+  (!!el.closest('[role=listbox]') && !el.closest('[data-page]'));
 
 const VERTICAL = ['ArrowUp', 'ArrowDown'];
 const HORIZONTAL = ['ArrowLeft', 'ArrowRight'];
