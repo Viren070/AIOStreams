@@ -695,6 +695,14 @@ msgstr "Negro"
 msgid "Blue"
 msgstr "Azul"
 
+#: src/pages/settings/interface.tsx
+msgid "Blur episodes you haven't started"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
 msgstr "Negrita"
@@ -4101,6 +4109,11 @@ msgstr "Velocidad {shown}×"
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
 msgstr "Aumentar la velocidad mientras se mantiene presionado"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Spoilers"
+msgstr "Traílers"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
