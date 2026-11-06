@@ -855,7 +855,14 @@ export function move(dir: Direction): boolean {
   }
   // Any other way stays in such a box, as what it covers lies beside it.
   const within = exit && !out ? exit : root;
-  const near = back && canFocus(back) ? back : nearest(within, from, dir);
+  let near = back && canFocus(back) ? back : null;
+  // A box entered at its named element, as tabs at the picked one, has more of it to pass on the way back.
+  const entered = near && from.closest<HTMLElement>('[data-nav-enter]');
+  if (entered && !entered.contains(near)) {
+    const inside = nearest(within, from, dir);
+    if (inside && entered.contains(inside)) near = inside;
+  }
+  near ??= nearest(within, from, dir);
   const wait = waitsFor(within, rectOf(from), near, dir);
   bars = null;
   drifts = [];
