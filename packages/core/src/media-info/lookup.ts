@@ -13,6 +13,7 @@ import {
   isSeasonWrong,
   parseFileNames,
   selectFileInTorrentOrNZB,
+  VIDEO_FILE_EXTENSIONS,
 } from '../debrid/utils.js';
 import { nzbContentKey } from '../release-blocklist/keys.js';
 import type { StreamContext } from '../streams/context.js';
@@ -104,13 +105,62 @@ function namedRow(
 ): StoredFile | undefined {
   for (const named of [identity.file, identity.filename]) {
     if (!named) continue;
-    const exact = rows.find((r) => r.file === named);
-    if (exact) return exact;
     const name = baseName(named);
-    const byName = rows.find((r) => name && baseName(r.file) === name);
-    if (byName) return byName;
+    if (!name) continue;
+    if (name !== named) {
+      const exact = rows.find((r) => r.file === named);
+      if (exact) return exact;
+    }
+    const matches = rows.filter((r) => baseName(r.file) === name);
+    if (matches.length === 1 && (name === named || matches[0].file === name)) {
+      return matches[0];
+    }
   }
   return undefined;
+}
+
+function videoExtension(name: string): string | undefined {
+  const lower = name.toLowerCase();
+  return VIDEO_FILE_EXTENSIONS.find((ext) => lower.endsWith(ext));
+}
+
+function releaseLabel(name: string): string {
+  return name
+    .normalize('NFC')
+    .trim()
+    .toLowerCase()
+    .replace(/[._\s]+/g, '.')
+    .replace(
+      /(^|[.-])([0-9o]+)([pi])(?=$|[.-])/g,
+      (token, sep, height, scan) => {
+        // Some release names spell zeros as O in a resolution, e.g. 1O8Op.
+        const digits = height.replaceAll('o', '0');
+        return /^(480|576|720|1080|1440|2160|4320)$/.test(digits)
+          ? `${sep}${digits}${scan}`
+          : token;
+      }
+    );
+}
+
+function hasOnlyTorrentTitle(identity: MediaInfoIdentity): boolean {
+  // A display filename may repeat the release title. An index, path or video
+  // filename identifies a particular file and needs a stronger match.
+  if (identity.fileIdx !== undefined && identity.fileIdx >= 0) return false;
+  return [identity.file, identity.filename].every(
+    (name) =>
+      !name ||
+      (name === identity.title && !/[\/\\]/.test(name) && !videoExtension(name))
+  );
+}
+
+function matchesTorrentTitle(title: string | undefined, file: string): boolean {
+  const name = baseName(file);
+  const extension = videoExtension(name);
+  return (
+    !!title &&
+    !!extension &&
+    releaseLabel(name.slice(0, -extension.length)) === releaseLabel(title)
+  );
 }
 
 /** The file a stream plays, or a pack's files that may share one layout. */
@@ -118,16 +168,41 @@ type Pick = { file: StoredFile } | { siblings: StoredFile[] };
 
 async function pickFile(
   identity: MediaInfoIdentity,
-  rows: StoredFile[],
+  reports: StoredFile[],
   metadata: () => Promise<TitleMetadata | undefined>
 ): Promise<Pick | undefined> {
+  const rows = byFile(reports);
   const named = namedRow(identity, rows);
   if (named) return { file: named };
-  const single = rows.find((r) => r.releaseFiles === 1);
-  if (single) return { file: single };
+
+  const first = rows[0];
+  const torrent = first.releaseKey.startsWith('btih:');
+  const canUseSoleFile =
+    rows.length === 1 &&
+    !reports.some((r) => r.releaseFiles > 1) &&
+    (!torrent || hasOnlyTorrentTitle(identity)) &&
+    featureFiles([
+      { name: baseName(first.file), size: first.size ?? 0, index: 0 },
+    ]).length > 0;
+  if (canUseSoleFile && reports.some((r) => r.releaseFiles === 1)) {
+    return { file: first };
+  }
 
   const episode = await metadata();
-  if (!episode?.season || !episode.episode) return undefined;
+  if (!episode?.season || !episode.episode) {
+    // HTTP probes may know only the file they read. Require the whole video
+    // stem to match the torrent label before using an unknown-count record.
+    if (
+      canUseSoleFile &&
+      torrent &&
+      episode?.episode === undefined &&
+      episode?.season === undefined &&
+      matchesTorrentTitle(identity.title, first.file)
+    ) {
+      return { file: first };
+    }
+    return undefined;
+  }
   const features = featureFiles(
     rows.map((row, index) => ({
       name: baseName(row.file),
@@ -198,7 +273,7 @@ async function findRecords(
 
   const picks: (Pick | undefined)[] = [];
   for (const [index, identity] of identities.entries()) {
-    const rows = byFile(keys[index].flatMap((k) => rowsByKey.get(k) ?? []));
+    const rows = keys[index].flatMap((k) => rowsByKey.get(k) ?? []);
     picks.push(
       rows.length ? await pickFile(identity, rows, metadata) : undefined
     );

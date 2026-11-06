@@ -11,6 +11,7 @@ export interface MediaInfoIdentity {
   /** Search-time NZB hash, which the library aliases to the exact post. */
   nzbHash?: string;
   file?: string;
+  fileIdx?: number;
   filename?: string;
   title?: string;
 }
@@ -63,6 +64,7 @@ function torrentIdentity(stream: ParsedStream): MediaInfoIdentity | undefined {
   return {
     releaseKeys: [key],
     file: stream.torrent?.file,
+    fileIdx: stream.torrent?.fileIdx,
     filename: stream.filename,
     title: stream.torrent?.title ?? stream.folderName ?? stream.filename,
   };
