@@ -368,7 +368,7 @@ function Synopsis({
   );
 }
 
-function episodeState(episode: BaseItemDto) {
+export function episodeState(episode: BaseItemDto) {
   return {
     'data-watched': episode.UserData?.Played || undefined,
     'data-in-progress': (progressOf(episode) ?? 0) > 0 || undefined,

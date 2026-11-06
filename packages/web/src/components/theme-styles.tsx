@@ -8,6 +8,13 @@ import { useServerInfo } from '../lib/server-info';
 export function ThemeStyles() {
   const [colors] = useSetting(settings.theme.colors);
   const [css] = useSetting(settings.theme.customCss);
+  const [blurSpoilers] = useSetting(settings.interface.blurSpoilers);
+  React.useEffect(() => {
+    document.documentElement.toggleAttribute(
+      'data-blur-spoilers',
+      blurSpoilers
+    );
+  }, [blurSpoilers]);
   const vars = React.useMemo(
     () =>
       Object.entries(themeVariables(colors))

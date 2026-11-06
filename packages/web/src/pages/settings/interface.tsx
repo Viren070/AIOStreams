@@ -277,6 +277,9 @@ export function InterfaceSection() {
   const [cardPreviews, setCardPreviews] = useSetting(
     settings.interface.cardPreviews
   );
+  const [blurSpoilers, setBlurSpoilers] = useSetting(
+    settings.interface.blurSpoilers
+  );
   const touch = !currentHost().tv && matchMedia('(pointer: coarse)').matches;
 
   const option = (value: string, label: string) => ({
@@ -420,6 +423,19 @@ export function InterfaceSection() {
           ]}
           value={episodeLayout}
           onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}
+        />
+      </SettingsCard>
+      <SettingsCard
+        name="spoilers"
+        title={t`Spoilers`}
+        description={followsYou()}
+      >
+        <Switch
+          side="right"
+          label={t`Blur episodes you haven't started`}
+          help={t`Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one.`}
+          value={blurSpoilers}
+          onValueChange={setBlurSpoilers}
         />
       </SettingsCard>
       <NavigationCard />

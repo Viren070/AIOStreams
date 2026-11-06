@@ -15,7 +15,12 @@ import { unavailableKind } from '../../lib/format';
 import { useVersionPicker } from '../version-picker';
 import { useEpisodes, useSeasons } from '../../lib/queries';
 import type { BaseItemDto } from '../../lib/types';
-import { EpisodeThumb, episodeLine, seasonEpisodeTitle } from '../episodes';
+import {
+  EpisodeThumb,
+  episodeLine,
+  episodeState,
+  seasonEpisodeTitle,
+} from '../episodes';
 import { SeasonPills } from '../season-pills';
 
 export function EpisodesSheet({
@@ -158,6 +163,7 @@ function EpisodeRow({
     <button
       type="button"
       data-ui="player-episode"
+      {...episodeState(episode)}
       data-current={current || undefined}
       data-focus="own"
       aria-current={current || undefined}
@@ -176,7 +182,10 @@ function EpisodeRow({
         numberClass="text-2xl"
       />
       <div className="min-w-0 flex-1 py-0.5">
-        <p className="line-clamp-2 text-sm font-semibold">
+        <p
+          data-ui="episode-title"
+          className="line-clamp-2 text-sm font-semibold"
+        >
           {seasonEpisodeTitle(episode)}
         </p>
         <p className="mt-1 truncate text-xs text-[--muted]">
