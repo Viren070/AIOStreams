@@ -4,27 +4,25 @@ export { RPDB } from './rpdb.js';
 export { TopPoster } from './topPoster.js';
 export { AIOratings } from './aioratings.js';
 export { OpenPosterDB } from './openposterdb.js';
+export { CustomPoster } from './custom.js';
 
 import type { BasePosterService } from './base.js';
 import { RPDB } from './rpdb.js';
 import { TopPoster } from './topPoster.js';
 import { AIOratings } from './aioratings.js';
 import { OpenPosterDB } from './openposterdb.js';
+import { CustomPoster } from './custom.js';
 import type { UserData } from '../db/schemas.js';
 
 export type PosterServiceType =
-  | 'rpdb'
-  | 'top-poster'
-  | 'aioratings'
-  | 'openposterdb'
-  | 'none';
+  'rpdb' | 'top-poster' | 'aioratings' | 'openposterdb' | 'custom' | 'none';
 
 /**
  * All known poster service domains. Used to check if a poster URL
  * is already from a poster service.
  *
- * OpenPosterDB is excluded because its domain is user-configurable;
- * its instance `ownDomains` handles this at runtime.
+ * OpenPosterDB and custom URLs are excluded because their domains are
+ * user-configurable; their instance `ownDomains` handles this at runtime.
  */
 export const ALL_POSTER_SERVICE_DOMAINS = [
   'api.ratingposterdb.com',
@@ -64,6 +62,10 @@ export function createPosterService(
             userData.openposterdbParameters
           )
         : null;
+    case 'custom':
+      return userData.customPosterUrl
+        ? new CustomPoster(userData.customPosterUrl)
+        : null;
     default:
       return null;
   }
@@ -87,6 +89,8 @@ export function createPosterServiceFromParams(
       return new AIOratings(apiKey, params.profileId || 'default');
     case 'openposterdb':
       return new OpenPosterDB(apiKey, params.baseUrl, params.parameters);
+    case 'custom':
+      return new CustomPoster(apiKey);
     default:
       return null;
   }

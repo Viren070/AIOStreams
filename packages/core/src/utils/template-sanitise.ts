@@ -41,6 +41,7 @@ const TOP_LEVEL_SECRETS = [
   'openposterdbApiKey',
   'openposterdbUrl',
   'openposterdbParameters',
+  'customPosterUrl',
 ] as const;
 
 export type OptionLookup = (presetType: string) => Option[] | undefined;
