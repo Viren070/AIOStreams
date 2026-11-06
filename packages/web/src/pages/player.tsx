@@ -1,3 +1,4 @@
+import { type LiveText, useLiveText } from '../lib/playback/live-text';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -785,21 +786,12 @@ function Player({
       )}
       {!mini && (
         <>
-          {player.subtitleText && (
-            <SubtitleText
-              text={player.subtitleText}
-              style={subtitleStyle}
-              lift={player.subtitleLift}
-            />
-          )}
-          {player.stats?.text && (
-            <pre
-              data-ui="player-stats"
-              className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
-            >
-              {player.stats.text}
-            </pre>
-          )}
+          <PageSubtitle
+            text={player.subtitleText}
+            style={subtitleStyle}
+            lift={player.subtitleLift}
+          />
+          {player.stats && <PlayerStats text={player.stats.text} />}
           {launched && (
             <p
               data-ui="player-external"
@@ -848,5 +840,30 @@ function Player({
         </>
       )}
     </div>
+  );
+}
+
+/** The page's own subtitle line: the only part of the page each new line draws again. */
+function PageSubtitle({
+  text,
+  ...props
+}: { text: LiveText } & Omit<
+  React.ComponentProps<typeof SubtitleText>,
+  'text'
+>) {
+  const line = useLiveText(text);
+  return line ? <SubtitleText text={line} {...props} /> : null;
+}
+
+function PlayerStats({ text }: { text: LiveText }) {
+  const shown = useLiveText(text);
+  if (!shown) return null;
+  return (
+    <pre
+      data-ui="player-stats"
+      className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+    >
+      {shown}
+    </pre>
   );
 }

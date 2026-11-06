@@ -1,3 +1,4 @@
+import type { LiveText } from './live-text';
 import { t } from '@lingui/core/macro';
 import { storage } from '../storage';
 import type { JellyfinClient } from '../client';
@@ -99,7 +100,7 @@ export interface PlayerController {
     status?: SyncStatus;
   };
   /** The subtitle the page draws, for a player that draws none itself. */
-  subtitleText?: string;
+  subtitleText: LiveText;
   /** The share `liftSubtitles` last asked for, which the page's own subtitle slides to. */
   subtitleLift: number;
   /** Missing where the player has no pictures for the seek bar. */
@@ -114,7 +115,7 @@ export interface PlayerController {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
-    text?: string;
+    text: LiveText;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {

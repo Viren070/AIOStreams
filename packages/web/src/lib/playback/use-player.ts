@@ -1,3 +1,4 @@
+import { createLiveText } from './live-text';
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
@@ -169,17 +170,23 @@ export function usePlayer(
   // Engines report several things in one go, before the page draws again.
   const live = React.useRef({ ...state, tracks: [] as EngineTrack[] });
   const patch = React.useCallback((next: Partial<PlayerState>) => {
-    live.current = { ...live.current, ...next };
+    // Hosts report their state with every position update (about four times a second),
+    // mostly unchanged. A new state object each time re-rendered the whole player page and
+    // its hidden controls for as long as anything played; only a real change may.
+    const current = live.current;
+    const keys = Object.keys(next) as (keyof PlayerState)[];
+    if (keys.every((k) => Object.is(current[k], next[k]))) return;
+    live.current = { ...current, ...next };
     setState((s) => ({ ...s, ...next }));
   }, []);
   const playhead = usePlayheadWriter(startMs);
   const [tracks, setTracks] = React.useState<EngineTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>();
-  const [subtitleText, setSubtitleText] = React.useState<string>();
+  const [subtitleText] = React.useState(createLiveText);
   const [thumbnails, setThumbnails] =
     React.useState<ReturnType<typeof thumbnailFeed>>();
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
-  const [statsText, setStatsText] = React.useState<string>();
+  const [statsText] = React.useState(createLiveText);
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
   const [lift, setLift] = React.useState(0);
   const [fit] = useSetting(settings.video.fit);
@@ -310,9 +317,9 @@ export function usePlayer(
       case 'closed':
         return latest.current.onClosed?.();
       case 'subtitle-text':
-        return setSubtitleText(event.text);
+        return subtitleText.set(event.text);
       case 'stats-text':
-        return setStatsText(event.text);
+        return statsText.set(event.text);
     }
   };
 
@@ -377,7 +384,7 @@ export function usePlayer(
   React.useEffect(() => {
     setRetry(undefined);
     setStatsPage(null);
-    setStatsText(undefined);
+    statsText.set(undefined);
     setRetimed({});
     const file = latestFile.current(startMs);
     if (file.volume) patch(file.volume);
