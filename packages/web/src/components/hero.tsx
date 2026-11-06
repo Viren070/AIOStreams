@@ -234,7 +234,8 @@ function HeroDetails({
   const { client } = useSession();
   const picker = useVersionPicker();
   const fetchNextUp = useFetchNextUp();
-  const logo = logoUrl(client, item, { maxWidth: 384 });
+  // The size the title's page asks for, so it's in memory when that opens.
+  const logo = logoUrl(client, item, { maxWidth: 416 });
   // By address, since the hero swaps items under the same details.
   const [failedLogo, setFailedLogo] = React.useState<string>();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
@@ -258,6 +259,7 @@ function HeroDetails({
         });
   const holdPlay = useHold(() => play(true));
   const phone = useMediaQuery('(max-width: 639px)');
+  const open = () => navigate(itemPath(item), { fromHero: phone });
   const parts: [string, React.ReactNode][] = [
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
@@ -336,7 +338,7 @@ function HeroDetails({
               className="rounded-full"
               icon={<BiInfoCircle />}
               aria-label={t`More info`}
-              onClick={() => navigate(itemPath(item))}
+              onClick={open}
             />
           ) : (
             <Button
@@ -345,7 +347,7 @@ function HeroDetails({
               intent={playable ? 'gray-outline' : 'white'}
               className="rounded-full"
               leftIcon={<BiInfoCircle className="text-xl" />}
-              onClick={() => navigate(itemPath(item))}
+              onClick={open}
             >
               <Trans>More info</Trans>
             </Button>

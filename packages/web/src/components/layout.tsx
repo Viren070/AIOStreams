@@ -50,6 +50,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '../lib/session';
 import { useLiveTvView, useOwnAvatar, usePickableUsers } from '../lib/queries';
+import { pageOpening } from '../lib/page-open';
 import { navigate, to } from '../lib/paths';
 import { currentHost } from '../lib/hosts';
 import { pageRtl } from '../lib/direction';
@@ -770,6 +771,7 @@ export function WebLayout() {
                           key={pathname}
                           data-page={pageName(pathname)}
                           {...PAGE_FADE}
+                          initial={pageOpening() ? false : PAGE_FADE.initial}
                           className={page}
                         >
                           <Outlet />

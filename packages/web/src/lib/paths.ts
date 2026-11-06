@@ -1,3 +1,4 @@
+import { openPage } from './page-open';
 import type { ServerInfo } from './server-info';
 import type { BaseItemDto } from './types';
 
@@ -79,6 +80,7 @@ export function configureUrl(base: string, info: ServerInfo): string | null {
 interface NavigateOptions {
   replace?: boolean;
   keepScroll?: boolean;
+  fromHero?: boolean;
 }
 
 type Push = (path: string, opts: NavigateOptions) => void;
@@ -98,7 +100,14 @@ export function setNavigator(fn: Push, fresh: Restart): void {
 }
 
 export function navigate(path: string, opts: NavigateOptions = {}) {
-  push(path, opts);
+  const pathname = path.split('?')[0];
+  const opensTitle =
+    pathname.startsWith(to.item('')) &&
+    pathname !== location.hash.slice(1).split('?')[0] &&
+    !opts.replace &&
+    !opts.keepScroll;
+  if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
+  else push(path, opts);
 }
 
 /** `path` as the history's first entry, so back can't reach the pages before it. */

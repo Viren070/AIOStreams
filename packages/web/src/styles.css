@@ -47,6 +47,24 @@
     }
   }
 }
+/* Opening a title, see page-open.ts. */
+:root[data-sliding-open]::view-transition-old(root),
+:root[data-sliding-open]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-sliding-open]::view-transition-new(root) {
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
+}
+::view-transition-group(title-logo) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+::view-transition-old(hero-details),
+::view-transition-old(hero-dots),
+::view-transition-old(home-rows) {
+  animation-duration: 100ms;
+}
 @keyframes scroll-lag {
   to {
     transform: translateY(50vh);
