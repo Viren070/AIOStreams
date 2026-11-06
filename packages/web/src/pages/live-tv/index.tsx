@@ -162,7 +162,13 @@ export function LiveTvPage({
     requestedView === 'guide' || requestedView === 'list'
       ? requestedView
       : (lastView() ?? (currentHost().tv ? 'list' : 'guide'));
-  const guide = wide && shownView === 'guide';
+  // Addons without a guide list channels with nothing on, which would leave the
+  // guide empty rows; the lineup's first page tells, and the guide waits for it.
+  const lineupStart = useChannelPages(ALL, { enabled: !!view.data });
+  const hasGuide = !!lineupStart.data?.pages[0]?.Items?.some(
+    (c) => c.CurrentProgram
+  );
+  const guide = wide && shownView === 'guide' && hasGuide;
   const guideRange = useGuideRange().data;
   const reminders = useReminders();
   const reminded = React.useMemo(
@@ -414,7 +420,7 @@ export function LiveTvPage({
             }}
           />
         )}
-        {wide && (
+        {wide && hasGuide && (
           <PillTabs
             name="live-view"
             options={[
