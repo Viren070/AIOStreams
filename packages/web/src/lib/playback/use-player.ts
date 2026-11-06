@@ -424,7 +424,9 @@ export function usePlayer(
 
   const [thumbnailsOn] = useSetting(settings.controls.thumbnails);
   React.useEffect(() => {
-    if (!engine.thumbnails || !thumbnailsOn) return;
+    // A live stream has no seek bar, and opening it again can take the
+    // provider's only connection from the player.
+    if (!engine.thumbnails || !thumbnailsOn || liveSource) return;
     const feed = thumbnailFeed((onThumbnail) =>
       engine.thumbnails!({ url, headers: latest.current.headers }, onThumbnail)
     );
@@ -433,7 +435,7 @@ export function usePlayer(
       feed.stop();
       setThumbnails(undefined);
     };
-  }, [engine, latest, url, thumbnailsOn]);
+  }, [engine, latest, url, thumbnailsOn, liveSource]);
 
   React.useEffect(() => {
     if (!thumbnails || !state.started) return;
