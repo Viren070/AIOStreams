@@ -211,6 +211,9 @@ export function ItemPage({
   );
 }
 
+/** Art that arrives within this was never seen missing, so it just appears. */
+const UNSEEN_MS = 250;
+
 /** Past the landscape art, the poster stands in as a blurred wash of its colours. */
 function Backdrop({
   images,
@@ -224,18 +227,43 @@ function Backdrop({
   // Tied to the sources, not reset by an effect, which a cached image can load before.
   const [failed, setFailed] = React.useState({ key: '', count: 0 });
   const attempt = failed.key === key ? failed.count : 0;
-  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
+  const [opened] = React.useState(() => performance.now());
+  const [arrived, setArrived] = React.useState<{
+    src: string;
+    late: boolean;
+  } | null>(null);
   const src = sources[attempt];
-  const loaded = !!src && loadedSrc === src;
+  const loaded = !!src && arrived?.src === src;
   const wash = attempt >= images.length;
+  // Shown before the first frame when another image already holds it in memory.
+  const held = React.useCallback(
+    (el: HTMLImageElement | null) => {
+      if (src && el?.complete && el.naturalWidth)
+        setArrived({ src, late: false });
+    },
+    [src]
+  );
   const image = src && (
     <CachedImage
       key={src}
+      ref={held}
       data-ui="item-backdrop-image"
       data-wash={wash || undefined}
       src={src}
       alt=""
-      onLoad={() => setLoadedSrc(src)}
+      // Decoded first, as a large image would otherwise appear a moment after it's shown.
+      onLoad={(e) =>
+        void e.currentTarget
+          .decode()
+          .catch(() => undefined)
+          .then(() =>
+            setArrived((was) =>
+              was?.src === src
+                ? was
+                : { src, late: performance.now() - opened > UNSEEN_MS }
+            )
+          )
+      }
       onError={() =>
         setFailed((f) => ({
           key,
@@ -243,7 +271,8 @@ function Backdrop({
         }))
       }
       className={cn(
-        'absolute inset-0 h-full w-full object-cover transition-opacity duration-700',
+        'absolute inset-0 h-full w-full object-cover',
+        loaded && arrived.late && 'transition-opacity duration-700',
         wash ? 'scale-125 blur-3xl saturate-150' : 'object-top',
         !loaded ? 'opacity-0' : wash ? 'opacity-50' : 'opacity-100'
       )}
