@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-06 22:46+0000\n"
+"PO-Revision-Date: 2026-11-06 23:26+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -2466,7 +2466,7 @@ msgstr "Nessuna riga corrisponde."
 
 #: src/pages/live-tv/index.tsx
 msgid "No live TV here"
-msgstr ""
+msgstr "Nessuna TV in diretta"
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
@@ -2601,7 +2601,7 @@ msgstr "Nessun contenuto in riproduzione."
 
 #: src/pages/player.tsx
 msgid "Nothing plays on this channel right now."
-msgstr ""
+msgstr "Nessun contenuto in riproduzione al momento su questo canale."
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
@@ -3232,9 +3232,8 @@ msgstr "Precedente"
 
 #: src/components/player/controls.tsx src/components/player/live.tsx
 #: src/lib/input/actions.ts src/pages/player.tsx
-#, fuzzy
 msgid "Previous channel"
-msgstr "Capitolo precedente"
+msgstr "Canale precedente"
 
 #: src/lib/input/actions.ts
 msgid "Previous chapter"
@@ -3343,9 +3342,8 @@ msgid "Recaps"
 msgstr "Riassunti"
 
 #: src/lib/live-tv.ts
-#, fuzzy
 msgid "Recent"
-msgstr "Accento"
+msgstr "Recenti"
 
 #: src/pages/search.tsx
 msgid "Recent searches"
@@ -3389,19 +3387,19 @@ msgstr "Ricorda le scelte per serie"
 
 #: src/pages/live-tv/channel-details.tsx
 msgid "Remind me"
-msgstr ""
+msgstr "Avvisami"
 
 #: src/pages/live-tv/guide.tsx
 msgid "Reminder"
-msgstr ""
+msgstr "Promemoria"
 
 #: src/pages/live-tv/index.tsx
 msgid "Reminder removed"
-msgstr ""
+msgstr "Promemoria rimosso"
 
 #: src/pages/live-tv/channel-details.tsx
 msgid "Reminder set"
-msgstr ""
+msgstr "Promemoria impostato"
 
 #: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
@@ -4100,9 +4098,8 @@ msgid "Start a party"
 msgstr "Avvia un watch party"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Start on"
-msgstr "Riavvia ora"
+msgstr "Avvia su"
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
@@ -4470,7 +4467,7 @@ msgstr "il link ha restituito altro rispetto ad un video"
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the live stream stopped"
-msgstr ""
+msgstr "lo streaming della diretta si è interrotto"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
@@ -4498,7 +4495,7 @@ msgstr "La pagina si è riavviata inaspettatamente"
 
 #: src/pages/settings/interface.tsx
 msgid "The page the app opens on. A link still opens what it points to."
-msgstr ""
+msgstr "La pagina in cui l'app si apre. Un link continua ad aprire il contenuto a cui è indirizzato."
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4736,7 +4733,7 @@ msgstr "Oggi"
 
 #: src/pages/live-tv/index.tsx
 msgid "Tomorrow"
-msgstr ""
+msgstr "Domani"
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"
@@ -5062,9 +5059,8 @@ msgid "Waiting for approval…"
 msgstr "In attesa di approvazione …"
 
 #: src/components/live-reminders.tsx src/pages/live-tv/channel-details.tsx
-#, fuzzy
 msgid "Watch"
-msgstr "Visto"
+msgstr "Guarda"
 
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
@@ -5238,7 +5234,7 @@ msgstr "Le schede mostrano il nome di ciascuna pagina accanto alla relativa icon
 
 #: src/components/shortcut-settings.tsx
 msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
-msgstr ""
+msgstr "Mentre è in riproduzione un canale. Su un TV, su e giù cambiano il canale, e i tasti numerici ne scelgono uno in base al suo numero."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
@@ -5298,7 +5294,7 @@ msgstr "Giallo"
 
 #: src/pages/live-tv/index.tsx
 msgid "Yesterday"
-msgstr ""
+msgstr "Ieri"
 
 #: src/components/layout.tsx
 msgid "You"
@@ -5310,7 +5306,7 @@ msgstr "Hai lasciato il watch party."
 
 #: src/pages/live-tv/index.tsx
 msgid "You'll be reminded at {time}"
-msgstr ""
+msgstr "Verrai avvisato alle {time}"
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
