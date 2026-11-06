@@ -59,6 +59,8 @@ interface ConfigKeyEntry {
 const CONFIG_KEY_CACHE_TTL = 24 * 60 * 60;
 
 const configKeyCache = Cache.getInstance<string, string>('config-key', 50000);
+/** Sign-ins with the same password share one check and derivation, which run on the libuv pool. */
+const derivingConfigKeys = new Map<string, Promise<Buffer>>();
 
 let trustedUuidsSource: string | null | undefined;
 let trustedUuidPatterns: RegExp[] = [];
@@ -281,6 +283,21 @@ export class UserRepository {
       return cached;
     }
 
+    let pending = derivingConfigKeys.get(cacheKey);
+    if (!pending) {
+      pending = this.deriveConfigKey(cacheKey, password, row).finally(() =>
+        derivingConfigKeys.delete(cacheKey)
+      );
+      derivingConfigKeys.set(cacheKey, pending);
+    }
+    return pending;
+  }
+
+  private static async deriveConfigKey(
+    cacheKey: string,
+    password: string,
+    row: UserRow
+  ): Promise<Buffer> {
     const isValid = await verifyHash(password, row.password_hash);
     if (!isValid) {
       await configKeyCache.delete(cacheKey);
