@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.9.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.8.0...smart-tv-v0.9.0) (2026-11-06)
+
+
+### Features
+
+* **ui:** give confirmation dialogs a name and a focus return ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **ui:** take a colour typed without its # ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** add a setting for how long the hero stays on each title ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** ask for a metadata addon on a title without details ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** bend the liquid glass bar's backdrop toward its middle like a lens ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** bigger icons in the bottom bar without names ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** draw liquid glass as a lens around its middle line, with a lit rim ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** fill the phone's title row in a set order, and keep tablets on the inline row ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** give shows Play and More info in the rotating hero ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** mark the open season with a sliding bar ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** mark unaired episodes the server still lets play, and ask before playing one ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** pick a tab on a press, waiting only out a held key ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** play or pause with Select while the player's controls are hidden ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** put a server subtitle's title on a line of its own ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** put a title's actions in a labelled row and a More sheet on touch screens ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** scroll a title's backdrop and the rotating hero at half speed ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** show episodes title first, with their air date and a menu button ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** show the player's chapters in a sheet with pictures ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** show the time in the player's top bar ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** slide the bottom bar away while scrolling down ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+
+
+### Bug Fixes
+
+* **ui:** keep typed colour text while it names the stored colour ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** drop chapter titles that are only a timestamp ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** format date-only air dates on their own day ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** hide the side rails' scrollbars ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** keep the skip flash in place while skips add up ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** limit episode highlights to key focus and pointers that hover ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** name tracks by language and kind, with their own title on a line below ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** send planned skips to the Android app only ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+* **web:** start keys on a tab list's selected tab when nothing is focused ([109b5d1](https://github.com/Viren070/AIOStreams/commit/109b5d1d27f1e50e4f012ede3aa9c0f1494f8f85))
+
 ## [0.8.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.7.0...smart-tv-v0.8.0) (2026-10-29)
 
 
