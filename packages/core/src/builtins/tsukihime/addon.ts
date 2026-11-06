@@ -124,8 +124,8 @@ export class TsukihimeAddon extends BaseDebridAddon<TsukihimeAddonConfig> {
       size: result.size,
       parsedMediaInfo: normaliseParsedMediaInfo({
         mediaInfoQuality: 'indexer',
-        languages: result.audioLangs,
-        subtitles: result.subLangs,
+        languages: result.audioLangs?.length ? result.audioLangs : undefined,
+        subtitles: result.subLangs?.length ? result.subLangs : undefined,
       }),
     };
   }

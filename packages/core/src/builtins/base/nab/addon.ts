@@ -51,10 +51,12 @@ export function parseNabParsedFileInfo(args: {
   audioLanguages?: string | number | boolean;
   subtitleLanguages?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
+  const languages = parseNabLanguages(args.audioLanguages);
+  const subtitles = parseNabLanguages(args.subtitleLanguages);
   return normaliseParsedMediaInfo({
     mediaInfoQuality: 'indexer',
-    languages: parseNabLanguages(args.audioLanguages),
-    subtitles: parseNabLanguages(args.subtitleLanguages),
+    languages: languages.length ? languages : undefined,
+    subtitles: subtitles.length ? subtitles : undefined,
   });
 }
 

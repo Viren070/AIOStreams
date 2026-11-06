@@ -123,9 +123,9 @@ Modifiers are chained with `::`:
 
 #### Media info
 
-| Variable                    | Type   | Description                                                                                                                                                                                                                |
-| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{stream.mediaInfoQuality}` | string | Confidence tier for how the stream's media info (languages, subtitles, audio, etc.) was determined: `probe` (ffprobe-derived: StremThru, stored or looked-up tracks, or this instance's own probes), `indexer`, or `addon` |
+| Variable                    | Type   | Description                                                                                                                                                                                                                       |
+| --------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{stream.mediaInfoQuality}` | string | Where the stream's media info came from: `probe` (read from the file: StremThru, stored or looked-up tracks, or this instance's own probes), or `indexer` / `addon` (audio or subtitle languages reported by an indexer or addon) |
 
 #### Tracks
 
