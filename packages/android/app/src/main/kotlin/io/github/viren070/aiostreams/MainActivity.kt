@@ -475,10 +475,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** As the web view counts gamepads: joystick devices. */
+    /**
+     * A real game controller: a joystick device with a stick or a d-pad hat. The joystick source
+     * alone isn't enough: TV remotes claim it for one stray axis (the Xiaomi TV remote's
+     * "Consumer Control" device maps ABS_VOLUME to GENERIC_1), and a false "controller" makes the
+     * page poll gamepads on every animation frame for as long as it runs, which on a slow TV
+     * stick keeps the web view busy even during playback and makes the remote feel laggy.
+     */
     private fun hasGamepad() = InputDevice.getDeviceIds().any { id ->
-        InputDevice.getDevice(id)?.let { !it.isVirtual && it.supportsSource(InputDevice.SOURCE_JOYSTICK) } == true
+        InputDevice.getDevice(id)?.let { d ->
+            !d.isVirtual && d.supportsSource(InputDevice.SOURCE_JOYSTICK) &&
+                (d.hasAxes(MotionEvent.AXIS_X, MotionEvent.AXIS_Y) || d.hasAxes(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y))
+        } == true
     }
+
+    private fun InputDevice.hasAxes(a: Int, b: Int) =
+        getMotionRange(a, InputDevice.SOURCE_JOYSTICK) != null && getMotionRange(b, InputDevice.SOURCE_JOYSTICK) != null
 
     /** Asked on the first download, whose progress shows in one, and before an update. */
     private fun askForNotifications(then: () -> Unit = {}) {
