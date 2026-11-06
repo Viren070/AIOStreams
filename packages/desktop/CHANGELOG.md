@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.23.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.23.0...desktop-v0.23.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **desktop:** inhibit idle through GtkApplication on Linux ([eb8c15f](https://github.com/Viren070/AIOStreams/commit/eb8c15f179657e106145a8a504f879f5fc2bb941))
+* **desktop:** load live files with FFmpeg's reconnect off ([2d2519f](https://github.com/Viren070/AIOStreams/commit/2d2519fef3f6027a3984fb7684fdb44265acfb2c))
+
 ## [0.23.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.22.0...desktop-v0.23.0) (2026-11-04)
 
 
