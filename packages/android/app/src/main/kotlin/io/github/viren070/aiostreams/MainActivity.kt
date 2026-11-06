@@ -20,8 +20,6 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.text.format.Formatter
 import android.util.Log
-import android.hardware.input.InputManager
-import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -164,17 +162,15 @@ class MainActivity : ComponentActivity() {
             passthrough = passthrough::supported,
             trustedRoots = { trustedRoots },
         )
-        gamepads = hasGamepad()
-        getSystemService(InputManager::class.java).registerInputDeviceListener(controllers, null)
         val identity = AppIdentity(
             BuildConfig.VERSION_NAME,
             deviceName(),
             deviceId(),
             onTv(),
             voice.available,
-            gamepads,
             PictureInPicture.supported(this),
             miniPlayer = true,
+            gamepadButtons = true,
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }
@@ -484,44 +480,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private var gamepads = false
-
-    private val controllers = object : InputManager.InputDeviceListener {
-        override fun onInputDeviceAdded(deviceId: Int) = update()
-        override fun onInputDeviceRemoved(deviceId: Int) = update()
-        override fun onInputDeviceChanged(deviceId: Int) = update()
-
-        private fun update() {
-            val now = hasGamepad()
-            if (now == gamepads) return
-            gamepads = now
-            bridge.send(buildJsonObject {
-                put("type", "gamepads")
-                put("connected", now)
-            })
-        }
+    private val buttons = GamepadButtons { input, down ->
+        bridge.send(buildJsonObject {
+            put("type", "gamepad")
+            put("input", input)
+            put("down", down)
+        })
     }
-
-    /**
-     * A real game controller: a joystick device with a stick, a d-pad hat or gamepad buttons.
-     * The joystick source alone isn't enough: TV remotes claim it for one stray axis (the Xiaomi
-     * TV remote's "Consumer Control" device maps ABS_VOLUME to GENERIC_1), and a false
-     * "controller" makes the page poll gamepads on every animation frame for as long as it runs,
-     * which on a slow TV stick keeps the web view busy even during playback and makes the remote
-     * feel laggy.
-     */
-    private fun hasGamepad() = InputDevice.getDeviceIds().any { id ->
-        InputDevice.getDevice(id)?.let { d ->
-            !d.isVirtual && d.supportsSource(InputDevice.SOURCE_JOYSTICK) &&
-                (d.hasAxes(MotionEvent.AXIS_X, MotionEvent.AXIS_Y) ||
-                    d.hasAxes(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y) ||
-                    // A pad without a recognised axis pair: its gamepad buttons, which a remote lacks.
-                    (d.supportsSource(InputDevice.SOURCE_GAMEPAD) && d.hasKeys(KeyEvent.KEYCODE_BUTTON_A)[0]))
-        } == true
-    }
-
-    private fun InputDevice.hasAxes(a: Int, b: Int) =
-        getMotionRange(a, InputDevice.SOURCE_JOYSTICK) != null && getMotionRange(b, InputDevice.SOURCE_JOYSTICK) != null
 
     /** Asked on the first download, whose progress shows in one, and before an update. */
     private fun askForNotifications(then: () -> Unit = {}) {
@@ -581,6 +546,9 @@ class MainActivity : ComponentActivity() {
     override fun dispatchTouchEvent(event: MotionEvent): Boolean =
         (started && mini.onTouch(event)) || super.dispatchTouchEvent(event)
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        (started && buttons.handle(event)) || super.dispatchKeyEvent(event)
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         mini.pictureInPicture(isInPictureInPictureMode)
@@ -605,7 +573,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         if (!started) return super.onDestroy()
-        getSystemService(InputManager::class.java).unregisterInputDeviceListener(controllers)
         updater.release()
         voice.release()
         Downloads.queue(this).send = null
