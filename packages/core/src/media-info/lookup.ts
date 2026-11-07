@@ -1,4 +1,4 @@
-import type { ParsedStream } from '../db/schemas.js';
+import type { ParsedStream, UserData } from '../db/schemas.js';
 import {
   LOCAL_ORIGIN,
   MediaInfoRepository,
@@ -6,22 +6,24 @@ import {
   type StoredFile,
 } from '../db/repositories/media-info.js';
 import { UsenetLibraryRepository } from '../db/repositories/usenet-library.js';
-import type { TitleMetadata } from '../debrid/base.js';
+import type { DebridFile, TitleMetadata } from '../debrid/base.js';
 import {
   featureFiles,
   isEpisodeWrong,
   isSeasonWrong,
   parseFileNames,
   selectFileInTorrentOrNZB,
+  VIDEO_FILE_EXTENSIONS,
 } from '../debrid/utils.js';
 import { nzbContentKey } from '../release-blocklist/keys.js';
 import type { StreamContext } from '../streams/context.js';
-import { createLogger, hasTrackLists } from '../utils/index.js';
+import { constants, createLogger, hasTrackLists } from '../utils/index.js';
 import { applyMediaInfo } from './apply.js';
 import { mediaInfoIdentity, type MediaInfoIdentity } from './identity.js';
 import type { MediaInfoRecord, MediaTrack } from './record.js';
 import { REMOTE_ORIGIN_PREFIX, remoteRows } from './remote.js';
 import { noteLookup } from './activity.js';
+import { torrentInventories } from './inventory.js';
 
 export { mediaInfoIdentity, type MediaInfoIdentity } from './identity.js';
 
@@ -99,18 +101,106 @@ function tracksOnly(record: MediaInfoRecord): MediaInfoRecord {
 }
 
 function namedRow(
-  identity: MediaInfoIdentity,
-  rows: StoredFile[]
+  names: (string | undefined)[],
+  rows: StoredFile[],
+  torrent: boolean
 ): StoredFile | undefined {
-  for (const named of [identity.file, identity.filename]) {
+  for (const named of names) {
     if (!named) continue;
-    const exact = rows.find((r) => r.file === named);
-    if (exact) return exact;
     const name = baseName(named);
-    const byName = rows.find((r) => name && baseName(r.file) === name);
-    if (byName) return byName;
+    if (!name) continue;
+    if (!torrent || name !== named) {
+      const exact = rows.find((r) => r.file === named);
+      if (exact) return exact;
+    }
+    const matches = rows.filter((r) => baseName(r.file) === name);
+    if (!torrent && matches.length) return matches[0];
+    if (matches.length === 1 && (name === named || matches[0].file === name)) {
+      return matches[0];
+    }
   }
   return undefined;
+}
+
+function videoExtension(name: string): string | undefined {
+  const lower = name.toLowerCase();
+  return VIDEO_FILE_EXTENSIONS.find((ext) => lower.endsWith(ext));
+}
+
+function torrentFileName(identity: MediaInfoIdentity): string | undefined {
+  const { file, filename } = identity;
+  const namesFile = (name: string) =>
+    /[\/\\]/.test(name) || !!videoExtension(name);
+  if (file) return file;
+  return filename && namesFile(filename) ? filename : undefined;
+}
+
+function torrentFeatures(rows: StoredFile[]): StoredFile[] {
+  return featureFiles(
+    rows.map((row) => ({ name: baseName(row.file), size: row.size ?? 0, row }))
+  ).map((f) => f.row);
+}
+
+function sizeMatches(identity: MediaInfoIdentity, file: StoredFile): boolean {
+  return !(
+    identity.videoSize !== undefined &&
+    file.size &&
+    file.size !== identity.videoSize
+  );
+}
+
+function soleTorrentFile(
+  identity: MediaInfoIdentity,
+  rows: StoredFile[],
+  reports: StoredFile[]
+): StoredFile | undefined {
+  const features = torrentFeatures(rows);
+  const file = features[0];
+  if (
+    features.length !== 1 ||
+    reports.some((r) => r.releaseFiles > 1) ||
+    (identity.filename && identity.filename !== identity.title) ||
+    !sizeMatches(identity, file)
+  ) {
+    return undefined;
+  }
+  return reports.some((r) => r.releaseFiles === 1) ? file : undefined;
+}
+
+function needsInventory(
+  identity: MediaInfoIdentity,
+  reports: StoredFile[]
+): boolean {
+  return (
+    !!identity.releaseKeys[0]?.startsWith('btih:') &&
+    !torrentFileName(identity) &&
+    !((identity.fileIdx ?? -1) >= 0) &&
+    (!identity.filename || identity.filename === identity.title) &&
+    !reports.some((r) => r.releaseFiles > 1) &&
+    reports.length > 0 &&
+    torrentFeatures(byFile(reports)).length === 1
+  );
+}
+
+/** A store's sole video, matched to the probe by its actual name and bytes. */
+function inventoryFile(
+  identity: MediaInfoIdentity,
+  reports: StoredFile[],
+  files: DebridFile[]
+): StoredFile | undefined {
+  if (files.length !== 1) return undefined;
+  const [file] = files;
+  if (
+    !file.name ||
+    !videoExtension(file.name) ||
+    !Number.isSafeInteger(file.size) ||
+    file.size <= 0
+  )
+    return undefined;
+  const row = namedRow([file.path ?? file.name], byFile(reports), true);
+  return row && row.size === file.size && sizeMatches(identity, row)
+    ? row
+    : undefined;
 }
 
 /** The file a stream plays, or a pack's files that may share one layout. */
@@ -118,13 +208,32 @@ type Pick = { file: StoredFile } | { siblings: StoredFile[] };
 
 async function pickFile(
   identity: MediaInfoIdentity,
-  rows: StoredFile[],
-  metadata: () => Promise<TitleMetadata | undefined>
+  reports: StoredFile[],
+  metadata: () => Promise<TitleMetadata | undefined>,
+  movie: boolean
 ): Promise<Pick | undefined> {
-  const named = namedRow(identity, rows);
+  const rows = byFile(reports);
+  const torrent = rows[0].releaseKey.startsWith('btih:');
+  const explicitFile = torrent ? torrentFileName(identity) : undefined;
+  const indexed = torrent && (identity.fileIdx ?? -1) >= 0;
+  let names = [identity.file, identity.filename];
+  if (torrent) {
+    // A repeated release label is not evidence of the requested file, even
+    // when an older probe was stored under that same label.
+    const displayName =
+      !indexed && identity.filename !== identity.title
+        ? identity.filename
+        : undefined;
+    names = [explicitFile ?? displayName];
+  }
+  const named = namedRow(names, rows, torrent);
   if (named) return { file: named };
-  const single = rows.find((r) => r.releaseFiles === 1);
+  if (explicitFile || indexed) return undefined;
+  const single = torrent
+    ? soleTorrentFile(identity, rows, reports)
+    : rows.find((r) => r.releaseFiles === 1);
   if (single) return { file: single };
+  if (movie) return undefined;
 
   const episode = await metadata();
   if (!episode?.season || !episode.episode) return undefined;
@@ -173,7 +282,9 @@ interface Found {
  */
 async function findRecords(
   identities: MediaInfoIdentity[],
-  metadata: () => Promise<TitleMetadata | undefined>
+  metadata: () => Promise<TitleMetadata | undefined>,
+  movie: boolean,
+  userData?: UserData
 ): Promise<(Found | undefined)[]> {
   const aliases = await UsenetLibraryRepository.resolveAliases(
     identities.flatMap((i) => (i.nzbHash ? [i.nzbHash] : []))
@@ -198,10 +309,31 @@ async function findRecords(
 
   const picks: (Pick | undefined)[] = [];
   for (const [index, identity] of identities.entries()) {
-    const rows = byFile(keys[index].flatMap((k) => rowsByKey.get(k) ?? []));
+    const rows = keys[index].flatMap((k) => rowsByKey.get(k) ?? []);
     picks.push(
-      rows.length ? await pickFile(identity, rows, metadata) : undefined
+      rows.length ? await pickFile(identity, rows, metadata, movie) : undefined
     );
+  }
+  if (movie) {
+    const pending = identities.filter(
+      (identity, index) =>
+        !picks[index] &&
+        needsInventory(
+          identity,
+          keys[index].flatMap((k) => rowsByKey.get(k) ?? [])
+        )
+    );
+    const inventories = await torrentInventories(pending, userData);
+    for (const [index, identity] of identities.entries()) {
+      const files = inventories.get(identity);
+      if (!files) continue;
+      const file = inventoryFile(
+        identity,
+        keys[index].flatMap((k) => rowsByKey.get(k) ?? []),
+        files
+      );
+      if (file) picks[index] = { file };
+    }
   }
   const wanted = picks.flatMap((pick) =>
     !pick ? [] : 'file' in pick ? [pick.file] : pick.siblings
@@ -261,15 +393,23 @@ export function storedFileInfo(
 
 export async function storedMediaInfoFor(
   identity: MediaInfoIdentity,
-  metadata: TitleMetadata | undefined
+  metadata: TitleMetadata | undefined,
+  movie: boolean,
+  userData?: UserData
 ): Promise<MediaInfoRecord | undefined> {
-  const [found] = await findRecords([identity], async () => metadata);
+  const [found] = await findRecords(
+    [identity],
+    async () => metadata,
+    movie,
+    userData
+  );
   return found?.record;
 }
 
 export async function resolveStoredMediaInfo(
   streams: ParsedStream[],
-  context: StreamContext
+  context: StreamContext,
+  userData?: UserData
 ): Promise<void> {
   const eligible: [ParsedStream, MediaInfoIdentity][] = [];
   for (const stream of streams) {
@@ -282,7 +422,9 @@ export async function resolveStoredMediaInfo(
     let metadata: Promise<TitleMetadata | undefined> | undefined;
     const found = await findRecords(
       eligible.map(([, identity]) => identity),
-      () => (metadata ??= requestTitleMetadata(context))
+      () => (metadata ??= requestTitleMetadata(context)),
+      context.type === constants.MOVIE_TYPE,
+      userData
     );
     const filledFrom: string[] = [];
     for (const [index, [stream]] of eligible.entries()) {

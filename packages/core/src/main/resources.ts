@@ -306,7 +306,7 @@ export async function processStreams(
 
   const withMediaInfo = async (streams: ParsedStream[]) => {
     const start = Date.now();
-    await resolveStoredMediaInfo(streams, context);
+    await resolveStoredMediaInfo(streams, context, ctx.userData);
     await resolveRemuxDbMediaInfo(streams, context, ctx.userData);
     mediaInfoMs += Date.now() - start;
   };

@@ -257,7 +257,7 @@ class StreamFetcher {
       await this.precompute.precomputeSeaDexOnly(groupStreams, context);
 
       const mediaInfoStart = Date.now();
-      await resolveStoredMediaInfo(groupStreams, context);
+      await resolveStoredMediaInfo(groupStreams, context, this.userData);
       await resolveRemuxDbMediaInfo(groupStreams, context, this.userData);
       mediaInfoMs += Date.now() - mediaInfoStart;
 
