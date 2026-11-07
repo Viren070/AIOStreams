@@ -1,6 +1,5 @@
 package io.github.viren070.aiostreams.exoplayer.subtitles.ass
 
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
@@ -11,6 +10,7 @@ import io.github.viren070.aiostreams.exoplayer.extractor.MatroskaIds
 import io.github.viren070.aiostreams.exoplayer.extractor.vintLength
 import io.github.viren070.aiostreams.exoplayer.subtitles.AssSink
 import io.github.viren070.aiostreams.exoplayer.subtitles.FontFile
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.EOFException
 import java.io.File
 import java.io.IOException
@@ -65,7 +65,7 @@ internal class AttachedFonts(
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         } catch (e: Exception) {
-            if (!closed) Log.w(TAG, "couldn't read the attached fonts", e)
+            if (!closed) AppLog.w(TAG, "couldn't read the attached fonts", e)
         }
     }
 

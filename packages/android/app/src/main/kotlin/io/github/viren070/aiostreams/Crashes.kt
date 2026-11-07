@@ -10,6 +10,7 @@ import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewCompat
 import io.github.viren070.aiostreams.exoplayer.video.mediaCapsLine
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -43,6 +44,7 @@ object Crashes {
     private const val WEEK_MS = 7 * 24 * 60 * 60 * 1000L
     private const val SUMMARY_FRAMES = 12
     private const val TRACE_LIMIT = 200_000
+    const val LOG_LINES = 300
 
     private fun prefs(context: Context) = context.getSharedPreferences("crashes", Context.MODE_PRIVATE)
 
@@ -194,7 +196,7 @@ object Crashes {
         val notes = listOfNotNull("Importance: ${importance(exit)}", doingOf(context, exit.pid, exit.timestamp)?.let { "Doing: $it" })
         return assemble(
             context, exit.timestamp, uptimeS, exit.pss.takeIf { it > 0 } ?: exit.rss, summary, details,
-            log ?: logOf(exit.pid), notes = notes,
+            logOf(exit.pid, exit.timestamp, log ?: SystemLog.lines(exit.pid)), notes = notes,
         )
     }
 
@@ -207,7 +209,7 @@ object Crashes {
         val details = mutableListOf<String>()
         javaSummary(java, summary, details)
         val notes = listOfNotNull(java.doing?.let { "Doing: $it" })
-        return assemble(context, java.at, null, 0, summary, details, emptyList(), notes = notes)
+        return assemble(context, java.at, null, 0, summary, details, logOf(null, java.at, emptyList()), notes = notes)
     }
 
     private fun javaSummary(java: JavaCrash, summary: MutableList<String>, details: MutableList<String>) {
@@ -312,13 +314,9 @@ object Crashes {
         .map { it.trim() }
         .toList()
 
-    /** A finished process's lines, while the system log still holds them; any app may read its own. */
-    private fun logOf(pid: Int): List<String> = runCatching {
-        ProcessBuilder("logcat", "-d", "-v", "threadtime", "-t", "400", "--pid", pid.toString())
-            .redirectErrorStream(true)
-            .start()
-            .inputStream.bufferedReader().use { it.readLines() }
-    }.getOrDefault(emptyList())
+    private fun logOf(pid: Int?, until: Long, system: List<String>): List<String> =
+        listOf("App log:") + AppLog.lines(LOG_LINES, pid, until) +
+            if (system.isEmpty()) emptyList() else listOf("", "System log:") + system
 }
 
 /** The parts of Android's tombstone protobuf (debuggerd/proto/tombstone.proto) a report shows. */

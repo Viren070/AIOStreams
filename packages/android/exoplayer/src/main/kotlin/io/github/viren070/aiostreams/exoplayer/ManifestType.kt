@@ -5,11 +5,13 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.IOException
 
 /** The playlist or manifest type of an address that doesn't say, from what its server sends. */
 @OptIn(UnstableApi::class)
 internal object ManifestType {
+    private const val TAG = "exo"
     private const val PEEK_BYTES = 2048
     private val HLS_TYPES = setOf("application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/mpegurl", "audio/x-mpegurl")
     private const val DASH_TYPE = "application/dash+xml"
@@ -19,12 +21,15 @@ internal object ManifestType {
         val type = source.responseHeaders.entries
             .firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }
             ?.value?.firstOrNull()?.substringBefore(';')?.trim()?.lowercase()
-        when (type) {
+        val found = when (type) {
             in HLS_TYPES -> MimeTypes.APPLICATION_M3U8
             DASH_TYPE -> MimeTypes.APPLICATION_MPD
             else -> fromStart(peek(source))
         }
-    } catch (_: IOException) {
+        AppLog.i(TAG, "live link is ${found ?: "a plain stream"}, sent as ${type ?: "no type"}")
+        found
+    } catch (e: IOException) {
+        AppLog.w(TAG, "couldn't tell the live link's type", e)
         null
     } finally {
         runCatching { source.close() }

@@ -2,6 +2,7 @@ package io.github.viren070.aiostreams
 
 import android.content.Context
 import android.os.Process
+import io.github.viren070.aiostreams.logs.AppLog
 import io.github.viren070.aiostreams.playback.Engine
 
 /** Versions, the device and the recent log, for a bug report. */
@@ -17,13 +18,9 @@ fun diagnostics(context: Context, engine: Engine, web: String?, server: String?)
     appendLine("stats=${runCatching { engine.stats() }.getOrNull()}")
     appendLine(Crashes.webViewLine(context))
     appendLine()
-    append(recentLog())
+    appendLine("App log:")
+    AppLog.lines(Crashes.LOG_LINES).forEach(::appendLine)
+    appendLine()
+    appendLine("System log:")
+    SystemLog.lines(Process.myPid()).forEach(::appendLine)
 }
-
-/** The app's own lines from the system log, which any app may read. */
-private fun recentLog(): String = runCatching {
-    ProcessBuilder("logcat", "-d", "-t", "300", "--pid", Process.myPid().toString())
-        .redirectErrorStream(true)
-        .start()
-        .inputStream.bufferedReader().use { it.readText() }
-}.getOrDefault("")

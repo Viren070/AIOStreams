@@ -19,7 +19,6 @@ import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.provider.Settings
 import android.text.format.Formatter
-import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -44,6 +43,7 @@ import io.github.viren070.aiostreams.bridge.AppBridge
 import io.github.viren070.aiostreams.bridge.AppIdentity
 import io.github.viren070.aiostreams.bridge.WebApp
 import io.github.viren070.aiostreams.downloads.DownloadChannel
+import io.github.viren070.aiostreams.logs.AppLog
 import io.github.viren070.aiostreams.mpv.MpvEngine
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.PlayerChannel
@@ -257,7 +257,12 @@ class MainActivity : ComponentActivity() {
                     "brightness" -> levels.setBrightness(value)
                 }
             }
-            "web-error" -> Log.e("page", message["message"]?.jsonPrimitive?.content.orEmpty())
+            "web-error" -> AppLog.e("page", pageText(message))
+            "log" -> if (message["level"]?.jsonPrimitive?.content == "warn") {
+                AppLog.w("page", pageText(message))
+            } else {
+                AppLog.i("page", pageText(message))
+            }
             "exit" -> moveTaskToBack(true)
             "links-ready" -> {
                 linksReady = true
@@ -370,7 +375,7 @@ class MainActivity : ComponentActivity() {
                     File(folder, name).writeText(text)
                 }
             }
-            saved.exceptionOrNull()?.let { Log.e("save-file", "saving $name", it) }
+            saved.exceptionOrNull()?.let { AppLog.w("save-file", "saving $name", it) }
             runOnUiThread {
                 val note = getString(if (saved.isSuccess) R.string.file_saved else R.string.file_not_saved, name)
                 Toast.makeText(this, note, Toast.LENGTH_LONG).show()
@@ -490,6 +495,9 @@ class MainActivity : ComponentActivity() {
         })
     }
 
+    private fun pageText(message: JsonObject) =
+        message["message"]?.jsonPrimitive?.content.orEmpty().take(MAX_PAGE_TEXT)
+
     /** Asked on the first download, whose progress shows in one, and before an update. */
     private fun askForNotifications(then: () -> Unit = {}) {
         val permission = Manifest.permission.POST_NOTIFICATIONS
@@ -586,5 +594,9 @@ class MainActivity : ComponentActivity() {
         playback.engine.release()
         web.destroy()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val MAX_PAGE_TEXT = 4000
     }
 }

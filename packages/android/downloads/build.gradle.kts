@@ -12,4 +12,5 @@ android {
 dependencies {
     api(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
+    implementation(project(":logs"))
 }

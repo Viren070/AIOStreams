@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioSink.AudioSinkConfig
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import io.github.viren070.aiostreams.logs.AppLog
 
 /** Passes through only the formats the page allows, and delays the sound against the picture. */
 @OptIn(UnstableApi::class)
@@ -32,6 +33,7 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
         val next = names.flatMapTo(mutableSetOf()) { SPDIF[it].orEmpty() }
         if (next == passthrough) return
         passthrough = next
+        AppLog.i(TAG, "passthrough allowed: ${names.joinToString().ifEmpty { "none" }}")
         // Picks the track's output again, so a changed setting applies at once.
         listener?.onAudioCapabilitiesChanged()
     }
@@ -39,9 +41,15 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     private var stretching = false
     private var passingThrough = false
     private var decodedForSpeed = false
+    private var output: String? = null
 
     override fun configure(audioSinkConfig: AudioSinkConfig) {
-        passingThrough = audioSinkConfig.format.sampleMimeType != MimeTypes.AUDIO_RAW
+        val format = audioSinkConfig.format
+        passingThrough = format.sampleMimeType != MimeTypes.AUDIO_RAW
+        val next = "${format.sampleMimeType} ${format.channelCount} ch ${format.sampleRate} Hz, " +
+            if (passingThrough) "passed through" else "decoded"
+        if (next != output) AppLog.i(TAG, "audio output: $next")
+        output = next
         super.configure(audioSinkConfig)
     }
 
@@ -75,6 +83,7 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     }
 
     private companion object {
+        const val TAG = "audio"
         val SPDIF = mapOf(
             "ac3" to listOf(MimeTypes.AUDIO_AC3),
             "eac3" to listOf(MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC),

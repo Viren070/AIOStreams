@@ -1,6 +1,6 @@
 package io.github.viren070.aiostreams.downloads
 
-import android.util.Log
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.File
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -78,7 +78,7 @@ class DownloadQueue(
             if (jobs.any { it.spec.id == spec.id }) continue
             val problem = runCatching { check(spec) }.exceptionOrNull()
             if (problem != null) {
-                Log.w(TAG, "download ${spec.id}: ${problem.message}")
+                AppLog.w(TAG, "download ${spec.id}: ${problem.message}")
                 send?.invoke(buildJsonObject {
                     put("type", "error")
                     put("message", "Can't download ${spec.title}: ${problem.message}")
@@ -144,7 +144,7 @@ class DownloadQueue(
             try {
                 block()
             } catch (e: Exception) {
-                Log.e(TAG, "queue", e)
+                AppLog.e(TAG, "queue", e)
             }
         }
     }
@@ -171,7 +171,7 @@ class DownloadQueue(
             // Paused, removed or waiting for Wi-Fi, which is already recorded.
             error is Stopped -> {}
             else -> {
-                Log.w(TAG, "download failed id=$id: ${error.message}")
+                AppLog.w(TAG, "download failed id=$id: ${error.message}")
                 job.state = State.Failed
                 job.error = error.message
             }
@@ -231,7 +231,7 @@ class DownloadQueue(
                     fetcher.fetch(file.url, file.headers, place(folder, file.path), stop) { _, _ -> }
                 } catch (e: Failed) {
                     // Art or a subtitle missing never costs the video.
-                    Log.w(TAG, "download ${spec.id}: skipped ${file.path}: ${e.message}")
+                    AppLog.w(TAG, "download ${spec.id}: skipped ${file.path}: ${e.message}")
                 }
             }
         }
@@ -325,7 +325,7 @@ class DownloadQueue(
         val temporary = File(stateFile.path + ".tmp")
         runCatching {
             temporary.writeText(json.encodeToString(Saved.serializer(), saved))
-            if (!temporary.renameTo(stateFile)) Log.w(TAG, "could not save the queue")
+            if (!temporary.renameTo(stateFile)) AppLog.w(TAG, "could not save the queue")
         }
     }
 

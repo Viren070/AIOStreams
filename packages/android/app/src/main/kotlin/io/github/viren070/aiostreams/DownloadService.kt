@@ -9,13 +9,13 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
-import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.viren070.aiostreams.downloads.Running
+import io.github.viren070.aiostreams.logs.AppLog
 import java.text.NumberFormat
 
 /** Keeps downloads going out of sight before Android 14, with their progress in a notification. */
@@ -60,7 +60,7 @@ class DownloadService : Service() {
                     started = true
                 } catch (e: IllegalStateException) {
                     // Android refuses it from the background; the downloads still run.
-                    Log.w("downloads", "could not start the download service", e)
+                    AppLog.w("downloads", "could not start the download service", e)
                 }
                 return
             }

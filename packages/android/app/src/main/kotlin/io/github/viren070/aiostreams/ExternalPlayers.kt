@@ -4,10 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import io.github.viren070.aiostreams.logs.AppLog
 
 /**
  * Video players an `intent:` link names, opened for a result: where they
@@ -23,7 +23,7 @@ class ExternalPlayers(private val activity: ComponentActivity, private val onRet
         val intent = try {
             Intent.parseUri(link, Intent.URI_INTENT_SCHEME)
         } catch (e: Exception) {
-            Log.w(TAG, "bad intent link", e)
+            AppLog.w(TAG, "bad intent link", e)
             return
         }
         // As a browser opens one: an action, a type and a package, never a component.

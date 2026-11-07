@@ -5,7 +5,6 @@ import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
-import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -15,6 +14,7 @@ import io.github.viren070.aiostreams.exoplayer.subtitles.SampleParser
 import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleStyle
 import io.github.viren070.aiostreams.exoplayer.subtitles.TextSink
 import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
@@ -122,7 +122,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     init {
         worker.post {
             handle = AssNative.create(font().path)
-            if (handle == 0L) Log.e(TAG, "libass.so can't be loaded")
+            if (handle == 0L) AppLog.e(TAG, "libass.so can't be loaded")
             // The surface may have come first.
             shower.post(::attachWindow)
         }
@@ -168,7 +168,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
             override fun sample(track: String, timeUs: Long, data: ByteArray) = queue(opened) {
                 val text = textTracks[track] ?: return@queue
                 runCatching { text.read(timeUs, data) { addLine(track, it) } }
-                    .onFailure { Log.w(TAG, "couldn't read a subtitle line", it) }
+                    .onFailure { AppLog.w(TAG, "couldn't read a subtitle line", it) }
             }
         }
     }
@@ -348,7 +348,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         if (giving.isEmpty()) return false
         for (font in giving) {
             runCatching { AssNative.addFont(handle, font.file.name, font.file.readBytes()) }
-                .onFailure { Log.w(TAG, "couldn't read ${font.file.name}", it) }
+                .onFailure { AppLog.w(TAG, "couldn't read ${font.file.name}", it) }
         }
         AssNative.reloadFonts(handle)
         styled = null

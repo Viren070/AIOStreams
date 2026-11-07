@@ -1,6 +1,6 @@
 package io.github.viren070.aiostreams
 
-import android.util.Log
+import io.github.viren070.aiostreams.logs.AppLog
 import java.util.concurrent.Executors
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -33,7 +33,7 @@ class YouTube(private val send: (JsonObject) -> Unit) {
 
     fun resolve(request: String, videoId: String) = worker.execute {
         val url = if (VIDEO_ID.matches(videoId)) {
-            CLIENTS.firstNotNullOfOrNull { runCatching { ask(it, videoId) }.onFailure { e -> Log.w(TAG, "${it.name}: $e") }.getOrNull() }
+            CLIENTS.firstNotNullOfOrNull { runCatching { ask(it, videoId) }.onFailure { e -> AppLog.w(TAG, it.name, e) }.getOrNull() }
         } else {
             null
         }

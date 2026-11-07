@@ -9,6 +9,8 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import io.github.viren070.aiostreams.libs.FallbackFont
+import io.github.viren070.aiostreams.logs.AppLog
+import io.github.viren070.aiostreams.logs.Repeats
 import io.github.viren070.aiostreams.playback.CacheBudget
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
@@ -252,7 +254,7 @@ class MpvEngine(private val context: Context) : Engine {
             set("secondary-sid", track)
             // Once mpv has decoded the newly picked track's lines, then as it reads on.
             readingAhead = calls.scheduleWithFixedDelay(
-                { runCatching(::readAhead).onFailure { Log.w(TAG, "reading ahead failed", it) } },
+                { runCatching(::readAhead).onFailure { AppLog.w(TAG, "reading ahead failed", it) } },
                 1, READ_AHEAD_EVERY_S, TimeUnit.SECONDS,
             )
         } else {
@@ -381,6 +383,7 @@ class MpvEngine(private val context: Context) : Engine {
                     val error = fields["file_error"]?.asString()
                     listener.onEnded(fields["reason"]?.asString() ?: "unknown", error, cause.takeIf { error != null })
                     cause = null
+                    repeats.flush()
                 }
             }
         }
@@ -404,13 +407,16 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
+    private val repeats = Repeats(TAG)
+
     private val logs = object : MPV.LogObserver {
         override fun logMessage(prefix: String, level: Int, text: String) {
             val line = text.trimEnd()
             // mpv's error names only the step that failed; FFmpeg's first network error says why.
             if (level <= LOG_ERROR && prefix == "ffmpeg" && cause == null) cause = line.replace(PROTOCOL, "")
             if (level <= LOG_ERROR) updateFilters { refused(prefix, line) }
-            if (level <= LOG_WARN) Log.println(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, TAG, "[$prefix] $line")
+            if (level > LOG_WARN || line.isEmpty() || HARMLESS.any(line::contains)) return
+            repeats.write(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, "[$prefix] $line")
         }
     }
 
@@ -601,6 +607,15 @@ class MpvEngine(private val context: Context) : Engine {
         private const val VO = "gpu-next"
         private const val LOG_ERROR = 20
         private const val LOG_WARN = 30
+
+        /** What FFmpeg and mpv say on every load of some files, which tells of nothing wrong. */
+        private val HARMLESS = listOf(
+            "Disabling http_persistent",
+            "Disabling http_multiple",
+            "mime type is not rfc8216 compliant",
+            "compiled without LittleCMS",
+            "Both surface and native_window are NULL",
+        )
         private val PROTOCOL = Regex("^\\w+: ")
 
         private fun formatOf(name: String): Int = when (name) {

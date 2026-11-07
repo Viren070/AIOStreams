@@ -2,6 +2,7 @@ package io.github.viren070.aiostreams
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import androidx.annotation.OptIn
@@ -14,6 +15,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import io.github.viren070.aiostreams.logs.AppLog
 
 /** The media session and its notification, which keep playback going out of sight. */
 class PlaybackService : MediaSessionService() {
@@ -45,8 +47,13 @@ class PlaybackService : MediaSessionService() {
                     intent: Intent,
                 ): Boolean {
                     val key = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
-                    val systemPause = key?.keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE && key.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
-                    return (systemPause && expectedDrop()) || super.onMediaButtonEvent(session, controllerInfo, intent)
+                    val system = key?.deviceId == KeyCharacterMap.VIRTUAL_KEYBOARD
+                    val ignored = system && key?.keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE && expectedDrop()
+                    if (key?.action == KeyEvent.ACTION_DOWN) {
+                        val from = if (system) "software" else InputDevice.getDevice(key.deviceId)?.name ?: "device ${key.deviceId}"
+                        AppLog.i(TAG, "${KeyEvent.keyCodeToString(key.keyCode)} sent by $from${if (ignored) ", ignored after a display mode switch" else ""}")
+                    }
+                    return ignored || super.onMediaButtonEvent(session, controllerInfo, intent)
                 }
             })
             .build()
@@ -65,6 +72,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     companion object {
+        private const val TAG = "session"
+
         /** Set by the activity before it connects. */
         var player: Player? = null
 

@@ -1,6 +1,6 @@
 package io.github.viren070.aiostreams.mpv
 
-import android.util.Log
+import io.github.viren070.aiostreams.logs.AppLog
 import io.github.viren070.aiostreams.playback.Sound
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
@@ -43,7 +43,7 @@ internal class SoundFilters(private val mpv: MPV) {
     /** Whether mpv's log says the output refused the encoder's AC-3, which then stops for the file. */
     fun refused(prefix: String, text: String): Boolean {
         if (!ac3 || prefix != "cplayer" || !text.startsWith(REFUSED)) return false
-        Log.w(TAG, "the output refused AC-3, so this file plays without encoding")
+        AppLog.w(TAG, "the output refused AC-3, so this file plays without encoding")
         refused = true
         return true
     }
@@ -68,7 +68,7 @@ internal class SoundFilters(private val mpv: MPV) {
 
     /** mpv logs a filter that fails. */
     private fun edit(operation: String, filter: String) {
-        Log.i(TAG, "af $operation $filter")
+        AppLog.i(TAG, "af $operation $filter")
         mpv.command("af", operation, filter)
     }
 

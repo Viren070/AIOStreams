@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
+import io.github.viren070.aiostreams.logs.AppLog
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -35,6 +36,7 @@ class FrameRateMatch(
         val best = choose(display.supportedModes.filter { it.sameSize(active) }, frameRate.toFloat()) ?: return
         if (best.modeId == active.modeId) return
         if (original == null) original = activity.window.attributes.preferredDisplayModeId
+        AppLog.i(TAG, "switching the display from ${active.refreshRate} to ${best.refreshRate} Hz for $frameRate fps")
         prefer(best.modeId)
         val held = hold()
         wait(display, best) {
@@ -50,6 +52,7 @@ class FrameRateMatch(
         matched = 0.0
         cancelWait()
         prefer(original ?: return)
+        AppLog.i(TAG, "switching the display back")
         original = null
         switchedAt = SystemClock.uptimeMillis()
     }
@@ -81,7 +84,12 @@ class FrameRateMatch(
         val poll = object : Runnable {
             override fun run() {
                 stable = if (display.mode.refreshRate.near(mode.refreshRate)) stable + 1 else 0
-                if (stable >= 2 || SystemClock.uptimeMillis() - start > SWITCH_TIMEOUT_MS) {
+                val waited = SystemClock.uptimeMillis() - start
+                if (stable >= 2 || waited > SWITCH_TIMEOUT_MS) {
+                    AppLog.i(
+                        TAG,
+                        if (stable >= 2) "the display switched in $waited ms" else "the display still shows ${display.mode.refreshRate} Hz after $waited ms",
+                    )
                     waiting = null
                     return then()
                 }
@@ -98,6 +106,7 @@ class FrameRateMatch(
     }
 
     private companion object {
+        const val TAG = "display"
         const val POLL_MS = 60L
         const val SWITCH_TIMEOUT_MS = 4000L
         const val RELINK_MS = 5000L

@@ -9,6 +9,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
+import io.github.viren070.aiostreams.logs.AppLog
+import io.github.viren070.aiostreams.logs.Repeats
 import java.io.EOFException
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -40,6 +42,8 @@ internal class Stream(
     private var length = C.LENGTH_UNSET.toLong()
     private var answered = false
     private var readAt = 0L
+    private var connections = 0
+    private val reconnects = Repeats(TAG, keep = 1, windowMs = RECONNECTS_WINDOW_MS)
 
     /** A position the bytes from readAt run unbroken to, or -1. */
     private var runHint = -1L
@@ -84,6 +88,7 @@ internal class Stream(
 
     fun close() = lock.withLock {
         closed = true
+        reconnects.flush()
         blocks.free()
         changed.signalAll()
     }
@@ -111,7 +116,7 @@ internal class Stream(
         if (budget <= MIN_BYTES) return false
         budget = (budget / 2).coerceAtLeast(MIN_BYTES) / BLOCK * BLOCK
         while (blocks.count * BLOCK > budget && evict(-1)) Unit
-        Log.i(TAG, "memory is short, holding ${budget shr 20} MB at most")
+        AppLog.i(TAG, "memory is short, holding ${budget shr 20} MB at most")
         true
     }
 
@@ -224,6 +229,7 @@ internal class Stream(
             if (waited) meter.pause()
             try {
                 if (source == null || at != from) {
+                    if (connections++ > 0) reconnects.write(Log.INFO, "connecting again at ${from shr 20} MB")
                     retire(source)
                     source = null
                     source = connect(from, task)
@@ -256,7 +262,7 @@ internal class Stream(
                 source = null
                 if (closed) break
                 task.failures++
-                Log.w(TAG, "fetch failed (${task.failures})", e)
+                AppLog.w(TAG, "fetch failed (${task.failures})", e)
                 if (!failed(task, e)) break
             }
         }
@@ -381,7 +387,7 @@ internal class Stream(
             }
         } catch (e: Exception) {
             // The main connection fetches what the extractor reads.
-            if (!task.abandoned) Log.w(TAG, "side fetch failed", e)
+            if (!task.abandoned) AppLog.w(TAG, "side fetch failed", e)
         } finally {
             if (task.abandoned) source?.closeQuietly() else retire(source)
             lock.withLock {
@@ -429,7 +435,7 @@ internal class Stream(
             val now = SystemClock.elapsedRealtimeNanos()
             for ((source, waited) in waiting) {
                 if (now - waited.since < STALL_NS || waiting.remove(source) == null) continue
-                Log.w(TAG, "the link stalled, so a new connection takes over")
+                AppLog.w(TAG, "the link stalled, so a new connection takes over")
                 abandon(waited.task)
             }
         }
@@ -563,6 +569,7 @@ internal class Stream(
         const val LANDING_SHARE = 8
         const val SPARE_MARGIN_US = 4_000_000L
         const val HELD_POLL_NS = 100_000_000L
+        const val RECONNECTS_WINDOW_MS = 600_000L
 
         // Closing a connection with bytes left drains it for a while first, which a fetch shouldn't wait for.
         // Never shut down, as a fetch thread can retire its connection after a release.

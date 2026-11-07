@@ -5,7 +5,7 @@ import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
 import android.util.Base64
-import android.util.Log
+import io.github.viren070.aiostreams.logs.AppLog
 import io.github.viren070.aiostreams.natives.SubtitleTimeline
 import io.github.viren070.aiostreams.natives.Thumbnails
 import java.io.File
@@ -86,6 +86,7 @@ class PlayerChannel(
 
     /** Hands playback to `next`, releasing the engine it had; with `reload`, at the same place in the file. */
     fun replace(next: Engine, reload: Boolean) {
+        AppLog.i(TAG, "engine \"${engine.description}\" -> \"${next.description}\"")
         val at = state.positionMs
         engine.release()
         state = PlayerState()
@@ -194,12 +195,18 @@ class PlayerChannel(
 
     private fun load(request: LoadRequest) {
         beforeLoad()
+        AppLog.i(
+            TAG,
+            "load engine=\"${engine.description}\" live=${request.live} append=${request.append} " +
+                "start=${request.startMs.toLong()} url=${request.url}",
+        )
         showVideo(true)
         loaded = request
         engine.load(request)
     }
 
     override fun onUnplayable(error: String) {
+        AppLog.w(TAG, "unplayable: $error")
         main.post {
             if (fallBack()) return@post
             send(PlayerProtocol.ended("error", error, null))
@@ -235,6 +242,11 @@ class PlayerChannel(
     }
 
     override fun onEnded(reason: String, error: String?, cause: String?) {
+        if (error == null) {
+            AppLog.i(TAG, "ended reason=$reason")
+        } else {
+            AppLog.w(TAG, "ended reason=$reason error=\"$error\"${cause?.let { " cause=\"$it\"" }.orEmpty()}")
+        }
         main.post { send(PlayerProtocol.ended(reason, error, cause)) }
     }
 
@@ -282,7 +294,7 @@ class PlayerChannel(
         reader.execute {
             val headers = load.headers.flatMap { listOf(it.key, it.value) }.toTypedArray()
             val lines = runCatching { indexLines(SubtitleTimeline.read(load.url, headers, trustedRoots())) }
-                .onFailure { Log.w(TAG, "couldn't read the subtitle index", it) }
+                .onFailure { AppLog.w(TAG, "couldn't read the subtitle index", it) }
                 .getOrNull()
             main.post {
                 if (indexing == load.url) indexing = null
@@ -338,7 +350,7 @@ class PlayerChannel(
     }
 
     private fun sendThumbnail(url: String, positionMs: Long, src: String?, error: String?) {
-        if (error != null) Log.i(TAG, "no thumbnails: $error")
+        if (error != null) AppLog.i(TAG, "no thumbnails: $error")
         send(buildJsonObject {
             put("type", "player-thumbnail")
             put("url", url)
@@ -364,7 +376,7 @@ class PlayerChannel(
     }
 
     private fun reject(error: Throwable) {
-        Log.w(TAG, "refused: ${error.message}")
+        AppLog.w(TAG, "refused: ${error.message}")
         send(buildJsonObject {
             put("type", "error")
             put("message", error.message)

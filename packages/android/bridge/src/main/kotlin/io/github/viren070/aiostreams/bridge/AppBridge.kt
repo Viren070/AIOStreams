@@ -106,6 +106,36 @@ class AppBridge(
               return () => listeners.delete(listener);
             },
           });
+          // Errors go to the app's log, which problem reports read.
+          const MAX_REPORTS = 100;
+          let reports = 0;
+          let lastReport = '';
+          const describe = (value) => {
+            if (value instanceof Error) return value.stack || value.name + ': ' + value.message;
+            if (typeof value === 'string') return value;
+            try {
+              return JSON.stringify(value);
+            } catch {
+              return String(value);
+            }
+          };
+          const report = (message) => {
+            if (!message || message === lastReport || reports >= MAX_REPORTS) return;
+            lastReport = message;
+            reports++;
+            send({ type: 'web-error', message });
+            if (reports === MAX_REPORTS)
+              send({ type: 'web-error', message: 'further errors from this page are not logged' });
+          };
+          window.addEventListener('error', (e) =>
+            report(e.error ? describe(e.error) : e.message + ' (' + e.filename + ':' + e.lineno + ')')
+          );
+          window.addEventListener('unhandledrejection', (e) => report('unhandled rejection: ' + describe(e.reason)));
+          const consoleError = console.error;
+          console.error = (...args) => {
+            report(args.map(describe).join(' '));
+            consoleError.apply(console, args);
+          };
           send({ type: '$HELLO' });
         })();
     """.trimIndent()

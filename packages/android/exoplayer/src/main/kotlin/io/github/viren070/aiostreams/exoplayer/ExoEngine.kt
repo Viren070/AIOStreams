@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Choreographer
 import android.view.View
 import androidx.annotation.OptIn
@@ -55,6 +54,7 @@ import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRoute
 import io.github.viren070.aiostreams.exoplayer.video.MediaCaps
 import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
 import io.github.viren070.aiostreams.exoplayer.video.dolbyVisionRoute
+import io.github.viren070.aiostreams.logs.AppLog
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
 import io.github.viren070.aiostreams.playback.Fit
@@ -243,7 +243,7 @@ class ExoEngine(private val context: Context) : Engine {
                     subtitles.add(ExternalSubtitle(id, url, title, language, script))
                     selectSubtitle(id)
                 }
-            }.onFailure { Log.w(TAG, "couldn't add the subtitle", it) }
+            }.onFailure { AppLog.w(TAG, "couldn't add the subtitle", it) }
         }
     }
 
@@ -541,7 +541,7 @@ class ExoEngine(private val context: Context) : Engine {
     }
 
     private fun post(block: () -> Unit) {
-        main.post { runCatching(block).onFailure { Log.w(TAG, "player call failed", it) } }
+        main.post { runCatching(block).onFailure { AppLog.e(TAG, "player call failed", it) } }
     }
 
     private fun <T> onMain(block: () -> T): T {
@@ -666,7 +666,7 @@ class ExoEngine(private val context: Context) : Engine {
             }
             url = null
             selector.tracksKnown = false
-            Log.w(TAG, "playback failed", error)
+            AppLog.w(TAG, "playback failed (${error.errorCodeName})", error)
             state(PlayerState(idle = true))
             // mpv can't load a link that failed to either; anything else it may well play.
             if (!Failures.isLink(error)) return listener?.onUnplayable(Failures.unplayable(error)) ?: Unit
