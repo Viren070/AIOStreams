@@ -597,19 +597,24 @@ fn work(
         // Subtitles and art come on a second thread while the video does, so a
         // slow one, or one retried until it fails, never holds the video back.
         thread::scope(|scope| {
-            let beside = scope.spawn(|| -> Result<(), Failure> {
-                for file in extras {
-                    let path = place(&folder, &file.path).map_err(Failure::Error)?;
-                    match fetch(&agent, &file.url, &file.headers, &path, &stop, |_, _| {}) {
-                        // Art or a subtitle missing never costs the video.
-                        Err(Failure::Error(e)) => {
-                            log::warn!("download {}: skipped {}: {e}", spec.id, file.path)
+            // A thread the system can't give fails the download instead of
+            // leaving it running with nothing behind it.
+            let beside = thread::Builder::new()
+                .name("download".into())
+                .spawn_scoped(scope, || -> Result<(), Failure> {
+                    for file in extras {
+                        let path = place(&folder, &file.path).map_err(Failure::Error)?;
+                        match fetch(&agent, &file.url, &file.headers, &path, &stop, |_, _| {}) {
+                            // Art or a subtitle missing never costs the video.
+                            Err(Failure::Error(e)) => {
+                                log::warn!("download {}: skipped {}: {e}", spec.id, file.path)
+                            }
+                            result => result?,
                         }
-                        result => result?,
                     }
-                }
-                Ok(())
-            });
+                    Ok(())
+                })
+                .map_err(|e| Failure::Error(e.to_string()))?;
             let video = videos.into_iter().try_for_each(|file| {
                 let path = place(&folder, &file.path).map_err(Failure::Error)?;
                 let report = |bytes, total| {
