@@ -188,16 +188,22 @@ const overlaps = (a: Box, b: DOMRect) =>
   a.y < b.bottom &&
   a.y + a.height > b.top;
 
-/** Dialogs dim the whole page; menus and the like only hide what they cover. */
+/**
+ * Dialogs dim the whole page; popovers, whose content is a dialog too, menus
+ * and the like only hide what they cover.
+ */
 const MODAL = '[role="dialog"], [role="alertdialog"]';
-const OVER = `${MODAL}, [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]`;
+const POPPER = '[data-radix-popper-content-wrapper]';
+const OVER = `${MODAL}, [role="menu"], [role="listbox"], ${POPPER}`;
 
 /** Something the page opened over the player, which the app's video would hide. */
 function useCovered(box: Box): boolean {
   const [covered, setCovered] = React.useState(false);
   const check = React.useCallback(() => {
     const over = [...document.querySelectorAll(OVER)].some(
-      (el) => el.matches(MODAL) || overlaps(box, el.getBoundingClientRect())
+      (el) =>
+        (el.matches(MODAL) && !el.closest(POPPER)) ||
+        overlaps(box, el.getBoundingClientRect())
     );
     setCovered(over);
   }, [box]);
