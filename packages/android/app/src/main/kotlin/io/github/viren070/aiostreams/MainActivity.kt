@@ -54,6 +54,7 @@ import java.io.File
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
@@ -309,6 +310,21 @@ class MainActivity : ComponentActivity() {
                 (playback.engine as? MpvEngine)?.reloadConfig()
                 sendMpvConfig()
             }
+            "mpv-shaders" -> sendMpvShaders()
+            "mpv-shader-add" -> {
+                MpvEngine.addShader(
+                    this,
+                    message["name"]?.jsonPrimitive?.content.orEmpty(),
+                    message["text"]?.jsonPrimitive?.content.orEmpty(),
+                )
+                (playback.engine as? MpvEngine)?.reloadShaders()
+                sendMpvShaders()
+            }
+            "mpv-shader-remove" -> {
+                MpvEngine.removeShader(this, message["name"]?.jsonPrimitive?.content.orEmpty())
+                (playback.engine as? MpvEngine)?.reloadShaders()
+                sendMpvShaders()
+            }
             "diagnostics" -> {
                 val web = message["web"]?.jsonPrimitive?.contentOrNull
                 val server = message["server"]?.jsonPrimitive?.contentOrNull
@@ -462,6 +478,11 @@ class MainActivity : ComponentActivity() {
     private fun sendMpvConfig() = bridge.send(buildJsonObject {
         put("type", "mpv-config")
         put("text", MpvEngine.configFile(this@MainActivity).takeIf { it.exists() }?.readText().orEmpty())
+    })
+
+    private fun sendMpvShaders() = bridge.send(buildJsonObject {
+        put("type", "mpv-shaders")
+        put("names", JsonArray(MpvEngine.shaders(this@MainActivity).map { JsonPrimitive(it.name) }))
     })
 
     private fun setFullscreen(on: Boolean) {
