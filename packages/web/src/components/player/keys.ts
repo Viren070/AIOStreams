@@ -16,6 +16,7 @@ import {
 import { useLatest } from '../../lib/use-latest';
 import type { PlayerController } from '../../lib/playback/controller';
 import { canUpscale } from '../../lib/playback/player-choice';
+import { pickUpscaling, upscalingOn } from '../../lib/playback/upscaling';
 import { settings } from '../../lib/settings';
 import { delayNotice, SUBTITLE_DELAY_STEP_MS } from '../../lib/subtitles/delay';
 import { formatLocale } from '../../lib/i18n';
@@ -284,8 +285,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       },
       'player.upscaling': () => {
         if (!canUpscale()) return false;
-        const on = !settings.video.upscaling.read();
-        settings.video.upscaling.write(on);
+        const on = !upscalingOn();
+        pickUpscaling(on);
         k().notice(on ? t`Anime upscaling: on` : t`Anime upscaling: off`);
       },
     };

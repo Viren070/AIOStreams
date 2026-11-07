@@ -52,7 +52,8 @@ export interface PlayerState {
 }
 
 /** What some players add to what a browser's video can do. */
-export type PlayerFeature = 'audio' | 'chapters' | 'stats' | 'headers';
+export type PlayerFeature =
+  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
 export const browserFeatures: readonly PlayerFeature[] =

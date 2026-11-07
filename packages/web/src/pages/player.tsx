@@ -41,6 +41,7 @@ import {
 import { usePlayer } from '../lib/playback/use-player';
 import { videoEngine } from '../lib/playback/video';
 import { useNowPlaying } from '../lib/playback/now-playing';
+import { usePlayingAnime } from '../lib/playback/upscaling';
 import {
   useShowPicks,
   useShowTrackPicks,
@@ -685,6 +686,7 @@ function Player({
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
+  usePlayingAnime(item);
   const close = React.useRef<() => void>(undefined);
   const ended = useEnded(item, mini, () => close.current?.());
   const { connect } = ended;

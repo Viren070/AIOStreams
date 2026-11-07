@@ -231,6 +231,7 @@ export const ACTIONS = {
     help: msg`Turns it on or off for what is playing.`,
     group: 'player',
     keys: ['U'],
+    needs: 'upscaling',
   },
 
   'live.channelUp': {

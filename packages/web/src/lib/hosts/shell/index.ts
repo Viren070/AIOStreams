@@ -11,6 +11,7 @@ import { androidHost, setupAndroid } from './android';
 import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
 import { playerSettings } from './player';
+import { onUpscalingChange } from '../../playback/upscaling';
 
 export type UpdateState = ShellAnswer<'update-state'>;
 
@@ -82,11 +83,13 @@ export function ShellSetup() {
     apply();
     checkForUpdates(channel);
     const unsubscribeSettings = onSettingsChange(apply);
+    const unsubscribeUpscaling = onUpscalingChange(apply);
     const teardown =
       shell.platform === 'android' ? setupAndroid() : setupDesktop();
     shell.send({ type: 'player-sync' });
     return () => {
       unsubscribeSettings();
+      unsubscribeUpscaling();
       teardown();
     };
   }, []);

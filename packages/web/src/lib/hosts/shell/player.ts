@@ -15,6 +15,7 @@ import {
   subtitleScale,
 } from '../../subtitles/style';
 import { parseChapters } from '../../playback/chapters';
+import { upscalingOn } from '../../playback/upscaling';
 import type { Span } from '../../subtitles/align';
 import {
   ownTrackLabel,
@@ -690,11 +691,11 @@ export function playerSettings() {
     nightMode: audio.nightMode.read(),
     ac3Encode: audio.ac3Encode.read(),
     cacheMb: Number(settings.player.cacheSize.read()) || 0,
+    upscaling: upscalingOn(),
     ...(android
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
-          upscaling: video.upscaling.read(),
         }
       : { audioDevice: audio.device.read() }),
   };
