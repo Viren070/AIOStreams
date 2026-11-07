@@ -40,7 +40,7 @@ import {
   usePlayback,
 } from '../../lib/playback/session';
 import { navigate, to } from '../../lib/paths';
-import { focusOn, isTextField, useAction } from '../../lib/input';
+import { focusOn, isTextField, pickOnFocus, useAction } from '../../lib/input';
 import { NumberEntry, useNumberEntry } from '../../components/channel-number';
 import type { BaseItemDto } from '../../lib/types';
 import { PageMessage } from '../../components/layout';
@@ -133,6 +133,14 @@ export function LiveTvPage({
     : groupsLoading
       ? wanted
       : ALL;
+  // The picker's last group, which it picks again as the keys come back to it.
+  const [addonGroup, setAddonGroup] = React.useState<string>();
+  if (
+    group !== addonGroup &&
+    !OWN_GROUPS.has(group) &&
+    groups.some((g) => g.id === group)
+  )
+    setAddonGroup(group);
   const pages = useChannelPages(group, { enabled: !!view.data });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
   const channels = React.useMemo(
@@ -425,6 +433,11 @@ export function LiveTvPage({
               }))}
               value={addonGroups.some((g) => g.id === group) ? [group] : []}
               onValueChange={(next) => next[0] && chooseGroup(next[0])}
+              {...pickOnFocus(
+                addonGroup && addonGroup !== group
+                  ? () => chooseGroup(addonGroup)
+                  : undefined
+              )}
             />
           </div>
         )}
