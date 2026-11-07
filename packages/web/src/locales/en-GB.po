@@ -427,6 +427,10 @@ msgstr "Add a language"
 msgid "Add a server"
 msgstr "Add a server"
 
+#: src/pages/settings/apps.tsx
+msgid "Add a shader"
+msgstr "Add a shader"
+
 #: src/pages/settings/common.tsx
 msgid "Add another language"
 msgstr "Add another language"
@@ -555,6 +559,19 @@ msgstr "Android app"
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
 msgstr "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
+
+#: src/lib/input/actions.ts
+#: src/pages/settings/playback.tsx
+msgid "Anime upscaling"
+msgstr "Anime upscaling"
+
+#: src/components/player/keys.ts
+msgid "Anime upscaling: off"
+msgstr "Anime upscaling: off"
+
+#: src/components/player/keys.ts
+msgid "Anime upscaling: on"
+msgstr "Anime upscaling: on"
 
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
@@ -1810,6 +1827,10 @@ msgstr "General"
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Give this code to whoever looks into it."
+
+#: src/pages/settings/apps.tsx
+msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
+msgstr "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
 
 #: src/router.tsx
 msgid "Go home"
@@ -3573,6 +3594,7 @@ msgstr "Reminder set"
 #: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
+#: src/pages/settings/apps.tsx
 msgid "Remove"
 msgstr "Remove"
 
@@ -3961,6 +3983,10 @@ msgstr "Set by hand"
 msgid "Settings"
 msgstr "Settings"
 
+#: src/pages/settings/apps.tsx
+msgid "Shaders"
+msgstr "Shaders"
+
 #: src/pages/settings/subtitles.tsx
 msgid "Shadow"
 msgstr "Shadow"
@@ -3968,6 +3994,10 @@ msgstr "Shadow"
 #: src/components/party/party-sheet.tsx
 msgid "Share the invite"
 msgstr "Share the invite"
+
+#: src/pages/settings/playback.tsx
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. Uses more battery, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgstr "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. Uses more battery, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -5023,6 +5053,10 @@ msgstr "Turn other surround sound into Dolby Digital"
 #: src/pages/settings/cache.tsx
 msgid "Turning one off also clears it."
 msgstr "Turning one off also clears it."
+
+#: src/lib/input/actions.ts
+msgid "Turns it on or off for what is playing."
+msgstr "Turns it on or off for what is playing."
 
 #: src/pages/settings/cache.tsx
 msgid "Two weeks"

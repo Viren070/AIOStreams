@@ -17,6 +17,7 @@ import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
   linkPreset,
+  canUpscale,
   playerOptions,
 } from '../../lib/playback/player-choice';
 import {
@@ -139,6 +140,7 @@ export function PlaybackSection() {
   const [engine] = useSetting(settings.player.engine);
   const [frameRate, setFrameRate] = useSetting(settings.video.frameRate);
   const [tunneling, setTunneling] = useSetting(settings.video.tunneling);
+  const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
   const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
   // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
@@ -408,6 +410,15 @@ export function PlaybackSection() {
             value={dolbyVision}
             onValueChange={setDolbyVision}
           />
+          {canUpscale() && (
+            <Switch
+              side="right"
+              label={t`Anime upscaling`}
+              help={t`Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. Uses more battery, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are.`}
+              value={upscaling}
+              onValueChange={setUpscaling}
+            />
+          )}
           {androidTv && (
             <Switch
               side="right"

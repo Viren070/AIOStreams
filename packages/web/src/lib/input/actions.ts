@@ -226,6 +226,12 @@ export const ACTIONS = {
     keys: ['I'],
     needs: 'stats',
   },
+  'player.upscaling': {
+    label: msg`Anime upscaling`,
+    help: msg`Turns it on or off for what is playing.`,
+    group: 'player',
+    keys: ['U'],
+  },
 
   'live.channelUp': {
     label: msg`Next channel`,

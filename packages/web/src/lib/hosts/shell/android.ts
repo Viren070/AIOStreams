@@ -66,6 +66,20 @@ const mpvConfig = (message: { type: string; text?: string }) =>
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
 
+/** The app's own mpv shaders, as it answers each change to them. */
+const mpvShaders = (message: { type: string; name?: string; text?: string }) =>
+  ask(message, 'mpv-shaders', { timeoutMs: 5000, errors: true }).then(
+    (m) => m.names
+  );
+
+export const readMpvShaders = () => mpvShaders({ type: 'mpv-shaders' });
+
+export const addMpvShader = (name: string, text: string) =>
+  mpvShaders({ type: 'mpv-shader-add', name, text });
+
+export const removeMpvShader = (name: string) =>
+  mpvShaders({ type: 'mpv-shader-remove', name });
+
 const voiceErrors = () => ({
   'no-speech': t`Nothing was heard`,
   failed: t`Voice search failed`,

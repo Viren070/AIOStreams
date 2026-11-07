@@ -957,6 +957,7 @@ export const settings = {
       undefined,
       ['aiostreams-android-tunneling']
     ),
+    upscaling: device<boolean>('aiostreams-web-video-upscaling', false),
   },
   audio: {
     channels: device<AudioChannels>(

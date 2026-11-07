@@ -127,6 +127,8 @@ function exoStatsText(
     );
     const route = str('dolbyVisionRoute');
     if (route) lines.push(`Plays as   ${route}`);
+    const upscaling = str('upscaling');
+    if (upscaling) lines.push(`Upscaling  ${upscaling}`);
   }
   const hdr = list('hdrTypes')
     .map((type) => HDR_TYPES[type])
@@ -692,6 +694,7 @@ export function playerSettings() {
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
+          upscaling: video.upscaling.read(),
         }
       : { audioDevice: audio.device.read() }),
   };

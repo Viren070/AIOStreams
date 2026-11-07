@@ -162,6 +162,8 @@ export function playerSupport(): { headers: boolean; youtube: boolean } {
 }
 
 /** `launched` are the players the desktop app found it can start. */
+export const canUpscale = () => currentHost().name === 'android-app';
+
 export function playerOptions(
   launched: readonly string[]
 ): { value: string; label: string }[] {

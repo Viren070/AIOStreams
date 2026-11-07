@@ -426,6 +426,10 @@ msgstr ""
 msgid "Add a server"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "Add a shader"
+msgstr ""
+
 #: src/pages/settings/common.tsx
 msgid "Add another language"
 msgstr ""
@@ -553,6 +557,19 @@ msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
+msgstr ""
+
+#: src/lib/input/actions.ts
+#: src/pages/settings/playback.tsx
+msgid "Anime upscaling"
+msgstr ""
+
+#: src/components/player/keys.ts
+msgid "Anime upscaling: off"
+msgstr ""
+
+#: src/components/player/keys.ts
+msgid "Anime upscaling: on"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -1808,6 +1825,10 @@ msgstr ""
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
+msgstr ""
+
+#: src/pages/settings/apps.tsx
+msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
 msgstr ""
 
 #: src/router.tsx
@@ -3572,6 +3593,7 @@ msgstr ""
 #: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
+#: src/pages/settings/apps.tsx
 msgid "Remove"
 msgstr ""
 
@@ -3960,12 +3982,20 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/pages/settings/apps.tsx
+msgid "Shaders"
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Shadow"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Share the invite"
+msgstr ""
+
+#: src/pages/settings/playback.tsx
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. Uses more battery, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
 #: src/lib/input/keys.ts
@@ -5021,6 +5051,10 @@ msgstr ""
 
 #: src/pages/settings/cache.tsx
 msgid "Turning one off also clears it."
+msgstr ""
+
+#: src/lib/input/actions.ts
+msgid "Turns it on or off for what is playing."
 msgstr ""
 
 #: src/pages/settings/cache.tsx

@@ -99,6 +99,7 @@ export type ShellMessage =
   /** The engine the Android app plays with now. */
   | { type: 'player-engine'; name: string }
   | { type: 'mpv-config'; text: string }
+  | { type: 'mpv-shaders'; names: string[] }
   | {
       type: 'player-stats';
       stats: Record<string, unknown>;
