@@ -190,6 +190,8 @@ pub struct Settings {
     pub audio_device: Option<String>,
     #[serde(default = "yes")]
     pub dolby_vision: bool,
+    #[serde(default)]
+    pub upscaling: bool,
     /// Zero sizes the cache from the computer's memory.
     #[serde(default)]
     pub cache_mb: u64,

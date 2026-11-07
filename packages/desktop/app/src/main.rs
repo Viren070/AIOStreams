@@ -222,6 +222,8 @@ pub struct Paths {
     downloads: PathBuf,
     /// Where downloads go until the user picks a folder.
     download_folder: PathBuf,
+    /// The upscaling shader, which mpv only reads from a file.
+    upscaling_hook: PathBuf,
 }
 
 pub struct App {
@@ -318,6 +320,7 @@ fn main() {
         subtitles,
         downloads: data_dir.join("downloads.json"),
         download_folder,
+        upscaling_hook: data_dir.join("upscaling.glsl"),
     });
     shell::run(App {
         args,
@@ -347,9 +350,10 @@ fn mpv_config_dir(config_dir: &Path) -> PathBuf {
 /// `emit` is called on mpv's event thread.
 pub fn start_player(
     video: &platform::VideoSurface,
-    mpv_dir: &Path,
+    paths: &Paths,
     emit: impl Fn(Outbound) + Send + Sync + 'static,
 ) -> Player {
+    let mpv_dir = &paths.mpv;
     let mut defaults: Vec<(&str, String)> = vec![
         ("config-dir", mpv_dir.to_string_lossy().into_owned()),
         ("config", "yes".into()),
@@ -413,8 +417,15 @@ pub fn start_player(
     let sized = std::fs::read_to_string(mpv_dir.join("mpv.conf"))
         .is_ok_and(|c| c.contains("demuxer-max-bytes"));
     let auto_cache = (!sized).then(|| playback::auto_cache(platform::total_memory()));
-    Player::start(library, &defaults, &required, auto_cache, Arc::new(emit))
-        .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
+    Player::start(
+        library,
+        &defaults,
+        &required,
+        auto_cache,
+        paths.upscaling_hook.clone(),
+        Arc::new(emit),
+    )
+    .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
 
 /// `emit` is called on the player's own threads.

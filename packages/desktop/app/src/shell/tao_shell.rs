@@ -175,7 +175,7 @@ pub fn run(app: App) {
     let size = window.inner_size();
 
     let video = platform::VideoSurface::new(&window).unwrap_or_else(|e| platform::fatal(&e));
-    let started = start_player(&video, &paths.mpv, {
+    let started = start_player(&video, &paths, {
         let proxy = proxy.clone();
         move |message: Outbound| {
             let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
