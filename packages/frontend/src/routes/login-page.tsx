@@ -155,13 +155,6 @@ export function LoginPage() {
           <p className="text-sm text-[--muted] text-center">
             Log in to access this AIOStreams instance.
           </p>
-          {localLoginEnabled && (
-            <p className="text-xs text-[--muted] text-center">
-              Use a username and password from your instance's{' '}
-              <code className="text-[--foreground]">AIOSTREAMS_AUTH</code>{' '}
-              environment variable
-            </p>
-          )}
         </div>
         {oidc?.enabled && (
           <div className="flex flex-col gap-4 mb-4">
@@ -185,6 +178,9 @@ export function LoginPage() {
         )}
         {localLoginEnabled && (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <p className="text-xs text-[--muted] text-center">
+              Use the login details provided by the instance administrator.
+            </p>
             <TextInput
               label="Username"
               id="username"
