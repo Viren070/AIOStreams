@@ -9,6 +9,7 @@ use aiostreams_container::{RangeReader, subtitle_timelines};
 use serde_json::Value;
 
 use crate::bridge::Outbound;
+use crate::logs::MpvLog;
 use crate::mpv::{Event, Kind, Mpv};
 use crate::playback::{
     self, Change, IMAGE_SUBTITLE_CODECS, Load, Loadfile, OBSERVED, REFERENCE_LINES, Settings,
@@ -327,7 +328,10 @@ impl Player {
     }
 
     pub fn set_sound(&self, sound: Sound) {
-        log::info!("set sound={sound:?}");
+        let shown = format!("{sound:?}");
+        if self.differs_from_logged("sound", &shown) {
+            log::info!("set sound={shown}");
+        }
         if let Ok(mut pending) = self.sound.lock() {
             *pending = Some(sound);
         }
@@ -546,10 +550,7 @@ impl Player {
     }
 
     fn set(&self, name: &'static str, value: String) {
-        let changed = LOGGED_PROPS.contains(&name)
-            && self.logged.lock().is_ok_and(|mut logged| {
-                logged.insert(name.to_string(), value.clone()).as_ref() != Some(&value)
-            });
+        let changed = LOGGED_PROPS.contains(&name) && self.differs_from_logged(name, &value);
         let shown = if value.is_empty() { "\"\"" } else { &value };
         if changed {
             log::info!("set {name}={shown}");
@@ -557,6 +558,15 @@ impl Player {
             log::debug!("set {name}={shown}");
         }
         self.send(Request::SetProp(name.to_string(), value));
+    }
+
+    fn differs_from_logged(&self, name: &str, value: &str) -> bool {
+        self.logged.lock().is_ok_and(|mut logged| {
+            logged
+                .insert(name.to_string(), value.to_string())
+                .as_deref()
+                != Some(value)
+        })
     }
 
     pub fn sync(&self) {
@@ -752,41 +762,6 @@ impl Throttle {
         } else {
             Self::EVERY
         }
-    }
-}
-
-/// Collapses a message mpv repeats, as a broken stream can print one per frame.
-#[derive(Default)]
-struct MpvLog {
-    last: Option<(log::Level, String)>,
-    repeats: u32,
-}
-
-impl MpvLog {
-    fn push(&mut self, level: &str, prefix: &str, text: &str) {
-        let level = if level == "error" || level == "fatal" {
-            log::Level::Error
-        } else {
-            log::Level::Warn
-        };
-        let line = format!("[{prefix}] {}", text.trim_end());
-        if self.last.as_ref().is_some_and(|(_, last)| *last == line) {
-            self.repeats += 1;
-            return;
-        }
-        self.flush();
-        log::log!(target: "mpv", level, "{line}");
-        self.last = Some((level, line));
-    }
-
-    fn flush(&mut self) {
-        if self.repeats > 0
-            && let Some((level, _)) = &self.last
-        {
-            log::log!(target: "mpv", *level, "last message repeated {} more times", self.repeats);
-        }
-        self.repeats = 0;
-        self.last = None;
     }
 }
 

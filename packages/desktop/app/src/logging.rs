@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use aiostreams_desktop_core::logs::mask_links;
 use log::{Level, LevelFilter, Log, Metadata, Record};
 
 use crate::platform;
@@ -41,7 +42,7 @@ impl Log for FileLogger {
         }
         let (date, time) = platform::local_time();
         // Continuation lines, as in a stack trace, are indented under their entry.
-        let message = record.args().to_string().replace('\n', "\n    ");
+        let message = mask_links(&record.args().to_string()).replace('\n', "\n    ");
         let line = format!(
             "{date} {time} {:<5} {}: {message}\n",
             record.level(),

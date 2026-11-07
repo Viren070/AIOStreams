@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::bridge::{self, Outbound, origin};
 use aiostreams_desktop_core::discord;
 use aiostreams_desktop_core::external::External;
 use aiostreams_desktop_core::player::Player;
@@ -361,11 +361,10 @@ pub fn run(app: App) {
             if from != app_origin {
                 return log::warn!("ignored a message from {from}");
             }
-            match serde_json::from_str::<Inbound>(&value.to_str()) {
-                Ok(message) => handle(
+            if let Some(message) = bridge::parse(&value.to_str()) {
+                handle(
                     message, &player, &external, &post, &paths, &updater, &downloads,
-                ),
-                Err(e) => log::warn!("bad message: {e}"),
+                );
             }
         }
     });

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::bridge::{self, Outbound, origin};
 use aiostreams_desktop_core::discord;
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
@@ -250,11 +250,10 @@ pub fn run(app: App) {
                 let send = |event: UserEvent| {
                     let _ = proxy.send_event(event);
                 };
-                match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(
+                if let Some(message) = bridge::parse(req.body()) {
+                    handle(
                         message, &player, &external, &send, &paths, &updater, &downloads,
-                    ),
-                    Err(e) => log::warn!("bad message: {e}"),
+                    );
                 }
             }
         })

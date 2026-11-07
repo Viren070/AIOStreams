@@ -1,6 +1,7 @@
 //! Messages between the page and the shell.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -204,6 +205,11 @@ pub enum Inbound {
     WebError {
         message: String,
     },
+    /// A line the page writes to the app's log.
+    Log {
+        level: PageLogLevel,
+        message: String,
+    },
     /// What Discord shows the user doing; `None` clears it.
     Presence {
         presence: Option<Presence>,
@@ -241,6 +247,44 @@ pub enum Inbound {
     DownloadConfig {
         concurrent: u32,
     },
+}
+
+static REFUSED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+/// A page message, or `None` for one this version can't read, logged once per type.
+pub fn parse(body: &str) -> Option<Inbound> {
+    let error = match serde_json::from_str(body) {
+        Ok(message) => return Some(message),
+        Err(e) => e.to_string(),
+    };
+    let kind = serde_json::from_str::<Value>(body)
+        .ok()
+        .and_then(|v| v["type"].as_str().map(String::from))
+        .unwrap_or_default();
+    if REFUSED.lock().is_ok_and(|mut r| r.insert(kind.clone())) {
+        if error.starts_with("unknown variant") {
+            log::warn!("ignored {kind} messages, which this version doesn't know");
+        } else {
+            log::warn!("ignored a {kind} message: {error}");
+        }
+    }
+    None
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PageLogLevel {
+    Info,
+    Warn,
+}
+
+impl From<PageLogLevel> for log::Level {
+    fn from(level: PageLogLevel) -> Self {
+        match level {
+            PageLogLevel::Info => log::Level::Info,
+            PageLogLevel::Warn => log::Level::Warn,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

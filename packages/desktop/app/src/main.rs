@@ -435,6 +435,7 @@ pub fn start_downloads(paths: &Paths, emit: impl Fn(Outbound) + Send + 'static) 
 
 const SUBTITLE_TYPES: &[&str] = &["srt", "vtt", "ass", "ssa", "sub", "sup"];
 const MAX_SUBTITLE_BYTES: usize = 10 << 20;
+const MAX_PAGE_TEXT: usize = 4000;
 
 /// The page never names a path for mpv to open, so the app writes the file itself.
 fn save_subtitle(dir: &Path, name: &str, data: &str) -> Result<PathBuf, String> {
@@ -768,9 +769,13 @@ pub fn handle(
         Inbound::DownloadConfig { concurrent } => {
             downloads.send(downloads::Command::SetConcurrent(concurrent))
         }
-        Inbound::WebError { message } => {
-            let message: String = message.chars().take(4000).collect();
-            log::error!(target: "web", "{message}");
+        Inbound::WebError { message } => log::error!(target: "web", "{}", page_text(&message)),
+        Inbound::Log { level, message } => {
+            log::log!(target: "web", log::Level::from(level), "{}", page_text(&message))
         }
     }
+}
+
+fn page_text(message: &str) -> String {
+    message.chars().take(MAX_PAGE_TEXT).collect()
 }

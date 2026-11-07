@@ -3,6 +3,7 @@ pub mod discord;
 pub mod downloads;
 pub mod external;
 pub mod licenses;
+pub mod logs;
 pub mod mpv;
 pub mod now_playing;
 pub mod playback;
