@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-06 23:26+0000\n"
+"PO-Revision-Date: 2026-11-08 00:06+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -21,7 +21,7 @@ msgstr "{address} non ha risposto. Verifica che sia in esecuzione, poi riprova."
 
 #: src/components/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} su {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -695,11 +695,11 @@ msgstr "Blu"
 
 #: src/pages/settings/interface.tsx
 msgid "Blur episodes you haven't started"
-msgstr ""
+msgstr "Sfoca gli episodi che non hai ancora iniziato"
 
 #: src/pages/settings/interface.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
-msgstr ""
+msgstr "Sfoca immagini, titoli e descrizioni finché non ci si posiziona sopra con il puntatore, la tastiera o il telecomando."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
@@ -4098,9 +4098,8 @@ msgid "Speed up while held"
 msgstr "Velocizza mentre è mantenuto"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Spoilers"
-msgstr "Trailer"
+msgstr "Spoiler"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
