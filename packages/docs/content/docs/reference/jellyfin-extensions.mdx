@@ -117,6 +117,7 @@ In the `PlaybackInfo` body:
 | `Fresh`                     | The app is listing versions: answer with a list no older than the server keeps one for   |
 | `Refresh`                   | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
 | `MediaSourceId`             | Standard. The app is playing that version: answer from the list it came from             |
+| `SkipSubtitles`             | Don't ask subtitle addons for the first version; the app asks for the version it plays   |
 | `EnableRequiredHttpHeaders` | The app's player sends a version's standard `RequiredHttpHeaders` with its requests      |
 | `EnableYouTube`             | The app's player opens a version by its `ytId`                                           |
 
