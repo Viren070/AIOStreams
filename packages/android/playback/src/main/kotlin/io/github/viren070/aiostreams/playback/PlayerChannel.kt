@@ -86,13 +86,14 @@ class PlayerChannel(
 
     /** Hands playback to `next`, releasing the engine it had; with `reload`, at the same place in the file. */
     fun replace(next: Engine, reload: Boolean) {
-        AppLog.i(TAG, "engine \"${engine.description}\" -> \"${next.description}\"")
+        val previous = engine.description
         val at = state.positionMs
         engine.release()
         state = PlayerState()
         heldPosition = null
         engine = next
         next.start(this)
+        AppLog.i(TAG, "engine \"$previous\" -> \"${next.description}\"")
         settings?.let { next.setSettings(applied(it)) }
         style?.let(next::setStyle)
         next.change(settled)
