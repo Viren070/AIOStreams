@@ -92,8 +92,8 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     private val converted = HashSet<String>()
     private val textTracks = HashMap<String, AssTextTrack>()
 
-    /** Each file track's latest lines, which libass gets once the track shows; it holds only the shown one's. */
-    private val recent = HashMap<String, ArrayDeque<AssLine>>()
+    /** The file tracks' latest lines, which libass gets once a track shows; it holds only the shown one's. */
+    private val recent = RecentLines()
     private val fonts = AssFonts()
     private var shown: String? = null
     private var width = 0
@@ -216,7 +216,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     fun select(key: String?) = queue {
         if (key != shown) {
             shown?.takeIf { it !in scripts }?.let(tracks::get)?.let(AssNative::flushTrack)
-            tracks[key]?.let { track -> recent[key]?.forEach { AssNative.addLine(track, it.bytes, it.startMs, it.durationMs) } }
+            tracks[key]?.let { track -> recent.forEach(key) { AssNative.addLine(track, it.bytes, it.startMs, it.durationMs) } }
         }
         val restyle = (key in converted) != (shown in converted)
         shown = key
@@ -326,9 +326,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     }
 
     private fun addLine(track: String, line: AssLine) {
-        val lines = recent.getOrPut(track) { ArrayDeque() }
-        lines += line
-        while (lines.isNotEmpty() && lines.first().endMs < frameUs / 1000 - KEPT_MS) lines.removeFirst()
+        recent.add(track, line, frameUs / 1000)
         if (track == shown) tracks[track]?.let {
             AssNative.addLine(it, line.bytes, line.startMs, line.durationMs)
             linesFrom(line.startMs)
@@ -524,8 +522,5 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
         /** Frames' times kept from before the one showing, for a seek back. */
         const val KEPT_FRAMES_US = 5_000_000L
-
-        /** Lines a track keeps from before the playhead, for one it shows later; signs can stay up a while. */
-        const val KEPT_MS = 30_000L
     }
 }
