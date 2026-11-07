@@ -799,8 +799,9 @@ mod tests {
     use crate::bridge::DownloadFile;
     use std::net::TcpListener;
 
-    /// A server whose subtitle always answers 502 and whose video answers at once.
-    fn serve() -> String {
+    /// A server whose subtitle answers `subtitle`, such as `502 Bad Gateway`,
+    /// and whose video answers at once.
+    fn serve(subtitle: &'static str) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = format!("http://{}", listener.local_addr().unwrap());
         thread::spawn(move || {
@@ -808,9 +809,9 @@ mod tests {
                 let mut request = [0u8; 4096];
                 let n = stream.read(&mut request).unwrap_or(0);
                 let answer = if request[..n].starts_with(b"GET /subtitle") {
-                    "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    format!("HTTP/1.1 {subtitle}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
                 } else {
-                    "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nvideo"
+                    "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nvideo".into()
                 };
                 let _ = stream.write_all(answer.as_bytes());
             }
@@ -818,11 +819,16 @@ mod tests {
         address
     }
 
-    #[test]
-    fn the_video_does_not_wait_for_a_subtitle_retried() {
-        let address = serve();
-        let folder =
-            std::env::temp_dir().join(format!("aiostreams-downloads-{}", std::process::id()));
+    struct Download {
+        folder: PathBuf,
+        stop: Arc<AtomicBool>,
+        received: Receiver<Event>,
+        worker: thread::JoinHandle<()>,
+    }
+
+    /// Downloads a subtitle and a video from `address`, into a folder named for the test.
+    fn download(address: &str, name: &str) -> Download {
+        let folder = std::env::temp_dir().join(format!("aiostreams-{name}-{}", std::process::id()));
         let file = |path: &str, kind| DownloadFile {
             url: format!("{address}/{path}"),
             path: path.into(),
@@ -844,24 +850,50 @@ mod tests {
             let (folder, stop) = (folder.clone(), stop.clone());
             thread::spawn(move || work(spec, folder, agent(), stop, events))
         };
+        Download {
+            folder,
+            stop,
+            received,
+            worker,
+        }
+    }
 
+    impl Download {
+        /// The result, and the video's bytes, once the download ends.
+        fn finish(self) -> (Result<(), Failure>, Vec<u8>) {
+            let result = loop {
+                match self.received.recv_timeout(Duration::from_secs(10)) {
+                    Ok(Event::Finished { result, .. }) => break result,
+                    Ok(_) => continue,
+                    Err(e) => panic!("the download did not finish: {e}"),
+                }
+            };
+            self.worker.join().unwrap();
+            let video = fs::read(self.folder.join("video.mkv")).unwrap_or_default();
+            let _ = fs::remove_dir_all(&self.folder);
+            (result, video)
+        }
+    }
+
+    #[test]
+    fn the_video_does_not_wait_for_a_subtitle_retried() {
+        let download = download(&serve("502 Bad Gateway"), "retried");
         // The subtitle is retried for minutes, so the video's bytes within
         // seconds mean the video did not wait for it.
-        let first = received.recv_timeout(Duration::from_secs(10));
+        let first = download.received.recv_timeout(Duration::from_secs(10));
         assert!(matches!(first, Ok(Event::Progress { .. })));
 
-        stop.store(true, Ordering::Relaxed);
-        let result = loop {
-            match received.recv_timeout(Duration::from_secs(10)) {
-                Ok(Event::Finished { result, .. }) => break result,
-                Ok(_) => continue,
-                Err(e) => panic!("the download did not finish: {e}"),
-            }
-        };
-        worker.join().unwrap();
-        let video = fs::read(folder.join("video.mkv"));
-        let _ = fs::remove_dir_all(&folder);
+        download.stop.store(true, Ordering::Relaxed);
+        let (result, video) = download.finish();
         assert!(matches!(result, Err(Failure::Stopped)));
-        assert_eq!(video.unwrap(), b"video");
+        assert_eq!(video, b"video");
+    }
+
+    #[test]
+    fn a_subtitle_that_fails_is_skipped() {
+        // A 404 is not retried, so the subtitle fails at once.
+        let (result, video) = download(&serve("404 Not Found"), "skipped").finish();
+        assert!(matches!(result, Ok(())));
+        assert_eq!(video, b"video");
     }
 }
