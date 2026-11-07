@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { after, before, describe, it } from 'node:test';
+import { after, before, describe, it, mock } from 'node:test';
 // Initialise the dependency graph in the same order as the server.
 import '../index.js';
 import { initialiseConfig } from '../config/index.js';
@@ -9,7 +9,10 @@ import {
   MediaInfoRepository,
   type MediaInfoRow,
 } from '../db/repositories/media-info.js';
-import type { Stream } from '../db/schemas.js';
+import type { Stream, UserData } from '../db/schemas.js';
+import type { DebridFile } from '../debrid/base.js';
+import { TorrentsService } from '@torbox/torbox-api';
+import { Cache } from '../utils/cache.js';
 import { applyStoredMediaInfo, sourceRecordFrom } from '../jellyfin/media.js';
 import { CometPreset } from '../presets/comet.js';
 import { TorrentioPreset } from '../presets/torrentio.js';
@@ -33,15 +36,49 @@ const info: MediaInfoRecord = {
 
 let directory: string;
 let nextKey = 0;
+const inventories = new Map<string, DebridFile[]>();
+const checkedHashes: string[][] = [];
+const userData = {
+  services: [{ id: 'torbox', credentials: { apiKey: 'fixture' } }],
+} as UserData;
 
 before(async () => {
   directory = await mkdtemp('media-info-test-');
   await initDb(`sqlite://./${directory}/db.sqlite`);
   await initialiseConfig();
+  mock.method(
+    TorrentsService.prototype,
+    'getTorrentCachedAvailability',
+    async (
+      version: string,
+      params: { hash: string; format: string; listFiles: string }
+    ) => {
+      assert.equal(version, 'v1');
+      assert.equal(params.format, 'list');
+      assert.equal(params.listFiles, 'true');
+      const hashes = params.hash.split(',');
+      assert.ok(hashes.length <= 100);
+      checkedHashes.push(hashes);
+      return {
+        data: {
+          success: true,
+          data: hashes.map((hash) => ({
+            hash,
+            size: (inventories.get(hash) ?? []).reduce(
+              (sum, f) => sum + f.size,
+              0
+            ),
+            files: inventories.get(hash) ?? [],
+          })),
+        },
+      };
+    }
+  );
 });
 
 after(async () => {
   await closeDb();
+  mock.restoreAll();
   if (directory) await rm(directory, { recursive: true, force: true });
 });
 
@@ -61,7 +98,13 @@ async function seed(reports: Partial<MediaInfoRow>[], kind = 'btih') {
       ...report,
     }))
   );
-  return { hash, releaseKeys: [releaseKey], title, filename: title };
+  return {
+    hash,
+    releaseKeys: [releaseKey],
+    title,
+    filename: title,
+    service: 'torbox',
+  };
 }
 
 function parseDebrid(
@@ -95,12 +138,17 @@ function context(type: string) {
 }
 
 function storedMovieInfo(identity: MediaInfoIdentity) {
-  return storedMediaInfoFor(identity, undefined, true);
+  return storedMediaInfoFor(identity, undefined, true, userData);
+}
+
+function singleInventory(hash: string, name = file) {
+  inventories.set(hash, [{ name, size: 6_930_229_510, index: 0 }]);
 }
 
 describe('stored media info file selection', () => {
   it('enriches Torrentio and Comet streams from the reported probe', async () => {
     const { hash } = await seed([{}]);
+    singleInventory(hash);
     const cases = [
       [TorrentioPreset, 'https://torrentio.strem.fun', undefined],
       [TorrentioPreset, 'https://torrentio.strem.fun', title],
@@ -114,7 +162,7 @@ describe('stored media info file selection', () => {
         behaviorHints: { filename },
       });
       assert.equal(parsed.torrent?.infoHash, hash);
-      await resolveStoredMediaInfo([parsed], context('movie'));
+      await resolveStoredMediaInfo([parsed], context('movie'), userData);
       assert.equal(parsed.parsedFile?.mediaInfoQuality, 'probe');
       assert.deepEqual(parsed.parsedFile?.audioTags, ['AAC']);
     }
@@ -122,21 +170,29 @@ describe('stored media info file selection', () => {
 
   it('checks the actual Torrentio URL shape and an advertised byte count', async () => {
     const { hash } = await seed([{}]);
+    singleInventory(hash);
     const rounded = torrentioStream(hash);
     const exact = torrentioStream(hash, 6_930_229_510);
     const different = torrentioStream(hash, 6_930_229_511);
-    await resolveStoredMediaInfo([rounded, exact, different], context('movie'));
+    await resolveStoredMediaInfo(
+      [rounded, exact, different],
+      context('movie'),
+      userData
+    );
     assert.equal(rounded.parsedFile?.mediaInfoQuality, 'probe');
     assert.equal(exact.parsedFile?.mediaInfoQuality, 'probe');
     assert.notEqual(different.parsedFile?.mediaInfoQuality, 'probe');
   });
 
-  it('requires a movie request for the unknown-count title match', async () => {
+  it('requires a movie request for an unknown-count inventory lookup', async () => {
     for (const name of [file, title]) {
       const { hash } = await seed([{ file: name }]);
       const parsed = torrentioStream(hash);
-      await resolveStoredMediaInfo([parsed], context('series'));
+      singleInventory(hash);
+      const before = checkedHashes.length;
+      await resolveStoredMediaInfo([parsed], context('series'), userData);
       assert.notEqual(parsed.parsedFile?.mediaInfoQuality, 'probe');
+      assert.equal(checkedHashes.length, before);
     }
   });
 
@@ -154,13 +210,19 @@ describe('stored media info file selection', () => {
       audioTracks: [{ index: 1, codec: 'opus' }],
     };
     existing.parsedFile = parsedFile;
-    await resolveStoredMediaInfo([custom, existing], context('movie'));
+    singleInventory(hash);
+    await resolveStoredMediaInfo(
+      [custom, existing],
+      context('movie'),
+      userData
+    );
     assert.notEqual(custom.parsedFile?.mediaInfoQuality, 'probe');
     assert.equal(existing.parsedFile, parsedFile);
   });
 
-  it('uses the same movie-only fallback on Jellyfin play', async () => {
+  it('verifies the same inventory on Jellyfin play', async () => {
     const { hash } = await seed([{}]);
+    singleInventory(hash);
     const stream = torrentioStream(hash);
     const record = sourceRecordFrom(
       'jellyfin-fixture',
@@ -172,7 +234,7 @@ describe('stored media info file selection', () => {
     );
     assert.equal(await applyStoredMediaInfo(record, undefined), false);
     assert.equal(
-      await applyStoredMediaInfo(record, undefined, { movie: true }),
+      await applyStoredMediaInfo(record, undefined, { movie: true, userData }),
       true
     );
     assert.equal(record.extension.mediaInfoQuality, 'probe');
@@ -180,11 +242,111 @@ describe('stored media info file selection', () => {
     assert.deepEqual(record.extension.audioTags, ['AAC']);
   });
 
-  it('matches the complete video stem across separators, case and paths', async () => {
+  it('uses the actual inventory name independently of the release label', async () => {
     const identity = await seed([
       { file: 'folder/THE_OGRES_BRIDE_2026_PK_WEB-DL_1080P.MKV' },
     ]);
+    singleInventory(
+      identity.hash,
+      'folder/THE_OGRES_BRIDE_2026_PK_WEB-DL_1080P.MKV'
+    );
     assert.deepEqual(await storedMovieInfo(identity), info);
+  });
+
+  it('does not infer a sole file from a title and one observed probe', async () => {
+    const identity = await seed([{}]);
+    assert.equal(await storedMovieInfo(identity), undefined);
+    inventories.set(identity.hash, [
+      { name: file, size: 6_930_229_510, index: 0 },
+      { name: `${title}.mp4`, size: 6_930_229_510, index: 1 },
+    ]);
+    await Cache.clearPrefix('media-info:torbox-inventory');
+    assert.equal(await storedMovieInfo(identity), undefined);
+  });
+
+  it('requires matching inventory bytes and never normalizes actual file names', async () => {
+    const identity = await seed([{}]);
+    for (const candidate of [
+      { name: file, size: 6_930_229_511 },
+      { name: `${title}.mkv`, size: 6_930_229_510 },
+      { name: file, size: 0 },
+    ]) {
+      inventories.set(identity.hash, [candidate]);
+      await Cache.clearPrefix('media-info:torbox-inventory');
+      assert.equal(await storedMovieInfo(identity), undefined);
+    }
+  });
+
+  it('does not query a disabled or unconfigured service and keeps exact matches', async () => {
+    const identity = await seed([{}]);
+    singleInventory(identity.hash);
+    const before = checkedHashes.length;
+    for (const config of [
+      undefined,
+      {} as UserData,
+      {
+        services: [
+          { id: 'torbox', enabled: false, credentials: { apiKey: 'fixture' } },
+        ],
+      } as UserData,
+    ]) {
+      assert.equal(
+        await storedMediaInfoFor(identity, undefined, true, config),
+        undefined
+      );
+      assert.deepEqual(
+        await storedMediaInfoFor(
+          { ...identity, file },
+          undefined,
+          true,
+          config
+        ),
+        info
+      );
+    }
+    assert.equal(checkedHashes.length, before);
+  });
+
+  it('batches and deduplicates ambiguous hashes by store', async () => {
+    const a = await seed([{}]);
+    const b = await seed([{}]);
+    singleInventory(a.hash);
+    singleInventory(b.hash);
+    const before = checkedHashes.length;
+    const streams = [
+      torrentioStream(a.hash),
+      torrentioStream(b.hash),
+      torrentioStream(a.hash),
+    ];
+    await resolveStoredMediaInfo(streams, context('movie'), userData);
+    assert.equal(checkedHashes.length, before + 1);
+    assert.deepEqual(new Set(checkedHashes.at(-1)), new Set([a.hash, b.hash]));
+    assert.ok(streams.every((s) => s.parsedFile?.mediaInfoQuality === 'probe'));
+  });
+
+  it('preserves the known single feature when samples are also stored', async () => {
+    for (const reverse of [false, true]) {
+      const reports = [
+        { file, releaseFiles: 1 },
+        { file: 'sample.mkv', releaseFiles: 1, size: 1_000_000 },
+      ];
+      const identity = await seed(reverse ? reports.reverse() : reports);
+      assert.deepEqual(await storedMovieInfo(identity), info);
+    }
+  });
+
+  it('honors an explicit extensionless file even when it equals the title', async () => {
+    const identity = await seed([{ file: 'Feature' }]);
+    assert.deepEqual(
+      await storedMovieInfo({
+        ...identity,
+        file: 'Feature',
+        title: 'Feature',
+        filename: 'Feature',
+        fileIdx: 0,
+      }),
+      info
+    );
   });
 
   it('refuses a title-only match for a stream with a file index', async () => {

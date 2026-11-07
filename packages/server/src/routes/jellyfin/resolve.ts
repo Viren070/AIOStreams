@@ -483,6 +483,7 @@ export async function applyProbedMediaInfo(
   if (!record) return;
   const applied = await applyStoredMediaInfo(record, memo.titleMetadata, {
     movie: memo.type === constants.MOVIE_TYPE,
+    userData: ctx.userData,
     waitMs: opts.playing
       ? (ctx.userData.jellyfin?.playWait ?? appConfig.mediaInfo.playWait) * 1000
       : 0,

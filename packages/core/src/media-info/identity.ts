@@ -1,5 +1,9 @@
 import type { ParsedStream } from '../db/schemas.js';
-import { canonicalNzbHash, playbackNzbHash } from '../debrid/utils.js';
+import {
+  canonicalNzbHash,
+  playbackNzbHash,
+  VIDEO_FILE_EXTENSIONS,
+} from '../debrid/utils.js';
 import { isTrustedAddon } from '../presets/trust.js';
 import { unwrapProxyUrl } from '../proxy/token.js';
 import { torrentKey } from '../release-blocklist/keys.js';
@@ -16,6 +20,8 @@ export interface MediaInfoIdentity {
   title?: string;
   /** Exact bytes advertised by the addon, when it provides a video size. */
   videoSize?: number;
+  /** The store whose file inventory describes this debrid stream. */
+  service?: string;
 }
 
 /**
@@ -64,12 +70,23 @@ function torrentIdentity(stream: ParsedStream): MediaInfoIdentity | undefined {
   const key = torrentKey(stream.torrent?.infoHash);
   if (!key) return undefined;
   const size = stream.otherBehaviorHints?.videoSize;
+  const title = stream.torrent?.title ?? stream.folderName ?? stream.filename;
+  const file = stream.torrent?.file;
+  // Torrentio sometimes repeats its release label in behaviorHints.filename.
+  // Other parsers set torrent.file only when they know the selected file.
+  const labelOnly =
+    stream.addon.preset.type === 'torrentio' &&
+    file === title &&
+    !!file &&
+    !/[\/\\]/.test(file) &&
+    !VIDEO_FILE_EXTENSIONS.some((ext) => file.toLowerCase().endsWith(ext));
   return {
     releaseKeys: [key],
-    file: stream.torrent?.file,
+    file: labelOnly ? undefined : file,
     fileIdx: stream.torrent?.fileIdx,
     filename: stream.filename,
-    title: stream.torrent?.title ?? stream.folderName ?? stream.filename,
+    title,
+    service: stream.service?.id,
     videoSize:
       typeof size === 'number' && size > 0 && Number.isSafeInteger(size)
         ? size

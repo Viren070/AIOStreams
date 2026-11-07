@@ -1,4 +1,9 @@
-import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
+import type {
+  MediaTrack,
+  ParsedFile,
+  ParsedStream,
+  UserData,
+} from '../db/schemas.js';
 import { constants, hasTrackLists } from '../utils/index.js';
 import type { TitleMetadata } from '../debrid/base.js';
 import { withPlayPath } from '../debrid/utils.js';
@@ -213,6 +218,7 @@ export async function applyStoredMediaInfo(
   metadata: TitleMetadata | undefined,
   opts: {
     movie?: boolean;
+    userData?: UserData;
     waitMs?: number;
     clientIp?: string;
     ids?: ContributionIds;
@@ -221,7 +227,12 @@ export async function applyStoredMediaInfo(
   if (record.notice || hasTrackLists(record.parsedFile)) return false;
   const stored = () =>
     record.mediaInfo
-      ? storedMediaInfoFor(record.mediaInfo, metadata, opts.movie === true)
+      ? storedMediaInfoFor(
+          record.mediaInfo,
+          metadata,
+          opts.movie === true,
+          opts.userData
+        )
       : Promise.resolve(undefined);
   let info = await stored();
   // The prober can't send headers or open a YouTube video.
