@@ -6,6 +6,7 @@ import {
   FileInfo,
   FileInfoSchema,
   PlaybackInfo,
+  ResolvedLinkInfo,
   ServiceAuth,
   ServiceAuthSchema,
   TitleMetadata,
@@ -101,7 +102,7 @@ export async function resolvePlaybackTarget(
   target: PlaybackTarget,
   ctx: { clientIp?: string },
   signal?: AbortSignal
-): Promise<string | undefined> {
+): Promise<ResolvedLinkInfo | undefined> {
   const fileInfo = await decodeFileInfo(target.fileInfoRaw);
   if (!fileInfo) {
     throw badRequest('Failed to parse file info and not found in store.');
