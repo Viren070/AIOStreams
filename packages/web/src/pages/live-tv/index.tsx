@@ -282,6 +282,14 @@ export function LiveTvPage({
       ) ?? document.querySelector<HTMLElement>('[data-ui=live-group-picker]');
     if (target) focusOn(target);
   };
+  // The guide has the programme's details above it, where the list has the groups.
+  const leaveGuideUp = () => {
+    const target = document.querySelector<HTMLElement>(
+      '[data-ui=live-top] button'
+    );
+    if (target) focusOn(target);
+    else leaveUp();
+  };
   // A remote's digits go to the channel with that number, loading on to it.
   // Numbers run through the whole lineup, so one outside the group opens All
   // channels on it.
@@ -510,7 +518,7 @@ export function LiveTvPage({
                 onFocus={(next) => follow(next.row, next.at)}
                 onPlay={playFromGuide}
                 onRange={onRange}
-                onLeaveUp={leaveUp}
+                onLeaveUp={leaveGuideUp}
                 reminded={reminded}
               />
             </div>
