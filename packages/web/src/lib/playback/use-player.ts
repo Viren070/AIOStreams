@@ -304,7 +304,7 @@ export function usePlayer(
         return;
       }
       case 'ended': {
-        if (recovery) return recovery.dropped();
+        if (recovery) return recovery.dropped('ended');
         const at = playhead.positionMs;
         if (live.current.durationMs - at <= EARLY_END_MS)
           return latest.current.onEnded();
@@ -326,7 +326,7 @@ export function usePlayer(
       case 'failed': {
         // Another engine's offer comes first for a source that never played here.
         if (recovery && (!event.retry || recovery.played))
-          return recovery.dropped();
+          return recovery.dropped(`failed: ${event.error}`);
         patch({ error: event.error });
         const again = event.retry;
         return setRetry(

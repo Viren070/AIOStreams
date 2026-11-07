@@ -212,6 +212,13 @@ export function appBridge(): ShellBridge | undefined {
   return window.aiostreamsApp;
 }
 
+/** A line for the app's log, which its problem reports show; the console's in a browser. */
+export function appLog(level: 'info' | 'warn', message: string): void {
+  const bridge = appBridge();
+  if (bridge) bridge.send({ type: 'log', level, message });
+  else console[level](message);
+}
+
 export type ShellAnswer<T extends ShellMessage['type']> = Extract<
   ShellMessage,
   { type: T }

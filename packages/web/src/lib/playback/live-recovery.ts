@@ -1,4 +1,5 @@
 import React from 'react';
+import { appLog } from '../hosts/shell/bridge';
 import { useLatest } from '../use-latest';
 import type { PlayerState } from './controller';
 
@@ -27,7 +28,7 @@ interface Actions {
 }
 
 export interface LiveRecovery {
-  dropped(): void;
+  dropped(why: string): void;
   readonly played: boolean;
 }
 
@@ -54,7 +55,7 @@ export function useLiveRecovery(
       return;
     }
     const stuck = setTimeout(
-      () => outage.dropped(),
+      () => outage.dropped(started ? 'stalled' : 'never-started'),
       started ? STALL_LIMIT_MS : START_LIMIT_MS
     );
     return () => clearTimeout(stuck);
@@ -78,25 +79,29 @@ class Outage implements LiveRecovery {
 
   constructor(private readonly actions: { readonly current: Actions }) {}
 
-  dropped(): void {
+  dropped(why: string): void {
     const now = Date.now();
     if (now - this.reopenedAt < STALE_EVENT_MS) return;
     this.stopTimers();
     if (!this.tries) this.since = now;
     const tries = this.played ? DELAYS_MS.length : UNPLAYED_TRIES;
     if (this.tries >= tries || now - this.since > OUTAGE_LIMIT_MS) {
+      appLog('warn', `live: ${why}; giving up after ${this.tries} reopens`);
       this.end();
       void this.actions.current.failed(() => this.reopen());
       return;
     }
+    const delay = DELAYS_MS[this.tries++];
+    appLog('info', `live: ${why}; reopen ${this.tries} in ${delay} ms`);
     this.notice ??= setTimeout(
       () => this.actions.current.showNotice(true),
       NOTICE_MS
     );
-    this.timer = setTimeout(() => this.reopen(), DELAYS_MS[this.tries++]);
+    this.timer = setTimeout(() => this.reopen(), delay);
   }
 
   playing(): void {
+    if (this.reopening) appLog('info', 'live: playing again');
     this.played = true;
     this.reopening = false;
     clearTimeout(this.timer);
@@ -116,7 +121,10 @@ class Outage implements LiveRecovery {
   private reopen(): void {
     this.reopening = true;
     this.reopenedAt = Date.now();
-    this.timer = setTimeout(() => this.dropped(), REOPEN_LIMIT_MS);
+    this.timer = setTimeout(
+      () => this.dropped('reopen-timed-out'),
+      REOPEN_LIMIT_MS
+    );
     this.actions.current.reopen();
     let last = this.actions.current.positionMs();
     let ahead = 0;

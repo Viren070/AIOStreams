@@ -32,6 +32,7 @@ import {
 } from '../lib/playback/stream';
 import { PlaybackReporter } from '../lib/playback/reporter';
 import { currentHost } from '../lib/hosts';
+import { appLog } from '../lib/hosts/shell/bridge';
 import { useFeature } from '../lib/server-info';
 import {
   leaveFullscreen,
@@ -345,8 +346,10 @@ function useNextLiveVersion(
       .fetchQuery(infoOptions(item.Id!))
       .catch(() => undefined);
     const versions = playableSources(info);
-    const next = versions[versions.findIndex((v) => v.Id === source.Id) + 1];
+    const index = versions.findIndex((v) => v.Id === source.Id) + 1;
+    const next = versions[index];
     if (!next) return false;
+    appLog('info', `live: trying version ${index + 1} of ${versions.length}`);
     playOn({ itemId: item.Id!, sourceId: next.Id!, startMs: 0, playlist });
     return true;
   };
