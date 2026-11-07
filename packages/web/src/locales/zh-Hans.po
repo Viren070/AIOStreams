@@ -19,6 +19,10 @@ msgstr "(你)"
 msgid "{address} did not answer. Check that it is running, then try again."
 msgstr "{address} 无响应。请检查其是否正在运行，然后重试。"
 
+#: src/components/live-reminders.tsx
+msgid "{at} on {channelName}"
+msgstr ""
+
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
 msgstr "{badgeCount, plural, one {你拥有 # 个标签} other {你拥有 # 个标签}}"
@@ -126,7 +130,7 @@ msgid "{key} is taken by {taken}"
 msgstr "{key} 已被 {taken} 占用"
 
 #: src/components/card-preview.tsx src/components/episodes.tsx
-#: src/pages/downloads.tsx
+#: src/pages/downloads.tsx src/pages/live-tv/channel-details.tsx
 msgid "{left} left"
 msgstr "剩余 {left}"
 
@@ -387,6 +391,7 @@ msgstr "操作"
 
 #: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
+#: src/pages/settings/interface.tsx
 msgid "Activity"
 msgstr "活动"
 
@@ -427,6 +432,7 @@ msgid "Add catalogs to your configuration, then refresh."
 msgstr "在配置中添加目录，然后刷新。"
 
 #: src/components/item-menu.tsx src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Add favourite"
 msgstr "添加收藏"
 
@@ -478,6 +484,11 @@ msgstr "{day} 播出 · 至 {until}"
 #: src/pages/discover.tsx src/pages/favourites.tsx
 msgid "All"
 msgstr "全部"
+
+#: src/lib/live-tv.ts src/pages/home.tsx
+#, fuzzy
+msgid "All channels"
+msgstr "频道"
 
 #: src/pages/item.tsx
 msgid "All episodes"
@@ -685,6 +696,14 @@ msgstr "黑色"
 msgid "Blue"
 msgstr "蓝色"
 
+#: src/pages/settings/interface.tsx
+msgid "Blur episodes you haven't started"
+msgstr ""
+
+#: src/pages/settings/interface.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
 msgstr "粗体"
@@ -754,7 +773,7 @@ msgid "Cache size"
 msgstr "缓存大小"
 
 #: src/components/layout.tsx src/pages/calendar.tsx src/pages/home.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Calendar"
 msgstr "日历"
 
@@ -824,9 +843,26 @@ msgstr "可在手机、电脑或浏览器中更改这些设置。"
 msgid "Channel"
 msgstr "频道"
 
+#: src/lib/input/keys.ts
+#, fuzzy
+msgid "Channel down"
+msgstr "频道"
+
+#: src/lib/input/keys.ts
+#, fuzzy
+msgid "Channel up"
+msgstr "频道"
+
+#: src/components/channel-list.tsx src/components/player/live.tsx
+#: src/components/player/options.tsx src/pages/favourites.tsx
+#: src/pages/live-tv/index.tsx src/pages/search.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr "频道"
+
+#: src/pages/live-tv/index.tsx
+msgid "Channels show here once your setup has an addon with live TV."
+msgstr ""
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1046,6 +1082,11 @@ msgstr "无法加入"
 msgid "Could not list the episodes"
 msgstr "无法列出剧集"
 
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Could not load Live TV"
+msgstr "无法加载其作品"
+
 #: src/pages/calendar.tsx
 msgid "Could not load the calendar"
 msgstr "无法加载日历"
@@ -1199,6 +1240,11 @@ msgstr "青色"
 msgid "Date not known"
 msgstr "日期未知"
 
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Day"
+msgstr "延迟"
+
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
 msgstr "当设备无法解码视频时，通过软件解码几乎所有格式的视频。Android 应用会读取你的 mpv.conf。"
@@ -1307,10 +1353,11 @@ msgid "Discord refused the status: {message}"
 msgstr "Discord 拒绝了状态更新：{message}"
 
 #: src/components/layout.tsx src/pages/discover.tsx src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Discover"
 msgstr "发现"
 
-#: src/components/layout.tsx
+#: src/components/layout.tsx src/components/live-reminders.tsx
 msgid "Dismiss"
 msgstr "关闭"
 
@@ -1396,7 +1443,7 @@ msgid "Downloading, {percent}%"
 msgstr "正在下载，{percent}%"
 
 #: src/components/layout.tsx src/pages/downloads.tsx
-#: src/pages/settings/index.tsx
+#: src/pages/settings/index.tsx src/pages/settings/interface.tsx
 msgid "Downloads"
 msgstr "下载"
 
@@ -1551,13 +1598,13 @@ msgstr "快进"
 msgid "Faster"
 msgstr "更快"
 
-#: src/pages/item.tsx
+#: src/components/channel-list.tsx src/pages/item.tsx
 #, fuzzy
 msgid "Favourite"
 msgstr "收藏"
 
-#: src/components/layout.tsx src/pages/favourites.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/lib/live-tv.ts src/pages/favourites.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Favourites"
 msgstr "收藏"
 
@@ -1667,7 +1714,8 @@ msgstr "前进"
 msgid "Frame timings"
 msgstr "帧时间"
 
-#: src/components/version-picker.tsx
+#: src/components/player/live.tsx src/components/version-picker.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "From the start"
 msgstr "从头开始"
 
@@ -1680,6 +1728,7 @@ msgid "Full"
 msgstr "完整"
 
 #: src/components/player/options.tsx src/lib/input/actions.ts
+#: src/pages/live-tv/channel-details.tsx
 msgid "Full screen"
 msgstr "全屏"
 
@@ -1695,6 +1744,10 @@ msgstr "将此代码提供给负责排查问题的人。"
 msgid "Go home"
 msgstr "返回首页"
 
+#: src/components/player/live.tsx
+msgid "Go live"
+msgstr ""
+
 #: src/components/item-menu.tsx
 msgid "Go to show"
 msgstr "前往剧集"
@@ -1707,13 +1760,22 @@ msgstr "绿色"
 msgid "Grey"
 msgstr "灰色"
 
-#: src/components/version-settings.tsx
+#: src/components/version-settings.tsx src/pages/live-tv/index.tsx
 msgid "Group"
 msgstr "分组"
 
 #: src/pages/history.tsx
 msgid "Group by day"
 msgstr "按日期分组"
+
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Groups"
+msgstr "分组"
+
+#: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
+msgid "Guide"
+msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -1773,7 +1835,7 @@ msgid "Hold"
 msgstr "按住"
 
 #: src/components/layout.tsx src/lib/input/actions.ts
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Home"
 msgstr "首页"
 
@@ -2011,7 +2073,7 @@ msgstr "语言、首页、网格和剧集"
 msgid "Large"
 msgstr "大"
 
-#: src/components/update-prompt.tsx
+#: src/components/update-prompt.tsx src/pages/live-tv/channel-details.tsx
 msgid "Later"
 msgstr "稍后"
 
@@ -2082,6 +2144,15 @@ msgstr "仅列出我的语言"
 #: src/pages/search.tsx
 msgid "Listening…"
 msgstr "正在聆听…"
+
+#: src/components/player/live.tsx
+msgid "Live"
+msgstr ""
+
+#: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
+#: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
+msgid "Live TV"
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2326,6 +2397,12 @@ msgstr "下一项"
 msgid "Next audio track"
 msgstr "下一条音轨"
 
+#: src/components/player/controls.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx
+#, fuzzy
+msgid "Next channel"
+msgstr "下一章"
+
 #: src/lib/input/actions.ts
 msgid "Next chapter"
 msgstr "下一章"
@@ -2383,6 +2460,14 @@ msgstr "没有符合条件的标签。"
 msgid "No catalogs yet"
 msgstr "还没有目录"
 
+#: src/components/channel-number.tsx
+msgid "No channel {typed}"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "No channels in this group."
+msgstr ""
+
 #: src/components/no-details.tsx
 #, fuzzy
 msgid "No details for this title"
@@ -2392,6 +2477,10 @@ msgstr "无法加载此内容"
 msgid "No episodes to download there"
 msgstr "此处没有可下载的剧集"
 
+#: src/pages/favourites.tsx
+msgid "No favourite channels yet."
+msgstr ""
+
 #: src/pages/settings/cache.tsx
 msgid "No limit"
 msgstr "不限"
@@ -2399,6 +2488,10 @@ msgstr "不限"
 #: src/components/player/subtitle-sync.tsx
 msgid "No line matches."
 msgstr "没有匹配的台词。"
+
+#: src/pages/live-tv/index.tsx
+msgid "No live TV here"
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
@@ -2524,14 +2617,18 @@ msgid "Nothing marked as a favourite yet."
 msgstr "还没有收藏任何内容。"
 
 #: src/components/licenses.tsx src/components/version-settings.tsx
-#: src/pages/discover.tsx src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/discover.tsx src/pages/live-tv/index.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "没有符合条件的内容。"
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing playing yet."
 msgstr "目前没有正在播放的内容。"
+
+#: src/pages/player.tsx
+msgid "Nothing plays on this channel right now."
+msgstr ""
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
@@ -2946,6 +3043,7 @@ msgstr "粉色"
 #: src/components/player/mini-player.tsx src/components/playlists.tsx
 #: src/components/random-pick.tsx src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Play"
 msgstr "播放"
 
@@ -3164,6 +3262,12 @@ msgstr "预览片段"
 msgid "Previous"
 msgstr "上一项"
 
+#: src/components/player/controls.tsx src/components/player/live.tsx
+#: src/lib/input/actions.ts src/pages/player.tsx
+#, fuzzy
+msgid "Previous channel"
+msgstr "上一章"
+
 #: src/lib/input/actions.ts
 msgid "Previous chapter"
 msgstr "上一章"
@@ -3272,6 +3376,11 @@ msgstr "剧情回顾"
 msgid "Recaps"
 msgstr "剧情回顾"
 
+#: src/lib/live-tv.ts
+#, fuzzy
+msgid "Recent"
+msgstr "强调色"
+
 #: src/pages/search.tsx
 msgid "Recent searches"
 msgstr "最近搜索"
@@ -3280,7 +3389,7 @@ msgstr "最近搜索"
 msgid "Reconnecting to the party…"
 msgstr "正在重新连接一起观看…"
 
-#: src/components/layout.tsx
+#: src/components/layout.tsx src/components/player/controls.tsx
 msgid "Reconnecting…"
 msgstr "正在重新连接…"
 
@@ -3312,6 +3421,22 @@ msgstr "上映日期"
 msgid "Remember picks per show"
 msgstr "为每部剧集记住选择"
 
+#: src/pages/live-tv/channel-details.tsx
+msgid "Remind me"
+msgstr ""
+
+#: src/pages/live-tv/guide.tsx
+msgid "Reminder"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Reminder removed"
+msgstr ""
+
+#: src/pages/live-tv/channel-details.tsx
+msgid "Reminder set"
+msgstr ""
+
 #: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
 msgid "Remove"
@@ -3334,6 +3459,7 @@ msgid "Remove {term}"
 msgstr "移除 {term}"
 
 #: src/components/item-menu.tsx src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Remove favourite"
 msgstr "取消收藏"
 
@@ -4003,6 +4129,11 @@ msgstr "速度 {shown}×"
 msgid "Speed up while held"
 msgstr "按住时加速播放"
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Spoilers"
+msgstr "预告片"
+
 #: src/pages/settings/apps.tsx
 msgid "Stable"
 msgstr "稳定版"
@@ -4010,6 +4141,11 @@ msgstr "稳定版"
 #: src/components/party/party-sheet.tsx
 msgid "Start a party"
 msgstr "开始一起观看"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Start on"
+msgstr "立即重新启动"
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
@@ -4377,6 +4513,11 @@ msgstr "链接可能已过期，或页面地址已更改。"
 msgid "the link returned something other than a video"
 msgstr "链接返回的内容不是视频"
 
+#. Follows "Playback failed:"
+#: src/lib/playback/use-player.ts
+msgid "the live stream stopped"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
@@ -4400,6 +4541,10 @@ msgstr "无法连接到另一台设备"
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
 msgstr "页面意外重新加载"
+
+#: src/pages/settings/interface.tsx
+msgid "The page the app opens on. A link still opens what it points to."
+msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4631,9 +4776,13 @@ msgstr "内容详情页"
 msgid "Titles, synopses and stream names stay in the language your addons send."
 msgstr "内容标题、简介和串流名称会保留插件提供的语言。"
 
-#: src/pages/calendar.tsx
+#: src/pages/calendar.tsx src/pages/live-tv/index.tsx
 msgid "Today"
 msgstr "今天"
+
+#: src/pages/live-tv/index.tsx
+msgid "Tomorrow"
+msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"
@@ -4680,8 +4829,8 @@ msgid "Troubleshooting"
 msgstr "故障排查"
 
 #: src/components/party/party-sheet.tsx src/components/random-pick.tsx
-#: src/components/version-picker.tsx src/pages/downloads.tsx
-#: src/pages/sign-in.tsx
+#: src/components/version-picker.tsx src/lib/playback/use-player.ts
+#: src/pages/downloads.tsx src/pages/sign-in.tsx
 msgid "Try again"
 msgstr "重试"
 
@@ -4959,6 +5108,11 @@ msgstr "正在等待 {names}"
 msgid "Waiting for approval…"
 msgstr "正在等待批准…"
 
+#: src/components/live-reminders.tsx src/pages/live-tv/channel-details.tsx
+#, fuzzy
+msgid "Watch"
+msgstr "已观看"
+
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
 msgstr "同步观看"
@@ -5132,6 +5286,10 @@ msgid "Whether the tabs name each page beside its icon."
 msgstr "设置是否在侧栏图标下方显示页面名称。"
 
 #: src/components/shortcut-settings.tsx
+msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
+msgstr ""
+
+#: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "通过听觉同步字幕时使用。"
 
@@ -5187,6 +5345,10 @@ msgstr "年份"
 msgid "Yellow"
 msgstr "黄色"
 
+#: src/pages/live-tv/index.tsx
+msgid "Yesterday"
+msgstr ""
+
 #: src/components/layout.tsx
 msgid "You"
 msgstr "你"
@@ -5194,6 +5356,10 @@ msgstr "你"
 #: src/lib/party/party.ts
 msgid "You left the party."
 msgstr "你已离开一起观看。"
+
+#: src/pages/live-tv/index.tsx
+msgid "You'll be reminded at {time}"
+msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"

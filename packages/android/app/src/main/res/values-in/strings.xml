@@ -1,3 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    </resources>
+    <string name="channel_downloads">Unduhan</string>
+    <plurals name="downloading_items">
+        <item quantity="other">Mengunduh %d item</item>
+    </plurals>
+    <string name="channel_updates">Pembaruan</string>
+    <string name="updated_to">Diperbarui ke %1$s</string>
+    <string name="tap_to_open">Ketuk untuk membuka</string>
+    <string name="update_no_build">Tidak ada build untuk prosesor perangkat ini</string>
+    <string name="update_damaged">Unduhan rusak</string>
+    <string name="update_install_failed">Pemasangan gagal: %1$s</string>
+    <string name="update_feed_answered">Feed merespons dengan status %1$d</string>
+    <string name="download_folder_title">Pilih lokasi penyimpanan unduhan</string>
+    <string name="download_folder_free">%1$s · %2$s tersedia</string>
+    <string name="file_saved">%1$s disimpan ke Unduhan</string>
+    <string name="file_not_saved">Tidak dapat menyimpan %1$s</string>
+    <string name="webview_version_unknown">tidak diketahui</string>
+    <string name="webview_too_old">WebView perangkat ini terlalu lama untuk aplikasi: versi %1$s, sedangkan aplikasi memerlukan versi %2$d atau yang lebih baru.</string>
+    <string name="webview_update">Perbarui Android System WebView atau sistem, lalu buka kembali aplikasi.</string>
+</resources>
