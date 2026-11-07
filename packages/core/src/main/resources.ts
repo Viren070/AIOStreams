@@ -15,6 +15,7 @@ import { Wrapper } from './wrapper.js';
 import { PresetManager } from '../presets/index.js';
 import { FeatureControl } from '../utils/feature.js';
 import { StreamContext, StreamUtils } from '../streams/index.js';
+import type { MetaHint } from '../metadata/hint.js';
 import { buildPlayChain, type FailoverContentType } from './play-chain.js';
 import { resolveServiceWrappedStreams } from './serviceWrapper.js';
 import { resolveRemuxDbMediaInfo } from '../remuxdb/wrap.js';
@@ -711,7 +712,8 @@ export async function getStreams(
   ctx: AIOStreamsContext,
   id: string,
   type: string,
-  preCaching: boolean = false
+  preCaching: boolean = false,
+  metaHint?: MetaHint
 ): Promise<StreamsResponse> {
   logger.debug({ type, id }, 'handling stream request');
   const statistics: { title: string; description: string; forced?: boolean }[] =
@@ -727,7 +729,7 @@ export async function getStreams(
     'found addons for stream resource'
   );
 
-  const context = await StreamContext.create(type, id, ctx.userData);
+  const context = await StreamContext.create(type, id, ctx.userData, metaHint);
   ctx.streamContext = context;
 
   const pipelineTtl = appConfig.resources.cache.pipeline.ttl;
@@ -737,7 +739,7 @@ export async function getStreams(
   let pipelineCacheKey = '';
   if (usePipelineCache) {
     pipelineCacheKey = `${getSimpleTextHash(
-      JSON.stringify(ctx.userData)
+      JSON.stringify(ctx.userData) + (metaHint ? JSON.stringify(metaHint) : '')
     )}:${type}:${id}`;
     const cached = await pipelineResultCache.get(pipelineCacheKey);
     if (cached !== undefined) {

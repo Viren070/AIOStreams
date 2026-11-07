@@ -39,6 +39,7 @@ import {
 import { SceneMappingDataset } from './scene-mappings.js';
 import { resolveCrossProviderIds } from './id-resolution.js';
 import { SkyhookMetadata } from './skyhook.js';
+import type { MetaHint } from './hint.js';
 
 const logger = createLogger('metadata-service');
 
@@ -64,12 +65,13 @@ export class MetadataService {
 
   public async getMetadata(
     id: ParsedId,
-    type: (typeof TYPES)[number]
+    type: (typeof TYPES)[number],
+    metaHint?: MetaHint
   ): Promise<Metadata> {
     return withRetry(
       async () => {
         const { result } = await this.lock.withLock(
-          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}`,
+          `metadata:${id.mediaType}:${id.type}:${id.value}:${id.season ?? ''}:${id.episode ?? ''}${this.config.tmdbAccessToken || this.config.tmdbApiKey ? ':tmdb' : ''}${this.config.tvdbApiKey ? ':tvdb' : ''}${metaHint ? `:${JSON.stringify(metaHint)}` : ''}`,
           async () => {
             const start = Date.now();
             // fill order is irrelevant; merge.ts decides what wins
@@ -669,7 +671,10 @@ export class MetadataService {
                 }
               }
               episodeYear ??= yearOf(
-                tmdbEp?.airDate ?? tvdbEp?.airDate ?? skyhookEp?.airDate
+                metaHint?.released ??
+                  tmdbEp?.airDate ??
+                  tvdbEp?.airDate ??
+                  skyhookEp?.airDate
               );
 
               // (season, episode) numbers mean whatever the provider the
@@ -679,6 +684,8 @@ export class MetadataService {
                   v.season === Number(id.season) && v.episode === episodeNumber
               )?.released;
               const referenceAirDate =
+                // the meta the request came from dates the episode it means
+                metaHint?.released ??
                 // the request's own provider is authoritative
                 (id.type === 'themoviedbId' ? tmdbEp?.airDate : undefined) ??
                 (id.type === 'thetvdbId' ? tvdbEp?.airDate : undefined) ??
@@ -699,12 +706,13 @@ export class MetadataService {
               if (
                 referenceAirDate &&
                 !Number.isNaN(new Date(referenceAirDate).getTime()) &&
-                [
-                  cinemetaReleased,
-                  tvdbEp?.airDate,
-                  skyhookEp?.airDate,
-                  tmdbEp?.airDate,
-                ].every((date) => agreesWithRequest(date ?? undefined))
+                (metaHint?.released ||
+                  [
+                    cinemetaReleased,
+                    tvdbEp?.airDate,
+                    skyhookEp?.airDate,
+                    tmdbEp?.airDate,
+                  ].every((date) => agreesWithRequest(date ?? undefined)))
               ) {
                 episodeReleased = referenceAirDate;
               }
