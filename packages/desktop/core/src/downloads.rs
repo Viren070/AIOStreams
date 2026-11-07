@@ -883,6 +883,13 @@ mod tests {
         let first = download.received.recv_timeout(Duration::from_secs(10));
         assert!(matches!(first, Ok(Event::Progress { .. })));
 
+        // The last bytes come before the video takes its name, so a stop
+        // before then would leave it as a part.
+        let named = download.folder.join("video.mkv");
+        let until = Instant::now() + Duration::from_secs(10);
+        while !named.exists() && Instant::now() < until {
+            thread::sleep(Duration::from_millis(20));
+        }
         download.stop.store(true, Ordering::Relaxed);
         let (result, video) = download.finish();
         assert!(matches!(result, Err(Failure::Stopped)));
