@@ -259,7 +259,8 @@ async function playbackInfo(req: Request, res: Response) {
       loc.ctx.persona?.id
     );
   const target = loc.requestedMsid ?? offered[0].msid;
-  await enrichSourceSubtitles(loc.ctx, memo, target);
+  if (bodyOf(req).SkipSubtitles !== true)
+    await enrichSourceSubtitles(loc.ctx, memo, target);
   await applyProbedMediaInfo(loc.ctx, memo, target, {
     playing: isPlaying(req, loc),
   });
