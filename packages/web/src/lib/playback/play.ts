@@ -1,5 +1,7 @@
 import { t } from '@lingui/core/macro';
+import { useQueryClient } from '@tanstack/react-query';
 import { currentHost } from '../hosts';
+import { usePlaybackInfoOptions } from '../queries';
 import { fullTitle, ticksToMs } from '../format';
 import { navigate, to } from '../paths';
 import { externalReturnUrl } from './external-return';
@@ -99,6 +101,8 @@ export function usePlay() {
   const following = useFollowing();
   const playForParty = usePlayForParty();
   const { prefs } = usePlaybackPrefs();
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
   return async (
     item: BaseItemDto,
     opts: {
@@ -132,7 +136,11 @@ export function usePlay() {
     }
     const player = chosenPlayer();
     if (player.kind === 'link') {
-      if (!openLink(player.template, item, source, startMs))
+      const info = await queryClient
+        .fetchQuery(infoOptions(item.Id!, source.Id))
+        .catch(() => undefined);
+      const named = playableSources(info).find((s) => s.Id === source.Id);
+      if (!openLink(player.template, item, named ?? source, startMs))
         opts.onExternal?.();
       return;
     }

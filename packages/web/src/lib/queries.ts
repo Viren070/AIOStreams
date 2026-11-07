@@ -611,7 +611,10 @@ function withOwnId(source: SourceInfo): SourceInfo {
   return id ? { ...source, Id: id } : source;
 }
 
-/** Naming a version also gets its subtitles from subtitle addons. */
+/**
+ * Naming a version also gets its subtitles from subtitle addons, as does a
+ * download's list, which saves the first version's.
+ */
 export async function requestPlaybackInfo(
   client: JellyfinClient,
   userId: string,
@@ -636,6 +639,8 @@ export async function requestPlaybackInfo(
       ...(opts.sourceId
         ? { MediaSourceId: opts.sourceId }
         : !opts.kept && { Fresh: true }),
+      ...(!opts.sourceId &&
+        opts.purpose !== 'download' && { SkipSubtitles: true }),
       ...(opts.refresh && { Refresh: true }),
       ...(support.headers && { EnableRequiredHttpHeaders: true }),
       ...(support.youtube && { EnableYouTube: true }),
