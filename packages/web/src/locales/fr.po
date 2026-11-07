@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 21:56+0000\n"
+"PO-Revision-Date: 2026-11-08 00:06+0000\n"
 "Last-Translator: D4rk <dark56100@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/aiostreams/web-app/fr/>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.1.dev0\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -21,7 +21,7 @@ msgstr "{address} n'a pas répondu. Vérifiez qu'il fonctionne, puis réessayez.
 
 #: src/components/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} sur {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -698,11 +698,11 @@ msgstr "Bleu"
 
 #: src/pages/settings/interface.tsx
 msgid "Blur episodes you haven't started"
-msgstr ""
+msgstr "Masquer les épisodes que vous n'avez pas commencés"
 
 #: src/pages/settings/interface.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
-msgstr ""
+msgstr "Floutez leurs images, titres et descriptions jusqu’à ce que le pointeur, le clavier ou la télécommande soit placé sur l’un d’entre eux."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
@@ -861,8 +861,9 @@ msgid "Channels"
 msgstr "Canaux"
 
 #: src/pages/live-tv/index.tsx
+#, fuzzy
 msgid "Channels show here once your setup has an addon with live TV."
-msgstr ""
+msgstr "Les chaînes s'affichent ici une fois que votre configuration inclut un addon proposant la télévision en direct."
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1745,8 +1746,9 @@ msgid "Go home"
 msgstr "Aller à l'accueil"
 
 #: src/components/player/live.tsx
+#, fuzzy
 msgid "Go live"
-msgstr ""
+msgstr "Lancer la diffusion en direct."
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -1775,7 +1777,7 @@ msgstr "Groupe"
 
 #: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
 msgid "Guide"
-msgstr ""
+msgstr "Guide"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -2151,8 +2153,9 @@ msgstr ""
 
 #: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
 #: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
+#, fuzzy
 msgid "Live TV"
-msgstr ""
+msgstr "Live TV"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2462,11 +2465,11 @@ msgstr "Aucun catalogue pour le moment"
 
 #: src/components/channel-number.tsx
 msgid "No channel {typed}"
-msgstr ""
+msgstr "Pas de canal {typed}"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
-msgstr ""
+msgstr "Pas de canaux dans ce groupe."
 
 #: src/components/no-details.tsx
 #, fuzzy
@@ -2479,7 +2482,7 @@ msgstr "Aucun épisode à télécharger ici"
 
 #: src/pages/favourites.tsx
 msgid "No favourite channels yet."
-msgstr ""
+msgstr "Aucune chaîne favorite pour l’instant."
 
 #: src/pages/settings/cache.tsx
 msgid "No limit"
