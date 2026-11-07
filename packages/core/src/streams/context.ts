@@ -1,5 +1,6 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import { MetadataService } from '../metadata/service.js';
+import { scopeAnimeEpisodeMappings } from '../metadata/id-resolution.js';
 import { Metadata } from '../metadata/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
 import {
@@ -92,8 +93,7 @@ export class StreamContext {
   // Episode details for series digital release filter and bitrate calculation
   private _episodeDetails: { airDate?: string; runtime?: number } | undefined;
   private _episodeDetailsPromise:
-    | Promise<{ airDate?: string; runtime?: number } | undefined>
-    | undefined;
+    Promise<{ airDate?: string; runtime?: number } | undefined> | undefined;
 
   // SeaDex data (for anime)
   private _seadex: SeaDexResult | undefined;
@@ -404,10 +404,11 @@ export class StreamContext {
         const originalSeason = Number(this.parsedId.season);
         let seasonNumber = originalSeason;
         let episodeNumber = Number(this.parsedId.episode);
-        if (this.isAnime && this.animeEntry) {
+        const animeEntry = scopeAnimeEpisodeMappings(this.animeEntry, metadata);
+        if (this.isAnime && animeEntry) {
           ({ seasonNumber, episodeNumber } = getTmdbEpisode(
             this.parsedId,
-            this.animeEntry,
+            animeEntry,
             metadata.seasons ?? []
           ));
           logger.debug(
@@ -416,7 +417,7 @@ export class StreamContext {
               originalEpisode: this.parsedId.episode,
               tmdbSeason: seasonNumber,
               tmdbEpisode: episodeNumber,
-              fromEpisode: this.animeEntry.tmdb?.fromEpisode,
+              fromEpisode: animeEntry.tmdb?.fromEpisode,
             },
             'resolved tmdb season/episode for episode details'
           );
