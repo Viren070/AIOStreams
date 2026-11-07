@@ -11,6 +11,7 @@ import {
   indexOfStream,
   lineupOf,
   nameOf,
+  searchLineup,
 } from './lineup.js';
 import {
   EMPTY,
@@ -95,6 +96,7 @@ export class XtreamAddon {
             { name: 'skip' },
             { name: 'date' },
             { name: 'ids' },
+            { name: 'search' },
           ],
         },
       ],
@@ -114,7 +116,7 @@ export class XtreamAddon {
   ): Promise<{ metas: MetaPreview[] } | { metasDetailed: Meta[] }> {
     if (type !== 'tv' || id !== CATALOG_ID)
       throw new Error(`Unknown catalog ${type}/${id}`);
-    const { genre, skip, date, ids } = parseExtras(extras);
+    const { genre, skip, date, ids, search } = parseExtras(extras);
     const lineup = await lineupOf(this.client);
     const indexes: number[] = [];
     if (ids) {
@@ -122,6 +124,11 @@ export class XtreamAddon {
         const index = this.indexOf(lineup, id);
         if (index >= 0) indexes.push(index);
       }
+    } else if (search) {
+      const start = Math.max(0, Number(skip) || 0);
+      indexes.push(
+        ...searchLineup(lineup, search, start + PAGE_SIZE).slice(start)
+      );
     } else {
       let members: Int32Array | undefined;
       if (genre) {

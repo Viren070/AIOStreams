@@ -49,6 +49,32 @@ export const channelCount = (lineup: Lineup) => lineup.streamIds.length;
 export const nameOf = (lineup: Lineup, i: number) =>
   lineup.names.toString('utf8', lineup.nameAt[i], lineup.nameAt[i + 1]);
 
+/** Channels whose names hold every word of the term, after the one numbered it. */
+export function searchLineup(
+  lineup: Lineup,
+  term: string,
+  limit: number
+): number[] {
+  const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+  const found: number[] = [];
+  if (!words.length) return found;
+  const count = channelCount(lineup);
+  const number = /^\d+$/.test(term.trim()) ? Number(term.trim()) : 0;
+  let numbered = -1;
+  for (let i = 0; number && i < count; i++)
+    if ((lineup.numbers[i] || i + 1) === number) {
+      numbered = i;
+      found.push(i);
+      break;
+    }
+  for (let i = 0; i < count && found.length < limit; i++) {
+    if (i === numbered) continue;
+    const name = nameOf(lineup, i).toLowerCase();
+    if (words.every((w) => name.includes(w))) found.push(i);
+  }
+  return found;
+}
+
 export const iconOf = (lineup: Lineup, i: number) =>
   lineup.iconDir[i] < 0
     ? ''

@@ -294,6 +294,30 @@ export async function listChannels(
 /** How far a search reads the channel list, which it holds an hour. */
 const SEARCHED = 5_000;
 
+/** A catalog's own search, for channels past what the list reads. */
+async function searchCatalog(
+  engine: AIOStreams,
+  scope: string,
+  catalog: Catalog,
+  term: string
+): Promise<ListedChannel[]> {
+  const res = await limitedCatalog(engine.getUserData().uuid ?? '', () =>
+    engine.getCatalog(
+      catalog.type,
+      catalog.id,
+      buildExtras(catalog, { search: term })
+    )
+  ).catch(() => undefined);
+  return Promise.all(
+    (res?.data ?? []).map(async (meta) => ({
+      meta,
+      number:
+        text(String(meta.channelNumber ?? '')) ??
+        (await channelNumberOf(scope, meta)),
+    }))
+  );
+}
+
 /** Channels whose names hold every word of the term, in list order. */
 export async function searchChannels(
   engine: AIOStreams,
@@ -303,16 +327,26 @@ export async function searchChannels(
 ): Promise<ListedChannel[]> {
   const words = term.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return [];
-  const { channels } = await listChannels(engine, scope, {
-    startIndex: 0,
-    limit: SEARCHED,
-  });
+  const [{ channels }, ...searched] = await Promise.all([
+    listChannels(engine, scope, { startIndex: 0, limit: SEARCHED }),
+    ...liveCatalogs(engine)
+      .filter((c) => supportsExtra(c, 'search'))
+      .map((c) => searchCatalog(engine, scope, c, term)),
+  ]);
   const named = channels.filter(({ meta }) => {
     const name = (meta.name ?? '').toLowerCase();
     return words.every((w) => name.includes(w));
   });
+  const seen = new Set(named.map(({ meta }) => `${meta.type}|${meta.id}`));
+  for (const found of searched.flat()) {
+    const key = `${found.meta.type}|${found.meta.id}`;
+    if (!seen.has(key)) named.push(found);
+    seen.add(key);
+  }
   // A channel's number finds it too, ahead of names holding the digits.
-  const numbered = channels.find(({ number }) => number === term.trim());
+  const numbered =
+    channels.find(({ number }) => number === term.trim()) ??
+    named.find(({ number }) => number === term.trim());
   return (
     numbered ? [numbered, ...named.filter((c) => c !== numbered)] : named
   ).slice(0, limit);
