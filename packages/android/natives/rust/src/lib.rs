@@ -5,6 +5,7 @@ pub mod http;
 mod logcat;
 mod subtitles;
 mod thumbnails;
+mod upscaling;
 
 /// Sends the Rust code's log records to logcat once the app loads the library.
 #[cfg(target_os = "android")]

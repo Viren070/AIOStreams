@@ -16,3 +16,7 @@ target_compile_options(aiostreams_stream_cache PRIVATE -O3 -Wall)
 add_library(aiostreams_sound SHARED sound_shaper.c)
 target_compile_options(aiostreams_sound PRIVATE -O3 -Wall)
 target_link_libraries(aiostreams_sound PRIVATE m)
+
+add_library(aiostreams_upscaler SHARED upscaler.c)
+target_compile_options(aiostreams_upscaler PRIVATE -O3 -Wall)
+target_link_libraries(aiostreams_upscaler PRIVATE log GLESv3)

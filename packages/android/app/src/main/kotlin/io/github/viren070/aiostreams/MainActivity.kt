@@ -280,6 +280,7 @@ class MainActivity : ComponentActivity() {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
                 message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
+                message["upscaling"]?.jsonPrimitive?.booleanOrNull?.let { playback.upscaling = it }
                 playback.sound = Sound(
                     dialogueBoost = message["dialogueBoost"]?.jsonPrimitive?.intOrNull ?: 0,
                     nightMode = message["nightMode"]?.jsonPrimitive?.booleanOrNull == true,
