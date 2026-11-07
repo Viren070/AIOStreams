@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-07 00:57+0000\n"
+"PO-Revision-Date: 2026-11-08 00:06+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -21,7 +21,7 @@ msgstr "{address} não respondeu. Verifique se está em execução e tente novam
 
 #: src/components/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr "{at} em {channelName}"
+msgstr "Às {at}, no canal {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -233,7 +233,7 @@ msgstr "{stepSeconds, plural, one {Avançar # segundo} other {Avançar # segundo
 
 #: src/pages/history.tsx
 msgid "{time} watched"
-msgstr "{time} assistidos"
+msgstr "Tempo assistido: {time}"
 
 #: src/lib/party/follow.ts
 msgid "{title} isn't on your server."
@@ -374,7 +374,7 @@ msgstr "Sobre"
 
 #: src/pages/settings/theme.tsx
 msgid "Accent"
-msgstr "Sotaque"
+msgstr "Cor de destaque"
 
 #: src/components/layout.tsx src/pages/settings/index.tsx
 msgid "Account"
@@ -412,7 +412,7 @@ msgstr "Adicionar um filtro"
 
 #: src/components/shortcut-settings.tsx
 msgid "Add a key for {label}"
-msgstr "Adicionar uma chave para {label}"
+msgstr "Adicionar atalho para {label}"
 
 #: src/pages/settings/common.tsx
 msgid "Add a language"
@@ -473,11 +473,11 @@ msgstr "O AIOStreams é um projeto independente, desenvolvido e mantido por mim 
 
 #: src/pages/item.tsx
 msgid "Airs"
-msgstr "Ares"
+msgstr "Exibição"
 
 #: src/lib/format.ts
 msgid "Airs {day} · {until}"
-msgstr "Ares {day} · {until}"
+msgstr "Estreia {day} · {until}"
 
 #: src/components/kind-tabs.tsx src/components/version-picker.tsx
 #: src/pages/discover.tsx src/pages/favourites.tsx
@@ -518,7 +518,7 @@ msgstr "Também quando você voltar após meia hora. Quem estava assistindo cont
 
 #: src/lib/input/keys.ts
 msgid "Alt"
-msgstr "Texto alternativo"
+msgstr "Alt"
 
 #: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 #: src/pages/settings/subtitles.tsx
@@ -588,7 +588,7 @@ msgstr "Tem certeza de que deseja continuar?"
 
 #: src/pages/settings/cache.tsx
 msgid "Artwork"
-msgstr "Arte"
+msgstr "Imagens"
 
 #: src/components/party/party-sheet.tsx
 msgid "As the host"
@@ -711,23 +711,23 @@ msgstr "Borda"
 
 #: src/pages/person.tsx
 msgid "Born {date}"
-msgstr "Nascido em {date}"
+msgstr "Nasceu em {date}"
 
 #: src/pages/person.tsx
 msgid "Born {date} (age {age})"
-msgstr "Nascido em {date} ( {age} anos)"
+msgstr "Nasceu em {date} ({age} anos)"
 
 #: src/pages/person.tsx
 msgid "Born {date} (age {age}) in {place}"
-msgstr "Nascido em {date} ({age} anos) em {place}"
+msgstr "Nasceu em {date} ({age} anos), em {place}"
 
 #: src/pages/person.tsx
 msgid "Born {date} in {place}"
-msgstr "Nascido em {date} em {place}"
+msgstr "Nasceu em {date}, em {place}"
 
 #: src/pages/person.tsx
 msgid "Born in {place}"
-msgstr "Nascido em {place}"
+msgstr "Nasceu em {place}"
 
 #: src/pages/settings/interface.tsx
 msgid "Bottom bar"
@@ -830,7 +830,7 @@ msgstr "Alterar atalhos"
 
 #: src/components/party/party-sheet.tsx
 msgid "Change speed to catch up"
-msgstr "Alterar a velocidade para alcançar o tempo real"
+msgstr "Ajustar velocidade para sincronizar"
 
 #: src/components/version-settings.tsx
 msgid "Change these on a phone, a computer or in a browser."
@@ -1163,11 +1163,11 @@ msgstr "País"
 
 #: src/pages/settings/playback.tsx
 msgid "Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
-msgstr "Faz a contagem regressiva e reproduz o próximo episódio na mesma versão. Quando desativado, o aviso aguarda sua ação."
+msgstr "Após a contagem regressiva, reproduz o próximo episódio em uma versão semelhante. Se desativado, o aviso aguarda sua confirmação."
 
 #: src/pages/settings/playback.tsx
 msgid "Counts down, then plays the next episode. Off, the prompt waits for you."
-msgstr "Faz a contagem regressiva e reproduz o próximo episódio. Quando desativado, o aviso aguarda você."
+msgstr "Após a contagem regressiva, reproduz o próximo episódio. Se desativado, o aviso aguarda sua confirmação."
 
 #: src/components/playlists.tsx
 msgid "Create"
@@ -1457,7 +1457,7 @@ msgstr "Abandonar"
 
 #: src/pages/item.tsx
 msgid "Drop show"
-msgstr "Remover série"
+msgstr "Abandonar série"
 
 #: src/components/player/controls.tsx
 msgid "Drop to add subtitles"
@@ -1575,7 +1575,7 @@ msgstr "Exportar"
 
 #: src/pages/settings/interface.tsx
 msgid "Fade"
-msgstr "Dissolver"
+msgstr "Degradê"
 
 #: src/pages/downloads.tsx
 msgid "Failed"
@@ -1628,7 +1628,7 @@ msgstr "Buscar versões ao abrir um título"
 
 #: src/components/download-button.tsx
 msgid "Finding a version to download"
-msgstr "Como encontrar uma versão para baixar"
+msgstr "Buscando versão para baixar"
 
 #: src/components/version-picker.tsx src/pages/downloads.tsx
 #: src/pages/player.tsx
@@ -1735,7 +1735,7 @@ msgstr "Ir para o início"
 
 #: src/components/player/live.tsx
 msgid "Go live"
-msgstr "Ao vivo"
+msgstr "Voltar ao vivo"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -1751,7 +1751,7 @@ msgstr "Cinza"
 
 #: src/components/version-settings.tsx src/pages/live-tv/index.tsx
 msgid "Group"
-msgstr "Agrupar"
+msgstr "Grupo"
 
 #: src/pages/history.tsx
 msgid "Group by day"
@@ -2151,7 +2151,7 @@ msgstr "Carregando…"
 
 #: src/components/player/controls.tsx
 msgid "Lock screen"
-msgstr "Tela de bloqueio"
+msgstr "Bloquear tela"
 
 #: src/pages/settings/apps.tsx
 msgid "Logs"
@@ -2446,7 +2446,7 @@ msgstr "Ainda não há catálogos"
 
 #: src/components/channel-number.tsx
 msgid "No channel {typed}"
-msgstr "Nenhum canal {typed}"
+msgstr "Canal {typed} não encontrado"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
@@ -2663,7 +2663,7 @@ msgstr "Desativado — o vídeo passa a dar pequenos saltos."
 
 #: src/pages/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
-msgstr "As versões anteriores aguardam o servidor. Sem conexão, todo o conteúdo salvo é exibido."
+msgstr "As páginas mais antigas são carregadas do servidor. Sem conexão, todas as páginas salvas são exibidas."
 
 #: src/components/party/party-sheet.tsx
 msgid "on {relay}"
@@ -3477,7 +3477,7 @@ msgstr "Relatório copiado"
 
 #: src/lib/client.ts
 msgid "Request failed ({status})"
-msgstr "Solicitação falhou ({status})"
+msgstr "Falha na solicitação ({status})"
 
 #: src/components/party/reaction-setting.tsx src/components/player/options.tsx
 #: src/pages/history.tsx
@@ -3935,7 +3935,7 @@ msgstr "Desconectado"
 
 #: src/lib/playback/controller.ts src/pages/settings/subtitles.tsx
 msgid "Signs and songs"
-msgstr "Placas e músicas"
+msgstr "Textos e músicas"
 
 #: src/components/player/options.tsx src/pages/settings/subtitles.tsx
 msgid "Size"
@@ -4168,7 +4168,7 @@ msgstr "Legendas estilizadas, comuns em animes, mantêm suas próprias fontes e 
 
 #: src/pages/settings/downloads.tsx
 msgid "Subtitle files go next to the video, named so players find them."
-msgstr "Os arquivos de legenda ficam ao lado do vídeo, com nomes que os players encontram."
+msgstr "As legendas são salvas junto com o vídeo, com nomes que os players reconhecem."
 
 #: src/components/player/keys.ts
 msgid "Subtitle height {height}%"
@@ -4197,7 +4197,7 @@ msgstr "Legendas {amount}"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Subtitles back in sync. Another line refines it."
-msgstr "Legendas sincronizadas novamente. Outra linha refina."
+msgstr "Legendas sincronizadas. Repita com outra fala para maior precisão."
 
 #: src/lib/input/actions.ts
 msgid "Subtitles earlier"
@@ -4229,7 +4229,7 @@ msgstr "Legendas com tempo ajustado para a velocidade do vídeo"
 
 #: src/components/player/subtitle-sync.tsx
 msgid "Subtitles set to {amount}. Another line refines it."
-msgstr "Legendas definidas para {amount}. Outra linha refina."
+msgstr "Legendas ajustadas: {amount}. Repita com outra fala para maior precisão."
 
 #: src/lib/subtitles/delay.ts
 msgid "Subtitles synced: {amount}"
@@ -4499,7 +4499,7 @@ msgstr "O software de código aberto neste app e a licença de cada um."
 
 #: src/components/remote-sheet.tsx
 msgid "The other device could not be reached"
-msgstr "Não foi possível alcançar o outro dispositivo"
+msgstr "Não foi possível conectar ao outro dispositivo"
 
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
@@ -4831,7 +4831,7 @@ msgstr "Máquina de escrever"
 
 #: src/components/episodes.tsx src/lib/format.ts
 msgid "Unaired"
-msgstr "Não exibido"
+msgstr "Não estreou"
 
 #: src/pages/settings/interface.tsx
 msgid "Under posters"
@@ -4839,7 +4839,7 @@ msgstr "Sob os pôsteres"
 
 #: src/pages/item.tsx
 msgid "Undrop show"
-msgstr "Desfazer remoção da série"
+msgstr "Retomar série"
 
 #: src/components/version-settings.tsx
 msgid "Unfinished"
@@ -5210,7 +5210,7 @@ msgstr "Quando a TV ou o receiver decodifica"
 
 #: src/pages/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
-msgstr "Quando um arquivo nomeia seus capítulos de introdução, créditos, resumo ou prévia, a omissão usa esses capítulos em vez dos tempos do servidor, pois correspondem exatamente àquele arquivo. O restante continua vindo do servidor."
+msgstr "Se o vídeo tiver capítulos marcados como abertura, créditos, resumo ou prévia, o app usa essas marcações para pular os trechos com mais precisão. Para os demais, usa os horários do servidor."
 
 #: src/pages/settings/about.tsx
 msgid "Where the app is made, and where to report a problem."
@@ -5262,11 +5262,11 @@ msgstr "Branco"
 
 #: src/pages/settings/index.tsx
 msgid "Who you are signed in as"
-msgstr "Com quem você está conectado"
+msgstr "Conta em uso"
 
 #: src/pages/settings/cache.tsx
 msgid "Who you are signed in as and the server’s details, which opening without a connection needs."
-msgstr "Com quem você está conectado e os detalhes do servidor, necessários para abrir sem conexão."
+msgstr "A conta em uso e os dados do servidor, necessários para abrir o app sem conexão."
 
 #: src/pages/settings/account.tsx
 msgid "Who's watching"
