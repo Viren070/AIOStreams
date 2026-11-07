@@ -1,6 +1,8 @@
 export interface MetadataTitle {
   title: string;
   language?: string; // ISO 639-1 language code, normalised from provider-specific formats
+  /** Every language that names a title this way, where `language` keeps only an unambiguous one. */
+  languages?: string[];
   trusted?: boolean;
 }
 
@@ -15,6 +17,10 @@ export function deduplicateTitles(
   const titleLangs = new Map<string, Set<string>>();
   const titleTrustedLangs = new Map<string, Set<string>>();
   const titleHasUntagged = new Set<string>();
+  // Kept apart from the sets above, which decide `language` from the
+  // single-language tags alone.
+  const titleAllLangs = new Map<string, Set<string>>();
+  const titleAllTrustedLangs = new Map<string, Set<string>>();
   const titleKeys: string[] = [];
   const titleFirstOccurrence = new Map<string, MetadataTitle>();
 
@@ -23,6 +29,8 @@ export function deduplicateTitles(
     if (!titleLangs.has(key)) {
       titleLangs.set(key, new Set());
       titleTrustedLangs.set(key, new Set());
+      titleAllLangs.set(key, new Set());
+      titleAllTrustedLangs.set(key, new Set());
       titleKeys.push(key);
       titleFirstOccurrence.set(key, t);
     }
@@ -33,6 +41,10 @@ export function deduplicateTitles(
       }
     } else {
       titleHasUntagged.add(key);
+    }
+    for (const lang of t.languages ?? (t.language ? [t.language] : [])) {
+      titleAllLangs.get(key)!.add(lang);
+      if (t.trusted) titleAllTrustedLangs.get(key)!.add(lang);
     }
   }
 
@@ -56,9 +68,15 @@ export function deduplicateTitles(
     ) {
       language = originalLanguage;
     }
+    // A trusted (TMDB) source names the title's languages better than aliases.
+    const allTrustedLangs = titleAllTrustedLangs.get(key)!;
+    const languages = [
+      ...(allTrustedLangs.size ? allTrustedLangs : titleAllLangs.get(key)!),
+    ];
     return {
       title: first.title,
       language,
+      languages: languages.length ? languages : undefined,
     };
   });
 }
