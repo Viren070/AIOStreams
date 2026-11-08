@@ -8,3 +8,10 @@
   :is(a, button) {
   margin-block: calc(var(--spacing) * 1);
 }
+
+@theme {
+  --color-brand-300: rgb(199 194 255);
+  --color-brand-400: rgb(159 146 255);
+  --color-brand-500: rgb(97 82 223);
+  --color-brand-600: rgb(82 67 203);
+}

@@ -2,6 +2,7 @@ import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import { Accordions, Accordion } from 'fumadocs-ui/components/accordion';
+import { CompareSlider } from '@/components/compare-slider';
 import { Gallery } from '@/components/gallery';
 import { InstanceTabs } from '@/components/instance-tabs';
 import { TemplateOpener } from '@/components/template-opener';
@@ -16,6 +17,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Tabs,
     Accordions,
     Accordion,
+    CompareSlider,
     Gallery,
     InstanceTabs,
     TemplateOpener,

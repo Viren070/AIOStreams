@@ -27,7 +27,7 @@
 <p align="center">
   <a href="https://docs.aiostreams.viren070.me"><strong>Docs</strong></a> ·
   <a href="https://docs.aiostreams.viren070.me/getting-started/public-instances">Public instances</a> ·
-  <a href="https://docs.aiostreams.viren070.me/apps">Apps</a> ·
+  <a href="https://docs.aiostreams.viren070.me/download">Download the app</a> ·
   <a href="https://docs.aiostreams.viren070.me/changelog">Changelog</a> ·
   <a href="https://discord.viren070.me">Discord</a>
 </p>
@@ -97,7 +97,8 @@ Because every source goes through AIOStreams, you set your rules once and they a
 - **Addon marketplace**: 80+ community addons (Torrentio, Comet, MediaFusion and many more) to enable in a
   click, or add any Stremio addon by URL. Streams, catalogs, metadata and subtitles are all supported.
 - **Built-in addons** that run inside AIOStreams: torrent and Usenet indexers, Prowlarr, Jackett, NZBHydra2,
-  Newznab and Torznab, SeaDex for anime, Google Drive, and your debrid or Usenet library.
+  Newznab and Torznab, SeaDex for anime, Xtream for your IPTV provider's channels, Google Drive, and your
+  debrid or Usenet library.
 - **Services** entered once and applied to every addon that can use them: Real-Debrid, AllDebrid, TorBox,
   Premiumize, Debrid-Link, put.io, Offcloud, PikPak, EasyDebrid and more for debrid; Easynews, NzbDAV, AltMount,
   Stremio NNTP and StremThru Newz for Usenet.
@@ -105,7 +106,7 @@ Because every source goes through AIOStreams, you set your rules once and they a
 <details>
 <summary><strong>The built-in addons</strong></summary>
 
-| Addon | What it searches |
+| Addon | What it finds |
 | --- | --- |
 | **Knaben** | A meta-search across The Pirate Bay, 1337x, Nyaa and more |
 | **The Pirate Bay** | The Pirate Bay, by title and IMDb ID |
@@ -122,11 +123,12 @@ Because every source goes through AIOStreams, you set your rules once and they a
 | **NZBHydra2** | Your Usenet indexers, through NZBHydra2 |
 | **Newznab**, **Torznab** | Any Newznab (Usenet) or Torznab (torrent) indexer |
 | **Easynews Search** | Easynews' Usenet index |
+| **Xtream** | Your IPTV provider's channels, programme guide and catch-up, from your Xtream login |
 | **Stremio GDrive** | Your Google Drive |
 | **Library** | What's already in your debrid or Usenet library |
 
-Built-in addons that search torrents need a debrid service. Every built-in addon supports anime and Kitsu
-and MAL catalogs.
+Built-in addons that search torrents need a debrid service. Every built-in addon that searches supports
+anime and Kitsu and MAL catalogs.
 
 </details>
 
@@ -141,12 +143,13 @@ Link your Stremio account and changes you save reinstall themselves.
 
 ### In the AIOStreams app
 
-Your catalogs become libraries and your streams become versions of a title, sorted and named by your rules,
-in an app of AIOStreams' own. There's nothing extra to host: every configuration is also a media server, so
-the app signs in to it, and so does any Jellyfin app.
+Your catalogs become a streaming app of AIOStreams' own, and your streams become versions of each title,
+sorted and named by your rules. There's nothing extra to host: every configuration is also a media server, so
+the app signs in to it, and so does any Jellyfin app. **[Download it](https://docs.aiostreams.viren070.me/download)**
+for your computer, phone or TV.
 
 <p align="center">
-  <img src="packages/docs/public/showcase/app.webp" alt="Browsing the AIOStreams app, opening a title and its versions" width="850">
+  <img src="packages/docs/public/showcase/home.webp" alt="The app's home page on a computer, with a film featured at the top above rows of posters" width="850">
 </p>
 
 | Where | App | Plays with |
@@ -160,24 +163,42 @@ the app signs in to it, and so does any Jellyfin app.
 
 The apps play streams with a link, such as debrid and Usenet ones; P2P torrents stay in Stremio.
 
-- **Browse** home rows for Continue Watching, Next Up and each catalog, Discover, search, collections,
-  favourites, a calendar of airing episodes, trailers, and a page for every title and person.
+**It works as it comes.** The player needs no setting up:
+
+- Styled subtitles, such as most anime releases, drawn by libass in both mpv and ExoPlayer, signs and all.
+- Dolby Vision and HDR, with profile 7 converted where a device only plays profile 8.
+- Surround sound passed through to your receiver format by format, or turned into Dolby Digital for an
+  optical or ARC link, and the TV switched to each video's frame rate.
+- Subtitles from your addons synced to the video by themselves, or by ear, or by picking the spoken line.
+- Seek previews, skipped intros and credits, and the next episode on its own.
+- **Anime upscaling** in the desktop and Android apps, which sharpens older and lower-resolution anime as it
+  plays.
+
+**It runs on your addons.** Catalogs, details, ratings, streams, subtitles and Live TV all come from addons.
+Tracker addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state)
+bring in your history, watchlist and ratings, and get your progress, ratings and drops back as you watch.
+
+- **Browse** a home page with a featured title, rows for Continue Watching, Next Up and each catalog,
+  Discover, search, collections, favourites, a calendar of airing episodes, trailers, and a page for every
+  title and person.
+- **[Live TV](https://docs.aiostreams.viren070.me/apps/live-tv)** from IPTV addons or your Xtream login, with
+  channel groups and numbers, a programme guide with the channel playing above it, catch-up and reminders.
 - **Versions** are your streams. Search them, save quick filters, label them with badges, switch mid-play, or
   open one in VLC, Infuse or another player.
-- **Play** with your audio and subtitle languages, styled subtitles, subtitle sync (by ear or by picking the
-  spoken line), seek previews, skipped intros and credits, and the next episode on its own.
 - **Households** get a user each, with their own Continue Watching and an optional PIN; TVs sign in with a
   Quick Connect code.
 - **Watch together** in sync with friends, on your server or across servers, with chat and reactions.
 - **Play on another device** turns the app into a remote for a TV or computer running it.
-- **Playlists**, **downloads** for offline viewing on desktop and Android, and **tracker sync** with addons
-  that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state).
-- **Themes**, your own colours and [custom CSS](https://docs.aiostreams.viren070.me/reference/web-app-css), and
-  the apps in your language, translated on [Weblate](https://hosted.weblate.org/engage/aiostreams/).
+- **Playlists**, a **mini player** that keeps playing while you browse, and **downloads** for offline viewing
+  on desktop and Android.
+- **Make it yours**: navigation along the top, down the side or in a corner on solid, frosted or liquid glass,
+  themes and your own colours, and [custom CSS](https://docs.aiostreams.viren070.me/reference/web-app-css)
+  with hooks on every part of the app. The apps are in your language too, translated on
+  [Weblate](https://hosted.weblate.org/engage/aiostreams/).
 
 <p align="center">
-  <img src="packages/docs/public/apps/desktop/home.webp" alt="The desktop app's home page" width="49%">
-  <img src="packages/docs/public/apps/android/tv-home.webp" alt="The Android app's home page on a TV" width="49%">
+  <img src="packages/docs/public/apps/live-tv/guide.webp" alt="Live TV's programme guide, with a channel playing in a preview above the grid" width="49%">
+  <img src="packages/docs/public/showcase/title.webp" alt="Severance's page in the app, with Resume, Trailer and the watched, favourite, drop and rate actions" width="49%">
 </p>
 
 ### Elsewhere
