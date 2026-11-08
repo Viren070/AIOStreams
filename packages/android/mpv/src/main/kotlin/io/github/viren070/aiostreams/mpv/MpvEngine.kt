@@ -101,8 +101,12 @@ class MpvEngine(private val context: Context) : Engine {
 
     private val dir = File(context.filesDir, "mpv")
 
+    // Read at start: asking a stuck mpv later would hold the main thread too.
+    @Volatile
+    private var versions = emptyMap<String, String?>()
+
     override val description: String
-        get() = property("mpv-version") ?: "mpv"
+        get() = versions["mpv-version"] ?: "mpv"
 
     override fun start(listener: Engine.Listener) {
         this.listener = listener
@@ -134,6 +138,7 @@ class MpvEngine(private val context: Context) : Engine {
         // MPV leaves mpv paused, and idling only until its first file ends.
         mpv.setOptionString("idle", "yes")
         mpv.setPropertyBoolean("pause", false)
+        versions = VERSIONS.associateWith { mpv.getPropertyString(it) }
         ownFont = mpv.getPropertyString("sub-font").orEmpty()
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
@@ -150,7 +155,7 @@ class MpvEngine(private val context: Context) : Engine {
 
     private fun set(name: String, value: String) = mpv.setPropertyString(name, value)
 
-    override fun property(name: String): String? = mpv.getPropertyString(name)
+    override fun property(name: String): String? = if (name in versions) versions[name] else mpv.getPropertyString(name)
 
     /** libass here finds fonts only in mpv's fonts folder. */
     private fun copyFonts() {
@@ -407,7 +412,8 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.removeObserver(observer)
         mpv.removeLogObserver(logs)
         calls.shutdown()
-        mpv.close()
+        // Closing waits for mpv's core, which may never answer.
+        Thread(mpv::close, "mpv-close").start()
     }
 
     private val observer = object : MPV.EventObserver {
@@ -686,6 +692,7 @@ class MpvEngine(private val context: Context) : Engine {
         }
 
         private const val CA_BUNDLE = "cacert.pem"
+        private val VERSIONS = listOf("mpv-version", "ffmpeg-version")
 
         private val STATS = listOf("frame-drop-count", "decoder-frame-drop-count", "vo-delayed-frame-count")
         private const val TAG = "mpv"
