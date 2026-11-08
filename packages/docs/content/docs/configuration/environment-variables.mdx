@@ -114,13 +114,14 @@ neither the environment variable nor a stored value is present.
 
 ### Branding
 
-| Environment Variable | UI Setting       | Type    | Default                   | Description                                                                                                                                                                     |
-| -------------------- | ---------------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ADDON_NAME`         | Addon Name       | string  | `AIOStreams`              | Display name shown in the manifest and UI.                                                                                                                                      |
-| `ADDON_ID`           | Addon ID         | string  | `com.aiostreams.viren070` | Reverse-DNS identifier published in the manifest. _(restart required)_                                                                                                          |
-| `CUSTOM_HTML`        | Custom Html      | string  | —                         | Optional HTML injected into the configuration page.                                                                                                                             |
-| `APP_CUSTOM_CSS`     | App Custom Css   | string  | —                         | CSS the AIOStreams apps apply for everyone signed in to this server. Each person's own custom CSS applies on top of it, and anyone can turn it off in the app's theme settings. |
-| `ALTERNATE_DESIGN`   | Alternate Design | boolean | `false`                   | Switches the frontend to the alternate design (different logo and theme).                                                                                                       |
+| Environment Variable    | UI Setting            | Type    | Default                   | Description                                                                                                                                                                     |
+| ----------------------- | --------------------- | ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADDON_NAME`            | Addon Name            | string  | `AIOStreams`              | Display name shown in the manifest and UI.                                                                                                                                      |
+| `ADDON_ID`              | Addon ID              | string  | `com.aiostreams.viren070` | Reverse-DNS identifier published in the manifest. _(restart required)_                                                                                                          |
+| `CUSTOM_HTML`           | Custom Html           | string  | —                         | Optional HTML injected into the configuration page.                                                                                                                             |
+| `APP_CUSTOM_CSS`        | App Custom Css        | string  | —                         | CSS the AIOStreams apps apply for everyone signed in to this server. Each person's own custom CSS applies on top of it, and anyone can turn it off in the app's theme settings. |
+| `ALTERNATE_DESIGN`      | Alternate Design      | boolean | `false`                   | Switches the frontend to the alternate design (different logo and theme).                                                                                                       |
+| `ALLOW_SEARCH_INDEXING` | Allow Search Indexing | boolean | `false`                   | Let search engines list this instance's pages. While it's off, every page asks them not to, so the instance stays out of search results.                                        |
 
 ### SSO / OIDC
 
