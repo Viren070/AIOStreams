@@ -385,7 +385,10 @@ html[data-blur-spoilers]
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day']:not(:hover, :focus-within)
+      [data-ui='calendar-day-art'][data-episode]
   ):not(
     [data-watched],
     [data-in-progress],
@@ -405,7 +408,8 @@ html[data-blur-spoilers]
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode]
   ):not(
     [data-watched],
     [data-in-progress],
@@ -417,7 +421,8 @@ html[data-blur-spoilers]
     [data-ui='episode-title'] > span,
     p[data-ui='episode-title'],
     [data-ui='episode-synopsis'],
-    [data-ui='wide-card-subtitle']
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
   ) {
   filter: blur(5px);
 }
@@ -428,14 +433,17 @@ html[data-blur-spoilers]:not([data-tv])
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day-art'][data-episode]
   )
   :is(
     [data-ui='artwork'],
     [data-ui='episode-title'] > span,
     p[data-ui='episode-title'],
     [data-ui='episode-synopsis'],
-    [data-ui='wide-card-subtitle']
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
   ) {
   transition-property: transform, opacity, filter;
   transition-duration: 250ms, 300ms, 300ms;

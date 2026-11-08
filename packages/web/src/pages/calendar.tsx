@@ -18,6 +18,7 @@ import {
   episodeCode,
   itemSubtitle,
   itemTitle,
+  progressOf,
 } from '../lib/format';
 import { landscapeUrls } from '../lib/images';
 import { href, itemPath, navigate, to } from '../lib/paths';
@@ -76,14 +77,23 @@ function longDay(d: Date): string {
   );
 }
 
+/** What spoiler blurring goes by; films aren't blurred. */
+const entryState = (item: BaseItemDto) => ({
+  'data-episode': item.Type === 'Episode' || undefined,
+  'data-watched': item.UserData?.Played || undefined,
+  'data-in-progress': (progressOf(item) ?? 0) > 0 || undefined,
+});
+
 function EpisodeRow({ item }: { item: BaseItemDto }) {
   const { client } = useSession();
   const played = !!item.UserData?.Played;
+  const subtitle = itemSubtitle(item);
+  const time = item.PremiereDate && airTime(item.PremiereDate);
   return (
     <Anchor
       href={href(itemPath(item))}
       data-ui="calendar-entry"
-      data-watched={played || undefined}
+      {...entryState(item)}
       data-focus="own"
       className={cn(
         'flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-white/5 focus-visible:bg-white/10',
@@ -99,9 +109,11 @@ function EpisodeRow({ item }: { item: BaseItemDto }) {
       <div className="min-w-0">
         <p className="truncate font-medium">{itemTitle(item)}</p>
         <p className="truncate text-sm text-[--muted]">
-          {[itemSubtitle(item), item.PremiereDate && airTime(item.PremiereDate)]
-            .filter(Boolean)
-            .join(' · ')}
+          {subtitle && (
+            <span data-ui="calendar-entry-subtitle">{subtitle}</span>
+          )}
+          {subtitle && time && ' · '}
+          {time}
         </p>
       </div>
     </Anchor>
@@ -153,6 +165,8 @@ function DayCell({
           {listed.map((item) => (
             <div
               key={item.Id}
+              data-ui="calendar-day-art"
+              {...entryState(item)}
               className={cn(
                 'absolute inset-0 transition-opacity duration-500',
                 item !== shown
@@ -189,7 +203,7 @@ function DayCell({
             <Anchor
               href={href(itemPath(item))}
               data-ui="calendar-entry"
-              data-watched={item.UserData?.Played || undefined}
+              {...entryState(item)}
               data-focus="own"
               onClick={(e) => e.stopPropagation()}
               onPointerEnter={() => setHovered(item)}
