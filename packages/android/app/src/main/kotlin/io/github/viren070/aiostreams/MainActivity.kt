@@ -21,6 +21,7 @@ import android.provider.Settings
 import android.text.format.Formatter
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
@@ -111,9 +112,13 @@ class MainActivity : ComponentActivity() {
     private val started get() = ::bridge.isInitialized
     /** The page's renderer ended, leaving a web view that can't be used. */
     private var pageGone = false
+    private var splash: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The starting theme's logo would show wherever the page is see-through.
+        setTheme(R.style.Theme_AIOStreams)
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) splashScreen.setOnExitAnimationListener { it.remove() }
         if (!webViewUsable(this)) return setContentView(outdatedWebView(this))
         // The page is dark whatever the system's theme, so the bars keep light icons.
         val dark = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { true }
@@ -128,9 +133,12 @@ class MainActivity : ComponentActivity() {
         }
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
         web = AppWebView(this, onTv())
+        val splash = View(this).apply { setBackgroundResource(R.drawable.splash) }
+        this.splash = splash
         setContentView(FrameLayout(this).apply {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
+            addView(splash, MATCH_PARENT, MATCH_PARENT)
         })
         mini = MiniPlayer(playback.stage, web, send = { bridge.send(it) }) { playback.subtitlesShown = it }
 
@@ -265,7 +273,10 @@ class MainActivity : ComponentActivity() {
                 AppLog.i("page", pageText(message))
             }
             "exit" -> moveTaskToBack(true)
+            "splash-shown" -> removeSplash()
             "links-ready" -> {
+                // For a page without a splash of its own.
+                removeSplash()
                 linksReady = true
                 sendLinks()
             }
@@ -359,6 +370,11 @@ class MainActivity : ComponentActivity() {
             }.start()
             "crash-seen" -> message["at"]?.jsonPrimitive?.longOrNull?.let { Crashes.seen(this, it) }
         }
+    }
+
+    private fun removeSplash() = runOnUiThread {
+        splash?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        splash = null
     }
 
     /** Into the shared Downloads folder, which needs storage access before Android 10. */
