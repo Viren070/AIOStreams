@@ -49,6 +49,7 @@ import { useHeroTarget } from './hero';
 import { useCardPreview } from './card-preview';
 import { openAddToPlaylist } from './playlists';
 import { playable as canPlay } from '../lib/playlists';
+import { usingKeys } from '../lib/input';
 import type { BaseItemDto } from '../lib/types';
 
 function PlayEntries({ item }: { item: BaseItemDto }) {
@@ -263,7 +264,20 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const resumeMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
 
   return (
-    <ContextMenuContent data-ui="item-menu" className="max-sm:w-60">
+    <ContextMenuContent
+      data-ui="item-menu"
+      className="max-sm:w-60"
+      // Radix starts on the first entry only for keys it sees, and the input
+      // layer takes a remote's held Enter and a gamepad's buttons first.
+      onFocus={(e) => {
+        const menu = e.currentTarget;
+        if (e.target !== menu || !usingKeys()) return;
+        if (menu.contains(e.relatedTarget as Node | null)) return;
+        menu
+          .querySelector<HTMLElement>('[role=menuitem]:not([data-disabled])')
+          ?.focus({ preventScroll: true });
+      }}
+    >
       <ContextMenuLabel className="line-clamp-1">
         {onPage ? item.Name : itemTitle(item)}
       </ContextMenuLabel>
