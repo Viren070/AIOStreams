@@ -62,6 +62,7 @@ import {
   msToTicks,
   ratingUserData,
   seasonAnimeIds,
+  filmAnimeIds,
   userDataFromRow,
   watchRowEpisode,
   watchRowsAndAirTimesFor,
@@ -673,6 +674,10 @@ export async function itemFromDescriptor(
       });
       if (asBoxset) item.Id = encodeItemId(d);
       if (!meta) item.aiostreams = { noMeta: true };
+      if (d.k === 'movie' && !asBoxset) {
+        const ids = item.ProviderIds as Record<string, string> | undefined;
+        item.ProviderIds = { ...ids, ...(await filmAnimeIds(base, ids)) };
+      }
       // A show is played by its episodes, which its own row does not hold.
       if (!opts.bare && (!opts.playstate || d.k === 'series'))
         await attachUserData(ctx, [item]);
