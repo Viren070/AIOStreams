@@ -812,6 +812,22 @@ let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
  */
 const cameFrom = new WeakMap<Element, HTMLElement>();
 
+/**
+ * From a page the navigation leads to, its entry there, which Back moves onto
+ * first; `data-nav-back` marks the way it lies from the page.
+ */
+export function navigationBack(): {
+  entry: HTMLElement;
+  dir: Direction;
+} | null {
+  const nav = document.querySelector<HTMLElement>('[data-nav-back]');
+  const entry = nav?.querySelector<HTMLElement>('[aria-current=page]');
+  if (!nav || !entry || nav.contains(document.activeElement)) return null;
+  // Narrow windows hide some navigations, which can't take focus then.
+  if (!entry.getClientRects().length) return null;
+  return { entry, dir: navSide(nav.dataset.navBack)! };
+}
+
 /** A side a `data-nav-*` mark names; `start` and `end` follow the page's direction. */
 export function navSide(value: string | undefined): Direction | undefined {
   if (value === 'start') return pageRtl() ? 'right' : 'left';

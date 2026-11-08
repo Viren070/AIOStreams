@@ -34,7 +34,8 @@ export function setupAndroid(): () => void {
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
     else if (m.type === 'back') backPressed();
-    else if (m.type === 'back-gesture') backGesture(m);
+    // Android 14 on reports a remote's Back key as a swipe starting.
+    else if (m.type === 'back-gesture' && !bridge.tv) backGesture(m);
     else if (m.type === 'player-engine') setEngine(m.name);
   });
   const stopNotingHome = bridge?.tv ? undefined : noteHomeScroll();

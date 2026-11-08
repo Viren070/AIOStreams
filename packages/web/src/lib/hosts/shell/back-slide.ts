@@ -1,4 +1,9 @@
-import { backIsFree, isTextField, runAction } from '../../input';
+import {
+  backIsFree,
+  isTextField,
+  navigationBack,
+  runAction,
+} from '../../input';
 import { UNDER_OPACITY, UNDER_SHIFT } from '../../page-open';
 
 const GLIDE = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
@@ -37,6 +42,7 @@ export function noteHomeScroll(): () => void {
 /** Home isn't one: Back asks there before leaving the app. */
 function pageBackLeaves(): HTMLElement | null {
   if (!backIsFree() || isTextField(document.activeElement)) return null;
+  if (navigationBack()) return null;
   if (!((window.history.state?.__TSR_index ?? 0) > 0)) return null;
   return document.querySelector<HTMLElement>(
     "main [data-page]:not([data-page='home'])"

@@ -14,7 +14,7 @@ import {
   keysOf,
   move,
   moveTo,
-  navSide,
+  navigationBack,
   onAction,
   openMenu,
   returnFocus,
@@ -50,16 +50,10 @@ function back(history: History): boolean {
   return true;
 }
 
-/**
- * From a page the navigation leads to, onto its entry in the navigation, which
- * `data-nav-back` marks with the way it lies from the page.
- */
 function toNavigation(): boolean {
-  const nav = document.querySelector<HTMLElement>('[data-nav-back]');
-  const current = nav?.querySelector<HTMLElement>('[aria-current=page]');
-  if (!nav || !current || nav.contains(document.activeElement)) return false;
-  moveTo(current, navSide(nav.dataset.navBack)!);
-  return true;
+  const back = navigationBack();
+  if (back) moveTo(back.entry, back.dir);
+  return !!back;
 }
 
 /**
