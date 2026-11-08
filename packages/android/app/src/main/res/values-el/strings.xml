@@ -1,3 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    </resources>
+    <string name="channel_downloads">Λήψεις</string>
+    <plurals name="downloading_items">
+        <item quantity="one">Γίνεται λήψη %d στοιχείου</item>
+        <item quantity="other">Γίνεται λήψη %d στοιχείων</item>
+    </plurals>
+    <string name="channel_updates">Ενημερώσεις</string>
+    <string name="updated_to">Έγινε ενημέρωση στην έκδοση %1$s</string>
+    <string name="tap_to_open">Πάτησε για άνοιγμα</string>
+    <string name="update_no_build">Δεν υπάρχει έκδοση για τον επεξεργαστή αυτής της συσκευής</string>
+    <string name="update_damaged">Το αρχείο λήψης είναι κατεστραμμένο</string>
+    <string name="update_install_failed">Η εγκατάσταση απέτυχε: %1$s</string>
+    <string name="update_feed_answered">Η ροή ενημερώσεων επέστρεψε %1$d</string>
+    <string name="download_folder_title">Επίλεξε πού θα αποθηκεύονται οι λήψεις</string>
+    <string name="download_folder_free">%1$s · %2$s ελεύθερα</string>
+    <string name="file_saved">Το %1$s αποθηκεύτηκε στις Λήψεις</string>
+    <string name="file_not_saved">Δεν ήταν δυνατή η αποθήκευση του %1$s</string>
+    <string name="webview_version_unknown">άγνωστη</string>
+    <string name="webview_too_old">Το WebView αυτής της συσκευής είναι πολύ παλιό για την εφαρμογή: έκδοση %1$s, ενώ απαιτείται η %2$d ή νεότερη.</string>
+    <string name="webview_update">Ενημέρωσε το Android System WebView ή το σύστημα και άνοιξε ξανά την εφαρμογή.</string>
+</resources>
