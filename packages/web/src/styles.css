@@ -377,7 +377,7 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   color: rgb(255 255 255 / 0.8);
 }
 
-/* Episodes not started, until the pointer or focus is on one. */
+/* Episodes not started, until the pointer, focus or its menu is on one. */
 html[data-blur-spoilers]
   :is(
     [data-ui='episode-card'],
@@ -394,7 +394,8 @@ html[data-blur-spoilers]
     [data-in-progress],
     [data-current],
     :hover,
-    :focus-within
+    :focus-within,
+    [data-menu-open] > *
   )
   [data-ui='artwork'] {
   filter: blur(12px);
@@ -415,7 +416,8 @@ html[data-blur-spoilers]
     [data-in-progress],
     [data-current],
     :hover,
-    :focus-within
+    :focus-within,
+    [data-menu-open] > *
   )
   :is(
     [data-ui='episode-title'] > span,

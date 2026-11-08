@@ -135,7 +135,7 @@ interface Point {
 }
 
 const OpenMenu = React.createContext<
-  ((target: MenuTarget, at: Point) => void) | null
+  ((target: MenuTarget, at: Point, card?: Element) => void) | null
 >(null);
 
 /** Opens the menu from a list that draws its own rows. */
@@ -148,29 +148,40 @@ const PHONE_MENU = 240 + 8;
 export function ItemMenuHost({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = React.useState<MenuTarget | null>(null);
   const trigger = React.useRef<HTMLSpanElement>(null);
-  const open = React.useCallback((next: MenuTarget, at: Point) => {
-    flushSync(() => setTarget(next));
-    // The menu opens beside the point and never slides, so a phone's point leaves it room.
-    const clientX =
-      innerWidth < 640
-        ? Math.min(at.clientX, innerWidth - PHONE_MENU)
-        : at.clientX;
-    // The trigger places the menu where it was right clicked.
-    trigger.current?.dispatchEvent(
-      new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        clientX,
-        clientY: at.clientY,
-      })
-    );
+  const owner = React.useRef<Element>(undefined);
+  // The card keeps its spoilers shown while focus is in its menu.
+  const own = React.useCallback((card?: Element) => {
+    owner.current?.removeAttribute('data-menu-open');
+    owner.current = card;
+    card?.setAttribute('data-menu-open', '');
   }, []);
+  const open = React.useCallback(
+    (next: MenuTarget, at: Point, card?: Element) => {
+      flushSync(() => setTarget(next));
+      own(card);
+      // The menu opens beside the point and never slides, so a phone's point leaves it room.
+      const clientX =
+        innerWidth < 640
+          ? Math.min(at.clientX, innerWidth - PHONE_MENU)
+          : at.clientX;
+      // The trigger places the menu where it was right clicked.
+      trigger.current?.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX,
+          clientY: at.clientY,
+        })
+      );
+    },
+    [own]
+  );
   return (
     <OpenMenu.Provider value={open}>
       {children}
       {/* Not modal: a modal menu turns the whole page's pointer events off and
           on, restyling every element as it opens and closes. */}
-      <ContextMenu modal={false}>
+      <ContextMenu modal={false} onOpenChange={(on) => on || own()}>
         <ContextMenuTrigger ref={trigger} className="hidden" />
         {target && <ItemMenuContent {...target} />}
       </ContextMenu>
@@ -214,7 +225,7 @@ export function ItemMenu({
       onContextMenu={(e) => {
         window.clearTimeout(pressTimer);
         e.preventDefault();
-        open(target, e);
+        open(target, e, e.currentTarget);
       }}
       // Some touch browsers never send a long press as a right click.
       onPointerDown={(e) => {
@@ -223,7 +234,7 @@ export function ItemMenu({
         const card = e.currentTarget;
         const at = { clientX: e.clientX, clientY: e.clientY };
         pressTimer = window.setTimeout(
-          () => card.isConnected && open(target, at),
+          () => card.isConnected && open(target, at, card),
           700
         );
       }}
