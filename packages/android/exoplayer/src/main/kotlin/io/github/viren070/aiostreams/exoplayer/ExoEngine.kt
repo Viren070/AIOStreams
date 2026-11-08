@@ -12,6 +12,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
+import androidx.media3.common.FileTypes
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaLibraryInfo
@@ -456,7 +457,8 @@ class ExoEngine(private val context: Context) : Engine {
         http.setDefaultRequestProperties(request.headers)
         link.setDefaultRequestProperties(request.headers)
         url = request.url
-        cache.play(request.url)
+        // The cache reconnects at an offset, which a live link can't serve.
+        cache.play(request.url.takeUnless { request.live })
         options = TrackOptions(request)
         caps = MediaCaps.read(context)
         upscaler?.reset()
@@ -482,7 +484,8 @@ class ExoEngine(private val context: Context) : Engine {
             .build()
         loadErrors.live = request.live
         val opening = ++opens
-        if (request.live && Util.inferContentType(Uri.parse(request.url)) == C.CONTENT_TYPE_OTHER) {
+        val uri = Uri.parse(request.url)
+        if (request.live && Util.inferContentType(uri) == C.CONTENT_TYPE_OTHER && FileTypes.inferFileTypeFromUri(uri) == FileTypes.UNKNOWN) {
             loader.execute {
                 val type = ManifestType.of(http.createDataSource(), request.url)
                 main.post { if (opens == opening) prepare(request, type) }
