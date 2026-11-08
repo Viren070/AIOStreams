@@ -410,11 +410,35 @@ const primaryButton =
 const secondaryButton =
   'inline-flex items-center gap-2 rounded-full border border-fd-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-fd-muted';
 
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebSite', name: 'AIOStreams', url: canonical('/') },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'AIOStreams',
+      url: canonical('/'),
+      description:
+        'Your Stremio addons, debrid services and Usenet in one list, filtered, sorted and formatted your way, in Stremio or the AIOStreams apps.',
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem:
+        'Windows, macOS, Linux, Android, Android TV, webOS, Tizen',
+      downloadUrl: canonical('/download'),
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      sameAs: ['https://github.com/Viren070/AIOStreams'],
+    },
+  ],
+};
+
 export default function HomePage() {
   const latest = getChangelogEntries()[0];
 
   return (
     <main className="flex flex-1 flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       <Hero latest={latest} />
 
       <section
