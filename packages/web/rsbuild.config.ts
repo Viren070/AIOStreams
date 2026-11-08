@@ -119,7 +119,7 @@ export default defineConfig(async ({ envMode }) => {
       tools,
       html: {
         template: './index.html',
-        templateParameters: { root: './', icons: false },
+        templateParameters: { root: './', icons: false, splash: true },
       },
       output: {
         distPath: { root: 'dist-standalone' },
@@ -136,7 +136,7 @@ export default defineConfig(async ({ envMode }) => {
     tools,
     html: {
       template: './index.html',
-      templateParameters: { root: '/', icons: true },
+      templateParameters: { root: '/', icons: true, splash: false },
     },
     output: { assetPrefix: ASSET_PREFIX },
     dev: { assetPrefix: ASSET_PREFIX },

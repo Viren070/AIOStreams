@@ -44,6 +44,7 @@ import { ServerStyles, ThemeStyles } from './components/theme-styles';
 import { WindowControls } from './components/window-controls';
 import { InputSetup } from './components/input-setup';
 import { CrashReportDialog } from './components/crash-report';
+import { SplashEnd } from './lib/splash';
 
 /** The web app served at the Jellyfin API's `/web`. */
 export default function JellyfinWebApp() {
@@ -211,6 +212,7 @@ function Standalone() {
           ) : (
             <ServerInfoProvider value={NO_SERVER_INFO}>
               <ServersPage key={linked} onChoose={choose} address={linked} />
+              <SplashEnd />
             </ServerInfoProvider>
           )}
         </motion.div>
@@ -255,6 +257,9 @@ function Session({
     if (ready) currentHost().signedIn?.(ready.client);
   }, [ready]);
 
+  const waiting =
+    phase.kind === 'loading' ||
+    (phase.kind === 'signed-out' && infoQuery.isLoading);
   let screen: React.ReactNode;
   switch (phase.kind) {
     case 'loading':
@@ -331,6 +336,7 @@ function Session({
           transition={{ duration: 0.18 }}
         >
           {screen}
+          {!waiting && <SplashEnd />}
         </motion.div>
       </AnimatePresence>
     </ServerInfoProvider>

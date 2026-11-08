@@ -32,8 +32,115 @@
         document.querySelector('meta[name="color-scheme"]').remove();
       }
     </script>
+    <% if (splash) { %>
+    <!-- Only transform and opacity animate, which run while the page's script loads. -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        /* Under the desktop app's window controls, so the window still moves and closes. */
+        z-index: 9998;
+        display: grid;
+        place-items: center;
+        background: #000;
+      }
+      #splash[data-ending] {
+        pointer-events: none;
+        animation: splash-out 0.5s ease-out forwards;
+      }
+      .splash-logo {
+        width: var(--splash-size, 288px);
+        height: var(--splash-size, 288px);
+      }
+      #splash[data-ending] .splash-logo {
+        animation: splash-settle 0.35s ease-in forwards;
+      }
+      /* Fixed while scaled, or the root would carry its fixed bars to the end of the page. */
+      #root[data-arriving] {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        overflow: clip;
+        animation: splash-arrive 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+      .splash-breath {
+        height: 100%;
+        animation: splash-breathe 2.4s ease-in-out infinite;
+      }
+      .splash-breath svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      @keyframes splash-breathe {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      @keyframes splash-out {
+        to {
+          opacity: 0;
+        }
+      }
+      @keyframes splash-settle {
+        to {
+          transform: scale(0.82);
+          opacity: 0;
+        }
+      }
+      @keyframes splash-arrive {
+        from {
+          transform: scale(1.03);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .splash-breath,
+        #splash[data-ending] .splash-logo,
+        #root[data-arriving] {
+          animation: none;
+        }
+      }
+    </style>
+    <% } %>
   </head>
   <body>
+    <% if (splash) { %>
+    <!-- Matches the Android app's res/drawable/splash_logo.xml. -->
+    <div id="splash" aria-hidden="true">
+      <div class="splash-logo">
+        <div class="splash-breath">
+          <svg viewBox="0 0 1080 1080">
+            <path
+              fill="#fff"
+              d="M508.34,338.5h3.14c65.24,0,106.01,70.62,73.39,127.12l-160.44,277.88h0c-66.63,0-108.27,-72.13 -74.96,-129.83l158.87,-275.17Z"
+            />
+            <path
+              fill="#fff"
+              d="M547.53,644.5a97.36,99 0,1 0,194.72 0a97.36,99 0,1 0,-194.72 0Z"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        // In vmin, which keeps its size through a TV's later 1280 px layout.
+        var side = Math.min(innerWidth, innerHeight);
+        if (side)
+          document
+            .getElementById('splash')
+            .style.setProperty('--splash-size', 28800 / side + 'vmin');
+        // The Android app covers the page until this shows.
+        var app = window.aiostreamsApp;
+        if (app && app.platform === 'android')
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              app.send({ type: 'splash-shown' });
+            });
+          });
+      })();
+    </script>
+    <% } %>
     <div id="root"></div>
   </body>
 </html>
