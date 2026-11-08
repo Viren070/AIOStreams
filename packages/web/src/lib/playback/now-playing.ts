@@ -26,6 +26,11 @@ function setHandler(
   } catch {}
 }
 
+/** The app puts the display's own mode back once nothing plays. */
+export function endNowPlaying(): void {
+  appBridge()?.send({ type: 'now-playing', item: null });
+}
+
 interface Actions {
   onStop(): void;
   onNext?: () => void;
@@ -138,7 +143,7 @@ export function useNowPlaying(
     });
     return () => {
       unsubscribe();
-      shell.send({ type: 'now-playing', item: null });
+      endNowPlaying();
     };
   }, [press]);
 

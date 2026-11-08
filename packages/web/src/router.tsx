@@ -22,6 +22,7 @@ import { PersonPage } from './pages/person';
 import { HistoryPage } from './pages/history';
 import { DownloadsPage } from './pages/downloads';
 import { openPlayback } from './lib/playback/session';
+import { endNowPlaying } from './lib/playback/now-playing';
 import { TrailerPage } from './pages/trailer';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -228,6 +229,8 @@ const trailerRoute = createRoute({
 function TrailerRouteView(): React.ReactElement {
   const { itemId } = trailerRoute.useParams();
   const { trailer } = trailerRoute.useSearch();
+  // Here, not in the page, which each trailer remounts.
+  React.useEffect(() => endNowPlaying, []);
   return (
     <TrailerPage key={`${itemId}|${trailer}`} itemId={itemId} index={trailer} />
   );
