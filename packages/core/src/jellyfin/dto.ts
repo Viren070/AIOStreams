@@ -176,7 +176,7 @@ export function userDataFromRow(
   runtimeMs?: number
 ): UserItemDataDto {
   if (!row) return defaultUserData(itemId);
-  const duration = runtimeMs || row.durationMs;
+  const duration = row.durationMs || runtimeMs || 0;
   const ud: UserItemDataDto = {
     PlaybackPositionTicks: msToTicks(row.positionMs),
     PlayCount: row.playCount,
