@@ -56,6 +56,12 @@ import {
 } from './catalog-order';
 import type { MergeRequest } from './merged-catalogs';
 import { useStatus } from '@/context/status';
+import { useAudiences } from '@/hooks/variants';
+import type { Toggle } from '@/lib/audiences';
+import {
+  AudienceModal,
+  type AudienceTarget,
+} from '../../../shared/audience-modal';
 
 const MODIFIERS = [restrictToVerticalAxis];
 const FIRST_ROWS = 30;
@@ -74,6 +80,16 @@ const STATUS_OPTIONS: { value: Status; label: string }[] = [
 ];
 
 type AddonList = 'newCatalogsDisabled' | 'upstreamCatalogOrder';
+
+const catalogToggle = (c: CatalogModification): Toggle => ({
+  label: c.name || c.id,
+  entries: [
+    { root: 'catalogModifications', match: { id: c.id, type: c.type } },
+    ...(isMerged(c)
+      ? [{ root: 'mergedCatalogs' as const, match: { id: c.id } }]
+      : []),
+  ],
+});
 
 function sourceKey(encoded: string): string {
   const params = new URLSearchParams(encoded);
@@ -99,6 +115,17 @@ export function CatalogSettingsCard({
   upstreamKeys: string[];
 }) {
   const { userData, setUserData } = useUserData();
+  const who = useAudiences();
+  const [audienceTarget, setAudienceTarget] = useState<AudienceTarget | null>(
+    null
+  );
+  const openAudiences = useCallback((catalog: CatalogModification) => {
+    const toggle = catalogToggle(catalog);
+    setAudienceTarget({
+      title: `Who gets ${toggle.label}`,
+      toggles: [toggle],
+    });
+  }, []);
 
   const mergedCatalogsCountRef = useRef(userData.mergedCatalogs?.length ?? 0);
   useEffect(() => {
@@ -119,10 +146,14 @@ export function CatalogSettingsCard({
     [userData.mergedCatalogs]
   );
 
-  const offPresets = useMemo(
-    () => disabledPresets(userData.presets),
-    [userData.presets]
-  );
+  // Catalogs stay listed while their addon is on for anyone.
+  const offPresets = useMemo(() => {
+    const off = disabledPresets(userData.presets);
+    for (const view of who.views)
+      for (const preset of view.presets ?? [])
+        if (preset.enabled) off.delete(preset.instanceId);
+    return off;
+  }, [userData.presets, who.views]);
   const catalogs = useMemo(
     () =>
       (userData.catalogModifications ?? []).filter(
@@ -584,6 +615,21 @@ export function CatalogSettingsCard({
                 >
                   Move to bottom
                 </DropdownMenuItem>
+                {who.available && (
+                  <DropdownMenuItem
+                    disabled={none}
+                    onSelect={() =>
+                      setAudienceTarget({
+                        title: `Who gets ${selectedCount} catalog${selectedCount === 1 ? '' : 's'}`,
+                        toggles: visible
+                          .filter((c) => selected.has(catalogKey(c)))
+                          .map(catalogToggle),
+                      })
+                    }
+                  >
+                    Choose who gets them…
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={
@@ -683,6 +729,8 @@ export function CatalogSettingsCard({
                         onMove={moveCatalog}
                         onToggleEnabled={toggleCatalog}
                         onEditMerged={editMerged}
+                        audienceSummary={who.summary(catalogToggle(catalog))}
+                        onAudiences={who.available ? openAudiences : undefined}
                       />
                     );
                   })}
@@ -692,6 +740,11 @@ export function CatalogSettingsCard({
           )}
         </>
       )}
+      <AudienceModal
+        who={who}
+        target={audienceTarget}
+        onClose={() => setAudienceTarget(null)}
+      />
     </SettingsCard>
   );
 }
