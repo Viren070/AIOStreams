@@ -124,6 +124,15 @@ In the `PlaybackInfo` body:
 Other clients send neither, so a version that only plays with its headers, or only as a YouTube
 video, is listed only when the body says the app can play it.
 
+## Playback reports
+
+The app adds `RunTimeTicks`, the length of the file as its player measured it, to the body of
+`POST /Sessions/Playing`, `/Sessions/Playing/Progress` and `/Sessions/Playing/Stopped`, and of the
+`POST /UserItems/{id}/UserData` that saves a position it could not report at the time. AIOStreams
+judges how much was watched against it, so a title is marked played at the right point even when
+its runtime from metadata is minutes off the file's. Without it, the server uses the runtime it
+knows for that version, or the title's.
+
 ## Libraries
 
 With `genreRequired`, a library (a `CollectionFolder`) whose items only list once a genre is picked
