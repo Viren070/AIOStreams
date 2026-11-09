@@ -53,6 +53,11 @@ function ticksToMs(v: unknown): number | undefined {
   return Number.isFinite(n) ? Math.round(n / TICKS_PER_MS) : undefined;
 }
 
+function measuredRuntimeOf(req: Request): number | undefined {
+  const ms = ticksToMs(bodyField(req, 'RunTimeTicks'));
+  return ms && ms > 0 ? ms : undefined;
+}
+
 function idFrom(req: Request): string | undefined {
   const body = bodyOf(req);
   const v =
@@ -198,6 +203,7 @@ async function record(
     playSessionId?: string;
     mediaSourceId?: string;
     tracks?: PlayingTracks;
+    durationMs?: number;
   } = {}
 ): Promise<void> {
   // Before any await, so a tick still in flight when a stop is written is older.
@@ -237,7 +243,8 @@ async function record(
       ref,
       { type, identity, positionMs, at },
       opts.paused,
-      tracks
+      tracks,
+      opts.durationMs
     );
     return;
   }
@@ -250,13 +257,9 @@ async function record(
 
   // one meta call on start and stop, none on the 5-10 s progress ticks
   const item = await itemFromDescriptor(ctx, d).catch(() => null);
-  const durationMs = await durationFor(
-    ctx,
-    d,
-    itemId,
-    item,
-    opts.mediaSourceId
-  );
+  const durationMs =
+    opts.durationMs ??
+    (await durationFor(ctx, d, itemId, item, opts.mediaSourceId));
   const event: WatchEvent = {
     type,
     identity,
@@ -313,11 +316,14 @@ async function progressed(
   ref: ContentRef,
   event: WatchProgressEvent,
   paused: boolean | undefined,
-  tracks: PlayingTracks | undefined
+  tracks: PlayingTracks | undefined,
+  durationMs: number | undefined
 ): Promise<void> {
   const { positionMs } = event;
+  // Only the session takes the runtime: on the tick it would mark the item played mid-play.
   const { transition, row: existing } = await checkInWatchSession(session, {
     positionMs,
+    durationMs,
     paused,
     ...tracks,
   });
@@ -332,16 +338,21 @@ async function progressed(
 
   // No row means no sweep could ever close it.
   if (!existing) {
-    await openWatchSession(session, ref, { positionMs, paused, ...tracks });
+    await openWatchSession(session, ref, {
+      positionMs,
+      durationMs,
+      paused,
+      ...tracks,
+    });
     return;
   }
 
-  // The runtime comes off the session: a tick carries none, and an event
-  // without a duration has the receiver store the position as zero.
+  // Other clients' ticks carry no runtime, and an event without one has the
+  // receiver store the position as zero.
   if (transition)
     await reportPlayback(ctx, transition, ref, {
       positionMs,
-      durationMs: existing.durationMs || undefined,
+      durationMs: durationMs || existing.durationMs || undefined,
       sessionStartedAt: existing.startedAt,
     });
 }
@@ -364,6 +375,7 @@ router.post(
           playSessionId: playSessionIdOf(req),
           mediaSourceId: mediaSourceIdOf(req),
           tracks: tracksOf(req),
+          durationMs: measuredRuntimeOf(req),
         }
       );
     res.status(204).end();
@@ -388,6 +400,7 @@ router.post(
           paused: body.IsPaused === true || qs(req, 'IsPaused') === 'true',
           playSessionId: playSessionIdOf(req),
           tracks: tracksOf(req),
+          durationMs: measuredRuntimeOf(req),
         }
       );
     }
@@ -404,7 +417,10 @@ router.post(
         id,
         'stop',
         ticksToMs(bodyOf(req).PositionTicks ?? qs(req, 'PositionTicks')),
-        { mediaSourceId: mediaSourceIdOf(req) }
+        {
+          mediaSourceId: mediaSourceIdOf(req),
+          durationMs: measuredRuntimeOf(req),
+        }
       );
     res.status(204).end();
   })
@@ -814,9 +830,10 @@ router.post(
         at: at > 0 && at <= Date.now() ? at : undefined,
         positionMs: ticksToMs(body.PlaybackPositionTicks),
         durationMs:
-          typeof item?.RunTimeTicks === 'number'
+          measuredRuntimeOf(req) ??
+          (typeof item?.RunTimeTicks === 'number'
             ? item.RunTimeTicks / TICKS_PER_MS
-            : undefined,
+            : undefined),
         snapshot: snapshotOf(item),
       });
     }
