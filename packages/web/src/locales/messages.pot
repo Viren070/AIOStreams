@@ -555,6 +555,11 @@ msgstr ""
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
 msgstr ""
 
+#: src/lib/format.ts
+#: src/pages/discover.tsx
+msgid "Anime"
+msgstr ""
+
 #: src/components/party/party-sheet.tsx
 msgid "Another relay"
 msgstr ""
