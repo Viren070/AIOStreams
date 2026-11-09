@@ -615,22 +615,6 @@ export const CacheAndPlaySchema = z
 
 export type CacheAndPlay = z.infer<typeof CacheAndPlaySchema>;
 
-/**
- * Config Expression Language script with a runtime-configurable maximum length
- * pulled from `config.userLimits.variants.maxScriptLength`.
- */
-function variantScript() {
-  return z.string().superRefine((value, ctx) => {
-    const max = config.userLimits.variants.maxScriptLength;
-    if (value.length > max) {
-      ctx.addIssue({
-        code: 'custom',
-        message: `Variant script exceeds maximum length of ${max} characters.`,
-      });
-    }
-  });
-}
-
 export const VariantSchema = z.object({
   // The id appears verbatim in the install URL and in the Stremio addon id.
   id: z
@@ -642,7 +626,7 @@ export const VariantSchema = z.object({
   /** Display label only. Use `set addonName = ...` to rebrand in Stremio. */
   name: z.string().min(1).max(64).optional(),
   enabled: z.boolean().optional(),
-  script: variantScript(),
+  script: z.string(),
   /**
    * Boolean stream expression. When it matches, the variant applies without
    * being named in the URL. An explicit selector applies either way.
@@ -2001,11 +1985,7 @@ const StatusResponseSchema = z.object({
     variants: z.object({
       access: z.enum(['none', 'trusted', 'all']),
       max: z.number(),
-      maxScriptLength: z.number(),
-      maxTotalInstructions: z.number(),
-      maxValueDepth: z.number(),
-      maxPathSegments: z.number(),
-      maxPathMatches: z.number(),
+      maxWork: z.number(),
     }),
     healthChecks: z.object({
       access: z.enum(['none', 'trusted', 'all']),
