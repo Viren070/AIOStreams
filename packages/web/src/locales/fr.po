@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-02 21:56+0000\n"
+"PO-Revision-Date: 2026-11-08 00:06+0000\n"
 "Last-Translator: D4rk <dark56100@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/aiostreams/web-app/fr/>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.1.dev0\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -18,6 +18,10 @@ msgstr "(toi)"
 #: src/pages/sign-in.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
 msgstr "{address} n'a pas répondu. Vérifiez qu'il fonctionne, puis réessayez."
+
+#: src/components/live-reminders.tsx
+msgid "{at} on {channelName}"
+msgstr "{at} sur {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -126,7 +130,7 @@ msgid "{key} is taken by {taken}"
 msgstr "{key} est déjà utilisé par {taken}"
 
 #: src/components/card-preview.tsx src/components/episodes.tsx
-#: src/pages/downloads.tsx
+#: src/pages/downloads.tsx src/pages/live-tv/channel-details.tsx
 msgid "{left} left"
 msgstr "{left} restants"
 
@@ -387,6 +391,7 @@ msgstr "Actions"
 
 #: src/components/layout.tsx src/pages/history.tsx src/pages/home.tsx
 #: src/pages/settings/apps.tsx src/pages/settings/cache.tsx
+#: src/pages/settings/interface.tsx
 msgid "Activity"
 msgstr "Activité"
 
@@ -427,6 +432,7 @@ msgid "Add catalogs to your configuration, then refresh."
 msgstr "Ajoutez des catalogues à votre configuration, puis actualisez."
 
 #: src/components/item-menu.tsx src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Add favourite"
 msgstr "Ajouter aux favoris"
 
@@ -478,6 +484,11 @@ msgstr "Diffusé {day} · {until}"
 #: src/pages/discover.tsx src/pages/favourites.tsx
 msgid "All"
 msgstr "Tout"
+
+#: src/lib/live-tv.ts src/pages/home.tsx
+#, fuzzy
+msgid "All channels"
+msgstr "Canaux"
 
 #: src/pages/item.tsx
 msgid "All episodes"
@@ -685,6 +696,14 @@ msgstr "Noir"
 msgid "Blue"
 msgstr "Bleu"
 
+#: src/pages/settings/interface.tsx
+msgid "Blur episodes you haven't started"
+msgstr "Masquer les épisodes que vous n'avez pas commencés"
+
+#: src/pages/settings/interface.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr "Floutez leurs images, titres et descriptions jusqu’à ce que le pointeur, le clavier ou la télécommande soit placé sur l’un d’entre eux."
+
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
 msgstr "Gras"
@@ -754,7 +773,7 @@ msgid "Cache size"
 msgstr "Taille du cache"
 
 #: src/components/layout.tsx src/pages/calendar.tsx src/pages/home.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Calendar"
 msgstr "Calendrier"
 
@@ -824,9 +843,27 @@ msgstr "Modifiez ces réglages sur téléphone, ordinateur ou dans un navigateur
 msgid "Channel"
 msgstr "Canal"
 
+#: src/lib/input/keys.ts
+#, fuzzy
+msgid "Channel down"
+msgstr "Canal"
+
+#: src/lib/input/keys.ts
+#, fuzzy
+msgid "Channel up"
+msgstr "Canal"
+
+#: src/components/channel-list.tsx src/components/player/live.tsx
+#: src/components/player/options.tsx src/pages/favourites.tsx
+#: src/pages/live-tv/index.tsx src/pages/search.tsx
 #: src/pages/settings/audio.tsx
 msgid "Channels"
 msgstr "Canaux"
+
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Channels show here once your setup has an addon with live TV."
+msgstr "Les chaînes s'affichent ici une fois que votre configuration inclut un addon proposant la télévision en direct."
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1046,6 +1083,11 @@ msgstr "Impossible de rejoindre"
 msgid "Could not list the episodes"
 msgstr "Impossible de lister les épisodes"
 
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Could not load Live TV"
+msgstr "Impossible de charger leurs œuvres"
+
 #: src/pages/calendar.tsx
 msgid "Could not load the calendar"
 msgstr "Impossible de charger le calendrier"
@@ -1199,6 +1241,11 @@ msgstr "Cyan"
 msgid "Date not known"
 msgstr "Date inconnue"
 
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Day"
+msgstr "Délai"
+
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
 msgstr "Décode presque toutes les vidéos, de manière logicielle si l'appareil n'a pas de décodeur. Utilise votre fichier mpv.conf sous l'application Android."
@@ -1307,10 +1354,11 @@ msgid "Discord refused the status: {message}"
 msgstr "Discord a refusé le statut : {message}"
 
 #: src/components/layout.tsx src/pages/discover.tsx src/pages/settings/apps.tsx
+#: src/pages/settings/interface.tsx
 msgid "Discover"
 msgstr "Découvrir"
 
-#: src/components/layout.tsx
+#: src/components/layout.tsx src/components/live-reminders.tsx
 msgid "Dismiss"
 msgstr "Ignorer"
 
@@ -1395,7 +1443,7 @@ msgid "Downloading, {percent}%"
 msgstr "Téléchargement, {percent} %"
 
 #: src/components/layout.tsx src/pages/downloads.tsx
-#: src/pages/settings/index.tsx
+#: src/pages/settings/index.tsx src/pages/settings/interface.tsx
 msgid "Downloads"
 msgstr "Téléchargements"
 
@@ -1551,13 +1599,13 @@ msgstr "Avance rapide"
 msgid "Faster"
 msgstr "Plus rapide"
 
-#: src/pages/item.tsx
+#: src/components/channel-list.tsx src/pages/item.tsx
 #, fuzzy
 msgid "Favourite"
 msgstr "Favoris"
 
-#: src/components/layout.tsx src/pages/favourites.tsx
-#: src/pages/settings/apps.tsx
+#: src/components/layout.tsx src/lib/live-tv.ts src/pages/favourites.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Favourites"
 msgstr "Favoris"
 
@@ -1667,7 +1715,8 @@ msgstr "Avancer"
 msgid "Frame timings"
 msgstr "Temps de trame"
 
-#: src/components/version-picker.tsx
+#: src/components/player/live.tsx src/components/version-picker.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "From the start"
 msgstr "Depuis le début"
 
@@ -1680,6 +1729,7 @@ msgid "Full"
 msgstr "Complet"
 
 #: src/components/player/options.tsx src/lib/input/actions.ts
+#: src/pages/live-tv/channel-details.tsx
 msgid "Full screen"
 msgstr "Plein écran"
 
@@ -1695,6 +1745,11 @@ msgstr "Donnez ce code à la personne chargée d'examiner le problème."
 msgid "Go home"
 msgstr "Aller à l'accueil"
 
+#: src/components/player/live.tsx
+#, fuzzy
+msgid "Go live"
+msgstr "Lancer la diffusion en direct."
+
 #: src/components/item-menu.tsx
 msgid "Go to show"
 msgstr "Aller à la série"
@@ -1707,13 +1762,22 @@ msgstr "Vert"
 msgid "Grey"
 msgstr "Gris"
 
-#: src/components/version-settings.tsx
+#: src/components/version-settings.tsx src/pages/live-tv/index.tsx
 msgid "Group"
 msgstr "Groupe"
 
 #: src/pages/history.tsx
 msgid "Group by day"
 msgstr "Grouper par jour"
+
+#: src/pages/live-tv/index.tsx
+#, fuzzy
+msgid "Groups"
+msgstr "Groupe"
+
+#: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
+msgid "Guide"
+msgstr "Guide"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -1773,7 +1837,7 @@ msgid "Hold"
 msgstr "Maintenir"
 
 #: src/components/layout.tsx src/lib/input/actions.ts
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/apps.tsx src/pages/settings/interface.tsx
 msgid "Home"
 msgstr "Accueil"
 
@@ -2011,7 +2075,7 @@ msgstr "Langue, accueil, grilles et épisodes"
 msgid "Large"
 msgstr "Grand"
 
-#: src/components/update-prompt.tsx
+#: src/components/update-prompt.tsx src/pages/live-tv/channel-details.tsx
 msgid "Later"
 msgstr "Plus tard"
 
@@ -2082,6 +2146,16 @@ msgstr "Lister uniquement mes langues"
 #: src/pages/search.tsx
 msgid "Listening…"
 msgstr "Écoute en cours…"
+
+#: src/components/player/live.tsx
+msgid "Live"
+msgstr ""
+
+#: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
+#: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Live TV"
+msgstr "Live TV"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2326,6 +2400,12 @@ msgstr "Suivant"
 msgid "Next audio track"
 msgstr "Piste audio suivante"
 
+#: src/components/player/controls.tsx src/lib/input/actions.ts
+#: src/pages/player.tsx
+#, fuzzy
+msgid "Next channel"
+msgstr "Chapitre suivant"
+
 #: src/lib/input/actions.ts
 msgid "Next chapter"
 msgstr "Chapitre suivant"
@@ -2383,6 +2463,14 @@ msgstr "Aucun badge ne correspond."
 msgid "No catalogs yet"
 msgstr "Aucun catalogue pour le moment"
 
+#: src/components/channel-number.tsx
+msgid "No channel {typed}"
+msgstr "Pas de canal {typed}"
+
+#: src/pages/live-tv/index.tsx
+msgid "No channels in this group."
+msgstr "Pas de canaux dans ce groupe."
+
 #: src/components/no-details.tsx
 #, fuzzy
 msgid "No details for this title"
@@ -2392,6 +2480,10 @@ msgstr "Impossible de charger ce titre"
 msgid "No episodes to download there"
 msgstr "Aucun épisode à télécharger ici"
 
+#: src/pages/favourites.tsx
+msgid "No favourite channels yet."
+msgstr "Aucune chaîne favorite pour l’instant."
+
 #: src/pages/settings/cache.tsx
 msgid "No limit"
 msgstr "Aucune limite"
@@ -2399,6 +2491,10 @@ msgstr "Aucune limite"
 #: src/components/player/subtitle-sync.tsx
 msgid "No line matches."
 msgstr "Aucune ligne ne correspond."
+
+#: src/pages/live-tv/index.tsx
+msgid "No live TV here"
+msgstr ""
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
@@ -2524,14 +2620,18 @@ msgid "Nothing marked as a favourite yet."
 msgstr "Aucun favori enregistré pour le moment."
 
 #: src/components/licenses.tsx src/components/version-settings.tsx
-#: src/pages/discover.tsx src/pages/settings/audio.tsx
-#: src/pages/settings/interface.tsx
+#: src/pages/discover.tsx src/pages/live-tv/index.tsx
+#: src/pages/settings/audio.tsx src/pages/settings/interface.tsx
 msgid "Nothing matches."
 msgstr "Aucun résultat correspondant."
 
 #: src/components/party/party-sheet.tsx
 msgid "Nothing playing yet."
 msgstr "Rien n'est lu pour le moment."
+
+#: src/pages/player.tsx
+msgid "Nothing plays on this channel right now."
+msgstr ""
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
@@ -2946,6 +3046,7 @@ msgstr "Rose"
 #: src/components/player/mini-player.tsx src/components/playlists.tsx
 #: src/components/random-pick.tsx src/components/remote-sheet.tsx
 #: src/lib/input/actions.ts src/lib/input/keys.ts src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Play"
 msgstr "Lecture"
 
@@ -3163,6 +3264,12 @@ msgstr "Aperçus"
 msgid "Previous"
 msgstr "Précédent"
 
+#: src/components/player/controls.tsx src/components/player/live.tsx
+#: src/lib/input/actions.ts src/pages/player.tsx
+#, fuzzy
+msgid "Previous channel"
+msgstr "Chapitre précédent"
+
 #: src/lib/input/actions.ts
 msgid "Previous chapter"
 msgstr "Chapitre précédent"
@@ -3270,6 +3377,11 @@ msgstr "Résumé"
 msgid "Recaps"
 msgstr "Résumés"
 
+#: src/lib/live-tv.ts
+#, fuzzy
+msgid "Recent"
+msgstr "Accent"
+
 #: src/pages/search.tsx
 msgid "Recent searches"
 msgstr "Recherches récentes"
@@ -3278,7 +3390,7 @@ msgstr "Recherches récentes"
 msgid "Reconnecting to the party…"
 msgstr "Reconnexion à la session…"
 
-#: src/components/layout.tsx
+#: src/components/layout.tsx src/components/player/controls.tsx
 msgid "Reconnecting…"
 msgstr "Reconnexion en cours…"
 
@@ -3310,6 +3422,22 @@ msgstr "Date de sortie"
 msgid "Remember picks per show"
 msgstr "Mémoriser les choix par série"
 
+#: src/pages/live-tv/channel-details.tsx
+msgid "Remind me"
+msgstr ""
+
+#: src/pages/live-tv/guide.tsx
+msgid "Reminder"
+msgstr ""
+
+#: src/pages/live-tv/index.tsx
+msgid "Reminder removed"
+msgstr ""
+
+#: src/pages/live-tv/channel-details.tsx
+msgid "Reminder set"
+msgstr ""
+
 #: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
 msgid "Remove"
@@ -3332,6 +3460,7 @@ msgid "Remove {term}"
 msgstr "Supprimer {term}"
 
 #: src/components/item-menu.tsx src/pages/item.tsx
+#: src/pages/live-tv/channel-details.tsx
 msgid "Remove favourite"
 msgstr "Retirer des favoris"
 
@@ -3999,6 +4128,11 @@ msgstr "Vitesse {shown}×"
 msgid "Speed up while held"
 msgstr "Accélérer pendant la pression"
 
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Spoilers"
+msgstr "Bandes-annonces"
+
 #: src/pages/settings/apps.tsx
 msgid "Stable"
 msgstr "Stable"
@@ -4006,6 +4140,11 @@ msgstr "Stable"
 #: src/components/party/party-sheet.tsx
 msgid "Start a party"
 msgstr "Démarrer une session"
+
+#: src/pages/settings/interface.tsx
+#, fuzzy
+msgid "Start on"
+msgstr "Redémarrer maintenant"
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
@@ -4371,6 +4510,11 @@ msgstr "Le lien est peut-être obsolète ou la page a été déplacée."
 msgid "the link returned something other than a video"
 msgstr "le lien a renvoyé autre chose qu'une vidéo"
 
+#. Follows "Playback failed:"
+#: src/lib/playback/use-player.ts
+msgid "the live stream stopped"
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
@@ -4394,6 +4538,10 @@ msgstr "Impossible de joindre l'autre appareil"
 #: src/components/crash-report.tsx
 msgid "The page restarted unexpectedly"
 msgstr "La page a redémarré de manière inattendue"
+
+#: src/pages/settings/interface.tsx
+msgid "The page the app opens on. A link still opens what it points to."
+msgstr ""
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4625,9 +4773,13 @@ msgstr "Pages des titres"
 msgid "Titles, synopses and stream names stay in the language your addons send."
 msgstr "Les titres, résumés et noms de flux restent dans la langue transmise par vos extensions."
 
-#: src/pages/calendar.tsx
+#: src/pages/calendar.tsx src/pages/live-tv/index.tsx
 msgid "Today"
 msgstr "Aujourd'hui"
+
+#: src/pages/live-tv/index.tsx
+msgid "Tomorrow"
+msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"
@@ -4674,8 +4826,8 @@ msgid "Troubleshooting"
 msgstr "Dépannage"
 
 #: src/components/party/party-sheet.tsx src/components/random-pick.tsx
-#: src/components/version-picker.tsx src/pages/downloads.tsx
-#: src/pages/sign-in.tsx
+#: src/components/version-picker.tsx src/lib/playback/use-player.ts
+#: src/pages/downloads.tsx src/pages/sign-in.tsx
 msgid "Try again"
 msgstr "Réessayer"
 
@@ -4953,6 +5105,11 @@ msgstr "En attente de {names}"
 msgid "Waiting for approval…"
 msgstr "En attente d'approbation…"
 
+#: src/components/live-reminders.tsx src/pages/live-tv/channel-details.tsx
+#, fuzzy
+msgid "Watch"
+msgstr "Vu"
+
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
 msgstr "Regarder ensemble"
@@ -5124,6 +5281,10 @@ msgid "Whether the tabs name each page beside its icon."
 msgstr "Que les onglets nomment chaque page à côté de son icône."
 
 #: src/components/shortcut-settings.tsx
+msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
+msgstr ""
+
+#: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "Pendant la synchronisation des sous-titres à l'oreille."
 
@@ -5179,6 +5340,10 @@ msgstr "Année"
 msgid "Yellow"
 msgstr "Jaune"
 
+#: src/pages/live-tv/index.tsx
+msgid "Yesterday"
+msgstr ""
+
 #: src/components/layout.tsx
 msgid "You"
 msgstr "Vous"
@@ -5186,6 +5351,10 @@ msgstr "Vous"
 #: src/lib/party/party.ts
 msgid "You left the party."
 msgstr "Vous avez quitté la session."
+
+#: src/pages/live-tv/index.tsx
+msgid "You'll be reminded at {time}"
+msgstr ""
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
