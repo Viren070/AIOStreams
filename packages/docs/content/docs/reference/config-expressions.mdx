@@ -208,6 +208,31 @@ A variant that `use variant` pulls in runs again even if it already applied on i
 
 ---
 
+## Who gets an addon or catalog
+
+Giving an addon or catalog to some people only needs no script. On the configure page, the people button beside each addon in **My Addons** and each catalog in **Catalogs**, and **Choose who gets them…** in their **Actions** menus, list who could get it:
+
+- the base config, which is what an install link without a variant serves;
+- each variant you install from a link, one with no activation condition that no user picks;
+- on a [media server](/apps/media-server#users-and-pins), the primary user and each other user.
+
+Ticking or unticking a row changes only that row. Behind it, the picker writes ordinary instructions:
+
+- **The base config** gets the item's own on/off switch.
+- **A variant you install from a link** gets an `enable` or `disable` line at its end.
+- **A user** gets the same line in a variant of their own, which has the user's id, or `primary` for the primary user. It is created and added to the end of their variant list the first time, and removed again once it holds nothing.
+
+```
+enable presets[instanceId="8ae"] # Torrentio
+disable catalogModifications[id="8ae1a2b.top"][type="movie"] # Popular
+```
+
+A line is only written where a row would otherwise come out wrong, and dropped once it changes nothing. The picker reads each row by applying that row's variants, so lines you wrote yourself count: a `disable presets[type=torrentio]` in a user's variants shows them without Torrentio. Only `enable` and `disable` lines naming that exact item are rewritten.
+
+Some rows can't be changed there: a user whose list puts another variant after their own, when that variant also turns the item on or off, and a user whose id another variant already has. The picker says which. Variants with an activation condition have no row, as they depend on the request, but the picker names any that change the item. Deleting an addon removes its lines, and those of its catalogs, from every variant, and removing a user removes their own variant unless something else uses it.
+
+---
+
 ## Syntax
 
 One instruction per line. `#` starts a comment, except inside a string. Object and array literals may span lines.
@@ -275,6 +300,8 @@ A path starts with a configuration field and drills in.
 
 A selector may match several elements, in which case the instruction applies to all of them: `disable presets[type=torrentio]` disables every Torrentio instance.
 
+Selectors written back to back narrow the same list, so an element has to match all of them: `presets[type=torrentio][options.name*="4K"]` is only the Torrentio instances with 4K in their name.
+
 `[*]` is the one segment that also walks an object, which is how a single instruction reaches all twelve sort lists: `add sortCriteria[*] { "key": "resolution", "direction": "desc" }` appends the same criterion to every one you have defined. The `[key=value]` selectors stay list-only, since an object's members are addressed by name.
 
 `=` and `!=` are exact and case-sensitive. `*=` and `!*=` are substring matches that ignore case.
@@ -311,6 +338,12 @@ disable presets[instanceId=8ae]                  # one exact instance
 ```
 
 The editor autocompletes real instance ids after `presets[instanceId=`, annotated with each addon's name.
+
+**Catalogs** are keyed by `id` and `type` together, since one addon can offer the same catalog for movies and for series. Their ids start with the addon's instance id:
+
+```
+disable catalogModifications[id="8ae1a2b.top"][type=movie]
+```
 
 **Ranked regex patterns and regex overrides** carry a `name`:
 
