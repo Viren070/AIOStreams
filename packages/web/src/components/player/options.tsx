@@ -62,12 +62,35 @@ import {
   stepSubtitleSize,
   subtitleSizeLabel,
 } from '../../lib/subtitles/style';
-import { splitByLanguage } from '../../lib/subtitles/tracks';
+import { languageCode, tagName } from '../../lib/languages';
+import { groupByLanguage, splitByLanguage } from '../../lib/subtitles/tracks';
 import { subtitleLanguages, usePlaybackPrefs } from '../../lib/user-config';
 import { ControlButton } from './buttons';
 import { useParty } from '../../lib/party/party';
 import { RATES, rateLabel } from './keys';
 import { useLatest } from '../../lib/use-latest';
+
+/** Tracks of one language, folded under its name. */
+interface TrackGroup {
+  id: string;
+  label: string;
+  tracks: Track[];
+}
+
+type MenuEntry = Track | TrackGroup;
+
+/** A language with several tracks lists them under its name. */
+function subtitleEntries(tracks: Track[]): MenuEntry[] {
+  return groupByLanguage(tracks).map(({ lang, tracks: own }) =>
+    lang && own.length > 1
+      ? {
+          id: `language:${languageCode(lang)}`,
+          label: tagName(lang) ?? lang,
+          tracks: own,
+        }
+      : own[0]
+  );
+}
 
 /** Opens in the menu's place from a row under its list. */
 interface MenuPage {
@@ -94,7 +117,7 @@ function Menu({
   name: string;
   label: string;
   icon: React.ReactNode;
-  options: Track[];
+  options: MenuEntry[];
   value: string | null;
   onSelect(id: string | null): void;
   open: boolean;
@@ -102,9 +125,13 @@ function Menu({
   action?: { name: string; label: string; icon: React.ReactNode; run(): void };
   pages?: MenuPage[];
   /** Listed after a press on `label`, which stands in for them until the menu closes. */
-  more?: { label: string; options: Track[] };
+  more?: { label: string; options: MenuEntry[] };
 }) {
   const [expanded, setExpanded] = React.useState(false);
+  /** Groups opened or closed by hand; the rest start open only around the current track. */
+  const [unfolded, setUnfolded] = React.useState(
+    () => new Map<string, boolean>()
+  );
   const [pageName, setPageName] = React.useState<string | null>(null);
   const firstMore = React.useRef<HTMLDivElement>(null);
   const back = React.useRef<HTMLDivElement>(null);
@@ -113,6 +140,7 @@ function Menu({
   React.useEffect(() => {
     if (open) return;
     setExpanded(false);
+    setUnfolded(new Map());
     setPageName(null);
     left.current = null;
   }, [open]);
@@ -124,12 +152,17 @@ function Menu({
     else if (left.current) rows.current.get(left.current)?.focus();
   }, [pageName]);
   const page = pages.find((p) => p.name === pageName);
-  const item = (option: Track, ref?: React.Ref<HTMLDivElement>) => (
+  const item = (
+    option: Track,
+    ref?: React.Ref<HTMLDivElement>,
+    className?: string
+  ) => (
     <DropdownMenuItem
       key={option.id}
       ref={ref}
       data-ui="player-menu-item"
       data-selected={(value ?? '') === option.id || undefined}
+      className={className}
       onClick={() => onSelect(option.id === '' ? null : option.id)}
     >
       <LuCheck
@@ -151,6 +184,39 @@ function Menu({
       </span>
     </DropdownMenuItem>
   );
+  const entry = (option: MenuEntry, ref?: React.Ref<HTMLDivElement>) => {
+    if (!('tracks' in option)) return item(option, ref);
+    const shown =
+      unfolded.get(option.id) ??
+      option.tracks.some((track) => track.id === value);
+    return (
+      <React.Fragment key={option.id}>
+        <DropdownMenuItem
+          ref={ref}
+          data-ui="player-menu-group"
+          data-name={option.id}
+          aria-expanded={shown}
+          onSelect={(e) => {
+            e.preventDefault();
+            setUnfolded((current) => new Map(current).set(option.id, !shown));
+          }}
+        >
+          {shown ? (
+            <LuChevronDown className="flex-none" />
+          ) : (
+            <LuChevronRight className="flex-none rtl:-scale-x-100" />
+          )}
+          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            {option.label}
+          </span>
+          <span className="ms-3 tabular-nums text-[--muted]">
+            {option.tracks.length}
+          </span>
+        </DropdownMenuItem>
+        {shown && option.tracks.map((track) => item(track, undefined, 'ps-6'))}
+      </React.Fragment>
+    );
+  };
   return (
     <DropdownMenu
       data-ui="player-menu"
@@ -238,12 +304,12 @@ function Menu({
               </div>
             )}
             <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
-              {options.map((option) => item(option))}
+              {options.map((option) => entry(option))}
               {more &&
                 more.options.length > 0 &&
                 (expanded ? (
                   more.options.map((option, i) =>
-                    item(option, i === 0 ? firstMore : undefined)
+                    entry(option, i === 0 ? firstMore : undefined)
                   )
                 ) : (
                   <DropdownMenuItem
@@ -661,10 +727,13 @@ export function OptionButtons({
           name="subtitles"
           label={t`Subtitles`}
           icon={state.subtitle ? <LuCaptions /> : <LuCaptionsOff />}
-          options={[{ id: '', label: t`Off` }, ...subtitles.shown]}
+          options={[
+            { id: '', label: t`Off` },
+            ...subtitleEntries(subtitles.shown),
+          ]}
           more={{
             label: t`More languages (${hidden})`,
-            options: subtitles.hidden,
+            options: subtitleEntries(subtitles.hidden),
           }}
           value={state.subtitle}
           onSelect={player.setSubtitle}
