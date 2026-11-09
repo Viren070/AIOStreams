@@ -115,12 +115,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       variants: {
         access: appConfig.userLimits.variants.access,
         max: appConfig.userLimits.variants.max,
-        maxScriptLength: appConfig.userLimits.variants.maxScriptLength,
-        maxTotalInstructions:
-          appConfig.userLimits.variants.maxTotalInstructions,
-        maxValueDepth: appConfig.userLimits.variants.maxValueDepth,
-        maxPathSegments: appConfig.userLimits.variants.maxPathSegments,
-        maxPathMatches: appConfig.userLimits.variants.maxPathMatches,
+        maxWork: appConfig.userLimits.variants.maxWork,
       },
       healthChecks: {
         access: appConfig.userLimits.healthChecks.access,
