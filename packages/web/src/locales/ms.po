@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-04 13:52+0000\n"
+"PO-Revision-Date: 2026-11-09 09:51+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.1.dev0\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: src/components/party/party-sheet.tsx
@@ -21,7 +21,7 @@ msgstr "{address} tidak menjawab. Periksa sama ada ia sedang berjalan, kemudian 
 
 #: src/components/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} di {channelName}"
 
 #: src/components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -485,9 +485,8 @@ msgid "All"
 msgstr "Semua"
 
 #: src/lib/live-tv.ts src/pages/home.tsx
-#, fuzzy
 msgid "All channels"
-msgstr "Saluran"
+msgstr "Semua saluran"
 
 #: src/pages/item.tsx
 msgid "All episodes"
@@ -696,11 +695,11 @@ msgstr "Biru"
 
 #: src/pages/settings/interface.tsx
 msgid "Blur episodes you haven't started"
-msgstr ""
+msgstr "Kaburkan episod yang belum anda tonton"
 
 #: src/pages/settings/interface.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
-msgstr ""
+msgstr "Mengaburkan gambar, tajuk dan perihalan sehingga penunjuk, papan kekunci atau kawalan jauh diarahkan padanya."
 
 #: src/pages/settings/subtitles.tsx
 msgid "Bold"
@@ -842,14 +841,12 @@ msgid "Channel"
 msgstr "Saluran"
 
 #: src/lib/input/keys.ts
-#, fuzzy
 msgid "Channel down"
-msgstr "Saluran"
+msgstr "Saluran bawah"
 
 #: src/lib/input/keys.ts
-#, fuzzy
 msgid "Channel up"
-msgstr "Saluran"
+msgstr "Saluran atas"
 
 #: src/components/channel-list.tsx src/components/player/live.tsx
 #: src/components/player/options.tsx src/pages/favourites.tsx
@@ -860,7 +857,7 @@ msgstr "Saluran"
 
 #: src/pages/live-tv/index.tsx
 msgid "Channels show here once your setup has an addon with live TV."
-msgstr ""
+msgstr "Saluran akan dipaparkan di sini setelah penyediaan anda mempunyai addon dengan TV langsung."
 
 #: src/components/player/chapters.tsx src/components/player/keys.ts
 msgid "Chapter {number}"
@@ -1081,9 +1078,8 @@ msgid "Could not list the episodes"
 msgstr "Tidak dapat menyenaraikan episod"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Could not load Live TV"
-msgstr "Tidak dapat memuatkan karya mereka"
+msgstr "Gagal memuatkan TV Langsung"
 
 #: src/pages/calendar.tsx
 msgid "Could not load the calendar"
@@ -1239,9 +1235,8 @@ msgid "Date not known"
 msgstr "Tarikh tidak diketahui"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Day"
-msgstr "Lengah masa"
+msgstr "Hari"
 
 #: src/pages/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
@@ -1670,7 +1665,7 @@ msgstr "Folder"
 
 #: src/pages/settings/interface.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
-msgstr "Mengikuti akan menyematkannya di atas baris dan memaparkan kad yang dipilih oleh penuding, papan kekunci atau alat kawalan jauh, bermula dengan tajuk utama, sama ada di belakang keseluruhan halaman atau di penjuru atasnya. Skrin sentuh dan tetingkap sempit akan mengekalkannya dalam mod putaran automatik."
+msgstr "Menyematkannya di atas baris dan memaparkan kad yang dipaparkan oleh penunjuk, papan kekunci atau kawalan jauh—bermula dengan tajuk utama—di belakang keseluruhan halaman atau di sudut atasnya. Skrin sentuh dan tetingkap sempit akan meletakkannya dalam mod putaran secara berterusan."
 
 #: src/pages/settings/interface.tsx
 msgid "Follows the selected card"
@@ -1740,7 +1735,7 @@ msgstr "Ke laman utama"
 
 #: src/components/player/live.tsx
 msgid "Go live"
-msgstr ""
+msgstr "Siarkan secara langsung"
 
 #: src/components/item-menu.tsx
 msgid "Go to show"
@@ -1763,13 +1758,12 @@ msgid "Group by day"
 msgstr "Kumpulkan mengikut hari"
 
 #: src/pages/live-tv/index.tsx
-#, fuzzy
 msgid "Groups"
 msgstr "Kumpulan"
 
 #: src/pages/live-tv/guide.tsx src/pages/live-tv/index.tsx
 msgid "Guide"
-msgstr ""
+msgstr "Panduan"
 
 #: src/pages/settings/playback.tsx
 msgid "Hardware decoding"
@@ -2140,12 +2134,12 @@ msgstr "Mendengar…"
 
 #: src/components/player/live.tsx
 msgid "Live"
-msgstr ""
+msgstr "Langsung"
 
 #: src/components/layout.tsx src/lib/input/actions.ts src/pages/home.tsx
 #: src/pages/live-tv/index.tsx src/pages/settings/interface.tsx
 msgid "Live TV"
-msgstr ""
+msgstr "TV Langsung"
 
 #: src/components/party/party-sheet.tsx
 msgid "Loading"
@@ -2390,9 +2384,8 @@ msgstr "Trek audio seterusnya"
 
 #: src/components/player/controls.tsx src/lib/input/actions.ts
 #: src/pages/player.tsx
-#, fuzzy
 msgid "Next channel"
-msgstr "Bab seterusnya"
+msgstr "Saluran seterusnya"
 
 #: src/lib/input/actions.ts
 msgid "Next chapter"
@@ -2453,11 +2446,11 @@ msgstr "Belum ada katalog"
 
 #: src/components/channel-number.tsx
 msgid "No channel {typed}"
-msgstr ""
+msgstr "Tiada saluran {typed}"
 
 #: src/pages/live-tv/index.tsx
 msgid "No channels in this group."
-msgstr ""
+msgstr "Tiada saluran dalam kumpulan ini."
 
 #: src/components/no-details.tsx
 msgid "No details for this title"
@@ -2469,7 +2462,7 @@ msgstr "Tiada episod untuk dimuat turun di situ"
 
 #: src/pages/favourites.tsx
 msgid "No favourite channels yet."
-msgstr ""
+msgstr "Tiada saluran kegemaran lagi."
 
 #: src/pages/settings/cache.tsx
 msgid "No limit"
@@ -2481,7 +2474,7 @@ msgstr "Tiada baris yang sepadan."
 
 #: src/pages/live-tv/index.tsx
 msgid "No live TV here"
-msgstr ""
+msgstr "Tiada TV langsung di sini"
 
 #: src/components/party/party-sheet.tsx
 msgid "No messages yet. Say hello."
@@ -2616,7 +2609,7 @@ msgstr "Belum ada yang dimainkan."
 
 #: src/pages/player.tsx
 msgid "Nothing plays on this channel right now."
-msgstr ""
+msgstr "Tiada kandungan disiarkan di saluran ini buat masa ini."
 
 #: src/lib/hosts/shell/android.ts
 msgid "Nothing was heard"
@@ -3247,9 +3240,8 @@ msgstr "Sebelumnya"
 
 #: src/components/player/controls.tsx src/components/player/live.tsx
 #: src/lib/input/actions.ts src/pages/player.tsx
-#, fuzzy
 msgid "Previous channel"
-msgstr "Bab sebelumnya"
+msgstr "Saluran sebelumnya"
 
 #: src/lib/input/actions.ts
 msgid "Previous chapter"
@@ -3358,9 +3350,8 @@ msgid "Recaps"
 msgstr "Imbas Kembali"
 
 #: src/lib/live-tv.ts
-#, fuzzy
 msgid "Recent"
-msgstr "Penyerlah"
+msgstr "Terkini"
 
 #: src/pages/search.tsx
 msgid "Recent searches"
@@ -3404,19 +3395,19 @@ msgstr "Ingat pilihan mengikut rancangan"
 
 #: src/pages/live-tv/channel-details.tsx
 msgid "Remind me"
-msgstr ""
+msgstr "Ingatkan saya"
 
 #: src/pages/live-tv/guide.tsx
 msgid "Reminder"
-msgstr ""
+msgstr "Peringatan"
 
 #: src/pages/live-tv/index.tsx
 msgid "Reminder removed"
-msgstr ""
+msgstr "Peringatan dipadamkan"
 
 #: src/pages/live-tv/channel-details.tsx
 msgid "Reminder set"
-msgstr ""
+msgstr "Peringatan ditetapkan"
 
 #: src/components/version-settings.tsx src/pages/search.tsx
 #: src/pages/servers.tsx
@@ -4107,9 +4098,8 @@ msgid "Speed up while held"
 msgstr "Lajukan semasa ditekan"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Spoilers"
-msgstr "Treler"
+msgstr "Bocoran"
 
 #: src/pages/settings/apps.tsx
 msgid "Stable"
@@ -4120,9 +4110,8 @@ msgid "Start a party"
 msgstr "Mulakan sesi tontonan"
 
 #: src/pages/settings/interface.tsx
-#, fuzzy
 msgid "Start on"
-msgstr "Mula semula sekarang"
+msgstr "Bermula pada"
 
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
@@ -4490,7 +4479,7 @@ msgstr "pautan mengembalikan sesuatu selain daripada video"
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the live stream stopped"
-msgstr ""
+msgstr "Siaran langsung terhenti"
 
 #: src/pages/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
@@ -4518,7 +4507,7 @@ msgstr "Halaman bermula semula secara tidak dijangka"
 
 #: src/pages/settings/interface.tsx
 msgid "The page the app opens on. A link still opens what it points to."
-msgstr ""
+msgstr "Halaman utama aplikasi. Pautan masih akan membuka kandungan yang dihalakannya."
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
@@ -4756,7 +4745,7 @@ msgstr "Hari ini"
 
 #: src/pages/live-tv/index.tsx
 msgid "Tomorrow"
-msgstr ""
+msgstr "Esok"
 
 #: src/lib/hosts/shell/player.ts
 msgid "too many requests"
@@ -5082,9 +5071,8 @@ msgid "Waiting for approval…"
 msgstr "Menunggu kelulusan…"
 
 #: src/components/live-reminders.tsx src/pages/live-tv/channel-details.tsx
-#, fuzzy
 msgid "Watch"
-msgstr "Ditonton"
+msgstr "Tonton"
 
 #: src/components/party/party-sheet.tsx
 msgid "Watch along"
@@ -5258,7 +5246,7 @@ msgstr "Sama ada tab memaparkan nama halaman di sebelah ikonnya."
 
 #: src/components/shortcut-settings.tsx
 msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
-msgstr ""
+msgstr "Semasa saluran dimainkan. Pada TV, butang atas dan bawah juga menukar saluran, dan kekunci nombor memilih saluran mengikut nombornya."
 
 #: src/components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
@@ -5318,7 +5306,7 @@ msgstr "Kuning"
 
 #: src/pages/live-tv/index.tsx
 msgid "Yesterday"
-msgstr ""
+msgstr "Semalam"
 
 #: src/components/layout.tsx
 msgid "You"
@@ -5330,7 +5318,7 @@ msgstr "Anda telah meninggalkan sesi."
 
 #: src/pages/live-tv/index.tsx
 msgid "You'll be reminded at {time}"
-msgstr ""
+msgstr "Anda akan diingatkan pada {time}"
 
 #: src/pages/settings/playback.tsx
 msgid "Your {name}"
