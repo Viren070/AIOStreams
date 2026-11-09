@@ -416,6 +416,7 @@ function useReporting(
       () => ({
         ms: player.playhead.positionMs,
         paused: state.current.paused,
+        durationMs: state.current.durationMs,
         ...tracks.current(),
       })
     );

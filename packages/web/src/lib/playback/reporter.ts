@@ -15,6 +15,7 @@ interface PendingStop {
   userId?: string;
   itemId: string;
   positionTicks: number;
+  runtimeTicks?: number;
   at: number;
 }
 
@@ -40,6 +41,7 @@ export class PlaybackReporter {
     private readonly position: () => {
       ms: number;
       paused: boolean;
+      durationMs?: number;
       /** Stream indexes in the version's list, where the player's tracks map to one. */
       audio?: number;
       subtitle?: number;
@@ -47,12 +49,17 @@ export class PlaybackReporter {
   ) {}
 
   private body(extra: Record<string, unknown> = {}) {
-    const { ms, paused, audio, subtitle } = this.position();
+    const { ms, paused, durationMs = 0, audio, subtitle } = this.position();
+    const measured =
+      !this.info.live && Number.isFinite(durationMs) && durationMs > 0;
     return {
       ItemId: this.info.itemId,
       MediaSourceId: this.info.mediaSourceId,
       PlaySessionId: this.info.playSessionId ?? undefined,
       PositionTicks: Math.round(ms) * TICKS_PER_MS,
+      RunTimeTicks: measured
+        ? Math.round(durationMs) * TICKS_PER_MS
+        : undefined,
       IsPaused: paused,
       AudioStreamIndex: audio,
       SubtitleStreamIndex: subtitle,
@@ -99,7 +106,7 @@ export class PlaybackReporter {
         (error: unknown) => {
           // Sent later it would save a position, which a live stream has none of.
           if (!(error instanceof ConnectionError) || this.info.live) return;
-          const { PositionTicks } = this.body();
+          const { PositionTicks, RunTimeTicks } = this.body();
           storage.set(PENDING_KEY, [
             ...pendingStops(),
             {
@@ -107,6 +114,7 @@ export class PlaybackReporter {
               userId: this.info.userId,
               itemId: this.info.itemId,
               positionTicks: PositionTicks,
+              runtimeTicks: RunTimeTicks,
               at: Date.now(),
             },
           ]);
@@ -139,6 +147,7 @@ export function usePendingStops(): void {
             `/UserItems/${stop.itemId}/UserData`,
             {
               PlaybackPositionTicks: stop.positionTicks,
+              RunTimeTicks: stop.runtimeTicks,
               LastPlayedDate: new Date(stop.at).toISOString(),
             },
             { userId: user.Id }
