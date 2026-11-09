@@ -18,17 +18,19 @@ export type CelLiteral =
 
 export type CelFilterOperator = '=' | '!=' | '*=' | '!*=';
 
+export interface CelFilterCondition {
+  /** Empty for a primitive list, where the element itself is compared. */
+  key: string;
+  operator: CelFilterOperator;
+  value: CelLiteral;
+}
+
 export type CelPathSegment =
   | { kind: 'key'; name: string }
   | { kind: 'index'; index: number }
   | { kind: 'all' }
-  | {
-      kind: 'filter';
-      /** Empty for a primitive list, where the element itself is compared. */
-      key: string;
-      operator: CelFilterOperator;
-      value: CelLiteral;
-    };
+  /** Selectors written back to back, `[a=1][b=2]`, must all match. */
+  | { kind: 'filter'; conditions: CelFilterCondition[] };
 
 export interface CelPath {
   root: string;
@@ -601,8 +603,14 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
           s.fail('expected "=", "!=", "*=" or "!*=" in selector');
         }
         s.skipTrivia();
-        const value = readSelectorValue(s, limits);
-        segments.push({ kind: 'filter', key, operator, value });
+        const condition = {
+          key,
+          operator,
+          value: readSelectorValue(s, limits),
+        };
+        const previous = segments[segments.length - 1];
+        if (previous?.kind === 'filter') previous.conditions.push(condition);
+        else segments.push({ kind: 'filter', conditions: [condition] });
       }
       s.skipTrivia();
       if (s.peek() !== ']') s.fail('expected "]"');
@@ -1054,32 +1062,43 @@ function matchesFilter(
   element: unknown,
   segment: Extract<CelPathSegment, { kind: 'filter' }>
 ): boolean {
-  if (segment.key && !isPlainObject(element)) return false;
+  return segment.conditions.every((condition) =>
+    matchesCondition(element, condition)
+  );
+}
+
+function matchesCondition(
+  element: unknown,
+  condition: CelFilterCondition
+): boolean {
+  if (condition.key && !isPlainObject(element)) return false;
   let actual: unknown = element;
-  for (const part of segment.key ? segment.key.split('.') : []) {
-    if (!isPlainObject(actual)) return segment.operator.startsWith('!');
+  for (const part of condition.key ? condition.key.split('.') : []) {
+    if (!isPlainObject(actual)) return condition.operator.startsWith('!');
     actual = actual[part];
   }
   const comparable =
     actual !== undefined &&
     actual !== null &&
-    (typeof segment.value !== 'object' || segment.value === null);
+    (typeof condition.value !== 'object' || condition.value === null);
 
   let hit: boolean;
-  if (segment.operator === '*=' || segment.operator === '!*=') {
+  if (condition.operator === '*=' || condition.operator === '!*=') {
     hit =
       comparable &&
       String(actual)
         .toLowerCase()
-        .includes(String(segment.value).toLowerCase());
+        .includes(String(condition.value).toLowerCase());
   } else {
     // String coercion so `[enabled=true]` and `[instanceId=abc]` both read well.
     hit =
-      deepEqual(actual, segment.value) ||
-      (comparable && String(actual) === String(segment.value));
+      deepEqual(actual, condition.value) ||
+      (comparable && String(actual) === String(condition.value));
   }
 
-  return segment.operator === '!=' || segment.operator === '!*=' ? !hit : hit;
+  return condition.operator === '!=' || condition.operator === '!*='
+    ? !hit
+    : hit;
 }
 
 /** Missing objects are materialised only for plain key segments: the shape of
