@@ -284,19 +284,19 @@ function Backdrop({
       aria-hidden
       data-ui="item-backdrop"
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
-      className="pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden [mask-image:linear-gradient(to_top,transparent,black_2px)] lg:h-[calc(85vh+var(--top-bar,0px))]"
+      className="pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden [mask-image:linear-gradient(to_top,transparent,black_2px)] landscape:h-[calc(85vh+var(--top-bar,0px))] lg:h-[calc(85vh+var(--top-bar,0px))]"
     >
       {wash ? (
         image
       ) : (
-        <BackdropFrame className="max-w-[calc(55vh*2.6)] lg:max-w-[calc(85vh*2.6)]">
+        <BackdropFrame className="max-w-[calc(55vh*2.6)] landscape:max-w-[calc(85vh*2.6)] lg:max-w-[calc(85vh*2.6)]">
           {image}
         </BackdropFrame>
       )}
       <div
         data-ui="item-backdrop-shade"
         data-name="side"
-        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent lg:block rtl:bg-gradient-to-l"
+        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent landscape:block lg:block rtl:bg-gradient-to-l"
       />
       <div
         data-ui="item-backdrop-shade"
