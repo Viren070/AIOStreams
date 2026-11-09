@@ -1,5 +1,3 @@
-// stremio://new-who.onrender.com/manifest.json
-
 import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
@@ -25,6 +23,7 @@ export class DoctorWhoUniversePreset extends Preset {
       constants.CATALOG_RESOURCE,
       constants.META_RESOURCE,
       constants.STREAM_RESOURCE,
+      constants.SUBTITLES_RESOURCE,
     ];
 
     const options: Option[] = [

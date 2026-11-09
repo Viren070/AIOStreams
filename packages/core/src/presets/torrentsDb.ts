@@ -30,6 +30,10 @@ export class TorrentsDbPreset extends Preset {
       label: 'YTS',
     },
     {
+      value: 'eztv',
+      label: 'EZTV',
+    },
+    {
       value: '1337x',
       label: '1337x',
     },
