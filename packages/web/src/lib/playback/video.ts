@@ -1,7 +1,6 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
 import { currentHost } from '@/lib/hosts';
-import { appLog } from '@/lib/hosts/shell/bridge';
 import type { VideoFit } from '@/lib/settings';
 import {
   EMBEDDED_WAIT_MS,
@@ -11,7 +10,6 @@ import {
 } from '@/lib/subtitles/embedded';
 import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
 import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
-import { assLayer, canDrawAss } from '@/lib/subtitles/libass';
 import { subtitleHeight, subtitleLine } from '@/lib/subtitles/style';
 import { videoSurface, type SubtitleLayer } from '@/lib/subtitles/surface';
 import type {
@@ -22,7 +20,12 @@ import type {
 } from './engine';
 import { ownTrackLabel } from './controller';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
-import { EMBEDDED, ownLines, ownSubtitleTrack } from './own-subtitles';
+import {
+  drawSubtitle,
+  ownLines,
+  ownSubtitleTrack,
+  ownTrackLost,
+} from './page-subtitles';
 
 export const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
 /** A cue would show `{\an8}`-style tags as text. */
@@ -153,11 +156,7 @@ export function videoEngine(
           }
           shiftCues();
         },
-        lost: (error) =>
-          appLog(
-            'warn',
-            `subtitles: the file's own track could not be read: ${String(error)}`
-          ),
+        lost: ownTrackLost,
       });
       if (!stop) return false;
       stopOwnText = stop;
@@ -196,44 +195,23 @@ export function videoEngine(
       layer?.destroy();
       layer = null;
       hideOwnText();
-      const failed = (error: unknown) => {
-        appLog(
-          'warn',
-          `subtitles: libass could not start, so they show as text: ${String(error)}`
-        );
-        assFailed = true;
-        setSubtitle(id);
-      };
-      const assUrl = file?.subtitles[at]?.assUrl;
-      const own = ownTracks.find((t) => `${EMBEDDED}${t.number}` === id);
       const el = video.current;
-      const libass = canDrawAss() && !assFailed;
-      if (
-        el &&
-        embedded &&
-        (own?.kind === 'pgs' || (own?.kind === 'ass' && libass))
-      )
-        layer = embedded.draw(
-          own.number,
-          videoSurface(el),
-          { delayMs, height },
-          {
-            onFail: failed,
-            onLost: (error) =>
-              appLog(
-                'warn',
-                `subtitles: the file's own track could not be read: ${String(error)}`
-              ),
-          }
-        );
-      else if (assUrl && el && libass)
-        layer = assLayer(
-          videoSurface(el),
-          { url: assUrl },
-          { delayMs, height },
-          failed
-        );
-      else if (el && own && embedded && own.kind !== 'pgs')
+      const picked = drawSubtitle(
+        id,
+        { own: ownTracks, embedded, server: file?.subtitles ?? [] },
+        el && videoSurface(el),
+        { delayMs, height },
+        {
+          assFailed,
+          onAssFail() {
+            assFailed = true;
+            setSubtitle(id);
+          },
+        }
+      );
+      layer = picked.layer;
+      const own = picked.own;
+      if (!picked.drawn && el && own && embedded && own.kind !== 'pgs')
         showOwnText(el, embedded, own.number);
       const shown = layer ? undefined : elements[at];
       if (shown && shown.readyState >= HTMLTrackElement.LOADED) {

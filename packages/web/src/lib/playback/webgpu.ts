@@ -3,11 +3,7 @@ import type React from 'react';
 import { currentHost } from '@/lib/hosts';
 import { appLog } from '@/lib/hosts/shell/bridge';
 import type { VideoFit } from '@/lib/settings';
-import {
-  parseCues,
-  plainCueText,
-  type SubtitleCue,
-} from '@/lib/subtitles/cues';
+import { plainCueText, type SubtitleCue } from '@/lib/subtitles/cues';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
@@ -15,7 +11,6 @@ import {
   type EmbeddedSubtitles,
 } from '@/lib/subtitles/embedded';
 import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
-import { assLayer, canDrawAss } from '@/lib/subtitles/libass';
 import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
 import { subtitleHeight } from '@/lib/subtitles/style';
 import {
@@ -32,7 +27,14 @@ import type {
 } from './engine';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 import { canPlayWithWebGpu } from './player-choice';
-import { EMBEDDED, ownLines, ownSubtitleTrack } from './own-subtitles';
+import {
+  drawSubtitle,
+  fetchCues,
+  ownLines,
+  ownSubtitleTrack,
+  ownTrackLost,
+  readOwnCues,
+} from './page-subtitles';
 import { SUBTITLE_TYPES } from './video';
 import upscalePass from './aiostreams-upscale.wgsl';
 import { onShadersChange, readShaders } from './shaders';
@@ -187,12 +189,6 @@ export function webGpuEngine(
     let dropBase: { shown: number; dropped: number } | null = null;
 
     const set = (state: EngineState) => emit({ type: 'state', state });
-    const lost = (error: unknown) =>
-      appLog(
-        'warn',
-        `subtitles: the file's own track could not be read: ${String(error)}`
-      );
-
     const surface: PictureSurface = {
       box() {
         const el = video.current;
@@ -294,49 +290,34 @@ export function webGpuEngine(
       stopOwnText();
       stopOwnText = () => {};
       cues = [];
-      const failed = (error: unknown) => {
-        appLog(
-          'warn',
-          `subtitles: libass could not start, so they show as text: ${String(error)}`
-        );
-        assFailed = true;
-        setSubtitle(id);
-      };
-      const start = { delayMs, height };
-      const own = ownTracks.find((t) => `${EMBEDDED}${t.number}` === id);
-      const server = file?.subtitles.find((s) => s.id === id);
-      const libass = canDrawAss() && !assFailed;
-      if (own && embedded) {
-        if (own.kind === 'pgs' || (own.kind === 'ass' && libass))
-          layer = embedded.draw(own.number, surface, start, {
-            onFail: failed,
-            onLost: lost,
-          });
-        else {
-          const read: SubtitleCue[] = [];
-          cues = read;
-          stopOwnText =
-            embedded.read(own.number, {
-              events: (events) => {
-                for (const { startMs, endMs, text } of events)
-                  read.push({ startMs, endMs, text });
-                shownAt = null;
-              },
-              lost,
-            }) ?? (() => {});
+      const picked = drawSubtitle(
+        id,
+        { own: ownTracks, embedded, server: file?.subtitles ?? [] },
+        surface,
+        { delayMs, height },
+        {
+          assFailed,
+          onAssFail() {
+            assFailed = true;
+            setSubtitle(id);
+          },
         }
-      } else if (server?.assUrl && libass)
-        layer = assLayer(surface, { url: server.assUrl }, start, failed);
-      else if (server)
-        void fetch(server.url)
-          .then((res) => (res.ok ? res.text() : ''))
-          .then((body) => {
+      );
+      layer = picked.layer;
+      if (!picked.drawn) {
+        if (picked.own && embedded)
+          stopOwnText = readOwnCues(embedded, picked.own.number, cues, {
+            read: () => (shownAt = null),
+            lost: ownTrackLost,
+          });
+        else if (picked.server)
+          fetchCues(picked.server.url, (read) => {
             if (subtitle !== id) return;
-            cues = parseCues(body);
+            cues = read;
             shownAt = null;
-          })
-          .catch(() => {});
-      else cues = files.find((f) => f.id === id)?.cues ?? [];
+          });
+        else cues = files.find((f) => f.id === id)?.cues ?? [];
+      }
       followText(!!id && !layer);
       set({ subtitle: id });
     };

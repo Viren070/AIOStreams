@@ -1,9 +1,5 @@
 import { t } from '@lingui/core/macro';
-import {
-  parseCues,
-  plainCueText,
-  type SubtitleCue,
-} from '@/lib/subtitles/cues';
+import { plainCueText, type SubtitleCue } from '@/lib/subtitles/cues';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
@@ -11,16 +7,18 @@ import {
   type EmbeddedSubtitles,
 } from '@/lib/subtitles/embedded';
 import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
-import { assLayer, canDrawAss } from '@/lib/subtitles/libass';
 import { subtitleHeight } from '@/lib/subtitles/style';
 import type { PictureSurface, SubtitleLayer } from '@/lib/subtitles/surface';
 import { ownTrackLabel } from '@/lib/playback/controller';
 import {
+  drawSubtitle,
   EMBEDDED as OWN,
+  fetchCues,
   ownLines,
   ownSubtitleTrack,
-} from '@/lib/playback/own-subtitles';
-import { appLog } from '@/lib/hosts/shell/bridge';
+  ownTrackLost,
+  readOwnCues,
+} from '@/lib/playback/page-subtitles';
 import type {
   EngineFactory,
   EngineFile,
@@ -248,72 +246,55 @@ export const avPlayEngine: EngineFactory = (emit) => {
     layer?.destroy();
     layer = null;
     report({ subtitle: id });
-    const start = { delayMs, height: liftHeight };
-    const failed = (error: unknown) => {
-      appLog(
-        'warn',
-        `subtitles: libass could not start, so they show as text: ${String(error)}`
-      );
-      assFailed = true;
-      setSubtitle(id);
-    };
-    const onLost = (error: unknown) => {
-      appLog(
-        'warn',
-        `subtitles: the file's own track could not be read: ${String(error)}`
-      );
+    const reading = id && lost.has(id) ? null : embedded;
+    const markLost = () => {
       lost.add(id!);
       setSubtitle(id);
     };
-    const own = ownTracks?.find((t) => `${OWN}${t.number}` === id);
+    const picked = drawSubtitle(
+      id,
+      {
+        own: ownTracks ?? [],
+        embedded: reading,
+        server: file?.subtitles ?? [],
+      },
+      surface,
+      { delayMs, height: liftHeight },
+      {
+        assFailed,
+        onAssFail() {
+          assFailed = true;
+          setSubtitle(id);
+        },
+        onLost: markLost,
+      }
+    );
+    layer = picked.layer;
+    const own = picked.own;
     let native = own
       ? avPlayTrackOf(own)
       : textTracks.find((t) => `${AVPLAY}${t.index}` === id);
-    if (own && embedded && !lost.has(id!)) {
-      const drawn =
-        own.kind === 'pgs' ||
-        (own.kind === 'ass' && canDrawAss() && !assFailed);
-      if (drawn) {
-        layer = embedded.draw(own.number, surface, start, {
-          onFail: failed,
-          onLost,
-        });
-        native = undefined;
-      } else if (!native) {
-        const read: SubtitleCue[] = [];
-        ownCues = read;
-        stopOwnText =
-          embedded.read(own.number, {
-            events(events) {
-              for (const { startMs, endMs, text } of events)
-                read.push({ startMs, endMs, text });
-              showText();
-            },
-            lost: onLost,
-          }) ?? (() => {});
-      }
-    }
+    if (picked.drawn) native = undefined;
+    else if (own && reading && !native)
+      stopOwnText = readOwnCues(reading, own.number, ownCues, {
+        read: showText,
+        lost(error) {
+          ownTrackLost(error);
+          markLost();
+        },
+      });
     run(() => {
       try {
         if (native) av.setSelectTrack('TEXT', native.index);
         av.setSilentSubtitle(!native);
       } catch {}
     });
-    if (own || native) return showText();
-    const server = file?.subtitles.find((s) => s.id === id);
-    if (server?.assUrl && canDrawAss() && !assFailed) {
-      layer = assLayer(surface, { url: server.assUrl }, start, failed);
-      return showText();
-    }
-    if (!server) return showText();
-    void fetch(server.url)
-      .then((res) => (res.ok ? res.text() : ''))
-      .then((body) => {
-        if (subtitle !== id) return;
-        externalCues = parseCues(body);
-        showText();
-      })
-      .catch(() => {});
+    if (own || native || picked.drawn || !picked.server) return showText();
+    fetchCues(picked.server.url, (read) => {
+      if (subtitle !== id) return;
+      externalCues = read;
+      showText();
+    });
   };
 
   return {
