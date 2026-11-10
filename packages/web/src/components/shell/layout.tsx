@@ -60,7 +60,7 @@ import { PageShown } from '@/lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
 import { PartyHost } from '@/features/party/party-host';
-import { openPartySheet } from '@/features/party/party-sheet';
+import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
 import { PageScroll } from './page-scroll';

@@ -6,9 +6,9 @@ import { usePartyEvent } from '@/lib/party/party';
 import {
   closePartySheet,
   openPartySheet,
-  PartySheet,
   usePartySheetOpen,
-} from './party-sheet';
+} from './sheet-state';
+import { PartySheet } from './party-sheet';
 
 const onPlayer = () => /^#\/play\//.test(window.location.hash);
 

@@ -6,7 +6,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "(you)"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 msgid "{count, plural, one {# title} other {# titles}}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
 msgstr ""
 
@@ -104,7 +104,7 @@ msgstr ""
 msgid "{help} {bytes}."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "{host}'s party"
 msgstr ""
 
@@ -133,7 +133,7 @@ msgstr ""
 msgid "{left} left"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
 msgstr ""
 
@@ -198,7 +198,7 @@ msgstr ""
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "{rest, plural, one {# more} other {# more}}"
 msgstr ""
 
@@ -206,11 +206,11 @@ msgstr ""
 msgid "{s}%"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "{seconds}s ahead"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "{seconds}s behind"
 msgstr ""
 
@@ -327,7 +327,7 @@ msgstr ""
 msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "A code is looked up on the relay picked above."
 msgstr ""
 
@@ -343,7 +343,7 @@ msgstr ""
 msgid "A regular expression. Case never matters."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "A relay someone else runs, for people on other servers."
 msgstr ""
 
@@ -573,11 +573,11 @@ msgstr ""
 msgid "Anime upscaling: on"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Another relay"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Anyone with the invite can join, from any server."
 msgstr ""
 
@@ -622,7 +622,7 @@ msgstr ""
 msgid "Artwork"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "As the host"
 msgstr ""
 
@@ -680,7 +680,7 @@ msgstr ""
 #: src/app/sign-in/page.tsx
 #: src/app/trailer/page.tsx
 #: src/components/shell/history-buttons.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 #: src/features/player/controls.tsx
 #: src/features/player/next-episode.tsx
 #: src/lib/input/actions.ts
@@ -880,7 +880,7 @@ msgstr ""
 msgid "Change shortcuts"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Change speed to catch up"
 msgstr ""
 
@@ -924,7 +924,7 @@ msgstr ""
 msgid "Chapters"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Chat"
 msgstr ""
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Close"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Code copied"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Code or invite link"
 msgstr ""
 
@@ -1043,7 +1043,7 @@ msgstr ""
 msgid "Connected to Discord."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Connection lost"
 msgstr ""
 
@@ -1075,12 +1075,12 @@ msgstr ""
 msgid "Copy as JSON"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Copy code"
 msgstr ""
 
 #: src/app/player/page.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Copy link"
 msgstr ""
 
@@ -1109,11 +1109,11 @@ msgstr ""
 msgid "Could not copy it"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Could not copy the code"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Could not copy the invite link"
 msgstr ""
 
@@ -1139,7 +1139,7 @@ msgstr ""
 msgid "Could not find versions: {message}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Could not join"
 msgstr ""
 
@@ -1212,7 +1212,7 @@ msgstr ""
 msgid "Could not save that setting"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Could not start a party"
 msgstr ""
 
@@ -1576,11 +1576,11 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
 msgstr ""
 
@@ -1919,7 +1919,7 @@ msgstr ""
 msgid "Hide episodes"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Hide QR code"
 msgstr ""
 
@@ -1943,7 +1943,7 @@ msgstr ""
 msgid "Home and libraries"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Host"
 msgstr ""
 
@@ -2045,15 +2045,15 @@ msgstr ""
 msgid "Intros"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Invite"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Invite code or link"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Invite link copied"
 msgstr ""
 
@@ -2081,19 +2081,20 @@ msgstr ""
 msgid "Jellyfin API"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Join"
 msgstr ""
 
+#: src/features/party/not-in-party.tsx
 #: src/features/party/party-sheet.tsx
 msgid "Join a party"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Joining leaves the party you're in."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Joining the party…"
 msgstr ""
 
@@ -2113,7 +2114,7 @@ msgstr ""
 msgid "Keep in step by changing speed"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Keeping in step"
 msgstr ""
 
@@ -2187,7 +2188,7 @@ msgstr ""
 msgid "Leave {from} to open this on {target}?"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Leave the party"
 msgstr ""
 
@@ -2211,7 +2212,7 @@ msgstr ""
 msgid "Less dialogue boost"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Let new people join"
 msgstr ""
 
@@ -2259,7 +2260,7 @@ msgstr ""
 msgid "Live TV"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Loading"
 msgstr ""
 
@@ -2275,7 +2276,7 @@ msgstr ""
 msgid "Logs"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
 msgstr ""
 
@@ -2283,7 +2284,7 @@ msgstr ""
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
 msgstr ""
 
@@ -2355,11 +2356,11 @@ msgstr ""
 msgid "Merge continue watching and next up"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "Message"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Messages"
 msgstr ""
 
@@ -2392,7 +2393,7 @@ msgstr ""
 msgid "More"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "More can be sent once the party is back."
 msgstr ""
 
@@ -2615,7 +2616,7 @@ msgstr ""
 msgid "No live TV here"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "No messages yet. Say hello."
 msgstr ""
 
@@ -2699,7 +2700,7 @@ msgstr ""
 msgid "Not now"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "Not sent. Try again"
 msgstr ""
 
@@ -2750,7 +2751,7 @@ msgstr ""
 msgid "Nothing matches."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Nothing playing yet."
 msgstr ""
 
@@ -2766,7 +2767,7 @@ msgstr ""
 msgid "Nothing watched yet."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Nothing yet. Anything anyone plays now plays for everyone."
 msgstr ""
 
@@ -2806,7 +2807,7 @@ msgstr ""
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Off, the video jumps instead."
 msgstr ""
 
@@ -2814,7 +2815,7 @@ msgstr ""
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "on {relay}"
 msgstr ""
 
@@ -2826,7 +2827,7 @@ msgstr ""
 msgid "On the home page"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "On this server"
 msgstr ""
 
@@ -2846,7 +2847,7 @@ msgstr ""
 msgid "Only forced"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Only I control playback"
 msgstr ""
 
@@ -2854,7 +2855,7 @@ msgstr ""
 msgid "Only on Wi-Fi"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Only people signed in to this server can join."
 msgstr ""
 
@@ -3000,7 +3001,7 @@ msgstr ""
 msgid "Output"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Over the video"
 msgstr ""
 
@@ -3090,11 +3091,11 @@ msgstr ""
 msgid "Paused · {of}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Paused on {name}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Paused on {name}, {at} in"
 msgstr ""
 
@@ -3110,7 +3111,7 @@ msgstr ""
 msgid "People"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "People and invite"
 msgstr ""
 
@@ -3313,7 +3314,7 @@ msgid "Player link"
 msgstr ""
 
 #: src/app/history/_components/sessions.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx
 #: src/features/player/episodes.tsx
 #: src/features/playlists/playlists.tsx
@@ -3348,7 +3349,7 @@ msgstr ""
 msgid "Playlists"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Plays <0>{title}</0> for everyone who joins."
 msgstr ""
 
@@ -3449,7 +3450,7 @@ msgstr ""
 msgid "Puts every key back the way it came."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "QR code"
 msgstr ""
 
@@ -3514,12 +3515,12 @@ msgstr ""
 msgid "Rating"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "React with {emoji}"
 msgstr ""
 
 #: src/app/settings/_components/reaction-setting.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Reactions"
 msgstr ""
 
@@ -3565,11 +3566,11 @@ msgstr ""
 msgid "refused"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Relay"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Relay address"
 msgstr ""
 
@@ -3610,7 +3611,7 @@ msgid "Remove {key}"
 msgstr ""
 
 #: src/app/settings/_components/common.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Remove {name}"
 msgstr ""
 
@@ -3927,7 +3928,7 @@ msgid "Select all"
 msgstr ""
 
 #: src/components/send-report.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "Send"
 msgstr ""
 
@@ -3940,7 +3941,7 @@ msgstr ""
 msgid "Send report"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "Sending…"
 msgstr ""
 
@@ -3956,7 +3957,7 @@ msgstr ""
 msgid "Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "Sends once the party is back"
 msgstr ""
 
@@ -4002,7 +4003,7 @@ msgstr ""
 msgid "Shadow"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Share the invite"
 msgstr ""
 
@@ -4286,7 +4287,7 @@ msgstr ""
 msgid "something this device cannot read"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Something this device cannot read"
 msgstr ""
 
@@ -4335,7 +4336,7 @@ msgstr ""
 msgid "Stable"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Start a party"
 msgstr ""
 
@@ -4757,11 +4758,11 @@ msgstr ""
 msgid "The party ended."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "The party is full"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "The party is watching <0>{title}</0>"
 msgstr ""
 
@@ -4916,7 +4917,7 @@ msgstr ""
 msgid "This season"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "This server"
 msgstr ""
 
@@ -5059,7 +5060,7 @@ msgstr ""
 #: src/app/downloads/page.tsx
 #: src/app/sign-in/page.tsx
 #: src/components/media/random-pick.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 #: src/features/versions/version-list.tsx
 #: src/lib/playback/use-player.ts
 msgid "Try again"
@@ -5351,7 +5352,7 @@ msgstr ""
 msgid "Watch"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Watch along"
 msgstr ""
 
@@ -5372,6 +5373,7 @@ msgstr ""
 
 #: src/app/item/_components/actions.tsx
 #: src/components/shell/layout.tsx
+#: src/features/party/in-party.tsx
 #: src/features/party/party-sheet.tsx
 #: src/features/player/options.tsx
 msgid "Watch together"
@@ -5391,19 +5393,19 @@ msgid "Watched marks and resume points are removed from this server. Favourites 
 msgstr ""
 
 #: src/app/settings/page.tsx
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Watching"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "Watching ({watching})"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Watching {name}"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Watching {name}, {at} in"
 msgstr ""
 
@@ -5415,7 +5417,7 @@ msgstr ""
 msgid "What happened"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/in-party.tsx
 msgid "What others send shows over the video for a few seconds. It always stays in the chat."
 msgstr ""
 
@@ -5427,7 +5429,7 @@ msgstr ""
 msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/chat.tsx
 msgid "What the others say shows here."
 msgstr ""
 
@@ -5567,7 +5569,7 @@ msgstr ""
 msgid "Win"
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr ""
 
@@ -5631,7 +5633,7 @@ msgstr ""
 msgid "Your player does not report back, so mark it as watched once you finish."
 msgstr ""
 
-#: src/features/party/party-sheet.tsx
+#: src/features/party/not-in-party.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
 msgstr ""
 

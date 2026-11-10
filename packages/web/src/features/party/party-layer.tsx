@@ -6,7 +6,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { formatLocale } from '@/lib/i18n';
 import { useParty, usePartyEvent, type PartyAction } from '@/lib/party/party';
 import { settings, useSetting } from '@/lib/settings';
-import { usePartySheetOpen } from './party-sheet';
+import { usePartySheetOpen } from './sheet-state';
 
 const BUBBLE_MS = 8_000;
 const REACTION_MS = 3_000;

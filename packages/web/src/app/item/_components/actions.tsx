@@ -31,7 +31,7 @@ import { downloadsHost } from '@/lib/downloads';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { TrailerButton } from './trailers';
 import { trailersOf } from '@/lib/playback/trailers';
-import { openPartySheet } from '@/features/party/party-sheet';
+import { openPartySheet } from '@/features/party/sheet-state';
 import { openRemote } from '@/features/remote/remote-sheet';
 import { openRandom } from '@/components/media/random-pick';
 import { useParty } from '@/lib/party/party';

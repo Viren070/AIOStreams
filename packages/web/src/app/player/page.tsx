@@ -115,7 +115,7 @@ import { PartyLayer } from '@/features/party/party-layer';
 import { useRemotePlayer } from '@/features/remote/remote-target';
 import { indexForTrack } from '@/lib/remote/tracks';
 import { useLatest } from '@/hooks/use-latest';
-import { openPartySheet } from '@/features/party/party-sheet';
+import { openPartySheet } from '@/features/party/sheet-state';
 import { usePlaylistEdits, usePlaylistName } from '@/lib/playlists';
 
 interface PlayerProps {
