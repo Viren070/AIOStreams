@@ -1,6 +1,5 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import React from 'react';
 import { BiDownload, BiErrorCircle, BiSolidDownload } from 'react-icons/bi';
 import { DropdownMenu, DropdownMenuItem } from '@aiostreams/ui/dropdown-menu';
 import { IconButton } from '@aiostreams/ui/button';

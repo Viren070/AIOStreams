@@ -1,4 +1,3 @@
-import React from 'react';
 import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '@/lib/jellyfin/session';
 import { posterUrl } from '@/lib/artwork/images';
