@@ -584,6 +584,7 @@ class ExoEngine(private val context: Context) : Engine {
     }
 
     private inner class Events : Player.Listener, AnalyticsListener, VideoFrameMetadataListener {
+        /** Ready, buffering or ended; the first ready reports the tracks and duration before `loaded`. */
         override fun onPlaybackStateChanged(state: Int) {
             when (state) {
                 Player.STATE_READY -> {

@@ -484,6 +484,7 @@ function Unreachable() {
   );
 }
 
+/** The app's frame: navigation, the page, and the player, which plays on in the mini player over other pages. */
 export function WebLayout() {
   const { switchUser, user } = useSession();
   const users = usePickableUsers();

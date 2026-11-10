@@ -122,6 +122,7 @@ export function stopPlayback(fallback: string): void {
   goBack(fallback);
 }
 
+/** Stops playback, the mini player included, with any audio switch on its way to the page. */
 export function closePlayback(): void {
   pendingSwitch = undefined;
   set(null);

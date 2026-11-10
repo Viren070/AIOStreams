@@ -75,6 +75,7 @@ interface Transport {
   onClick?: () => void;
 }
 
+/** The controls over the video: the title bar, seek bar, playback buttons and option menus. */
 export function PlayerControls({
   item,
   player,

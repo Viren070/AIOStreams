@@ -171,6 +171,7 @@ export const OBJECT_FIT: Record<VideoFit, string> = {
   stretch: 'object-fill',
 };
 
+/** The player's page: finds the version to play, then plays it or says why it can't. */
 export function PlayerPage({
   itemId,
   sourceId,
@@ -471,6 +472,7 @@ function useReporting(
   }, [subtitle]);
 }
 
+/** Why nothing plays, with the ways on: Back, other versions, the version an audio switch left, or another try. */
 function Failure({
   itemId,
   message,
@@ -869,6 +871,7 @@ function Player({
   const infoOptions = usePlaybackInfoOptions();
   const switchingAudio = React.useRef(false);
   const currentPlayer = useLatest(player);
+  // Plays the version with the chosen language from here, once the server confirms it still has it.
   const selectAlternate = async (choice: AlternateAudio) => {
     if (!canSwitchAudio || switchingAudio.current) return;
     switchingAudio.current = true;

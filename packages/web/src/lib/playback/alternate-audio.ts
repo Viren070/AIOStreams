@@ -11,12 +11,14 @@ export interface OtherAudioMenu {
   onSelect(choice: AlternateAudio): void;
 }
 
+/** A language another version of the title plays, and that version. */
 export interface AlternateAudio {
   language: string;
   label: string;
   source: SourceInfo & { Id: string };
 }
 
+/** A track's language as versions are compared by: ISO 639-2/B, or a canonical tag for a regional variant, and nothing for und, multi and the like. */
 export function audioLanguage(
   tag: string | null | undefined
 ): string | undefined {
@@ -38,6 +40,7 @@ export function audioLanguage(
   return code && tagName(code) ? languageCode(code) : undefined;
 }
 
+/** The languages a version's audio tracks play, else the ones its addon listed. */
 export function sourceAudioLanguages(source: SourceInfo): string[] {
   const tracks = (source.MediaStreams ?? [])
     .filter((track) => track.Type === 'Audio')
@@ -69,6 +72,7 @@ export function sourceDefaultsToAudio(
   return available.size === 1 && available.has(requested);
 }
 
+/** A finite version this player can switch to: one it plays directly, or any at all for an app player that sends request headers. */
 export function canPlayAudioSource(
   source: SourceInfo,
   nativeAudio = false

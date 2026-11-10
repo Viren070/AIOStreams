@@ -82,6 +82,7 @@ interface MenuPage {
 /** The audio menu's row for the version played before a switch. */
 const ORIGINAL_AUDIO = 'original-audio';
 
+/** A player menu: pinned rows, its options, other versions, more on request, and pages that open inside it. */
 function Menu({
   name,
   label,
@@ -582,6 +583,7 @@ function SubtitleTiming({
   );
 }
 
+/** The player's option buttons and their menus: versions, audio, subtitles and the rest. */
 export function OptionButtons({
   player,
   onMenu,

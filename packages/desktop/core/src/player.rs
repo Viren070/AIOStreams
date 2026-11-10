@@ -826,6 +826,7 @@ fn follow_subtitle(mpv: &Mpv, subtitles: &Mutex<SubtitleScale>, name: &str, valu
     }
 }
 
+/// Carries mpv's events and property changes to the page until the player quits.
 fn pump(
     mpv: &Mpv,
     emit: &Emit,

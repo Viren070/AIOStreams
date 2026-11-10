@@ -355,12 +355,14 @@ class MpvEngine(private val context: Context) : Engine {
 
         override fun eventProperty(property: String, value: Double) = report(property, JsonPrimitive(value))
 
+        /** A node property's change: audio parameters go to the sound filters, the rest to the page as JSON. */
         override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
             audioParams(value)
         } else {
             report(property, nodeJson(value) ?: JsonNull)
         }
 
+        /** mpv's events: a file starting, loading, restarting playback or ending. */
         override fun event(eventId: Int, data: MPVNode) {
             val listener = listener ?: return
             when (eventId) {
