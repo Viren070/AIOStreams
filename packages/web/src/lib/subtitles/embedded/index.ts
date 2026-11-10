@@ -16,12 +16,17 @@ import { openMp4, sampleLines } from '@/lib/subtitles/mp4/file';
 import { pgsLayer } from '@/lib/subtitles/pgs/layer';
 import type { PictureSurface, SubtitleLayer } from '@/lib/subtitles/surface';
 import { AttachedFonts } from './fonts';
-import type { HarvestedEvent, ReadPace, SubtitleHarvest } from './harvest';
+import type {
+  HarvestedEvent,
+  ReadPace,
+  SubtitleHarvest,
+  SuppliedBlock,
+} from './harvest';
 import { MatroskaHarvest } from './harvest/matroska';
 import { Mp4Harvest } from './harvest/mp4';
 import { rangeReader, SideReader } from './reads';
 
-export type { HarvestedEvent } from './harvest';
+export type { HarvestedEvent, SuppliedBlock } from './harvest';
 
 /** How long the user's picks wait for the file's own tracks. */
 const EMBEDDED_WAIT_MS = 3000;
@@ -50,6 +55,8 @@ export interface EmbeddedSubtitles {
   ): SubtitleLayer | null;
   /** Text events until stopped, ASS without its styling; null for pictures or a track the file hasn't. */
   read(number: number, sink: EventSink): (() => void) | null;
+  /** A Matroska file's subtitle blocks the player read with the video; from the first, no track is read for them. */
+  supply(blocks: readonly SuppliedBlock[]): void;
   /** `bufferedMs` is null where the player doesn't say. */
   setPosition(ms: number, bufferedMs: number | null): void;
   setPlaying(playing: boolean): void;
@@ -57,6 +64,7 @@ export interface EmbeddedSubtitles {
 }
 
 const SSA = /^S_(TEXT\/)?SSA$/;
+const EARLY_BLOCKS = 20_000;
 const HEAD_BYTES = 256 * 1024;
 
 export const readsOwnSubtitles = (source: SourceInfo) =>
@@ -107,6 +115,9 @@ export function embeddedSubtitles(
   let positionMs = 0;
   let bufferedMs: number | null = null;
   const harvests = new Map<number, SubtitleHarvest>();
+  let supplied = false;
+  /** Blocks that came before the file's head was read. */
+  let early: SuppliedBlock[] = [];
   let onPosition = (_ms: number) => {};
   let hide = () => {};
 
@@ -118,6 +129,9 @@ export function embeddedSubtitles(
     .then((opened) => {
       if (!opened || closed) return [];
       file = opened;
+      const waiting = early;
+      early = [];
+      if (waiting.length) supply(waiting);
       if (opened.matroska)
         fonts = new AttachedFonts(opened.matroska, (font) => {
           pool.push(font);
@@ -138,6 +152,7 @@ export function embeddedSubtitles(
     let harvest = harvests.get(track.number);
     if (!harvest) {
       harvest = opened.harvest(track, reader);
+      if (supplied) harvest.fromPlayer();
       harvests.set(track.number, harvest);
     }
     const reading = harvest;
@@ -188,6 +203,33 @@ export function embeddedSubtitles(
   const trackOf = (number: number) => {
     const track = file?.subtitles.find((t) => t.number === number && t.kind);
     return file && track && !closed ? { opened: file, track } : null;
+  };
+
+  const supply = (blocks: readonly SuppliedBlock[]) => {
+    if (closed) return;
+    const opened = file;
+    if (!opened) {
+      early = [...early, ...blocks].slice(-EARLY_BLOCKS);
+      return;
+    }
+    if (!opened.matroska) return;
+    if (!supplied) {
+      supplied = true;
+      for (const harvest of harvests.values()) harvest.fromPlayer();
+    }
+    for (const block of blocks) {
+      const track = opened.subtitles.find(
+        (t) => t.number === block.trackNumber && t.kind
+      );
+      if (!track) continue;
+      let harvest = harvests.get(track.number);
+      if (!harvest) {
+        harvest = opened.harvest(track, reader);
+        harvest.fromPlayer();
+        harvests.set(track.number, harvest);
+      }
+      void harvest.supplyBlock(block);
+    }
   };
 
   const read = (number: number, sink: EventSink) => {
@@ -279,6 +321,7 @@ export function embeddedSubtitles(
       };
     },
     read,
+    supply,
     index: () =>
       subtitles.then(() => {
         const opened = file;

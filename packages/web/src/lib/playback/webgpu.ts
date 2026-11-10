@@ -8,6 +8,7 @@ import {
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
+  type SuppliedBlock,
 } from '@/lib/subtitles/embedded';
 import {
   checkSubtitleFile,
@@ -95,6 +96,7 @@ interface GpuEvents {
   onDuration(ms: number | null): void;
   onFallback(reason: string, atMs: number): void;
   onError(message: string): void;
+  onSubtitleBlocks(blocks: readonly SuppliedBlock[]): void;
 }
 
 interface GpuModule {
@@ -422,6 +424,9 @@ export function webGpuEngine(
         },
         onError(message) {
           if (current()) unplayable(message, position);
+        },
+        onSubtitleBlocks(blocks) {
+          if (current()) embedded?.supply(blocks);
         },
       };
     };

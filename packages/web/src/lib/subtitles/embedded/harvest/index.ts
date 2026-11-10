@@ -21,6 +21,14 @@ const STEADY: ReadPace = { lanes: 1, hurry() {} };
 const sizeOf = (event: HarvestedEvent) =>
   event.text.length + (event.data?.length ?? 0);
 
+/** A block as the player read it with the video, in the file's time. */
+export interface SuppliedBlock {
+  trackNumber: number;
+  timestampMs: number;
+  durationMs: number | null;
+  data: Uint8Array;
+}
+
 export interface HarvestTask {
   timeMs: number;
   run(task: HarvestTask): Promise<void>;
@@ -72,6 +80,9 @@ export abstract class SubtitleHarvest {
   private held = 0;
   private timer = 0;
   private waiters: { untilMs: number; resolve: () => void }[] = [];
+  private supplied = false;
+  private readonly suppliedKeys = new Set<string>();
+  private nextSupplied = -1;
 
   constructor(
     readonly track: FileSubtitle,
@@ -101,6 +112,40 @@ export abstract class SubtitleHarvest {
     if (roomy === this.roomy) return;
     this.roomy = roomy;
     if (roomy && this.active) this.pump();
+  }
+
+  /** The player hands over the track's lines as it reads the file, so nothing is read for them from here on. */
+  fromPlayer(): void {
+    this.supplied = true;
+  }
+
+  supplyBlock(_block: SuppliedBlock): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /** Keyed apart from file positions, by content, as a cluster the player reads again sends its blocks again. */
+  protected supply(event: HarvestedEvent): void {
+    const key = `${event.startMs}:${event.endMs}:${event.text}:${event.data?.length ?? 0}`;
+    if (this.suppliedKeys.has(key)) return;
+    this.suppliedKeys.add(key);
+    this.events.set(this.nextSupplied--, event);
+    this.held += sizeOf(event);
+    this.onUpdate(event);
+    if (this.held > KEEP_SIZE) this.dropFarSupplied();
+  }
+
+  private dropFarSupplied(): void {
+    const from = this.positionMs - BEHIND_MS - 60_000;
+    const to = this.positionMs + AHEAD_MS + 60_000;
+    for (const [at, event] of this.events) {
+      if (this.held <= KEEP_SIZE * 0.75) break;
+      if (at >= 0 || (event.endMs >= from && event.startMs <= to)) continue;
+      this.events.delete(at);
+      this.held -= sizeOf(event);
+      this.suppliedKeys.delete(
+        `${event.startMs}:${event.endMs}:${event.text}:${event.data?.length ?? 0}`
+      );
+    }
   }
 
   pause(): void {
@@ -185,7 +230,8 @@ export abstract class SubtitleHarvest {
   }
 
   private pump(): void {
-    if (!this.active || this.failed) return this.pace.hurry(false);
+    if (!this.active || this.failed || this.supplied)
+      return this.pace.hurry(false);
     window.clearTimeout(this.timer);
     while (this.running < this.pace.lanes) {
       const task = this.next();

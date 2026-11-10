@@ -27,6 +27,7 @@ import {
   type HarvestedEvent,
   type HarvestTask,
   type ReadPace,
+  type SuppliedBlock,
 } from '.';
 
 const MAX_BLOCK = 4 * 1024 * 1024;
@@ -149,6 +150,17 @@ export class MatroskaHarvest extends SubtitleHarvest {
       this.clusters.set(at, known);
     }
     return known;
+  }
+
+  override async supplyBlock(block: SuppliedBlock): Promise<void> {
+    const payload = await decoded(block.data, this.track.encoding, 1);
+    const picture = this.track.kind === 'pgs';
+    this.supply({
+      startMs: block.timestampMs,
+      endMs: block.timestampMs + (block.durationMs ?? DEFAULT_DURATION_MS),
+      text: picture ? '' : blockText(this.track, payload),
+      ...(picture && { data: payload }),
+    });
   }
 
   private async keepBlock(
