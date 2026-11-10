@@ -1,16 +1,20 @@
-import { readAll, type ByteReader } from '../../byte-reader';
-import type { FetchPastCors } from '../../hosts';
-import type { SourceInfo } from '../../types';
-import type { Span } from '../align';
-import { assHeader, scriptFamilies } from '../ass-script';
-import { assPlainText } from '../cues';
-import type { FileSubtitle } from '../file-subtitle';
-import { assLayer } from '../libass';
-import { openMatroska, type MkvFile, type MkvSubtitle } from '../matroska/file';
-import { indexLines } from '../matroska/lines';
-import { openMp4, sampleLines } from '../mp4/file';
-import { pgsLayer } from '../pgs/layer';
-import type { PictureSurface, SubtitleLayer } from '../surface';
+import { readAll, type ByteReader } from '@/lib/byte-reader';
+import type { FetchPastCors } from '@/lib/hosts';
+import type { SourceInfo } from '@/lib/jellyfin/types';
+import type { Span } from '@/lib/subtitles/align';
+import { assHeader, scriptFamilies } from '@/lib/subtitles/ass-script';
+import { assPlainText } from '@/lib/subtitles/cues';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
+import { assLayer } from '@/lib/subtitles/libass';
+import {
+  openMatroska,
+  type MkvFile,
+  type MkvSubtitle,
+} from '@/lib/subtitles/matroska/file';
+import { indexLines } from '@/lib/subtitles/matroska/lines';
+import { openMp4, sampleLines } from '@/lib/subtitles/mp4/file';
+import { pgsLayer } from '@/lib/subtitles/pgs/layer';
+import type { PictureSurface, SubtitleLayer } from '@/lib/subtitles/surface';
 import { AttachedFonts } from './fonts';
 import type { HarvestedEvent, SubtitleHarvest } from './harvest';
 import { MatroskaHarvest } from './harvest/matroska';

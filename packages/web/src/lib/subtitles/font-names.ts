@@ -1,4 +1,4 @@
-import { readAll, type ByteReader } from '../byte-reader';
+import { readAll, type ByteReader } from '@/lib/byte-reader';
 
 /** Family, full and PostScript names from the name table, lower case. */
 export async function fontNames(

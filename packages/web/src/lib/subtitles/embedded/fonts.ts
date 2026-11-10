@@ -1,11 +1,11 @@
-import { readAll, ReadError, type ByteReader } from '../../byte-reader';
-import { fontNames } from '../font-names';
+import { readAll, ReadError, type ByteReader } from '@/lib/byte-reader';
+import { fontNames } from '@/lib/subtitles/font-names';
 import {
   attachedFiles,
   isFont,
   type Attachment,
   type MkvFile,
-} from '../matroska/file';
+} from '@/lib/subtitles/matroska/file';
 
 const TRIES = 5;
 

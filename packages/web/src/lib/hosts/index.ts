@@ -1,8 +1,8 @@
-import type { JellyfinClient } from '../client';
-import type { DownloadsHost } from '../downloads/types';
-import type { PlayerFeature } from '../playback/controller';
-import type { EngineFactory } from '../playback/engine';
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import type { DownloadsHost } from '@/lib/downloads/types';
+import type { PlayerFeature } from '@/lib/playback/controller';
+import type { EngineFactory } from '@/lib/playback/engine';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 import { androidHost } from './jellyfin-android';
 import { jellyfinDesktopHost } from './jellyfin-desktop';
 import { nativeShellHost } from './native-shell';

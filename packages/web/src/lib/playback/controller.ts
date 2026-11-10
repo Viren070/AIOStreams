@@ -1,17 +1,21 @@
 import { t } from '@lingui/core/macro';
-import { storage } from '../storage';
-import type { JellyfinClient } from '../client';
+import { storage } from '@/lib/storage';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
 import type { Chapter } from './chapters';
 import type { Live } from './live-value';
-import type { SubtitleStyle } from '../settings';
-import type { SubtitleLine } from '../subtitles/cues';
-import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
-import { tagName } from '../languages';
+import type { SubtitleStyle } from '@/lib/settings';
+import type { SubtitleLine } from '@/lib/subtitles/cues';
+import { subtitleType, type SubtitleFacts } from '@/lib/subtitles/tracks';
+import { tagName } from '@/lib/languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
 import type { PlannedSkip, StatsRow, VideoFrame } from './engine';
-import type { PlaybackPrefs } from '../user-config';
-import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
+import type {
+  BaseItemDto,
+  MediaStream,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 
 export interface Track {
   id: string;

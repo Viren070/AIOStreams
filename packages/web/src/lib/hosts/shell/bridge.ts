@@ -1,9 +1,9 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import type { HostEvent } from '../../downloads/types';
-import type { LicenseList } from '../../licenses';
-import type { TimeRange } from '../../playback/playhead';
-import type { Span } from '../../subtitles/align';
+import type { HostEvent } from '@/lib/downloads/types';
+import type { LicenseList } from '@/lib/licenses';
+import type { TimeRange } from '@/lib/playback/playhead';
+import type { Span } from '@/lib/subtitles/align';
 
 /** A track as the app's player lists it; `url` is where an added one came from. */
 export interface AppTrack {

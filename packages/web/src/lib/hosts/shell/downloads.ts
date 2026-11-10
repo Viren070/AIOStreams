@@ -1,4 +1,4 @@
-import type { DownloadsHost } from '../../downloads/types';
+import type { DownloadsHost } from '@/lib/downloads/types';
 import { appBridge } from './bridge';
 
 function send(message: { type: string; [key: string]: unknown }) {

@@ -1,24 +1,28 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
-import { currentHost } from '../hosts';
-import { appLog } from '../hosts/shell/bridge';
-import type { VideoFit } from '../settings';
-import { parseCues, plainCueText, type SubtitleCue } from '../subtitles/cues';
+import { currentHost } from '@/lib/hosts';
+import { appLog } from '@/lib/hosts/shell/bridge';
+import type { VideoFit } from '@/lib/settings';
+import {
+  parseCues,
+  plainCueText,
+  type SubtitleCue,
+} from '@/lib/subtitles/cues';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
-} from '../subtitles/embedded';
-import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
-import { assLayer, canDrawAss } from '../subtitles/libass';
-import type { FileSubtitle } from '../subtitles/file-subtitle';
-import { subtitleHeight } from '../subtitles/style';
+} from '@/lib/subtitles/embedded';
+import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
+import { assLayer, canDrawAss } from '@/lib/subtitles/libass';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
+import { subtitleHeight } from '@/lib/subtitles/style';
 import {
   pictureBox,
   type PictureSurface,
   type SubtitleLayer,
-} from '../subtitles/surface';
+} from '@/lib/subtitles/surface';
 import { ownTrackLabel } from './controller';
 import type {
   EngineFactory,

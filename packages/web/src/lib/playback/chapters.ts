@@ -1,4 +1,4 @@
-import type { MediaSegmentDto } from '../types';
+import type { MediaSegmentDto } from '@/lib/jellyfin/types';
 import type { ThumbnailFeed } from './thumbnails';
 
 type Kind = MediaSegmentDto['Type'];

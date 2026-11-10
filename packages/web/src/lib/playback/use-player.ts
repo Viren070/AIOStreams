@@ -1,28 +1,28 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import type { JellyfinClient } from '../client';
-import { clock } from '../format';
-import { settings, useSetting } from '../settings';
-import { storage } from '../storage';
-import type { Span } from '../subtitles/align';
-import { referenceTrack, SubtitleSync } from '../subtitles/auto-sync';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { clock } from '@/lib/format';
+import { settings, useSetting } from '@/lib/settings';
+import { storage } from '@/lib/storage';
+import type { Span } from '@/lib/subtitles/align';
+import { referenceTrack, SubtitleSync } from '@/lib/subtitles/auto-sync';
 import {
   parseSubtitle,
   plainLines,
   retimeSubtitle,
   subtitleExtension,
-} from '../subtitles/cues';
+} from '@/lib/subtitles/cues';
 import {
   clampDelay,
   savedSubtitleDelay,
   saveSubtitleDelay,
   SUBTITLE_DELAY_LIMIT_MS,
-} from '../subtitles/delay';
-import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
-import { SUBTITLE_LIFT_MS, subtitleHeight } from '../subtitles/style';
-import type { MediaStream, SourceInfo } from '../types';
-import { appLog } from '../hosts/shell/bridge';
-import { useLatest } from '../use-latest';
+} from '@/lib/subtitles/delay';
+import { subtitleUrl, textSubtitles } from '@/lib/subtitles/tracks';
+import { SUBTITLE_LIFT_MS, subtitleHeight } from '@/lib/subtitles/style';
+import type { MediaStream, SourceInfo } from '@/lib/jellyfin/types';
+import { appLog } from '@/lib/hosts/shell/bridge';
+import { useLatest } from '@/hooks/use-latest';
 import type { Chapter } from './chapters';
 import { useLiveRecovery } from './live-recovery';
 import {

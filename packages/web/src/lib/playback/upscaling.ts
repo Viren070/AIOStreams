@@ -1,7 +1,7 @@
 import React from 'react';
-import { useItem } from '../queries';
-import { settings } from '../settings';
-import type { BaseItemDto } from '../types';
+import { useItem } from '@/lib/jellyfin/queries';
+import { settings } from '@/lib/settings';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's names
 const ANIME_IDS = ['AniList', 'Kitsu', 'MyAnimeList', 'AniDB'];

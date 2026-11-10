@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import type { Host } from '..';
-import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
+import { onSettingsChange, settings, type PlayerEngine } from '@/lib/settings';
 import { backGesture, backPressed, noteHomeScroll } from './back-slide';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';

@@ -5,9 +5,9 @@ import {
   noteRead,
   refused,
   type BlobAddress,
-} from '../artwork';
-import { isReachable } from '../connection';
-import { settings, useSetting } from '../settings';
+} from '@/lib/artwork/artwork';
+import { isReachable } from '@/lib/jellyfin/connection';
+import { settings, useSetting } from '@/lib/settings';
 import { maybeSaved, noteSaved, schedulePrune } from '.';
 import { readImage, writeImage } from './store';
 

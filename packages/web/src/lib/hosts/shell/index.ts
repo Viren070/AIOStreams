@@ -4,14 +4,14 @@ import {
   settings,
   onSettingsChange,
   type UpdateChannelSetting,
-} from '../../settings';
-import { useLatest } from '../../use-latest';
+} from '@/lib/settings';
+import { useLatest } from '@/hooks/use-latest';
 import type { Host } from '..';
 import { androidHost, setupAndroid } from './android';
 import { appBridge, ask, bridgeStore, type ShellAnswer } from './bridge';
 import { desktopHost, setupDesktop } from './desktop';
 import { playerSettings } from './player';
-import { onUpscalingChange } from '../../playback/upscaling';
+import { onUpscalingChange } from '@/lib/playback/upscaling';
 
 export type UpdateState = ShellAnswer<'update-state'>;
 

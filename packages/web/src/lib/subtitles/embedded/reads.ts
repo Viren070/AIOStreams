@@ -1,10 +1,10 @@
-import type { FetchPastCors } from '../../hosts';
+import type { FetchPastCors } from '@/lib/hosts';
 import {
   concat,
   ReadError,
   readsInTurn,
   type ByteReader,
-} from '../../byte-reader';
+} from '@/lib/byte-reader';
 
 const CHUNK = 512 * 1024;
 

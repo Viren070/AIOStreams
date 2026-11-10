@@ -1,19 +1,19 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
-import { currentHost } from '../hosts';
-import { appLog } from '../hosts/shell/bridge';
-import type { VideoFit } from '../settings';
+import { currentHost } from '@/lib/hosts';
+import { appLog } from '@/lib/hosts/shell/bridge';
+import type { VideoFit } from '@/lib/settings';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
-} from '../subtitles/embedded';
-import type { FileSubtitle } from '../subtitles/file-subtitle';
-import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
-import { assLayer, canDrawAss } from '../subtitles/libass';
-import { subtitleHeight, subtitleLine } from '../subtitles/style';
-import { videoSurface, type SubtitleLayer } from '../subtitles/surface';
+} from '@/lib/subtitles/embedded';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
+import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
+import { assLayer, canDrawAss } from '@/lib/subtitles/libass';
+import { subtitleHeight, subtitleLine } from '@/lib/subtitles/style';
+import { videoSurface, type SubtitleLayer } from '@/lib/subtitles/surface';
 import type {
   EngineFactory,
   EngineFile,

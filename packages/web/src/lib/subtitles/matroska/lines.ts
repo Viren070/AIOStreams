@@ -1,4 +1,4 @@
-import type { Span } from '../align';
+import type { Span } from '@/lib/subtitles/align';
 import type { MkvFile, MkvSubtitle } from './file';
 
 /** How long a line whose index entry has no duration shows, at most, before the next. */

@@ -1,4 +1,4 @@
-import { PRUNE_AFTER_MS } from '../libass';
+import { PRUNE_AFTER_MS } from '@/lib/subtitles/libass';
 import { startsEpoch } from './display-set';
 import { PgsSets, type DrawnSet } from './sets';
 import type { PgsReply, PgsRequest } from './worker';
@@ -7,7 +7,7 @@ import {
   type PictureSurface,
   type ShownFrame,
   type SubtitleLayer,
-} from '../surface';
+} from '@/lib/subtitles/surface';
 
 export interface PictureEvent {
   startMs: number;

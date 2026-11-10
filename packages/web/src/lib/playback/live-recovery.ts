@@ -1,6 +1,6 @@
 import React from 'react';
-import { appLog } from '../hosts/shell/bridge';
-import { useLatest } from '../use-latest';
+import { appLog } from '@/lib/hosts/shell/bridge';
+import { useLatest } from '@/hooks/use-latest';
 import type { PlayerState } from './controller';
 
 const DELAYS_MS = [0, 1_000, 3_000, 5_000];

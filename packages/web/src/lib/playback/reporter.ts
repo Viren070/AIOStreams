@@ -1,10 +1,10 @@
 import React from 'react';
-import { ConnectionError, type JellyfinClient } from '../client';
-import { useReachable } from '../connection';
-import { TICKS_PER_MS } from '../format';
-import { useRefreshWatchState } from '../queries';
-import { useSession } from '../session';
-import { storage } from '../storage';
+import { ConnectionError, type JellyfinClient } from '@/lib/jellyfin/client';
+import { useReachable } from '@/lib/jellyfin/connection';
+import { TICKS_PER_MS } from '@/lib/format';
+import { useRefreshWatchState } from '@/lib/jellyfin/queries';
+import { useSession } from '@/lib/jellyfin/session';
+import { storage } from '@/lib/storage';
 
 const PROGRESS_EVERY_MS = 10_000;
 const PENDING_KEY = 'aiostreams-web-pending-progress';

@@ -1,5 +1,5 @@
-import { firstInLanguages, sameLanguage } from '../languages';
-import type { PlaybackPrefs } from '../user-config';
+import { firstInLanguages, sameLanguage } from '@/lib/languages';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
 
 /** The kinds of audio track the user ranks. */
 export const AUDIO_TYPES = ['main', 'description', 'commentary'] as const;

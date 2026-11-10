@@ -1,5 +1,5 @@
 import { formatBytes } from '@aiostreams/ui/core/format';
-import type { EngineStats, StatsRow } from '../../playback/engine';
+import type { EngineStats, StatsRow } from '@/lib/playback/engine';
 import { t } from '@lingui/core/macro';
 import { ask } from './bridge';
 

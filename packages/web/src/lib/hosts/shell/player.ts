@@ -1,26 +1,26 @@
 import { t } from '@lingui/core/macro';
-import { fullTitle } from '../../format';
+import { fullTitle } from '@/lib/format';
 import {
   base64,
   checkSubtitleFile,
   readSubtitleFile,
-} from '../../subtitles/files';
-import { settings, type SubtitleStyle } from '../../settings';
-import { subtitleLanguages } from '../../user-config';
+} from '@/lib/subtitles/files';
+import { settings, type SubtitleStyle } from '@/lib/settings';
+import { subtitleLanguages } from '@/lib/jellyfin/user-config';
 import {
   MPV_OUTLINE,
   MPV_SHADOW,
   mpvColor,
   subtitleScale,
-} from '../../subtitles/style';
-import { parseChapters } from '../../playback/chapters';
-import { upscalingOn } from '../../playback/upscaling';
-import type { Span } from '../../subtitles/align';
+} from '@/lib/subtitles/style';
+import { parseChapters } from '@/lib/playback/chapters';
+import { upscalingOn } from '@/lib/playback/upscaling';
+import type { Span } from '@/lib/subtitles/align';
 import {
   ownTrackLabel,
   type QueuedItem,
   type Track,
-} from '../../playback/controller';
+} from '@/lib/playback/controller';
 import type {
   EngineFactory,
   EngineFile,
@@ -28,8 +28,8 @@ import type {
   EngineTrack,
   ServerSubtitle,
   VideoFrame,
-} from '../../playback/engine';
-import { audioCodes } from '../../playback/track-picks';
+} from '@/lib/playback/engine';
+import { audioCodes } from '@/lib/playback/track-picks';
 import { currentHost } from '..';
 import { appBridge, type AppTrack, type ShellMessage } from './bridge';
 import { exoStats } from './exo-stats';

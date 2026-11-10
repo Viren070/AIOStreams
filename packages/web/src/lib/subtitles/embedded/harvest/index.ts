@@ -1,5 +1,5 @@
-import { ReadError } from '../../../byte-reader';
-import type { FileSubtitle } from '../../file-subtitle';
+import { ReadError } from '@/lib/byte-reader';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
 
 export interface HarvestedEvent {
   startMs: number;

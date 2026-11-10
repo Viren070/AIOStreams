@@ -1,6 +1,10 @@
-import { readAll, ReadError } from '../../../byte-reader';
-import type { FileSubtitle } from '../../file-subtitle';
-import { sampleText, type Mp4File, type Mp4Sample } from '../../mp4/file';
+import { readAll, ReadError } from '@/lib/byte-reader';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
+import {
+  sampleText,
+  type Mp4File,
+  type Mp4Sample,
+} from '@/lib/subtitles/mp4/file';
 import {
   MERGE_GAP,
   MERGE_SPAN,

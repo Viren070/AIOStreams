@@ -3,8 +3,8 @@ import {
   isTextField,
   navigationBack,
   runAction,
-} from '../../input';
-import { UNDER_OPACITY, UNDER_SHIFT } from '../../page-open';
+} from '@/lib/input';
+import { UNDER_OPACITY, UNDER_SHIFT } from '@/lib/page-open';
 
 const GLIDE = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
 /** Longer than `history.back` takes to land. */

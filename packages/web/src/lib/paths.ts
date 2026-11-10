@@ -1,6 +1,6 @@
 import { openPage } from './page-open';
-import type { ServerInfo } from './server-info';
-import type { BaseItemDto } from './types';
+import type { ServerInfo } from './jellyfin/server-info';
+import type { BaseItemDto } from './jellyfin/types';
 
 /*
  * The app routes on the URL hash, like jellyfin-web, so it works under any

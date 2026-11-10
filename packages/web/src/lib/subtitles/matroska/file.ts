@@ -6,8 +6,8 @@ import {
   streamOf,
   withStart,
   type ByteReader,
-} from '../../byte-reader';
-import type { FileSubtitle, SubtitleKind } from '../file-subtitle';
+} from '@/lib/byte-reader';
+import type { FileSubtitle, SubtitleKind } from '@/lib/subtitles/file-subtitle';
 import {
   ATTACHED_FILE,
   ATTACHMENTS,

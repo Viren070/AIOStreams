@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
-import { formatLocale } from '../i18n';
-import type { SyncOutcome } from '../playback/controller';
-import { storedMap } from '../storage';
+import { formatLocale } from '@/lib/i18n';
+import type { SyncOutcome } from '@/lib/playback/controller';
+import { storedMap } from '@/lib/storage';
 
 import type { SubtitleLine } from './cues';
 

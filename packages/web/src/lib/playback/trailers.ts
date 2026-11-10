@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { currentHost } from '../hosts';
-import type { BaseItemDto } from '../types';
+import { currentHost } from '@/lib/hosts';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 export interface Trailer {
   name: string;

@@ -1,6 +1,6 @@
 import React from 'react';
-import { useSavedSrc } from '../lib/cache/images';
-import { useNear } from '../lib/use-in-view';
+import { useSavedSrc } from '@/lib/cache/images';
+import { useNear } from '@/hooks/use-in-view';
 
 /** An `<img>` that shows the device's saved copy, and saves what it loads. */
 export function CachedImage({

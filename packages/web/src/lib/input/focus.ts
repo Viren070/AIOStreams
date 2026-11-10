@@ -1,5 +1,5 @@
 import { drift, glideBy, glideTo, headedTo } from './glide';
-import { pageRtl } from '../direction';
+import { pageRtl } from '@/lib/direction';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 

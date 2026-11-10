@@ -1,5 +1,5 @@
 import React from 'react';
-import type { JellyfinClient } from './client';
+import type { JellyfinClient } from './jellyfin/client';
 import { storage } from './storage';
 import { CACHE_CATEGORIES } from './cache/store';
 import { appBridge } from './hosts/shell/bridge';

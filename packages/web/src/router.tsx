@@ -8,25 +8,25 @@ import {
   createRouter,
   Outlet,
 } from '@tanstack/react-router';
-import { PageMessage, WebLayout } from './components/layout';
+import { PageMessage, WebLayout } from './components/shell/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
 import { openStartPage } from './lib/start-page';
-import { DiscoverIndex, DiscoverPage } from './pages/discover';
-import { FavouritesPage } from './pages/favourites';
-import { CalendarPage } from './pages/calendar';
-import { LiveTvPage } from './pages/live-tv';
-import { SearchPage } from './pages/search';
-import { ItemPage } from './pages/item';
-import { PersonPage } from './pages/person';
-import { HistoryPage } from './pages/history';
-import { DownloadsPage } from './pages/downloads';
+import { DiscoverIndex, DiscoverPage } from './app/discover/page';
+import { FavouritesPage } from './app/favourites/page';
+import { CalendarPage } from './app/calendar/page';
+import { LiveTvPage } from './app/live-tv/page';
+import { SearchPage } from './app/search/page';
+import { ItemPage } from './app/item/page';
+import { PersonPage } from './app/person/page';
+import { HistoryPage } from './app/history/page';
+import { DownloadsPage } from './app/downloads/page';
 import { openPlayback } from './lib/playback/session';
 import { endNowPlaying } from './lib/playback/now-playing';
-import { TrailerPage } from './pages/trailer';
+import { TrailerPage } from './app/trailer/page';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
-import { SettingsPage } from './pages/settings';
+import { SettingsPage } from './app/settings/page';
 
 const rootRoute = createRootRoute({ component: Outlet });
 

@@ -1,6 +1,6 @@
 import type { Host } from '..';
 import { serviceFetch } from './service';
-import { youTubeResolver } from '../youtube';
+import { youTubeResolver } from '@/lib/hosts/youtube';
 
 interface WebOSSystem {
   deviceInfo?: string;

@@ -2,20 +2,24 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import type { JellyfinClient } from '../client';
-import { currentHost } from '../hosts';
-import { navigate, to } from '../paths';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { currentHost } from '@/lib/hosts';
+import { navigate, to } from '@/lib/paths';
 import {
   closePlayback,
   playbackNow,
   playOn,
   stopPlayback,
-} from '../playback/session';
-import { playableSources } from '../playback/play';
-import { chosenPlayer } from '../playback/player-choice';
-import { requestItem, usePlaybackInfoOptions } from '../queries';
-import { useSession } from '../session';
-import type { BaseItemDto, BaseItemDtoQueryResult, SourceInfo } from '../types';
+} from '@/lib/playback/session';
+import { playableSources } from '@/lib/playback/play';
+import { chosenPlayer } from '@/lib/playback/player-choice';
+import { requestItem, usePlaybackInfoOptions } from '@/lib/jellyfin/queries';
+import { useSession } from '@/lib/jellyfin/session';
+import type {
+  BaseItemDto,
+  BaseItemDtoQueryResult,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 import { matchingVersion, partyItemTitle, type PartyItem } from './items';
 import {
   party,

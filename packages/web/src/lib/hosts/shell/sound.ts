@@ -1,4 +1,4 @@
-import { settings, type PassthroughFormat } from '../../settings';
+import { settings, type PassthroughFormat } from '@/lib/settings';
 
 /** The formats left on, as mpv names them; `dts-hd` passes DTS's core too. */
 function formatList(formats: Record<PassthroughFormat, boolean>): string[] {

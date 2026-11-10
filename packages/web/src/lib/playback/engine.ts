@@ -1,7 +1,11 @@
-import type { SubtitleStyle, VideoFit } from '../settings';
-import type { Span } from '../subtitles/align';
-import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
-import type { PlaybackPrefs } from '../user-config';
+import type { SubtitleStyle, VideoFit } from '@/lib/settings';
+import type { Span } from '@/lib/subtitles/align';
+import type {
+  BaseItemDto,
+  MediaStream,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
 import type { Chapter } from './chapters';
 import type { PlayerState, QueuedItem, Track } from './controller';
 import type { TimeRange } from './playhead';

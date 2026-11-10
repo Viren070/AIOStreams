@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { formatLocale } from './i18n';
 import { settings } from './settings';
-import type { BaseItemDto } from './types';
+import type { BaseItemDto } from './jellyfin/types';
 
 export const TICKS_PER_MS = 10_000;
 

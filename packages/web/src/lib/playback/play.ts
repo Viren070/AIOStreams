@@ -1,21 +1,28 @@
 import { t } from '@lingui/core/macro';
 import { useQueryClient } from '@tanstack/react-query';
-import { currentHost } from '../hosts';
-import { usePlaybackInfoOptions } from '../queries';
-import { fullTitle, ticksToMs } from '../format';
-import { navigate, to } from '../paths';
+import { currentHost } from '@/lib/hosts';
+import { usePlaybackInfoOptions } from '@/lib/jellyfin/queries';
+import { fullTitle, ticksToMs } from '@/lib/format';
+import { navigate, to } from '@/lib/paths';
 import { externalReturnUrl } from './external-return';
 import { chosenPlayer, playerLink } from './player-choice';
 import { directUrl } from './stream';
-import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
-import { useSession } from '../session';
-import { storedMap } from '../storage';
-import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
-import { useFollowing } from '../playlists';
-import { sameLanguage } from '../languages';
-import { party } from '../party/party';
-import { usePlayForParty } from '../party/actions';
-import type { BaseItemDto, PlaybackInfoResponse, SourceInfo } from '../types';
+import { subtitleUrl, textSubtitles } from '@/lib/subtitles/tracks';
+import { useSession } from '@/lib/jellyfin/session';
+import { storedMap } from '@/lib/storage';
+import {
+  subtitleLanguages,
+  usePlaybackPrefs,
+} from '@/lib/jellyfin/user-config';
+import { useFollowing } from '@/lib/playlists';
+import { sameLanguage } from '@/lib/languages';
+import { party } from '@/lib/party/party';
+import { usePlayForParty } from '@/lib/party/actions';
+import type {
+  BaseItemDto,
+  PlaybackInfoResponse,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 
 /** The version each item last played in, which resuming it goes straight to. */
 export const lastVersions = storedMap<string>(

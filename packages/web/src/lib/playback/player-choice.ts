@@ -1,8 +1,8 @@
 import { t } from '@lingui/core/macro';
-import { currentHost } from '../hosts';
-import { settings } from '../settings';
-import { storage } from '../storage';
-import { appBridge } from '../hosts/shell/bridge';
+import { currentHost } from '@/lib/hosts';
+import { settings } from '@/lib/settings';
+import { storage } from '@/lib/storage';
+import { appBridge } from '@/lib/hosts/shell/bridge';
 
 type Platform = 'ios' | 'android' | 'macos';
 

@@ -1,5 +1,5 @@
 import { t } from '@lingui/core/macro';
-import { formatLocale } from '../i18n';
+import { formatLocale } from '@/lib/i18n';
 import { parseSubtitle, type SubtitleCue } from './cues';
 
 const MAX_BYTES = 10 * 1024 * 1024;

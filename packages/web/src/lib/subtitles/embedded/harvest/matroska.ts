@@ -1,19 +1,24 @@
-import { concat, readAll, ReadError } from '../../../byte-reader';
+import { concat, readAll, ReadError } from '@/lib/byte-reader';
 import {
   blockTrack,
   clusterHead,
   readBlock,
   type Block,
   type ClusterHead,
-} from '../../matroska/blocks';
-import { BLOCK_GROUP, CLUSTER, SIMPLE_BLOCK, head } from '../../matroska/ebml';
+} from '@/lib/subtitles/matroska/blocks';
+import {
+  BLOCK_GROUP,
+  CLUSTER,
+  SIMPLE_BLOCK,
+  head,
+} from '@/lib/subtitles/matroska/ebml';
 import {
   blockText,
   decoded,
   type CueEntry,
   type MkvFile,
   type MkvSubtitle,
-} from '../../matroska/file';
+} from '@/lib/subtitles/matroska/file';
 import {
   MERGE_GAP,
   MERGE_SPAN,

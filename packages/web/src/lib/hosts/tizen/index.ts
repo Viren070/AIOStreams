@@ -1,5 +1,5 @@
 import type { Host } from '..';
-import { youTubeResolver } from '../youtube';
+import { youTubeResolver } from '@/lib/hosts/youtube';
 import { avPlayEngine } from './player';
 
 export interface AvPlayTrack {

@@ -1,13 +1,13 @@
 import { i18n, type MessageDescriptor } from '@lingui/core';
 import { msg, t } from '@lingui/core/macro';
-import type { Host } from '../hosts';
+import type { Host } from '@/lib/hosts';
 import {
   browserFeatures,
   webGpuFeatures,
   type PlayerFeature,
-} from '../playback/controller';
-import { playsWithWebGpu } from '../playback/player-choice';
-import { settings, useSetting } from '../settings';
+} from '@/lib/playback/controller';
+import { playsWithWebGpu } from '@/lib/playback/player-choice';
+import { settings, useSetting } from '@/lib/settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'live' | 'sync';
 

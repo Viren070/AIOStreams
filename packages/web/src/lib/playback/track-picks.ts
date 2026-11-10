@@ -1,17 +1,17 @@
-import { firstInLanguages, languageCode, sameLanguage } from '../languages';
+import { firstInLanguages, languageCode, sameLanguage } from '@/lib/languages';
 import {
   bestOfTypes,
   forcedOnly,
   preferredSubtitle,
   type SubtitleFacts,
-} from '../subtitles/tracks';
-import type { SourceInfo } from '../types';
+} from '@/lib/subtitles/tracks';
+import type { SourceInfo } from '@/lib/jellyfin/types';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
   subtitleLanguages,
   type PlaybackPrefs,
-} from '../user-config';
+} from '@/lib/jellyfin/user-config';
 import { audioTypes, betterAudioFor } from './audio-tracks';
 import type { EngineTrack, ServerSubtitle } from './engine';
 

@@ -1,5 +1,8 @@
-import type { EmbeddedSubtitles } from '../subtitles/embedded';
-import { subtitleCodec, type FileSubtitle } from '../subtitles/file-subtitle';
+import type { EmbeddedSubtitles } from '@/lib/subtitles/embedded';
+import {
+  subtitleCodec,
+  type FileSubtitle,
+} from '@/lib/subtitles/file-subtitle';
 import { ownTrackLabel } from './controller';
 import type { EngineTrack, PlayerEngine } from './engine';
 

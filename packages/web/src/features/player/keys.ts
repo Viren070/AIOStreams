@@ -1,0 +1,324 @@
+import { t } from '@lingui/core/macro';
+import React from 'react';
+import {
+  CHAPTER_SNAP_MS,
+  chapterAt,
+  chapterSeekMs,
+} from '@/lib/playback/chapters';
+import { currentHost } from '@/lib/hosts';
+import {
+  focusOn,
+  keyboardFocus,
+  movesFocus,
+  onAction,
+  type ActionId,
+} from '@/lib/input';
+import { useLatest } from '@/hooks/use-latest';
+import type { PlayerController } from '@/lib/playback/controller';
+import { canUpscale } from '@/lib/playback/player-choice';
+import { pickUpscaling, upscalingOn } from '@/lib/playback/upscaling';
+import { settings } from '@/lib/settings';
+import { delayNotice, SUBTITLE_DELAY_STEP_MS } from '@/lib/subtitles/delay';
+import { formatLocale } from '@/lib/i18n';
+import {
+  stepSubtitleHeight,
+  stepSubtitleSize,
+  subtitleSizeLabel,
+} from '@/lib/subtitles/style';
+
+export const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+export function rateLabel(rate: number): string {
+  if (rate === 1) return t`Normal`;
+  const shown = rate.toLocaleString(formatLocale());
+  return t`${shown}×`;
+}
+
+/** Back to a chapter's start, or the one before when it has only just begun. */
+const RESTART_CHAPTER_MS = 3000;
+
+/** `quiet` leaves the controls hidden, `brief` shows them for a moment. */
+type Outcome = boolean | void | 'quiet' | 'brief';
+
+interface PlayerKeys {
+  player: PlayerController;
+  /** The controls, which Back leaves before it leaves the player. */
+  root: React.RefObject<HTMLElement | null>;
+  /** False until the first frame. */
+  ready: boolean;
+  /** Whether the controls show, which Back hides first on a TV. */
+  visible(): boolean;
+  wake(): void;
+  /** Shows the controls for a moment. */
+  glance(): void;
+  glancing(): boolean;
+  hide(): void;
+  notice(text: string): void;
+  togglePlay(): void;
+  /** True when it scrubs, which shows the controls whatever the setting. */
+  seekBy(deltaMs: number, held: boolean): boolean;
+  /** Plays from a remote's scrub, or drops it; false without one. */
+  endScrub(commit: boolean): boolean;
+  onBack(): void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  /** Set while the skip button shows. */
+  skipSegment?: () => void;
+  speedUp(): (() => void) | false;
+  /** A channel's: digits pick one by its number, and `step` moves along the list. */
+  zap?: { step?: (sign: number) => void; type(digit: string): void };
+}
+
+/** The player's shortcuts, each of which also shows the controls. */
+export function usePlayerKeys(keys: PlayerKeys): void {
+  const latest = useLatest(keys);
+  const { subtitle } = keys.player.state;
+  const lastSubtitle = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (subtitle) lastSubtitle.current = subtitle;
+  }, [subtitle]);
+
+  React.useEffect(() => {
+    const k = () => latest.current;
+    const player = () => latest.current.player;
+
+    const nudgeVolume = (sign: number) => {
+      const { state, setVolume } = player();
+      const by = (sign * settings.controls.volumeStep.read()) / 100;
+      const next = Math.round((state.volume + by) * 100) / 100;
+      const volume = Math.min(state.maxVolume, Math.max(0, next));
+      setVolume(volume);
+      const percent = Math.round(volume * 100);
+      k().notice(t`Volume ${percent}%`);
+    };
+    const nudgeSubtitles = (sign: number) => {
+      const { state, setSubtitleDelay } = player();
+      if (!setSubtitleDelay || !state.subtitle) return false;
+      const next = state.subtitleDelayMs + sign * SUBTITLE_DELAY_STEP_MS;
+      setSubtitleDelay(next);
+      k().notice(delayNotice(next));
+    };
+    const resizeSubtitles = (sign: number) => {
+      if (!player().state.subtitle) return false;
+      const size = stepSubtitleSize(sign) ?? settings.subtitle.size.read();
+      const label = subtitleSizeLabel(size);
+      k().notice(t`Subtitle size: ${label}`);
+    };
+    const raiseSubtitles = (sign: number) => {
+      if (!player().state.subtitle) return false;
+      const height =
+        stepSubtitleHeight(sign) ?? settings.subtitle.position.read();
+      k().notice(t`Subtitle height ${height}%`);
+    };
+    const changeRate = (rate: number) => {
+      const { setRate } = player();
+      if (!setRate) return false;
+      setRate(rate);
+      const shown = rate.toLocaleString(formatLocale());
+      k().notice(rate === 1 ? t`Normal speed` : t`Speed ${shown}×`);
+    };
+    const stepRate = (sign: number) => {
+      const { rate } = player().state;
+      const nearest = RATES.reduce(
+        (best, r, i) =>
+          Math.abs(r - rate) < Math.abs(RATES[best] - rate) ? i : best,
+        0
+      );
+      const next = Math.min(RATES.length - 1, Math.max(0, nearest + sign));
+      return changeRate(RATES[next]);
+    };
+    const showSubtitle = (id: string | null) => {
+      const { subtitleTracks, setSubtitle } = player();
+      setSubtitle(id);
+      const label = subtitleTracks.find((t) => t.id === id)?.label;
+      k().notice(label ? t`Subtitles: ${label}` : t`Subtitles off`);
+    };
+    const chapterStep = (sign: number) => {
+      const { chapters, playhead, seek, thumbnails } = player();
+      if (!chapters?.length) return false;
+      const at = chapterAt(chapters, playhead.positionMs + CHAPTER_SNAP_MS);
+      const into = playhead.positionMs - (chapters[at]?.startMs ?? 0);
+      const to =
+        sign > 0
+          ? at + 1
+          : into > RESTART_CHAPTER_MS
+            ? at
+            : Math.max(0, at - 1);
+      const chapter = chapters[to];
+      if (!chapter) return false;
+      seek(chapterSeekMs(chapter.startMs, thumbnails));
+      const number = to + 1;
+      k().notice(chapter.title || t`Chapter ${number}`);
+    };
+    const call = (fn: (() => void) | undefined) => {
+      if (!fn) return false;
+      fn();
+    };
+    const zapStep = (sign: number): Outcome => {
+      const step = k().zap?.step;
+      if (!step) return false;
+      step(sign);
+      return 'quiet';
+    };
+    // A remote's own volume keys set a TV's volume, so Up and Down change channel or bring the controls back.
+    const upDown = (sign: number): Outcome => {
+      if (!currentHost().tv) return nudgeVolume(sign);
+      // Down moves down the list, to the next channel.
+      if (!k().visible() && k().zap?.step) return zapStep(-sign);
+      focusControls();
+    };
+    /** The skip button while it shows, else play. */
+    const focusControls = () => {
+      const root = k().root.current;
+      const target =
+        root?.querySelector<HTMLElement>('[data-ui=skip-segment] button') ??
+        [
+          ...(root?.querySelectorAll<HTMLElement>('[data-name=play]') ?? []),
+        ].find((el) => el.getClientRects().length);
+      if (target) focusOn(target);
+    };
+
+    const quietly = () =>
+      !k().visible() && !settings.controls.showOnPauseAndSkip.read();
+    const playKey = (toggle: () => void): Outcome => {
+      const quiet = quietly();
+      toggle();
+      if (quiet) return 'quiet';
+    };
+    const skip = (sign: number, repeat: boolean): Outcome => {
+      const hidden = !k().visible() || k().glancing();
+      const quiet = quietly();
+      const ms = sign * settings.controls.seekStep.read() * 1000;
+      if (k().seekBy(ms, repeat) || !hidden) return;
+      return quiet ? 'quiet' : 'brief';
+    };
+
+    const actions: Partial<
+      Record<ActionId, (input: string, repeat: boolean) => Outcome>
+    > = {
+      'player.controls': () => {
+        if (keyboardFocus()) return false;
+        if (k().endScrub(true)) return;
+        if (
+          k().root.current?.querySelector(
+            '[data-ui=skip-segment][data-visible]'
+          )
+        )
+          return call(k().skipSegment);
+        if (k().visible()) return focusControls();
+        return playKey(() => {
+          k().togglePlay();
+          if (settings.controls.showOnPauseAndSkip.read()) focusControls();
+        });
+      },
+      'player.playPause': () =>
+        playKey(() => {
+          if (!k().endScrub(true)) k().togglePlay();
+        }),
+      'player.play': () =>
+        playKey(() => {
+          if (!k().endScrub(true) && player().state.paused) k().togglePlay();
+        }),
+      'player.pause': () =>
+        playKey(() => {
+          if (!player().state.paused) k().togglePlay();
+        }),
+      'player.stop': () => k().onBack(),
+      'player.skipBack': (_, repeat) => skip(-1, repeat),
+      'player.skipForward': (_, repeat) => skip(1, repeat),
+      'player.jump': (input) => {
+        const { zap } = k();
+        if (zap) {
+          zap.type(input);
+          return 'quiet';
+        }
+        const { state, seek } = player();
+        if (!state.durationMs) return false;
+        seek((state.durationMs * Number(input)) / 10);
+      },
+      'player.previousChapter': () => chapterStep(-1),
+      'player.nextChapter': () => chapterStep(1),
+      'player.skipSegment': () => call(k().skipSegment),
+      'player.previous': () => call(k().onPrevious),
+      'player.next': () => call(k().onNext),
+      'player.volumeUp': () => upDown(1),
+      'player.volumeDown': () => upDown(-1),
+      'live.channelUp': () => zapStep(1),
+      'live.channelDown': () => zapStep(-1),
+      'player.mute': () => player().toggleMute(),
+      'player.audio': () => {
+        const { audioTracks, state, setAudio } = player();
+        if (audioTracks.length < 2) return false;
+        const at = audioTracks.findIndex((t) => t.id === state.audio);
+        const next = audioTracks[(at + 1) % audioTracks.length];
+        setAudio(next.id);
+        const { label } = next;
+        k().notice(t`Audio: ${label}`);
+      },
+      'player.subtitles': () => {
+        const { subtitleTracks, state } = player();
+        if (!subtitleTracks.length) return false;
+        showSubtitle(
+          state.subtitle ? null : (lastSubtitle.current ?? subtitleTracks[0].id)
+        );
+      },
+      'player.nextSubtitles': () => {
+        const { subtitleTracks, state } = player();
+        if (!subtitleTracks.length) return false;
+        const ids = [null, ...subtitleTracks.map((t) => t.id)];
+        showSubtitle(ids[(ids.indexOf(state.subtitle) + 1) % ids.length]);
+      },
+      'player.subtitlesEarlier': () => nudgeSubtitles(-1),
+      'player.subtitlesLater': () => nudgeSubtitles(1),
+      'player.subtitlesSmaller': () => resizeSubtitles(-1),
+      'player.subtitlesBigger': () => resizeSubtitles(1),
+      'player.subtitlesLower': () => raiseSubtitles(-1),
+      'player.subtitlesHigher': () => raiseSubtitles(1),
+      'player.slower': () => stepRate(-1),
+      'player.faster': () => stepRate(1),
+      'player.normalSpeed': () => changeRate(1),
+      'player.fullscreen': () => call(player().toggleFullscreen),
+      'player.stats': () => {
+        const { stats } = player();
+        if (!stats) return false;
+        stats.show(stats.page ? null : stats.pages[0].id);
+      },
+      'player.upscaling': () => {
+        if (!canUpscale()) return false;
+        const on = !upscalingOn();
+        pickUpscaling(on);
+        k().notice(on ? t`Anime upscaling: on` : t`Anime upscaling: off`);
+      },
+    };
+
+    const stops = Object.entries(actions).map(([id, run]) =>
+      onAction(id as ActionId, (input, repeat) => {
+        if (!k().ready) return id === 'player.stop' ? k().onBack() : undefined;
+        // A control with keyboard focus moves on to the next with the arrows.
+        if (keyboardFocus() && movesFocus(input)) return false;
+        const outcome = run(input, repeat);
+        if (outcome === false) return false;
+        if (outcome === 'brief') k().glance();
+        else if (outcome !== 'quiet') k().wake();
+      })
+    );
+    // A focused control keeps its key.
+    stops.push(
+      onAction('player.speedUp', () =>
+        keyboardFocus() || !k().ready ? false : k().speedUp()
+      )
+    );
+    stops.push(
+      onAction('back', () => {
+        if (k().endScrub(false)) return;
+        const el = keyboardFocus();
+        if (el && k().root.current?.contains(el)) {
+          el.blur();
+          k().hide();
+        } else if (currentHost().tv && k().visible()) k().hide();
+        else if (!currentHost().back?.()) k().onBack();
+      })
+    );
+    return () => stops.forEach((stop) => stop());
+  }, [latest]);
+}

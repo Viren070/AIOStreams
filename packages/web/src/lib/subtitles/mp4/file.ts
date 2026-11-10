@@ -1,6 +1,6 @@
-import { readAll, withStart, type ByteReader } from '../../byte-reader';
-import type { Span } from '../align';
-import type { FileSubtitle } from '../file-subtitle';
+import { readAll, withStart, type ByteReader } from '@/lib/byte-reader';
+import type { Span } from '@/lib/subtitles/align';
+import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
 
 /** The index of a film of many hours and tracks can pass this; it isn't worth the read. */
 const MAX_MOOV = 24 * 1024 * 1024;
