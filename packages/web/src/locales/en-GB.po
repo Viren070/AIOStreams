@@ -73,7 +73,7 @@ msgstr "{episodeCount, plural, one {# episode watched} other {# episodes watched
 
 #: src/app/downloads/page.tsx
 #: src/app/history/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/seasons.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
 msgstr "{episodeCount, plural, one {# episode} other {# episodes}}"
 
@@ -243,7 +243,7 @@ msgstr "{title} isn't on your server."
 msgid "{total, plural, one {# title} other {# titles}}"
 msgstr "{total, plural, one {# title} other {# titles}}"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/seasons.tsx
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
 msgstr "{unairedCount, plural, one {# unaired} other {# unaired}}"
 
@@ -440,7 +440,7 @@ msgstr "Add another language"
 msgid "Add catalogs to your configuration, then refresh."
 msgstr "Add catalogs to your configuration, then refresh."
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/item-menu.tsx
 msgid "Add favourite"
@@ -450,7 +450,7 @@ msgstr "Add favourite"
 msgid "Add from Continue watching"
 msgstr "Add from Continue watching"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/media/item-menu.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Add to playlist"
@@ -485,7 +485,7 @@ msgstr "Ads"
 msgid "AIOStreams is a solo project built and maintained by me in my free time. If you find it useful, please consider supporting my work. Your donation helps me keep the project alive and improve it for everyone!"
 msgstr "AIOStreams is a solo project built and maintained by me in my free time. If you find it useful, please consider supporting my work. Your donation helps me keep the project alive and improve it for everyone!"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Airs"
 msgstr "Airs"
 
@@ -505,7 +505,7 @@ msgstr "All"
 msgid "All channels"
 msgstr "All channels"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/seasons.tsx
 msgid "All episodes"
 msgstr "All episodes"
 
@@ -985,7 +985,7 @@ msgid "Code or invite link"
 msgstr "Code or invite link"
 
 #: src/app/discover/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/collection.tsx
 #: src/lib/format.ts
 msgid "Collections"
 msgstr "Collections"
@@ -1229,7 +1229,7 @@ msgstr "Couldn't reach {relay}."
 msgid "Countdown"
 msgstr "Countdown"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Country"
 msgstr "Country"
 
@@ -1368,7 +1368,7 @@ msgstr "Desert"
 msgid "Desktop app"
 msgstr "Desktop app"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 #: src/components/media/item-menu.tsx
 #: src/features/versions/version-picker.tsx
 msgid "Details"
@@ -1478,7 +1478,7 @@ msgstr "Done"
 msgid "Down"
 msgstr "Down"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/app/settings/about.tsx
 #: src/components/media/item-menu.tsx
 #: src/features/downloads/download-button.tsx
@@ -1540,11 +1540,11 @@ msgstr "Downloads wait for Wi-Fi or another unmetered network rather than use mo
 msgid "Drawer"
 msgstr "Drawer"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Drop"
 msgstr "Drop"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Drop show"
 msgstr "Drop show"
 
@@ -1610,7 +1610,7 @@ msgstr "Episode details"
 msgid "Episode layout"
 msgstr "Episode layout"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/seasons.tsx
 #: src/app/settings/interface.tsx
 #: src/features/player/episodes.tsx
 #: src/features/player/options.tsx
@@ -1633,11 +1633,11 @@ msgstr "Esc"
 msgid "Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
 msgstr "Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Every {list}"
 msgstr "Every {list}"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Every {list} at {time}"
 msgstr "Every {list} at {time}"
 
@@ -1683,7 +1683,7 @@ msgstr "Fast forward"
 msgid "Faster"
 msgstr "Faster"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/features/live-tv/channel-list.tsx
 msgid "Favourite"
 msgstr "Favourite"
@@ -1742,7 +1742,7 @@ msgstr "Finding versions"
 msgid "Finding versions of {name}…"
 msgstr "Finding versions of {name}…"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "First aired"
 msgstr "First aired"
 
@@ -2022,7 +2022,7 @@ msgstr "In sync"
 msgid "In the app's downloads"
 msgstr "In the app's downloads"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/collection.tsx
 msgid "In this collection"
 msgstr "In this collection"
 
@@ -2314,12 +2314,12 @@ msgid "Mark unaired episodes"
 msgstr "Mark unaired episodes"
 
 #: src/app/history/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/media/item-menu.tsx
 msgid "Mark unwatched"
 msgstr "Mark unwatched"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/media/item-menu.tsx
 msgid "Mark watched"
 msgstr "Mark watched"
@@ -2385,7 +2385,7 @@ msgid "Monospace"
 msgstr "Monospace"
 
 #: src/app/downloads/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/header.tsx
 #: src/components/media/episodes.tsx
 #: src/components/media/overview.tsx
 #: src/features/playlists/playlists.tsx
@@ -2409,7 +2409,7 @@ msgstr "More info"
 msgid "More languages ({hidden})"
 msgstr "More languages ({hidden})"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/similar.tsx
 msgid "More like this"
 msgstr "More like this"
 
@@ -2729,7 +2729,7 @@ msgid "Nothing here yet. Add titles from their menu, or from the suggestions bel
 msgstr "Nothing here yet. Add titles from their menu, or from the suggestions below."
 
 #: src/app/discover/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/collection.tsx
 msgid "Nothing here."
 msgstr "Nothing here."
 
@@ -3175,8 +3175,8 @@ msgstr "PIN or password"
 msgid "Pink"
 msgstr "Pink"
 
+#: src/app/item/_components/header.tsx
 #: src/app/item/_components/no-details.tsx
-#: src/app/item/page.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/hero.tsx
 #: src/components/media/item-menu.tsx
@@ -3190,7 +3190,7 @@ msgstr "Pink"
 msgid "Play"
 msgstr "Play"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/header.tsx
 msgid "Play {code}"
 msgstr "Play {code}"
 
@@ -3198,7 +3198,7 @@ msgstr "Play {code}"
 msgid "Play anyway"
 msgstr "Play anyway"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/header.tsx
 msgid "Play from the start"
 msgstr "Play from the start"
 
@@ -3222,11 +3222,11 @@ msgstr "Play lists the versions to choose from, but resuming goes back to the ve
 msgid "Play now"
 msgstr "Play now"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Play on"
 msgstr "Play on"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/media/item-menu.tsx
 #: src/features/remote/remote-sheet.tsx
 msgid "Play on another device"
@@ -3338,7 +3338,7 @@ msgstr "Playing on {name}"
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 msgstr "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/features/player/options.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Playlist"
@@ -3484,11 +3484,11 @@ msgstr "Raise subtitles"
 msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 msgstr "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Random"
 msgstr "Random"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/media/item-menu.tsx
 #: src/components/media/random-pick.tsx
 msgid "Random episode"
@@ -3502,12 +3502,12 @@ msgstr "Random favourite"
 msgid "Random pick"
 msgstr "Random pick"
 
+#: src/app/item/_components/actions.tsx
 #: src/app/item/_components/rating.tsx
-#: src/app/item/page.tsx
 msgid "Rate"
 msgstr "Rate"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/seasons.tsx
 msgid "Rate season"
 msgstr "Rate season"
 
@@ -3574,7 +3574,7 @@ msgstr "Relay"
 msgid "Relay address"
 msgstr "Relay address"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Released"
 msgstr "Released"
 
@@ -3623,7 +3623,7 @@ msgstr "Remove {targetName} from this device? You will need to add it and sign i
 msgid "Remove {term}"
 msgstr "Remove {term}"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/item-menu.tsx
 msgid "Remove favourite"
@@ -3733,7 +3733,7 @@ msgstr "Results of what you searched for."
 msgid "Resume"
 msgstr "Resume"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/header.tsx
 msgid "Resume {code}"
 msgstr "Resume {code}"
 
@@ -3741,7 +3741,7 @@ msgstr "Resume {code}"
 msgid "Resume all"
 msgstr "Resume all"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/header.tsx
 #: src/features/versions/version-picker.tsx
 #: src/lib/playback/use-player.ts
 msgid "Resume from {resumeAt}"
@@ -4389,7 +4389,7 @@ msgstr "Stream link copied"
 msgid "Stretch"
 msgstr "Stretch"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/details.tsx
 msgid "Studios"
 msgstr "Studios"
 
@@ -5040,7 +5040,7 @@ msgstr "Track {n}"
 msgid "Tracks"
 msgstr "Tracks"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/lib/playback/trailers.ts
 msgid "Trailer"
 msgstr "Trailer"
@@ -5111,7 +5111,7 @@ msgstr "Unaired"
 msgid "Under posters"
 msgstr "Under posters"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Undrop show"
 msgstr "Undrop show"
 
@@ -5364,14 +5364,14 @@ msgstr "Watch as someone else on this configuration. A user with a PIN needs it 
 msgid "Watch parties"
 msgstr "Watch parties"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/shell/layout.tsx
 #: src/features/party/party-sheet.tsx
 #: src/features/player/options.tsx
 msgid "Watch party"
 msgstr "Watch party"
 
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 #: src/components/shell/layout.tsx
 #: src/features/party/party-sheet.tsx
 #: src/features/player/options.tsx
@@ -5379,7 +5379,7 @@ msgid "Watch together"
 msgstr "Watch together"
 
 #: src/app/history/page.tsx
-#: src/app/item/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Watched"
 msgstr "Watched"
 
