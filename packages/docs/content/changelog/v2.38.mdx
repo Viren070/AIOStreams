@@ -1,6 +1,6 @@
 ---
 title: Live TV, anime upscaling and a mini player
-description: Live TV with a programme guide and catch-up, sharper anime as it plays, a mini player, styled subtitles in the browser, and the apps in 12 more languages.
+description: Live TV with a programme guide and catch-up, a full player in the browser, sharper anime as it plays, a mini player, and the apps in 12 more languages.
 date: 2026-11-09
 version: 2.38.0
 ---
@@ -13,16 +13,19 @@ import { Callout } from 'fumadocs-ui/components/callout';
 one page, with a programme guide, catch-up and reminders. The new **Xtream** addon signs in to your
 provider with the details it gave you.
 
-The desktop and Android apps **upscale anime** as it plays, for sharper lines and cleaner
-compression, and a **mini player** keeps the video going in a corner while you look around the
-app. In a browser and on LG and Samsung TVs, **styled subtitles** now show as their authors made
-them, a file's own subtitle tracks show, and subtitles line themselves up as they do in the apps.
-An experimental **WebGPU engine** lets a browser play what it couldn't before, such as HEVC, Dolby
-Vision, TrueHD and DTS, with anime upscaling too.
+The app gets a **full player in a browser**. The new **WebGPU engine** plays what a browser
+couldn't, such as HEVC, Dolby Vision, TrueHD and DTS, and the player now switches audio tracks,
+shows a file's own subtitles, draws styled subtitles as their authors made them and lines subtitles
+up by itself. LG and Samsung TVs get the same subtitles.
+
+The desktop and Android apps, and the browser, **upscale anime** as it plays, for sharper lines and
+cleaner compression, and a **mini player** keeps the video going in a corner while you look around
+the app.
 
 Title pages show **a rating from each source**, from IMDb and Rotten Tomatoes to Letterboxd and
-Trakt. The featured title on Home gets **Play** and **More info**, and resting on a card opens a
-**preview**. Phones get a centred look, a labelled row of actions and Android's back swipe,
+Trakt. The featured title on Home gets **Play** and **More info**, a card you rest on opens out to
+its details, and **trailers play by themselves**: in the card, in the featured title and behind a
+title's page. Phones get a centred look, a labelled row of actions and Android's back swipe,
 computers and tablets can put the tabs **along the top**, and the player adds **chapters with
 pictures** and a **pause screen**.
 
@@ -83,14 +86,52 @@ as Live TV too. [Live TV](/apps/live-tv) has the details. The channels shown are
 _Sintel_ and _Tears of Steel_, © Blender Foundation, shared under
 [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 
+## Playing in a browser
+
+The app in a browser used to play only what the browser decodes itself. MKV files, HEVC video and
+surround sound often failed, there was no way to switch audio tracks, a file's own subtitles didn't
+show, and styled subtitles came out as plain text. Now the player reads and decodes the file itself
+with the new **WebGPU engine**, and draws it with the graphics card, so a browser plays much like
+the apps:
+
+- **More files play**: HEVC and Dolby Vision video, and AC-3, E-AC-3, TrueHD and DTS sound, in MKV
+  and MP4 files.
+- **Audio tracks.** The audio menu switches between a file's tracks, for another language or a
+  commentary.
+- **The file's own subtitles.** The subtitle tracks inside an MKV or MP4 file show in the subtitle
+  menu: ASS, SRT, WebVTT, MP4's own text subtitles, and PGS, the picture subtitles on Blu-rays.
+- **Styled subtitles as their authors made them.** ASS and SSA subtitles are drawn with libass, the
+  renderer mpv uses, so their styling, positions, signs, karaoke, animations and the fonts attached
+  to the file look as they do in the desktop and Android apps.
+- **Subtitles that line themselves up.** A subtitle from your addons, or a file you add, lines up
+  with the file's own subtitles by itself, and one made for another frame rate is retimed first.
+- **Anime upscaling and your own shaders.** See [Anime upscaling](#anime-upscaling).
+- **A stats panel** on **I**.
+
+None of it needs setting up.
+
+![Sintel playing in a browser with the WebGPU engine: a styled sign reading The Land of the Gatekeepers over the picture, a subtitle line below it, and the audio menu open on the file's AC-3 5.1 and DTS 5.1 tracks](/changelog/v2.38/browser.webp)
+
+### When the browser's own player plays
+
+The WebGPU engine needs a browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened
+over HTTPS. It also needs the file's host to let the browser read the file: streams through
+AIOStreams' proxy or its usenet streaming do, and so does TorBox.
+
+Otherwise, and for live channels and streams that need extra headers, the browser's own player
+plays as before. It still draws styled subtitles with libass, and shows a file's own subtitle tracks
+where the host allows. If the engine can't play a version, as it opens or partway through, the
+browser's player takes over at the same point, with the same audio and subtitles. **Engine** under
+**Settings → Playback → Player** switches to the browser's own player for everything.
+
 ## New in the app
 
 Everything here works in every app, in a browser too, unless it says otherwise.
 
 ### Anime upscaling
 
-The desktop and Android apps, and the [WebGPU engine](#the-webgpu-engine) in a browser, can upscale
-anime as it plays: lines come out sharper and compression cleaner, most of all in older and
+The desktop and Android apps, and the [WebGPU engine](#playing-in-a-browser) in a browser, can
+upscale anime as it plays: lines come out sharper and compression cleaner, most of all in older and
 lower-resolution shows. Turn on **Anime upscaling** under **Settings → Playback → Video**.
 
 <CompareSlider
@@ -116,10 +157,9 @@ lower-resolution shows. Turn on **Anime upscaling** under **Settings → Playbac
   both ExoPlayer and mpv, and uses more battery.
 - **Compare it.** In the desktop app and a browser, **U** turns it on and off for what's playing.
 - **Or bring your own.** The Android app's built-in mpv now takes your own shaders, with **Add a
-  shader** under **Settings → Android app**, as the desktop app's mpv folder already does. The
-  WebGPU engine takes shaders as `.wgsl` files, under **Shaders** in **Settings → Playback →
-  Player**; they stay in that browser and apply in name order. mpv's GLSL shaders need converting
-  first.
+  shader** under **Settings → Android app**, as the desktop app's mpv folder already does. In a
+  browser, **Shaders** under **Settings → Playback → Player** takes `.wgsl` files; they stay in
+  that browser and apply in name order. mpv's GLSL shaders need converting first.
 
 ### Mini player
 
@@ -130,47 +170,17 @@ the small player.
 
 ![Home in the desktop app with Project Hail Mary featured, and the mini player in the bottom corner playing Sintel, with its title, a pause button and a close button below the video](/changelog/v2.38/mini-player.webp)
 
-### Subtitles in the browser and on TVs
+### LG and Samsung TVs
 
-In a browser and in the LG and Samsung TV apps, the player now draws ASS and SSA subtitles with
-libass, the same renderer mpv uses. Their styling, positions, signs, karaoke, animations and fonts
-show as the subtitle's author made them, instead of as plain text, so anime fansubs look as they do
-in the desktop and Android apps.
+The TV apps keep the TV's own player, and get the browser's new subtitles:
 
-- **Tracks inside the file.** The subtitle tracks inside an MKV or MP4 file now show in the
-  subtitle menu, each with its format, as in the apps: ASS, SRT, WebVTT, MP4's own text subtitles,
-  and PGS, the picture subtitles on Blu-rays. ASS tracks use the fonts attached to the file. The
-  player reads only the subtitles and fonts it needs, not the whole file.
-- **Subtitles that line themselves up.** A subtitle from your addons, or a file you add, lines up
-  with the file's own subtitles by itself, and one made for another frame rate is retimed first, as
-  in the desktop and Android apps.
-- **Nothing to set up.** It works by itself, and where libass can't run, styled subtitles show as
-  plain text, as before.
-- **It follows the player**: the subtitle delay, subtitles moving up above the controls, how the
-  video fits the screen, and the mini player.
-- **Limits.** In a browser, a file's own tracks, and lining up with them, work only if its host
-  lets the browser read it. Streams through AIOStreams' proxy or its usenet streaming do, and so
-  does TorBox. The LG and Samsung apps read any host. A font a subtitle names without including
-  falls back to a default one, and very heavy typesetting can drop frames on a slow device.
-
-ASS subtitles from your addons now keep their styling in the desktop and Android apps too, where
-before they arrived as plain text.
-
-### The WebGPU engine
-
-A browser plays only what it can decode, so MKV files, HEVC video and surround audio often fail.
-The new **WebGPU** engine, under **Settings → Playback → Player → Engine**, reads and decodes the
-file in the page and draws it with the graphics card. With it, a browser plays HEVC, Dolby Vision,
-AC-3, E-AC-3 with Atmos, TrueHD and DTS. It's experimental, so it's off until you choose it.
-
-- **It steps aside by itself.** If it can't play a version, when it opens or partway through, the
-  browser's own player takes over at the same point, with the same audio and subtitles.
-- **The rest of the player comes with it**: an audio track menu, which a browser's own player
-  doesn't have, the subtitles above, the mini player, and a stats panel on **I**.
-- **Anime upscaling and shaders.** It upscales anime as the apps do, and takes your own `.wgsl`
-  shaders. See [Anime upscaling](#anime-upscaling).
-- **Where it shows.** In a browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened
-  over HTTPS. The TV apps keep the TV's own player.
+- **Styled subtitles as their authors made them**, drawn with libass instead of as plain text. Very
+  heavy typesetting can drop frames on a slower TV.
+- **The file's own subtitles.** The subtitle tracks inside an MKV or MP4 file show in the subtitle
+  menu, from any host, PGS included.
+- **Subtitles that line themselves up** with the file's own, as in the other apps.
+- **Trailers** now play, in the TV's own player, and
+  [by themselves](#trailers-that-play-by-themselves) as in the other apps.
 
 ### Ratings from each source
 
@@ -200,10 +210,37 @@ short, as on Home, the first three show. AIOMetadata sends them once its critic 
 - **Play and More info** sit on the featured title, for shows too. **Time on each title** under
   **Settings → Interface** sets how long it stays on each, and a swipe, or a drag with the mouse,
   moves it on sooner.
-- **Previews.** While the featured title rotates, a card you rest on with a mouse or a remote grows
-  into a bigger preview with its details. **Previews** under **Settings → Interface** turns them
+- **Cards you rest on.** While the featured title rotates, a card you rest on with a remote or the
+  keyboard opens out in its row to a wide picture with its details, and the cards after it slide
+  along. With a mouse it pops out a bigger preview over the row instead, so the cards under the
+  pointer stay put. **Card you rest on** under **Settings → Interface** picks which, or turns them
   off.
 - **Favourite channels** get a row of their own.
+
+### Trailers that play by themselves
+
+![Home on a TV, with the Project Hail Mary card in the Popular row opened out to a wide picture, its trailer playing under its logo, scores and synopsis, and the posters after it moved along](/changelog/v2.38/trailer-card.webp)
+
+Rest on a title for a moment and its trailer plays:
+
+- **In cards.** A moment after a card on Home opens out or pops out, its trailer plays in it, and
+  its details fade away. Move on and it stops.
+- **In the featured title.** When the featured title follows the card you're on, or sits in the
+  corner, the card's trailer plays in a wide box at the top of Home. When it rotates, a title's
+  trailer plays once you've gone to it yourself: up from the rows, turning to it, or picking its
+  dot.
+- **Behind a title's page.** Left at the top of a title's page for a few seconds, its trailer plays
+  behind the page. **Up**, **Playback controls** or the page's trailer button shows it whole with
+  the player's controls, carrying on from where it was, and **Back** returns to the page with it
+  still playing.
+
+![Project Hail Mary's page on a TV with its trailer playing behind it, Playing and the trailer's name in the corner, and Press Up for playback controls at the top](/changelog/v2.38/trailer-title.webp)
+
+**Play by themselves** under **Settings → Interface** picks where they play. They're on with a
+mouse and on TVs, and off on phones and tablets. **Sound** beside it plays them with sound, on by
+default only on TVs, and a trailer you open whole always has sound. On Samsung TVs they play by
+themselves only with Sound on. They wait while something plays, during a watch party, and when your
+device asks for reduced motion or your browser is saving data.
 
 ### On phones
 
@@ -237,6 +274,8 @@ short, as on Home, the first three show. AIOMetadata sends them once its critic 
 - **Select** plays or pauses while the controls are hidden. Turn off **Show the controls on pause
   and skip**, under **Settings → Playback**, to keep them hidden then.
 - **Subtitles move smoothly** up above the controls when they show, and back down after.
+- **Styled subtitles from addons.** In the desktop and Android apps, ASS subtitles from your addons
+  keep their styling, where before they arrived as plain text.
 - **The time** shows in the player's top bar.
 - **Find versions when a title opens**, under **Settings → Playback**, looks for versions as soon
   as a title's page opens, so **Play** doesn't wait.
@@ -262,7 +301,6 @@ _Sintel_ is © Blender Foundation, shared under
   **Repeat**, going back to the first title after the last.
 - **Faster on TVs.** Rows scroll with less work, artwork loads nearest first, at the size it's
   drawn, and the player's controls show and hide with about a third of the work they took.
-- **Trailers on LG and Samsung TVs** now play, in the TV's own player.
 - **Licences.** **About** lists the open source projects in the app, with their licences.
 - **More to style with custom CSS.** The new pages, the mini player, the player's top bar and
   chapters, and the episode states have hooks. See [Web app CSS](/reference/web-app-css).

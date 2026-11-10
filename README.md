@@ -154,7 +154,7 @@ for your computer, phone or TV.
 
 | Where | App | Plays with |
 | --- | --- | --- |
-| Any browser | Nothing to install; add it to a phone's home screen to open it like an app | The browser, or the experimental WebGPU engine for HEVC, Dolby Vision, TrueHD and DTS |
+| Any browser | Nothing to install; add it to a phone's home screen to open it like an app | A WebGPU engine: HEVC, Dolby Vision, TrueHD and DTS, audio tracks, styled subtitles |
 | Windows, macOS, Linux | [Desktop app](https://docs.aiostreams.viren070.me/apps/desktop) | mpv: nearly any format, HDR, surround passthrough, styled subtitles |
 | Android phones and tablets | [Android app](https://docs.aiostreams.viren070.me/apps/android) | ExoPlayer or mpv: HDR and Dolby Vision, passthrough, styled subtitles |
 | Android TV, Google TV, Fire TV | [Android app](https://docs.aiostreams.viren070.me/apps/android#on-a-tv), with a layout made for the remote | ExoPlayer or mpv |

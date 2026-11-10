@@ -120,7 +120,7 @@ Looking for how something works rather than a fix? See the [FAQ](/faq).
   <Accordion title="A video won't play, or has no sound, in a browser">
     AIOStreams never converts video, and browsers can't play many formats: MKV files, HEVC video, and DTS or TrueHD audio often fail.
 
-    - **Try the WebGPU engine.** Set **Engine** to **WebGPU** under **Settings → Playback → Player**. It decodes the file in the page, so HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS play. It's experimental, and only listed in a browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened over HTTPS. When it can't play a version, the browser's own player takes over, so you're back to the formats the browser supports.
+    - **Check the WebGPU engine can run.** It decodes the file in the page, so HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS play, but only in a browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened over HTTPS, and when the file's host lets the browser read it, as AIOStreams' proxy, its usenet streaming and TorBox do. **Engine** under **Settings → Playback → Player** should be on **WebGPU**. Otherwise the browser's own player plays, with only the formats the browser supports.
     - **Or use an app.** The [desktop](/apps/desktop) and [Android](/apps/android) apps play nearly anything, or choose another player under **Settings → Playback → Player**.
 
   </Accordion>
