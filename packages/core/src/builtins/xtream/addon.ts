@@ -10,6 +10,7 @@ import {
   iconOf,
   indexOfStream,
   lineupOf,
+  longestCatchupOf,
   nameOf,
   searchLineup,
 } from './lineup.js';
@@ -79,7 +80,10 @@ export class XtreamAddon {
   }
 
   async getManifest(): Promise<Manifest> {
-    const groups = await groupsOf(this.client);
+    const [groups, catchupDays] = await Promise.all([
+      groupsOf(this.client),
+      longestCatchupOf(this.client),
+    ]);
     return {
       id: `aiostreams.${this.prefix.slice(0, -1)}`,
       version: '1.0.0',
@@ -105,7 +109,11 @@ export class XtreamAddon {
         { name: 'meta', types: ['tv'], idPrefixes: [this.prefix] },
         { name: 'stream', types: ['tv'], idPrefixes: [this.prefix] },
       ],
-      behaviorHints: { configurable: false, epgProvider: true },
+      behaviorHints: {
+        configurable: false,
+        epgProvider: true,
+        ...(catchupDays && { catchupDays }),
+      },
     };
   }
 

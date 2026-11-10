@@ -183,6 +183,13 @@ const groupLists = new TieredStore<string[], string[]>('xtream-groups', {
   decode: (groups) => groups,
 });
 
+const catchups = new TieredStore<number, number>('xtream-catchup', {
+  memoryBytes: () => 1000 * 1000,
+  sizeOf: () => 8,
+  encode: (days) => days,
+  decode: (days) => days,
+});
+
 /** Category rows the providers list among their channels, like `##### UK #####`. */
 const SEPARATOR = /^\s*([#=*~_-])\1{2,}/;
 
@@ -368,6 +375,11 @@ function load(client: XtreamClient, key: string): Promise<Lineup> {
         lineup.groups,
         appConfig.builtins.xtream.lineupTtl + STALE_SECONDS
       );
+      await catchups.set(
+        key,
+        lineup.archiveDays.reduce((most, days) => Math.max(most, days), 0),
+        appConfig.builtins.xtream.lineupTtl + STALE_SECONDS
+      );
       return {
         value: lineup,
         ttl: appConfig.builtins.xtream.lineupTtl + STALE_SECONDS,
@@ -427,6 +439,11 @@ export async function groupsOf(client: XtreamClient): Promise<string[]> {
         .then(() => undefined),
     STALE_SECONDS
   );
+}
+
+/** The longest catch-up of the account's channels, 0 until they've loaded. */
+export async function longestCatchupOf(client: XtreamClient): Promise<number> {
+  return (await catchups.peek(keyOf(client)))?.[0] ?? 0;
 }
 
 export function indexOfStream(lineup: Lineup, streamId: number): number {

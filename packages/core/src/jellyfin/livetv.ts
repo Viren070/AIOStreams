@@ -131,7 +131,6 @@ export function airingAt(
 }
 
 const DAY_MS = 86_400_000;
-const GUIDE_SAMPLE = 100;
 const MAX_DAYS_BACK = 14;
 
 /** The UTC days a window touches, as the guide's `date` extra names them. */
@@ -516,19 +515,9 @@ export async function programmeTarget(
   return channelOf(d);
 }
 
-/** How far back the guide goes: the longest catch-up of the first channels listed. */
-export async function guideDaysBack(
-  engine: AIOStreams,
-  scope: string
-): Promise<number> {
-  const { channels } = await listChannels(engine, scope, {
-    startIndex: 0,
-    limit: GUIDE_SAMPLE,
-  });
-  return Math.min(
-    MAX_DAYS_BACK,
-    Math.max(0, ...channels.map(({ meta }) => catchupDaysOf(meta)))
-  );
+/** How far back the guide goes: the longest catch-up the addons declare. */
+export function guideDaysBack(engine: AIOStreams): number {
+  return Math.min(MAX_DAYS_BACK, engine.catchupDays());
 }
 
 /** Built on the entry's content item, so the channel keeps the id favourites and history know. */

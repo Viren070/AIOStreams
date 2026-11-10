@@ -1295,6 +1295,7 @@ export const ManifestSchema = z
         configurable: z.boolean().optional(),
         configurationRequired: z.boolean().optional(),
         epgProvider: z.boolean().optional(),
+        catchupDays: z.number().optional(),
       })
       .optional(),
     // not part of the manifest scheme, but needed for stremio-addons.net
