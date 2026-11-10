@@ -575,48 +575,22 @@ function scheduleSniff(
   ).catch(() => undefined);
 }
 
-/** Stands in for a sniffed entry's type when the entry is a collection. */
-const COLLECTION_ENTRY = 'collection';
-
-export type ViewKind = CollectionType | 'mixed';
-
-export function collectionTypeFor(
-  catalog: Catalog,
-  entryTypes: string[]
-): ViewKind {
-  const playable = [...new Set(entryTypes)];
-  const boxsets = /collection/i.test(
-    `${catalog.type} ${catalog.id} ${catalog.name}`
-  );
-  if (playable.length) {
-    if (playable.every((t) => t === COLLECTION_ENTRY)) return 'boxsets';
-    if (playable.every((t) => t === 'movie' || t === COLLECTION_ENTRY))
-      return boxsets ? 'boxsets' : 'movies';
-    if (playable.every((t) => t === 'series' || t === 'anime'))
-      return 'tvshows';
-    // Both kinds: fall through to the declared type, since a client may drop a
-    // library with no CollectionType rather than browse it as mixed.
-  }
-  if (boxsets) return 'boxsets';
-  switch (catalog.type) {
-    case 'movie':
-      return 'movies';
-    case 'series':
-    case 'anime':
-      return 'tvshows';
-    default:
-      return 'mixed';
-  }
-}
-
-/** The view's `CollectionType`, absent when the catalog is not one kind. */
-export function viewCollectionType(
-  catalog: Catalog,
-  entryTypes: string[]
-): CollectionType | undefined {
-  const kind = collectionTypeFor(catalog, entryTypes);
-  return kind === 'mixed' ? undefined : kind;
-}
+import {
+  COLLECTION_ENTRY,
+  collectionTypeFor,
+  viewCollectionType,
+  isBoxsetCatalog,
+  isBoxsetEntry,
+  type ViewKind,
+} from './classification.js';
+export {
+  COLLECTION_ENTRY,
+  collectionTypeFor,
+  viewCollectionType,
+  isBoxsetCatalog,
+  isBoxsetEntry,
+  type ViewKind,
+};
 
 export interface ViewEntry {
   id: string;
@@ -689,7 +663,7 @@ function sniffedKind(type: string, leaves: string[]): ContentKind {
 }
 
 /** What a sweep already learned about this catalog; never a fresh fetch. */
-async function cachedEvidence(
+export async function cachedEvidence(
   userData: UserData,
   catalog: Catalog
 ): Promise<ViewEvidence | undefined> {

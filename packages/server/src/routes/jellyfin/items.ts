@@ -29,6 +29,8 @@ import {
   Cache,
   collectionMembers,
   viewCollectionType,
+  isBoxsetCatalog,
+  isBoxsetEntry,
   config as appConfig,
   contentDescriptor,
   decodeItemId,
@@ -302,25 +304,7 @@ export async function attachUserData(
   return items;
 }
 
-export function isBoxsetCatalog(
-  catalog: { type: string; id: string; name: string } | undefined
-): boolean {
-  return (
-    !!catalog &&
-    /collection/i.test(`${catalog.type} ${catalog.id} ${catalog.name}`)
-  );
-}
-
-/** A `collection` entry, or a movie in a catalog named for collections. */
-export function isBoxsetEntry(
-  preview: Pick<MetaPreview, 'type' | 'collection'>,
-  catalog?: { type: string; id: string; name: string }
-): boolean {
-  return (
-    !!preview.collection ||
-    (isBoxsetCatalog(catalog) && preview.type === 'movie')
-  );
-}
+export { isBoxsetCatalog, isBoxsetEntry };
 
 /** A collection's `ChildCount`, when the meta alone says it. */
 function knownMemberCount(
@@ -337,13 +321,14 @@ export async function itemsFromPreviews(
   opts: {
     parentId?: string;
     catalog?: { type: string; id: string; name: string };
+    holdsCollections?: boolean;
   } = {}
 ): Promise<JellyfinItem[]> {
   const evidence = await ctx.leafEvidence();
   const items = previews.map((p) =>
     buildContentItem(ctx.build, p, {
       parentId: opts.parentId,
-      boxset: isBoxsetEntry(p, opts.catalog),
+      boxset: isBoxsetEntry(p, opts.catalog, opts.holdsCollections),
       leaf: isLeafEntry(p, evidence),
       childCount: p.collection ? knownMemberCount(p) : undefined,
       genreCatalog: opts.catalog
