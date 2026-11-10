@@ -2,14 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import { Button } from '@aiostreams/ui/button';
+import { Switch } from '@aiostreams/ui/switch';
 import { useSession } from '@/lib/jellyfin/session';
+import { settings, useSetting } from '@/lib/settings';
+import { chooseUsageStats, usageStatsOffered } from '@/lib/usage-stats';
+import { usageStatsText } from '@/components/shell/usage-stats';
 import { currentHost } from '@/lib/hosts';
 import { useShellInfo, type ShellInfo } from '@/lib/hosts/shell';
 import { serverAddress } from '@/lib/jellyfin/servers';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { LicensesSetting } from './_components/licenses';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { DOCS_URL } from './_components/common';
+import { DOCS_URL, onDevice } from './_components/common';
 
 const REPO_URL = 'https://github.com/Viren070/AIOStreams';
 
@@ -105,6 +109,7 @@ export function AboutSection() {
           </SettingsRow>
         ))}
       </SettingsCard>
+      {usageStatsOffered() && <UsageStatsCard />}
       <SettingsCard
         name="credits"
         title={t({
@@ -126,6 +131,25 @@ export function AboutSection() {
         <LicensesSetting />
       </SettingsCard>
     </>
+  );
+}
+
+function UsageStatsCard() {
+  const [on] = useSetting(settings.app.usageStats);
+  return (
+    <SettingsCard
+      name="usage-stats"
+      title={t`Usage statistics`}
+      description={onDevice()}
+    >
+      <Switch
+        side="right"
+        label={t`Send usage statistics`}
+        help={usageStatsText()}
+        value={on}
+        onValueChange={chooseUsageStats}
+      />
+    </SettingsCard>
   );
 }
 

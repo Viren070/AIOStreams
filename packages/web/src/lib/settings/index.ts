@@ -711,6 +711,11 @@ export const settings = {
     ),
     discord,
     discordEvents: group(discord),
+    usageStats: device<boolean>('aiostreams-web-app-usage-stats', true),
+    usageStatsNoticed: device<boolean>(
+      'aiostreams-web-app-usage-stats-noticed',
+      false
+    ),
   },
   cache: {
     enabled: device<boolean>('aiostreams-web-cache', true),

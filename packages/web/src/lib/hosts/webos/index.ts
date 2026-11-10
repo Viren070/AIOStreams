@@ -18,21 +18,32 @@ declare global {
 // PalmSystem is its older name.
 const system = () => window.webOSSystem ?? window.PalmSystem;
 
-function device(): { name: string } {
+function deviceInfo(): { modelName?: string; platformVersion?: string } {
   try {
-    const { modelName } = JSON.parse(system()?.deviceInfo ?? '{}') as {
-      modelName?: string;
-    };
-    if (modelName) return { name: `LG ${modelName}` };
-  } catch {}
+    return JSON.parse(system()?.deviceInfo ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+function device(): { name: string } {
+  const { modelName } = deviceInfo();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- how the server lists the device
-  return { name: 'LG TV' };
+  return { name: modelName ? `LG ${modelName}` : 'LG TV' };
 }
 
 const host: Host = {
   name: 'webos',
   tv: true,
   device,
+  system: () => {
+    const { modelName, platformVersion } = deviceInfo();
+    return {
+      name: 'webOS',
+      version: platformVersion ?? '',
+      model: modelName ?? '',
+    };
+  },
   exit: () => system()?.platformBack?.(),
   keepAwake: (on) =>
     system()?.setWindowProperty?.('blockScreenSaver', String(on)),

@@ -62,6 +62,8 @@ export interface Host {
   tv?: boolean;
   /** The app's own name for this device, and its id where its player reports as it. */
   device?(): { id?: string; name?: string } | null;
+  /** The system and the device's model, for a host the user agent doesn't name them in. */
+  system?(): { name: string; version: string; model: string };
   /** A player drawn beneath the page, in place of the page's own video. */
   player?: EngineFactory;
   playerFeatures?: readonly PlayerFeature[];

@@ -59,6 +59,8 @@ import { PlayerPage } from '@/app/player/page';
 import { PageShown } from '@/lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
+import { UsageStats } from './usage-stats';
+import { usageStatsOffered } from '@/lib/usage-stats';
 import { PartyHost } from '@/features/party/party-host';
 import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
@@ -500,6 +502,7 @@ function PagesWork({
     <>
       <DownloadRunner paused={playing} />
       {shellHost() && <UpdatePrompt />}
+      {usageStatsOffered() && <UsageStats />}
     </>
   );
 }

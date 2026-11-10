@@ -2820,6 +2820,10 @@ msgstr ""
 msgid "Off, the video jumps instead."
 msgstr ""
 
+#: src/components/shell/usage-stats.tsx
+msgid "OK"
+msgstr ""
+
 #: src/app/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
 msgstr ""
@@ -2842,6 +2846,10 @@ msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "On wide screens"
+msgstr ""
+
+#: src/components/shell/usage-stats.tsx
+msgid "Once a day, the app sends an anonymous count with your type of device, system, app version, language, and country and region. Nothing that identifies you or what you watch is kept."
 msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
@@ -3973,6 +3981,10 @@ msgstr ""
 #: src/app/settings/apps.tsx
 #: src/components/shell/crash-report.tsx
 msgid "Send report"
+msgstr ""
+
+#: src/app/settings/about.tsx
+msgid "Send usage statistics"
 msgstr ""
 
 #: src/features/party/chat.tsx
@@ -5120,6 +5132,10 @@ msgstr ""
 msgid "Tunneled playback"
 msgstr ""
 
+#: src/components/shell/usage-stats.tsx
+msgid "Turn off"
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
 msgstr ""
@@ -5227,6 +5243,11 @@ msgstr ""
 
 #: src/app/settings/page.tsx
 msgid "Updates, picture-in-picture, mpv and troubleshooting"
+msgstr ""
+
+#: src/app/settings/about.tsx
+#: src/components/shell/usage-stats.tsx
+msgid "Usage statistics"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
@@ -5645,6 +5666,10 @@ msgstr ""
 #: src/components/shell/nav/touch-rail.tsx
 #: src/components/shell/nav/tv-rail.tsx
 msgid "You"
+msgstr ""
+
+#: src/components/shell/usage-stats.tsx
+msgid "You can change this later in Settings, under About."
 msgstr ""
 
 #: src/lib/party/party.ts

@@ -108,6 +108,13 @@ function webGpuPlayer() {
   };
 }
 
+/** Set by the apps' release builds only, so forks and local builds send nothing. */
+function usageStats(standalone: boolean) {
+  const appKey = process.env.APTABASE_APP_KEY;
+  const host = process.env.APTABASE_HOST;
+  return standalone && appKey && host ? { appKey, host } : null;
+}
+
 /**
  * `--env-mode standalone` builds the app on its own, with a server list,
  * instead of the copy each server hosts at `/web`.
@@ -123,6 +130,9 @@ export default defineConfig(async ({ envMode }) => {
     __UNFINISHED_LOCALES__: JSON.stringify(await unfinishedLocales()),
     __LICENSES_FILE__: JSON.stringify(LICENSES_FILE),
     __WEBGPU_PLAYER_MODULE__: JSON.stringify(engine.module),
+    __USAGE_STATS__: JSON.stringify(usageStats(standalone)),
+    // Set by the TV apps' build: they have no bridge to tell the page.
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || null),
   };
   const source = {
     entry: { index: './src/main.tsx' },
