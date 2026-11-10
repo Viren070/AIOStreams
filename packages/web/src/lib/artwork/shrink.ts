@@ -5,172 +5,16 @@
  */
 
 import { maybeSaved, noteSaved, saving, schedulePrune } from '@/lib/cache';
-import { isReachable } from '@/lib/jellyfin/connection';
-
-export interface ShrinkJob {
-  id: number;
-  url: string;
-  width: number;
-  height: number;
-  save: boolean;
-  /** Reads the device's saved copy first. */
-  look: boolean;
-  /** What the small encoded copy for this box is saved as. */
-  copy: string;
-  lookCopy: boolean;
-  accept: string;
-}
-
-export interface ShrinkReply {
-  id: number;
-  /** The image as it is, at a blob address the worker made. */
-  src?: string;
-  /** How large the image at `src` is. */
-  bytes?: number;
-  /** The image shrunk to the box. */
-  bitmap?: ImageBitmap;
-  /** Sent on its own once a shrunk image has a small encoded copy. */
-  encoded?: { url: string; bytes: number } & Drawn;
-  error?: string;
-  /** The fetch itself failed, as it does when the host refuses cross-origin reads. */
-  blocked?: true;
-  /** The worker cannot draw at all, so no later job will fare better. */
-  unsupported?: true;
-  /** Sent on its own once a fetched image is saved. */
-  saved?: { url: string; bytes: number };
-}
+import { artworkKey, drawnArtwork, keepDrawn, type Drawn } from './drawn';
+import type { ShrinkJob, ShrinkReply } from './messages';
+import { imageAccept, noteRead, refused } from './reads';
 
 export type Shrunk =
   { src: string } | { bitmap: ImageBitmap } | { plain: true };
 
-export interface Drawn {
-  src: string;
-  width: number;
-  height: number;
-}
-
-const addresses = new Map<string, { key: string; origin: string }>();
-/** Past this many, the parsed addresses start over. */
-const ADDRESSES_KEPT = 4000;
-
-/** Parsed once, as every card asks again each time it draws. */
-function address(url: string) {
-  let found = addresses.get(url);
-  if (!found) {
-    const parsed = new URL(url, location.href);
-    parsed.searchParams.delete('maxWidth');
-    found = { key: parsed.href, origin: parsed.origin };
-    if (addresses.size >= ADDRESSES_KEPT) addresses.clear();
-    addresses.set(url, found);
-  }
-  return found;
-}
-
-/** An image's address without the size asked of it, naming it at any size. */
-export const artworkKey = (url: string): string => address(url).key;
-
-interface Kept extends Drawn {
-  bytes: number;
-  /** The worker that made the address `src`, which revokes it. */
-  maker: Worker;
-}
-
-/** Artwork by address, oldest first, so a card drawn again shows it at once. */
-const drawn = new Map<string, Kept & { key: string }>();
-/** Each image's newest address. */
-const newest = new Map<string, string>();
-let drawnBytes = 0;
-/** Some hundreds of posters at the sizes servers send for a card. */
-const DRAWN_BUDGET = 24_000_000;
-
-export function drawnArtwork(url: string): Drawn | undefined {
-  const src = newest.get(artworkKey(url));
-  const entry = src ? drawn.get(src) : undefined;
-  if (entry) {
-    drawn.delete(entry.src);
-    drawn.set(entry.src, entry);
-  }
-  return entry;
-}
-
-// Addresses left out of the cache are revoked once no card shows them.
-const shown = new Map<string, number>();
-const dropped = new Map<string, Worker>();
-
-/** Marks the address as shown until the returned function is called. */
-export function holdArtwork(src: string): () => void {
-  shown.set(src, (shown.get(src) ?? 0) + 1);
-  return () => {
-    const left = (shown.get(src) ?? 1) - 1;
-    if (left > 0) return void shown.set(src, left);
-    shown.delete(src);
-    const maker = dropped.get(src);
-    if (!maker) return;
-    dropped.delete(src);
-    maker.postMessage({ revoke: src });
-  };
-}
-
-function drop(entry: Kept) {
-  if (shown.has(entry.src)) dropped.set(entry.src, entry.maker);
-  else entry.maker.postMessage({ revoke: entry.src });
-}
-
-const waiting = new Map<string, Set<(src: string) => void>>();
-
-/** Calls `onCopy` with the image's encoded copy once one exists. */
-export function onDrawn(
-  url: string,
-  onCopy: (src: string) => void
-): () => void {
-  const key = artworkKey(url);
-  let set = waiting.get(key);
-  if (!set) waiting.set(key, (set = new Set()));
-  set.add(onCopy);
-  return () => {
-    set.delete(onCopy);
-    if (!set.size) waiting.delete(key);
-  };
-}
-
-function keep(url: string, entry: Kept) {
-  const key = artworkKey(url);
-  // An older copy ages out with the rest, as a card may be decoding it before
-  // it holds it.
-  newest.set(key, entry.src);
-  drawn.set(entry.src, { ...entry, key });
-  drawnBytes += entry.bytes;
-  for (const [oldest, old] of drawn) {
-    if (drawnBytes <= DRAWN_BUDGET) break;
-    drawn.delete(oldest);
-    drawnBytes -= old.bytes;
-    if (newest.get(old.key) === oldest) newest.delete(old.key);
-    drop(old);
-  }
-  for (const onCopy of waiting.get(key) ?? []) onCopy(entry.src);
-}
-
 /** Drawn a little larger is close enough, as an `<img>` shrinks that cleanly. */
 const fits = (entry: Drawn, width: number, height: number) =>
   entry.width >= width && entry.height >= height && entry.width <= width * 1.5;
-
-// What an `<img>` asks for. A fetch accepts anything, which image hosts answer
-// with the original JPEG or PNG instead of a WebP or AVIF of half the size.
-const ACCEPT = 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8';
-/** The smallest AVIF there is; older WebKit can't decode AVIF, so it's tried first. */
-const AVIF_PROBE =
-  'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+ErK42A=';
-let accept = ACCEPT;
-const probe = new Image();
-probe.src = AVIF_PROBE;
-probe.decode().then(
-  () => (accept = `image/avif,${ACCEPT}`),
-  () => undefined
-);
-
-export function imageAccept(): string {
-  return accept;
-}
 
 export const canShrink =
   typeof Worker === 'function' &&
@@ -250,35 +94,11 @@ export function blobAddress(blob: Blob): Promise<BlobAddress> {
   });
 }
 
-/*
- * A plain image cannot reuse a refused fetch's download, as the two are cached
- * apart, so a server whose images have never been readable stops being tried.
- */
-const reads = new Map<string, { blocked: number; read: number }>();
-
-function readsFor(url: string) {
-  const { origin } = address(url);
-  let entry = reads.get(origin);
-  if (!entry) reads.set(origin, (entry = { blocked: 0, read: 0 }));
-  return entry;
-}
-
-export function refused(url: string): boolean {
-  const { blocked, read } = readsFor(url);
-  return blocked >= 8 && read === 0;
-}
-
-/** Offline, a failed fetch says nothing about the host. */
-export function noteRead(url: string, readable: boolean): void {
-  if (readable) readsFor(url).read++;
-  else if (isReachable()) readsFor(url).blocked++;
-}
-
 function settle(job: Pending, reply: ShrinkReply, maker?: Worker) {
   if (reply.blocked) noteRead(job.url, false);
   else if (reply.src || reply.bitmap) noteRead(job.url, true);
   if (reply.src && maker)
-    keep(job.url, {
+    keepDrawn(job.url, {
       src: reply.src,
       width: job.width,
       height: job.height,
@@ -313,7 +133,7 @@ function start(): Slot | null {
     }
     if (e.data.encoded) {
       const { url, ...entry } = e.data.encoded;
-      keep(url, { ...entry, maker: worker });
+      keepDrawn(url, { ...entry, maker: worker });
     }
     const asked = addressing.get(e.data.id);
     if (asked) {
@@ -455,7 +275,7 @@ function dispatch() {
       look: save && maybeSaved(url),
       copy,
       lookCopy: save && maybeSaved(copy),
-      accept,
+      accept: imageAccept(),
     } satisfies ShrinkJob);
   }
 }

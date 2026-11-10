@@ -1,11 +1,6 @@
 import React from 'react';
-import {
-  blobAddress,
-  imageAccept,
-  noteRead,
-  refused,
-  type BlobAddress,
-} from '@/lib/artwork/artwork';
+import { imageAccept, noteRead, refused } from '@/lib/artwork/reads';
+import { blobAddress, type BlobAddress } from '@/lib/artwork/shrink';
 import { isReachable } from '@/lib/jellyfin/connection';
 import { settings, useSetting } from '@/lib/settings';
 import { maybeSaved, noteSaved, schedulePrune } from '.';

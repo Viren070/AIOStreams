@@ -1,4 +1,4 @@
-import type { ShrinkJob, ShrinkReply } from './artwork';
+import type { ShrinkJob, ShrinkReply } from './messages';
 import { readImage, writeImage } from '@/lib/cache/store';
 
 const scope = self as unknown as Worker;

@@ -5,12 +5,11 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { onScreen, useNear } from '@/hooks/use-in-view';
 import {
   artworkKey,
-  canShrink,
   drawnArtwork,
   holdArtwork,
   onDrawn,
-  shrinkArtwork,
-} from '@/lib/artwork/artwork';
+} from '@/lib/artwork/drawn';
+import { canShrink, shrinkArtwork } from '@/lib/artwork/shrink';
 import { currentHost } from '@/lib/hosts';
 import { drawnRatio } from '@/lib/artwork/images';
 import { settings, useSetting } from '@/lib/settings';
