@@ -942,8 +942,10 @@ function Player({
   useKeepAwake(player, !hostPlayer);
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
+  const openedPaused = pausedAtStart === true && player.state.loaded;
   const covered =
-    !player.state.pictureInPicture && (!player.state.started || !!launched);
+    !player.state.pictureInPicture &&
+    ((!player.state.started && !openedPaused) || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const [place, setPlace] = React.useState<MiniVideoPlace | null>(null);
   React.useEffect(() => {
