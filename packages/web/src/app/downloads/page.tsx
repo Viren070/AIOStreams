@@ -18,7 +18,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { formatBytes, formatSpeed } from '@aiostreams/ui/core/format';
 import { useSession } from '@/lib/jellyfin/session';
 import { duration, fullTitle, itemSubtitle, itemTitle } from '@/lib/format';
-import { landscapeUrl, posterUrl } from '@/lib/artwork/images';
+import { landscapeUrl, posterUrl } from '@/lib/artwork/urls';
 import { itemPath, navigate } from '@/lib/paths';
 import {
   downloadsHost,

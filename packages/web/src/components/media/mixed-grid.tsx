@@ -1,6 +1,6 @@
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
-import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/images';
+import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/urls';
 import { itemSubtitle, progressOf } from '@/lib/format';
 import { href, itemPath } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';

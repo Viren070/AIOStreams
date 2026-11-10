@@ -7,7 +7,7 @@ import { Button, IconButton } from '@aiostreams/ui/button';
 import { Drawer } from '@aiostreams/ui/drawer';
 import { focusOn, keyboardFocus, useRestoreFocus } from '@/lib/input';
 import { useSession } from '@/lib/jellyfin/session';
-import { backdropUrl } from '@/lib/artwork/images';
+import { backdropUrl } from '@/lib/artwork/urls';
 import { navigate, to } from '@/lib/paths';
 import {
   trailersOf,

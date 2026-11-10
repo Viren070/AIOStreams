@@ -32,7 +32,7 @@ import {
   useOwnTotals,
 } from '@/lib/jellyfin/history';
 import { useClearHistory, useSetPlayed } from '@/lib/jellyfin/watch-state';
-import { posterUrl, landscapeUrls } from '@/lib/artwork/images';
+import { posterUrl, landscapeUrls } from '@/lib/artwork/urls';
 import {
   clock,
   dateFormat,

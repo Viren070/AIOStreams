@@ -11,7 +11,7 @@ import {
 } from '@/lib/artwork/drawn';
 import { canShrink, shrinkArtwork } from '@/lib/artwork/shrink';
 import { currentHost } from '@/lib/hosts';
-import { drawnRatio } from '@/lib/artwork/images';
+import { drawnRatio } from '@/lib/artwork/urls';
 import { settings, useSetting } from '@/lib/settings';
 import { CachedImage } from '@/components/cached-image';
 import { Anchor } from '@/components/anchor';

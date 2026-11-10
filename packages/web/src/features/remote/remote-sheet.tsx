@@ -19,7 +19,7 @@ import { Slider } from '@aiostreams/ui/slider';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { clock, itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
-import { landscapeUrl, posterUrl } from '@/lib/artwork/images';
+import { landscapeUrl, posterUrl } from '@/lib/artwork/urls';
 import { useRestoreFocus } from '@/lib/input';
 import { trackLabel } from '@/lib/playback/controller';
 import { itemPath, navigate } from '@/lib/paths';

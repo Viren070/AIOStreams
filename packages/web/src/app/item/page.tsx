@@ -3,7 +3,7 @@ import { t } from '@lingui/core/macro';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem, useShowAhead } from '@/lib/jellyfin/queries';
-import { backdropUrls, posterUrl } from '@/lib/artwork/images';
+import { backdropUrls, posterUrl } from '@/lib/artwork/urls';
 import { lacksDetails } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
 import { PageMessage } from '@/components/shell/page';

@@ -4,7 +4,7 @@ import { Trans } from '@lingui/react/macro';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItemPages } from '@/lib/jellyfin/queries';
-import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/images';
+import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/urls';
 import { itemSubtitle } from '@/lib/format';
 import { href, itemPath } from '@/lib/paths';
 import { useInView } from '@/hooks/use-in-view';

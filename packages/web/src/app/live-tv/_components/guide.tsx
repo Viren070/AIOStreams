@@ -3,7 +3,7 @@ import React from 'react';
 import { BiBell } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { posterUrl } from '@/lib/artwork/images';
+import { posterUrl } from '@/lib/artwork/urls';
 import { airTime, clockTime } from '@/lib/format';
 import { move, runAction } from '@/lib/input';
 import { caughtUp, endOf, startOf } from '@/features/live-tv/live-tv';

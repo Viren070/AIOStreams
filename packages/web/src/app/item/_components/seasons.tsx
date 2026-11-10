@@ -9,7 +9,7 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
 import { useSession } from '@/lib/jellyfin/session';
 import { useEpisodes, useSeasons, openingSeason } from '@/lib/jellyfin/queries';
-import { posterUrl } from '@/lib/artwork/images';
+import { posterUrl } from '@/lib/artwork/urls';
 import { isUnaired } from '@/lib/format';
 import { navigate, to } from '@/lib/paths';
 import { settings, useSetting } from '@/lib/settings';

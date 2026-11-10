@@ -25,7 +25,7 @@ import {
 import { useNow, useSchedules } from '@/features/live-tv/live-tv';
 import { settings, useSetting } from '@/lib/settings';
 import { useSearchHistory } from './search-history';
-import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/images';
+import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/urls';
 import { itemSubtitle, progressOf } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';

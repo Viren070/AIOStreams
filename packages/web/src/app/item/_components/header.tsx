@@ -25,7 +25,7 @@ import {
   landscapeUrls,
   logoUrl,
   posterUrl,
-} from '@/lib/artwork/images';
+} from '@/lib/artwork/urls';
 import {
   clock,
   dayLabel,

@@ -1,6 +1,6 @@
 import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '@/lib/jellyfin/session';
-import { posterUrl } from '@/lib/artwork/images';
+import { posterUrl } from '@/lib/artwork/urls';
 import { airedShare, airingAt } from './live-tv';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';

@@ -1,6 +1,6 @@
 /* eslint-disable lingui/no-unlocalized-strings -- folder names media players read */
 import type { JellyfinClient } from '@/lib/jellyfin/client';
-import { backdropUrl, logoUrl, posterUrl } from '@/lib/artwork/images';
+import { backdropUrl, logoUrl, posterUrl } from '@/lib/artwork/urls';
 import { requiredHeaders } from '@/lib/playback/stream';
 import { textSubtitles, subtitleUrl } from '@/lib/subtitles/tracks';
 import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';

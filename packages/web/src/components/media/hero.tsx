@@ -15,7 +15,7 @@ import { usePageShown } from '@/lib/page-shown';
 import { useFetchNextUp, useItem } from '@/lib/jellyfin/queries';
 import { focusOn, keyboardFocus, useAction } from '@/lib/input';
 import { ScrollRoot, watch } from '@/hooks/use-in-view';
-import { backdropUrl, landscapeUrl, logoUrl } from '@/lib/artwork/images';
+import { backdropUrl, landscapeUrl, logoUrl } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
 import { useVersionPicker } from '@/features/versions/version-picker';

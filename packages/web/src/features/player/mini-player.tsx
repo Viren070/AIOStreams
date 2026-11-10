@@ -5,7 +5,7 @@ import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
-import { landscapeUrl } from '@/lib/artwork/images';
+import { landscapeUrl } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle } from '@/lib/format';
 import { appBridge } from '@/lib/hosts/shell/bridge';
 import type { PlayerController } from '@/lib/playback/controller';

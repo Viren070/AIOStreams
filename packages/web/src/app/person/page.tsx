@@ -5,7 +5,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem, usePersonItems } from '@/lib/jellyfin/queries';
-import { posterUrl } from '@/lib/artwork/images';
+import { posterUrl } from '@/lib/artwork/urls';
 import { dateFormat, yearsBetween } from '@/lib/format';
 import { useInView } from '@/hooks/use-in-view';
 import { PageBody, PageMessage } from '@/components/shell/page';

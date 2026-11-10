@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { logoUrl } from '@/lib/artwork/images';
+import { logoUrl } from '@/lib/artwork/urls';
 import { itemTitle } from '@/lib/format';
 import { CachedImage } from '@/components/cached-image';
 import type { BaseItemDto } from '@/lib/jellyfin/types';

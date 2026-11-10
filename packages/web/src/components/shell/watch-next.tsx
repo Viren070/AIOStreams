@@ -2,7 +2,7 @@ import React from 'react';
 import { playLink } from '@/lib/app-links';
 import { itemTitle, ticksToMs } from '@/lib/format';
 import { currentHost, type WatchNextItem } from '@/lib/hosts';
-import { landscapeUrl } from '@/lib/artwork/images';
+import { landscapeUrl } from '@/lib/artwork/urls';
 import {
   mergeRows,
   useNextUp,

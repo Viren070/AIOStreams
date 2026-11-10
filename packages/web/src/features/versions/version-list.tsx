@@ -47,7 +47,7 @@ import { currentHost } from '@/lib/hosts';
 import { focusOn, keyboardFocus, tab, tabList } from '@/lib/input';
 import { clock } from '@/lib/format';
 import { cn } from '@aiostreams/ui/core/styling';
-import { backdropUrl, landscapeUrl } from '@/lib/artwork/images';
+import { backdropUrl, landscapeUrl } from '@/lib/artwork/urls';
 import { itemPath, navigate } from '@/lib/paths';
 import { settings, useSetting } from '@/lib/settings';
 import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';

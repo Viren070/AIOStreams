@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { useSession } from '@/lib/jellyfin/session';
 import { useSimilar } from '@/lib/jellyfin/queries';
-import { posterUrl, animatedPosterOf } from '@/lib/artwork/images';
+import { posterUrl, animatedPosterOf } from '@/lib/artwork/urls';
 import { itemSubtitle } from '@/lib/format';
 import { href, itemPath } from '@/lib/paths';
 import { useNear } from '@/hooks/use-in-view';

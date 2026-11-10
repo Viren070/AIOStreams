@@ -3,7 +3,7 @@ import { currentHost } from '@/lib/hosts';
 import { mediaKeyJustTaken, noteInput } from '@/lib/input';
 import type { MediaKey } from '@/lib/hosts/shell/bridge';
 import { itemSubtitle, itemTitle } from '@/lib/format';
-import { backdropUrl, landscapeUrl, posterUrl } from '@/lib/artwork/images';
+import { backdropUrl, landscapeUrl, posterUrl } from '@/lib/artwork/urls';
 import { useItem } from '@/lib/jellyfin/queries';
 import { useSession } from '@/lib/jellyfin/session';
 import { settings, useSetting } from '@/lib/settings';

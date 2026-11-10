@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { formatLocale } from '@/lib/i18n';
 import { useSession } from '@/lib/jellyfin/session';
-import { personImageUrl } from '@/lib/artwork/images';
+import { personImageUrl } from '@/lib/artwork/urls';
 import { href, to } from '@/lib/paths';
 import { MediaRow } from './media-row';
 import type { BaseItemPerson } from '@/lib/jellyfin/types';

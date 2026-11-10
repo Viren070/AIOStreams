@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { backdropUrl, logoUrl } from '@/lib/artwork/images';
+import { backdropUrl, logoUrl } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle } from '@/lib/format';
 import { CachedImage } from '@/components/cached-image';
 import type { BaseItemDto } from '@/lib/jellyfin/types';

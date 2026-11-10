@@ -41,7 +41,7 @@ import {
   usePlaylistEntries,
   usePlaylists,
 } from '@/lib/playlists';
-import { landscapeUrls, posterUrl } from '@/lib/artwork/images';
+import { landscapeUrls, posterUrl } from '@/lib/artwork/urls';
 import {
   duration,
   fullTitle,

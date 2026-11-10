@@ -20,7 +20,7 @@ import {
   itemTitle,
   progressOf,
 } from '@/lib/format';
-import { landscapeUrls } from '@/lib/artwork/images';
+import { landscapeUrls } from '@/lib/artwork/urls';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import { PageBody } from '@/components/shell/page';
 import { Artwork } from '@/components/media/cards';

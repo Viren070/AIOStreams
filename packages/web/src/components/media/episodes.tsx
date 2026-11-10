@@ -12,7 +12,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '@/lib/hosts';
 import { useSession } from '@/lib/jellyfin/session';
-import { landscapeUrls } from '@/lib/artwork/images';
+import { landscapeUrls } from '@/lib/artwork/urls';
 import {
   airedLabel,
   airsLater,

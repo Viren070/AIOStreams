@@ -15,7 +15,7 @@ import {
   ticksToMs,
   pickable,
 } from '@/lib/format';
-import { landscapeUrl, posterUrl } from '@/lib/artwork/images';
+import { landscapeUrl, posterUrl } from '@/lib/artwork/urls';
 import { useRestoreFocus } from '@/lib/input';
 import { itemPath, navigate } from '@/lib/paths';
 import { useFetchNextUp } from '@/lib/jellyfin/queries';

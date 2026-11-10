@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Badge } from '@aiostreams/ui/badge';
 import { useSession } from '@/lib/jellyfin/session';
-import { landscapeUrls } from '@/lib/artwork/images';
+import { landscapeUrls } from '@/lib/artwork/urls';
 import { clock, itemTitle, ticksToMs } from '@/lib/format';
 import { href, itemPath } from '@/lib/paths';
 import { MediaRow } from '@/components/media/media-row';

@@ -8,7 +8,7 @@ import { currentHost } from '@/lib/hosts';
 import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';
 import { usePlaylistName, useUpNext, type UpNext } from '@/lib/playlists';
 import type { PartyNeighbours } from '@/lib/party/follow';
-import { landscapeUrl } from '@/lib/artwork/images';
+import { landscapeUrl } from '@/lib/artwork/urls';
 import {
   episodeCode,
   fullTitle,

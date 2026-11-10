@@ -24,7 +24,7 @@ import {
   cardShape,
   landscapeUrls,
   animatedPosterOf,
-} from '@/lib/artwork/images';
+} from '@/lib/artwork/urls';
 import {
   dayLabel,
   libraryLabel,

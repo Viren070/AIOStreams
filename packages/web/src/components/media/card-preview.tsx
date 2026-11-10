@@ -5,7 +5,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem } from '@/lib/jellyfin/queries';
 import { currentHost } from '@/lib/hosts';
-import { backdropUrls, landscapeUrls, logoUrl } from '@/lib/artwork/images';
+import { backdropUrls, landscapeUrls, logoUrl } from '@/lib/artwork/urls';
 import {
   airedLabel,
   duration,
