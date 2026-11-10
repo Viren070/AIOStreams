@@ -165,12 +165,13 @@ export function LiveTvPage({
     requestedView === 'guide' || requestedView === 'list'
       ? requestedView
       : (lastView() ?? (currentHost().tv ? 'list' : 'guide'));
-  // Addons without a guide list channels with nothing on, which would leave the
-  // guide empty rows; the lineup's first page tells, and the guide waits for it.
+  // Without a guide every row would be empty. A guide catalog marks the view, and
+  // programmes from channels' own metas show on the lineup's first page.
   const lineupStart = useChannelPages(ALL, { enabled: !!view.data });
-  const hasGuide = !!lineupStart.data?.pages[0]?.Items?.some(
-    (c) => c.CurrentProgram
-  );
+  const hasGuide =
+    (view.data as { aiostreams?: { guide?: boolean } } | null | undefined)
+      ?.aiostreams?.guide === true ||
+    !!lineupStart.data?.pages[0]?.Items?.some((c) => c.CurrentProgram);
   const guide = wide && shownView === 'guide' && hasGuide;
   const guideRange = useGuideRange().data;
   const reminders = useReminders();
