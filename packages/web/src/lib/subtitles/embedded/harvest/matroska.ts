@@ -26,6 +26,7 @@ import {
   WINDOWED_OVER,
   type HarvestedEvent,
   type HarvestTask,
+  type ReadPace,
 } from '.';
 
 const MAX_BLOCK = 4 * 1024 * 1024;
@@ -45,9 +46,9 @@ export class MatroskaHarvest extends SubtitleHarvest {
   constructor(
     private readonly file: MkvFile,
     override readonly track: MkvSubtitle,
-    lanes?: () => number
+    pace?: ReadPace
   ) {
-    super(track, lanes);
+    super(track, pace);
     const cues = file.cues.get(track.number) ?? [];
     this.windowed = cues.length > WINDOWED_OVER;
     const byCluster = new Map<number, CueEntry[]>();

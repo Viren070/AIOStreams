@@ -1,4 +1,5 @@
 import type { FetchPastCors } from '@/lib/hosts';
+import type { ReadPace } from './harvest';
 import {
   concat,
   ReadError,
@@ -101,14 +102,19 @@ export function rangeReader(
 }
 
 const PLAYING_GAP_MS = 334;
+/** Inside the 10 reads a second, 3 at once, a debrid CDN was measured to take beside the video. */
+const HURRY_GAP_MS = 150;
+const HURRY_LANES = 3;
 const QUIET_MS = 10_000;
 const MAX_QUIET_MS = 60_000;
 const MAX_RETRY_AFTER_MS = 120_000;
 
 /** Paced so the host doesn't throttle the video's own stream. */
-export class SideReader implements ByteReader {
+export class SideReader implements ByteReader, ReadPace {
   lanes = 1;
   private gapMs = PLAYING_GAP_MS;
+  private playing = true;
+  private hurried = false;
   private running = 0;
   private lastAt = 0;
   private quietUntil = 0;
@@ -120,8 +126,23 @@ export class SideReader implements ByteReader {
   constructor(private readonly source: ByteReader) {}
 
   setPlaying(playing: boolean): void {
-    this.lanes = playing ? 1 : 3;
-    this.gapMs = playing ? PLAYING_GAP_MS : 0;
+    this.playing = playing;
+    this.pace();
+  }
+
+  hurry(on: boolean): void {
+    if (on === this.hurried) return;
+    this.hurried = on;
+    this.pace();
+  }
+
+  private pace(): void {
+    this.lanes = this.playing && !this.hurried ? 1 : HURRY_LANES;
+    this.gapMs = !this.playing
+      ? 0
+      : this.hurried
+        ? HURRY_GAP_MS
+        : PLAYING_GAP_MS;
     this.wake();
   }
 

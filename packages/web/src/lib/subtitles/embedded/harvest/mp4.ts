@@ -11,6 +11,7 @@ import {
   SubtitleHarvest,
   WINDOWED_OVER,
   type HarvestTask,
+  type ReadPace,
 } from '.';
 
 /** Reads the samples the sample tables list, one read per run of nearby ones. */
@@ -18,9 +19,9 @@ export class Mp4Harvest extends SubtitleHarvest {
   constructor(
     private readonly file: Mp4File,
     track: FileSubtitle,
-    lanes?: () => number
+    pace?: ReadPace
   ) {
-    super(track, lanes);
+    super(track, pace);
     const samples = file.samples.get(track.number) ?? [];
     this.windowed = samples.length > WINDOWED_OVER;
     let run: Mp4Sample[] = [];

@@ -10,6 +10,14 @@ export interface HarvestedEvent {
   data?: Uint8Array;
 }
 
+/** How many reads may run at once, and asks for more while lines near the playhead are unread. */
+export interface ReadPace {
+  readonly lanes: number;
+  hurry(on: boolean): void;
+}
+
+const STEADY: ReadPace = { lanes: 1, hurry() {} };
+
 const sizeOf = (event: HarvestedEvent) =>
   event.text.length + (event.data?.length ?? 0);
 
@@ -27,6 +35,10 @@ export interface HarvestTask {
 
 const AHEAD_MS = 90_000;
 const BEHIND_MS = 10_000;
+/** Lines this little before the playhead are read with those ahead of it, before older ones. */
+const NOW_MS = 2000;
+/** Unread lines this close ahead make the reads hurry. */
+const HURRY_AHEAD_MS = 15_000;
 export const MERGE_GAP = 64 * 1024;
 export const MERGE_SPAN = 256 * 1024;
 const SCAN_BUFFER_MS = 20_000;
@@ -63,7 +75,7 @@ export abstract class SubtitleHarvest {
 
   constructor(
     readonly track: FileSubtitle,
-    private readonly lanes: () => number = () => 1
+    private readonly pace: ReadPace = STEADY
   ) {}
 
   /** `ms` is the file's own time. A harvest that gave up tries again. */
@@ -94,6 +106,7 @@ export abstract class SubtitleHarvest {
   pause(): void {
     this.active = false;
     window.clearTimeout(this.timer);
+    this.pace.hurry(false);
   }
 
   /** Resolves once everything up to `untilMs` is read, or it can't be. */
@@ -152,9 +165,16 @@ export abstract class SubtitleHarvest {
       task.state === 'waiting' &&
       task.retryAt <= now &&
       (!task.heavy || this.roomy);
-    const near = this.tasks.find(
-      (task) => ready(task) && task.timeMs >= from && task.timeMs <= to
-    );
+    const near =
+      this.tasks.find(
+        (task) =>
+          ready(task) &&
+          task.timeMs >= this.positionMs - NOW_MS &&
+          task.timeMs <= to
+      ) ??
+      this.tasks.find(
+        (task) => ready(task) && task.timeMs >= from && task.timeMs <= to
+      );
     if (near) return near;
     if (this.running > 0 || this.scanning || this.windowed) return;
     const later = (task: HarvestTask) => ready(task) && !task.heavy;
@@ -165,9 +185,9 @@ export abstract class SubtitleHarvest {
   }
 
   private pump(): void {
-    if (!this.active || this.failed) return;
+    if (!this.active || this.failed) return this.pace.hurry(false);
     window.clearTimeout(this.timer);
-    while (this.running < this.lanes()) {
+    while (this.running < this.pace.lanes) {
       const task = this.next();
       if (!task) break;
       task.state = 'running';
@@ -191,6 +211,17 @@ export abstract class SubtitleHarvest {
         });
     }
     const now = Date.now();
+    const urgent = this.positionMs + HURRY_AHEAD_MS;
+    this.pace.hurry(
+      this.tasks.some(
+        (task) =>
+          task.state === 'waiting' &&
+          task.retryAt <= now &&
+          (!task.heavy || this.roomy) &&
+          task.timeMs >= this.positionMs - NOW_MS &&
+          task.timeMs <= urgent
+      )
+    );
     const soonest = this.tasks.reduce(
       (at, task) =>
         task.state === 'waiting' && task.retryAt > now

@@ -16,7 +16,7 @@ import { openMp4, sampleLines } from '@/lib/subtitles/mp4/file';
 import { pgsLayer } from '@/lib/subtitles/pgs/layer';
 import type { PictureSurface, SubtitleLayer } from '@/lib/subtitles/surface';
 import { AttachedFonts } from './fonts';
-import type { HarvestedEvent, SubtitleHarvest } from './harvest';
+import type { HarvestedEvent, ReadPace, SubtitleHarvest } from './harvest';
 import { MatroskaHarvest } from './harvest/matroska';
 import { Mp4Harvest } from './harvest/mp4';
 import { rangeReader, SideReader } from './reads';
@@ -69,7 +69,7 @@ interface OpenedFile {
   subtitles: FileSubtitle[];
   /** With the attachments and ASS headers only Matroska has. */
   matroska?: MkvFile;
-  harvest(track: FileSubtitle, lanes: () => number): SubtitleHarvest;
+  harvest(track: FileSubtitle, pace: ReadPace): SubtitleHarvest;
   lines(track: FileSubtitle): Span[];
 }
 
@@ -80,15 +80,15 @@ async function openFile(reader: ByteReader): Promise<OpenedFile | null> {
     return {
       subtitles: matroska.subtitles,
       matroska,
-      harvest: (track, lanes) =>
-        new MatroskaHarvest(matroska, track as MkvSubtitle, lanes),
+      harvest: (track, pace) =>
+        new MatroskaHarvest(matroska, track as MkvSubtitle, pace),
       lines: (track) => indexLines(matroska, track as MkvSubtitle),
     };
   const mp4 = await openMp4(reader, start);
   return (
     mp4 && {
       subtitles: mp4.subtitles,
-      harvest: (track, lanes) => new Mp4Harvest(mp4, track, lanes),
+      harvest: (track, pace) => new Mp4Harvest(mp4, track, pace),
       lines: (track) => sampleLines(mp4, track.number),
     }
   );
@@ -137,7 +137,7 @@ export function embeddedSubtitles(
     hide();
     let harvest = harvests.get(track.number);
     if (!harvest) {
-      harvest = opened.harvest(track, () => reader.lanes);
+      harvest = opened.harvest(track, reader);
       harvests.set(track.number, harvest);
     }
     const reading = harvest;
