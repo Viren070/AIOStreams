@@ -88,7 +88,9 @@ async function favouriteChannels(
     )
   );
   return built.filter(
-    (item): item is JellyfinItem => item?.Type === 'TvChannel'
+    (item): item is JellyfinItem =>
+      item?.Type === 'TvChannel' &&
+      !(item.aiostreams as { noMeta?: boolean } | undefined)?.noMeta
   );
 }
 

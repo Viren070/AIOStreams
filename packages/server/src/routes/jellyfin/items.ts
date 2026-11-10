@@ -658,6 +658,7 @@ export async function itemFromDescriptor(
             !hasProgrammeVideos(meta)));
       if (d.k === 'movie' && !asBoxset && isChannel(d.t, meta)) {
         const channel = await channelItem(ctx, base, opts.playstate);
+        if (!meta) channel.aiostreams = { noMeta: true };
         return opts.bare
           ? channel
           : attachUserData(ctx, [channel]).then(([built]) => built);
