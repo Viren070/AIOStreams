@@ -612,8 +612,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@aiostreams/webgpu-player':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.3.0
+        version: 0.3.0
       '@fontsource/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -736,8 +736,8 @@ packages:
   '@aiostreams/seanime-extensions@0.10.3':
     resolution: {integrity: sha512-1yoLXMz6DPyVRaeR8gY/mGYLQR3DdhcYOcPCI32vj8VJY0GfOdZxzMP+bCoU4EHY0lZmsa821P/ZZk95hG944Q==}
 
-  '@aiostreams/webgpu-player@0.2.0':
-    resolution: {integrity: sha512-o24TBlgvyWZVNhq3O1MXsocAR7BoWm4mAOlJ7o+e6uoFJt7wHWmpfPe8YvTw4dT3iJ/F0y8Cphe0mVh8yn//Bg==}
+  '@aiostreams/webgpu-player@0.3.0':
+    resolution: {integrity: sha512-kvnxNvryWSf1eGIWHO+xFmaJblITIHxdu+Wq7m9bNv1iWvLTJODtHYabHEbWbjM6AC+7zyi1rFusCK9H2EVqqA==}
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -8175,7 +8175,7 @@ snapshots:
 
   '@aiostreams/seanime-extensions@0.10.3': {}
 
-  '@aiostreams/webgpu-player@0.2.0': {}
+  '@aiostreams/webgpu-player@0.3.0': {}
 
   '@alloc/quick-lru@5.3.0': {}
 
