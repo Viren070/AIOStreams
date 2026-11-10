@@ -174,7 +174,13 @@ export type AudioChannels = (typeof AUDIO_CHANNELS)[number];
 
 /** What plays versions inside the Android app. */
 /** `auto` is the browser's own player in a browser. */
-export const PLAYER_ENGINES = ['auto', 'mpv', 'exoplayer', 'webgpu'] as const;
+export const PLAYER_ENGINES = [
+  'auto',
+  'mpv',
+  'exoplayer',
+  'webgpu',
+  'browser',
+] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
 /** What Back does in the player: stop, or play on in the mini player. */
 export const PLAYER_BACKS = ['stop', 'minimise'] as const;

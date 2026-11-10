@@ -168,9 +168,10 @@ export const canPlayWithWebGpu = () =>
   typeof VideoDecoder === 'function' &&
   typeof AudioWorkletNode === 'function';
 
+/** A browser's default too, wherever WebGPU can play. */
 export const playsWithWebGpu = () =>
   !currentHost().player &&
-  settings.player.engine.read() === 'webgpu' &&
+  ['auto', 'webgpu'].includes(settings.player.engine.read()) &&
   canPlayWithWebGpu();
 
 export const canUpscale = () =>

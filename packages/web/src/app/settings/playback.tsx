@@ -458,8 +458,8 @@ const engineOptions = (): { value: PlayerEngine; label: string }[] => [
 ];
 
 const browserEngineOptions = (): { value: PlayerEngine; label: string }[] => [
-  { value: 'auto', label: t`This browser` },
   { value: 'webgpu', label: 'WebGPU' },
+  { value: 'browser', label: t`This browser` },
 ];
 
 const engineHelp = (engine: PlayerEngine) =>
@@ -468,6 +468,7 @@ const engineHelp = (engine: PlayerEngine) =>
     mpv: t`Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.`,
     exoplayer: t`Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.`,
     webgpu: t`Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player.`,
+    browser: t`This browser's own player, which plays the formats this browser supports.`,
   })[engine];
 
 const cacheOptions = () =>
@@ -506,6 +507,7 @@ function PlayerCard() {
   const [player, setPlayer] = useSetting(settings.player.choice);
   const [link, setLink] = useSetting(settings.player.link);
   const [engine, setEngine] = useSetting(settings.player.engine);
+  const browserEngine = engine === 'browser' ? engine : 'webgpu';
   const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
   const [back, setBack] = useSetting(settings.player.back);
   const found = useExternalPlayers();
@@ -585,16 +587,12 @@ function PlayerCard() {
           <>
             <Select
               label={t`Engine`}
-              help={
-                engine === 'webgpu'
-                  ? engineHelp(engine)
-                  : t`This browser's own player, which plays the formats this browser supports.`
-              }
+              help={engineHelp(browserEngine)}
               options={browserEngineOptions()}
-              value={engine === 'webgpu' ? engine : 'auto'}
+              value={browserEngine}
               onValueChange={(v) => setEngine(v as PlayerEngine)}
             />
-            {engine === 'webgpu' && (
+            {browserEngine === 'webgpu' && (
               <>
                 <UpscalingSwitch />
                 <ShaderFilesRow
