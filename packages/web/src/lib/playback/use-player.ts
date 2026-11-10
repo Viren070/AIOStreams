@@ -310,6 +310,7 @@ export function usePlayer(
               audioLanguage(track.lang) === requested
           );
           const usesDefaultAudio =
+            !engine.picksTracks &&
             !tracks.some((track) => track.type === 'audio') &&
             sourceDefaultsToAudio(latest.current.source, requested);
           if (!match && !usesDefaultAudio) {

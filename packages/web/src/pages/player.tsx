@@ -1,6 +1,6 @@
 import {
   alternateAudio,
-  browserAudioSource,
+  canPlayAudioSource,
   sourceAudioLanguages,
   type AlternateAudio,
 } from '../lib/playback/alternate-audio';
@@ -840,14 +840,15 @@ function Player({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player, next.playlist);
+  const desktopAudio = !!hostPlayer && currentHost().name === 'desktop';
   const canSwitchAudio =
     !mini &&
     !local &&
     !launched &&
-    !hostPlayer &&
+    (!hostPlayer || desktopAudio) &&
     !inParty &&
     (item.Type === 'Movie' || item.Type === 'Episode') &&
-    browserAudioSource(source);
+    canPlayAudioSource(source, desktopAudio);
   const [audioMenuOpen, setAudioMenuOpen] = React.useState(false);
   const versions = usePlaybackInfo(item.Id!, {
     enabled: canSwitchAudio && audioMenuOpen,
@@ -873,7 +874,7 @@ function Player({
       );
       if (
         !target ||
-        !browserAudioSource(target) ||
+        !canPlayAudioSource(target, desktopAudio) ||
         !sourceAudioLanguages(target).includes(choice.language)
       ) {
         throw new Error('Alternate audio source unavailable');
@@ -1029,7 +1030,8 @@ function Player({
                           options: alternateAudio(
                             source,
                             player.audioTracks,
-                            playableSources(versions.data)
+                            playableSources(versions.data),
+                            desktopAudio
                           ),
                           onOpenChange: setAudioMenuOpen,
                           onSelect: selectAlternate,

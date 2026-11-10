@@ -67,15 +67,16 @@ export function sourceDefaultsToAudio(
   return available.size === 1 && available.has(requested);
 }
 
-export function browserAudioSource(
-  source: SourceInfo
+export function canPlayAudioSource(
+  source: SourceInfo,
+  desktop = false
 ): source is SourceInfo & { Id: string } {
   return (
     !!source.Id &&
     source.Type !== 'Placeholder' &&
     !source.IsInfiniteStream &&
-    !needsAppPlayer(source) &&
-    source.SupportsDirectPlay !== false
+    (desktop ||
+      (!needsAppPlayer(source) && source.SupportsDirectPlay !== false))
   );
 }
 
@@ -83,7 +84,8 @@ export function browserAudioSource(
 export function alternateAudio(
   current: SourceInfo,
   currentTracks: readonly { lang?: string }[],
-  sources: readonly SourceInfo[]
+  sources: readonly SourceInfo[],
+  desktop = false
 ): AlternateAudio[] {
   const currentLanguages = currentTracks.flatMap(
     (track) => audioLanguage(track.lang) ?? []
@@ -96,7 +98,8 @@ export function alternateAudio(
   const sameResolution = (source: SourceInfo) =>
     !!resolution && source.aiostreams?.resolution === resolution;
   for (const source of sources) {
-    if (!browserAudioSource(source) || source.Id === current.Id) continue;
+    if (!canPlayAudioSource(source, desktop) || source.Id === current.Id)
+      continue;
     for (const language of sourceAudioLanguages(source)) {
       if (present.has(language)) continue;
       const previous = options.get(language);

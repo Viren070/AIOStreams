@@ -895,7 +895,10 @@ fn pump(
                     stripping = !dolby_vision.load(Ordering::SeqCst) && strip_dolby_vision(mpv);
                     filters.loaded(mpv);
                     filters.apply(mpv, sound);
-                    // mpv reports the tracks it picked only after this event, which the page re-picks on.
+                    // Give the page this file's tracks before it applies its audio selection.
+                    if let Some(value) = mpv.get_property("track-list", Kind::Json) {
+                        report("track-list", &value);
+                    }
                     for name in ["aid", "sid"] {
                         if let Some(value) = mpv.get_property(name, Kind::String) {
                             report(name, &value);

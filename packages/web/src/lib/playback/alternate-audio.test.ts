@@ -50,6 +50,9 @@ describe('alternate audio', () => {
     expect(alternateAudio(current, [], [current, unknown, blocked])).toEqual(
       []
     );
+    expect(
+      alternateAudio(current, [], [current, unknown, blocked], true)
+    ).toMatchObject([{ source: { Id: 'blocked' } }]);
   });
 });
 
