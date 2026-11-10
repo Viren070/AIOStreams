@@ -158,7 +158,8 @@ Favourite channels come from `/LiveTv/Channels?IsFavorite=true`.
 
 A programme its channel keeps carries `"aiostreams": { "catchup": true }`, and plays from its start
 by its own id: `PlaybackInfo` and the stream answer with its archive rather than the channel live.
-`/LiveTv/GuideInfo` then starts as many days back as channels keep their programmes.
+`/LiveTv/GuideInfo` starts as many days back as the addons' manifests declare
+[catch-up](/reference/addon-protocol/live-tv#catch-up).
 
 ## Titles
 
