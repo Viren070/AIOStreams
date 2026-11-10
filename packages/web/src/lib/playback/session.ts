@@ -5,12 +5,15 @@ import { goBack, goBackInApp, navigate, to } from '../paths';
 import { settings } from '../settings';
 import { chosenPlayer } from './player-choice';
 
-/** The title the player plays, which plays on in the mini player while pages open over it. */
+/** An alternate audio version that replaced the one before it, which Return goes back to. */
 export interface AudioSwitch {
   language: string;
   previous: { sourceId: string; startMs: number; paused: boolean };
+  /** What played before the first switch, kept through later ones. */
+  original?: { sourceId: string; language: string };
 }
 
+/** The title the player plays, which plays on in the mini player while pages open over it. */
 export interface Playback {
   itemId: string;
   sourceId: string;
@@ -24,6 +27,7 @@ export interface Playback {
 let current: (Playback & { mini: boolean; docked?: boolean }) | null = null;
 /** A channel zapped to in the player keeps the preview Back returns to. */
 let zapping = false;
+/** What `playOn` asked of the page it opens, beyond what the address carries. */
 let pendingSwitch: Playback | undefined;
 /** What leaving the player's page does, when the player itself chose. */
 let leaving: 'keep' | 'stop' | null = null;
@@ -87,6 +91,7 @@ export function openPlayback(next: Playback): void {
 export function leftPlayback(how: 'back' | 'forward' | 'replace'): void {
   const chosen = leaving;
   leaving = null;
+  pendingSwitch = undefined;
   if (!current) return;
   const keep =
     chosen === 'keep' ||
@@ -118,6 +123,7 @@ export function stopPlayback(fallback: string): void {
 }
 
 export function closePlayback(): void {
+  pendingSwitch = undefined;
   set(null);
 }
 
@@ -153,5 +159,24 @@ export function playOn(next: Playback): void {
     navigate(to.play(next.itemId, next.sourceId, next.startMs, next.playlist), {
       replace: true,
     });
-  } else set({ ...next, mini: true, docked: current?.docked });
+  } else {
+    pendingSwitch = undefined;
+    set({ ...next, mini: true, docked: current?.docked });
+  }
+}
+
+/** Plays the version an alternate audio switch replaced, from where it was left. */
+export function returnFromAudioSwitch(
+  itemId: string,
+  playlist: string | undefined,
+  audioSwitch: AudioSwitch
+): void {
+  const { previous } = audioSwitch;
+  playOn({
+    itemId,
+    sourceId: previous.sourceId,
+    startMs: previous.startMs,
+    startPaused: previous.paused,
+    playlist,
+  });
 }

@@ -1,10 +1,10 @@
 import {
-  alternateAudio,
+  audioChoices,
   canPlayAudioSource,
+  playingAudioLanguage,
   sourceAudioLanguages,
   type AlternateAudio,
 } from '../lib/playback/alternate-audio';
-import { playbackNow, type AudioSwitch } from '../lib/playback/session';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -78,10 +78,13 @@ import {
   canMinimise,
   closePlayback,
   minimisePlayback,
+  playbackNow,
   playOn,
+  returnFromAudioSwitch,
   setLaunched,
   stopPlayback,
   usePlayback,
+  type AudioSwitch,
 } from '../lib/playback/session';
 import { noteChannelPlayed } from '../lib/live-tv';
 import { useZap, type Zap } from '../components/player/live';
@@ -216,16 +219,9 @@ export function PlayerPage({
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = named ? sources.find((s) => s.Id === named) : sources[0];
-  const returnToPrevious =
-    audioSwitch &&
-    (() =>
-      playOn({
-        itemId,
-        sourceId: audioSwitch.previous.sourceId,
-        startMs: audioSwitch.previous.startMs,
-        startPaused: audioSwitch.previous.paused,
-        playlist,
-      }));
+  const returnToPrevious = audioSwitch
+    ? () => returnFromAudioSwitch(itemId, playlist, audioSwitch)
+    : undefined;
   const missing =
     !playing &&
     !!item.data &&
@@ -850,10 +846,25 @@ function Player({
     (item.Type === 'Movie' || item.Type === 'Episode') &&
     canPlayAudioSource(source, nativeAudio);
   const [audioMenuOpen, setAudioMenuOpen] = React.useState(false);
+  // The list the server kept, so asking once playback starts scrapes nothing again.
   const versions = usePlaybackInfo(item.Id!, {
-    enabled: canSwitchAudio && audioMenuOpen,
+    enabled: canSwitchAudio && (audioMenuOpen || player.state.started),
     kept: true,
   });
+  const choices = canSwitchAudio
+    ? audioChoices(
+        source,
+        player.audioTracks,
+        playableSources(versions.data),
+        nativeAudio,
+        audioSwitch?.original
+      )
+    : undefined;
+  // Without other languages there is nothing to add to the audio menu.
+  const otherAudio =
+    choices && (choices.original || choices.options.length)
+      ? { ...choices, onOpenChange: setAudioMenuOpen }
+      : undefined;
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const switchingAudio = React.useRef(false);
@@ -863,6 +874,10 @@ function Player({
     switchingAudio.current = true;
     const previousPlayback = playbackNow();
     let switched = false;
+    const unavailable = () => {
+      if (playbackNow() === previousPlayback)
+        toast.error(t`This audio version is no longer available.`);
+    };
     try {
       const info = await queryClient.fetchQuery({
         ...infoOptions(item.Id!, choice.source.Id),
@@ -876,41 +891,41 @@ function Player({
         !target ||
         !canPlayAudioSource(target, nativeAudio) ||
         !sourceAudioLanguages(target).includes(choice.language)
-      ) {
-        throw new Error('Alternate audio source unavailable');
-      }
+      )
+        return unavailable();
       const active = currentPlayer.current;
       const previous = {
         sourceId: source.Id!,
         startMs: active.playhead.positionMs,
         paused: active.state.paused,
       };
+      const playing = playingAudioLanguage(
+        source,
+        active.audioTracks,
+        active.state.audio
+      );
+      const original =
+        audioSwitch?.original ??
+        (playing ? { sourceId: source.Id!, language: playing } : undefined);
       playOn({
         itemId: item.Id!,
         sourceId: target.Id,
         startMs: previous.startMs,
         playlist: next.playlist,
         startPaused: previous.paused,
-        audioSwitch: { language: choice.language, previous },
+        audioSwitch: { language: choice.language, previous, original },
       });
       switched = true;
-    } catch {
-      if (playbackNow() === previousPlayback)
-        toast.error(t`This audio version is no longer available.`);
+    } catch (error) {
+      appLog('warn', `audio: switching to ${choice.language} failed: ${error}`);
+      unavailable();
     } finally {
       if (!switched) switchingAudio.current = false;
     }
   };
-  const returnToPrevious =
-    audioSwitch &&
-    (() =>
-      playOn({
-        itemId: item.Id!,
-        sourceId: audioSwitch.previous.sourceId,
-        startMs: audioSwitch.previous.startMs,
-        startPaused: audioSwitch.previous.paused,
-        playlist,
-      }));
+  const returnToPrevious = audioSwitch
+    ? () => returnFromAudioSwitch(item.Id!, playlist, audioSwitch)
+    : undefined;
 
   const together = () =>
     openPartySheet(
@@ -1025,18 +1040,7 @@ function Player({
                   offeringNext={!!next.element}
                   onVersions={switchVersion}
                   otherAudio={
-                    canSwitchAudio
-                      ? {
-                          options: alternateAudio(
-                            source,
-                            player.audioTracks,
-                            playableSources(versions.data),
-                            nativeAudio
-                          ),
-                          onOpenChange: setAudioMenuOpen,
-                          onSelect: selectAlternate,
-                        }
-                      : undefined
+                    otherAudio && { ...otherAudio, onSelect: selectAlternate }
                   }
                   onPrevious={next.previous ? next.playPrevious : undefined}
                   onNext={next.next ? next.playNext : undefined}

@@ -79,6 +79,9 @@ interface MenuPage {
   content: React.ReactNode;
 }
 
+/** The audio menu's row for the version played before a switch. */
+const ORIGINAL_AUDIO = 'original-audio';
+
 function Menu({
   name,
   label,
@@ -91,6 +94,7 @@ function Menu({
   action,
   pages = [],
   more,
+  pinned,
   alternate,
 }: {
   name: string;
@@ -105,6 +109,8 @@ function Menu({
   pages?: MenuPage[];
   /** Listed after a press on `label`, which stands in for them until the menu closes. */
   more?: { label: string; options: Track[] };
+  /** Listed above `options`, such as the version played before a switch. */
+  pinned?: { label: string; options: Track[] };
   alternate?: { label: string; description: string; options: Track[] };
 }) {
   const [expanded, setExpanded] = React.useState(false);
@@ -238,6 +244,17 @@ function Menu({
                     <LuChevronRight className="!me-0 ms-1 flex-none rtl:-scale-x-100" />
                   </DropdownMenuItem>
                 ))}
+              </div>
+            )}
+            {!!pinned?.options.length && (
+              <div
+                role="group"
+                aria-label={pinned.label}
+                data-ui="player-menu-pinned"
+                className="-mx-2 mb-1 shrink-0 border-b px-2 pb-1"
+              >
+                <DropdownMenuLabel>{pinned.label}</DropdownMenuLabel>
+                {pinned.options.map((option) => item(option))}
               </div>
             )}
             <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
@@ -657,6 +674,19 @@ export function OptionButtons({
           label={t`Audio`}
           icon={<LuAudioLines />}
           options={player.audioTracks}
+          pinned={
+            otherAudio?.original && {
+              // The version playing before any switch, not the title's original language.
+              label: t`Started with`,
+              options: [
+                {
+                  id: ORIGINAL_AUDIO,
+                  label: otherAudio.original.label,
+                  detail: otherAudio.original.source.aiostreams?.resolution,
+                },
+              ],
+            }
+          }
           alternate={
             otherAudio && {
               label: t`Other versions`,
@@ -671,9 +701,12 @@ export function OptionButtons({
           value={state.audio}
           onSelect={(id) => {
             if (!id) return;
-            const choice = otherAudio?.options.find(
-              (entry) => id === `alternate:${entry.language}`
-            );
+            const choice =
+              id === ORIGINAL_AUDIO
+                ? otherAudio?.original
+                : otherAudio?.options.find(
+                    (entry) => id === `alternate:${entry.language}`
+                  );
             if (choice) otherAudio?.onSelect(choice);
             else player.setAudio(id);
           }}

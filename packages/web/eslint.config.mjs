@@ -103,5 +103,10 @@ export default tseslint.config(
       'lingui/no-single-tag-to-translate': 'error',
       'lingui/no-trans-inside-trans': 'error',
     },
+  },
+  // Test names and fixtures are for developers, not people using the app.
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: { 'lingui/no-unlocalized-strings': 'off' },
   }
 );

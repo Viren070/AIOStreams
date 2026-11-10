@@ -358,7 +358,7 @@ class MpvEngine(private val context: Context) : Engine {
         override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
             audioParams(value)
         } else {
-            report(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
+            report(property, nodeJson(value) ?: JsonNull)
         }
 
         override fun event(eventId: Int, data: MPVNode) {
@@ -374,11 +374,7 @@ class MpvEngine(private val context: Context) : Engine {
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
                     // Publish this file's tracks before the page applies its audio selection.
-                    mpv.getPropertyNode("track-list")?.let { node ->
-                        runCatching { Json.parseToJsonElement(node.toJson()) }.getOrNull()?.let {
-                            report("track-list", it)
-                        }
-                    }
+                    mpv.getPropertyNode("track-list")?.let { nodeJson(it) }?.let { report("track-list", it) }
                     for (name in listOf("aid", "sid")) mpv.getPropertyString(name)?.let { report(name, JsonPrimitive(it)) }
                     listener.onEvent("loaded")
                 }
@@ -445,6 +441,10 @@ class MpvEngine(private val context: Context) : Engine {
         set("secondary-sub-delay", "0")
         reportLines(lines)
     }
+
+    /** An mpv node as JSON, or null when it doesn't convert. */
+    private fun nodeJson(node: MPVNode): JsonElement? =
+        runCatching { Json.parseToJsonElement(node.toJson()) }.getOrNull()
 
     /** An observed property's change, in the page's terms. */
     private fun report(name: String, value: JsonElement) {

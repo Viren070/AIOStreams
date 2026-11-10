@@ -4311,6 +4311,10 @@ msgstr "Start a party"
 msgid "Start on"
 msgstr "Start on"
 
+#: src/components/player/options.tsx
+msgid "Started with"
+msgstr "Started with"
+
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
 msgstr "Starting…"

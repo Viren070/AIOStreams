@@ -1,4 +1,3 @@
-import { audioLanguage, sourceDefaultsToAudio } from './alternate-audio';
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
@@ -23,6 +22,7 @@ import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { SUBTITLE_LIFT_MS, subtitleHeight } from '../subtitles/style';
 import type { MediaStream, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
+import { audioLanguage, sourceDefaultsToAudio } from './alternate-audio';
 import type { Chapter } from './chapters';
 import { useLiveRecovery } from './live-recovery';
 import {

@@ -4311,6 +4311,10 @@ msgstr ""
 msgid "Start on"
 msgstr ""
 
+#: src/components/player/options.tsx
+msgid "Started with"
+msgstr ""
+
 #: src/components/remote-sheet.tsx
 msgid "Starting…"
 msgstr ""

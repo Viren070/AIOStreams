@@ -4,6 +4,8 @@ import type { SourceInfo } from '../types';
 import { needsAppPlayer } from './stream';
 
 export interface OtherAudioMenu {
+  /** The version playing before the first switch, pinned above the rest. */
+  original?: AlternateAudio;
   options: AlternateAudio[];
   onOpenChange(open: boolean): void;
   onSelect(choice: AlternateAudio): void;
@@ -116,4 +118,45 @@ export function alternateAudio(
     }
   }
   return [...options.values()];
+}
+
+/** The language the source plays now: the selected track's, else the first it advertises. */
+export function playingAudioLanguage(
+  source: SourceInfo,
+  tracks: readonly { id: string; lang?: string }[],
+  selected: string | null | undefined
+): string | undefined {
+  const available = sourceAudioLanguages(source);
+  const playing = audioLanguage(
+    tracks.find((track) => track.id === selected)?.lang
+  );
+  return playing && available.includes(playing) ? playing : available[0];
+}
+
+/**
+ * The audio menu's versions: the original one pinned while another plays,
+ * and the other languages without a second entry for the original's.
+ */
+export function audioChoices(
+  current: SourceInfo,
+  currentTracks: readonly { lang?: string }[],
+  sources: readonly SourceInfo[],
+  nativeAudio = false,
+  original?: { sourceId: string; language: string }
+): Pick<OtherAudioMenu, 'original' | 'options'> {
+  const options = alternateAudio(current, currentTracks, sources, nativeAudio);
+  const source =
+    original && original.sourceId !== current.Id
+      ? sources.find((candidate) => candidate.Id === original.sourceId)
+      : undefined;
+  if (!original || !source || !canPlayAudioSource(source, nativeAudio))
+    return { options };
+  return {
+    original: {
+      language: original.language,
+      label: tagName(original.language) ?? original.language,
+      source,
+    },
+    options: options.filter((choice) => choice.language !== original.language),
+  };
 }
