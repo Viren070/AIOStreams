@@ -1,20 +1,25 @@
 import { t } from '@lingui/core/macro';
-import { sameLanguage } from '../../languages';
 import {
   parseCues,
   plainCueText,
   type SubtitleCue,
 } from '../../subtitles/cues';
 import {
+  EMBEDDED_WAIT_MS,
   embeddedSubtitles,
-  isMatroska,
+  readsOwnSubtitles,
   type EmbeddedSubtitles,
 } from '../../subtitles/embedded';
+import type { FileSubtitle } from '../../subtitles/file-subtitle';
 import { assLayer, canDrawAss } from '../../subtitles/libass';
-import type { MkvSubtitle } from '../../subtitles/matroska/file';
 import { subtitleHeight } from '../../subtitles/style';
 import type { PictureSurface, SubtitleLayer } from '../../subtitles/surface';
 import { ownTrackLabel } from '../../playback/controller';
+import {
+  EMBEDDED as OWN,
+  ownLines,
+  ownSubtitleTrack,
+} from '../../playback/own-subtitles';
 import { appLog } from '../shell/bridge';
 import type {
   EngineFactory,
@@ -31,7 +36,7 @@ interface AvTrack {
   label: string;
 }
 
-const EMBEDDED = 'embedded:';
+const AVPLAY = 'embedded:';
 const TICK_MS = 250;
 /** Samsung's TVs since 2018 can't decode it. */
 const DTS = /dts/i;
@@ -86,10 +91,10 @@ function videoSizeOf(av: AvPlay): { width: number; height: number } | null {
 
 /**
  * Samsung's own player, drawn beneath the page through an
- * `application/avplayer` object. It draws no subtitles and can't fetch them,
- * so the page draws both the file's and the server's from their text, except
- * styled scripts and PGS pictures, which it draws over the picture. Its volume
- * is the TV's.
+ * `application/avplayer` object. Of a file's subtitles it lists and reads only
+ * plain text, without languages, and it draws none and can't fetch them. So the
+ * page lists the file's own tracks from the file, and draws text from its text,
+ * and styled scripts and PGS pictures over the picture. Its volume is the TV's.
  */
 export const avPlayEngine: EngineFactory = (emit) => {
   const av = window.webapis!.avplay!;
@@ -106,9 +111,13 @@ export const avPlayEngine: EngineFactory = (emit) => {
   let layer: SubtitleLayer | null = null;
   let assFailed = false;
   let embedded: EmbeddedSubtitles | null = null;
-  // The file's subtitle tracks once read, beside the ones AVPlay lists.
-  let ownTracks: MkvSubtitle[] | null = null;
+  // The file's own subtitle tracks the page can show, once read.
+  let ownTracks: FileSubtitle[] | null = null;
+  let audioTracks: AvTrack[] = [];
   let textTracks: AvTrack[] = [];
+  let prepared = false;
+  let ownCues: SubtitleCue[] = [];
+  let stopOwnText = () => {};
   // Tracks whose reads failed for good, which AVPlay draws as text instead.
   const lost = new Set<string>();
   const moved = new Set<() => void>();
@@ -167,7 +176,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
 
   const showText = () => {
     const at = position - delayMs;
-    const cues = [...externalCues, embeddedCue].filter(
+    const cues = [...externalCues, ...ownCues, embeddedCue].filter(
       (c): c is SubtitleCue => !!c && c.startMs <= at && at < c.endMs
     );
     emit({
@@ -201,25 +210,41 @@ export const avPlayEngine: EngineFactory = (emit) => {
     }
   };
 
-  /** By its place among the text tracks, where both lists agree on how many there are and their languages. */
-  const ownTrack = (id: string): MkvSubtitle | null => {
-    if (!ownTracks || ownTracks.length !== textTracks.length) return null;
-    const ordinal = textTracks.findIndex((t) => `${EMBEDDED}${t.index}` === id);
-    const track = ownTracks[ordinal];
-    const drawn =
-      track?.kind === 'pgs' ||
-      (track?.kind === 'ass' && canDrawAss() && !assFailed);
-    if (!drawn) return null;
-    const listed = textTracks[ordinal].language;
-    if (listed && track.language && !sameLanguage(listed, track.language))
-      return null;
-    return track;
+  /** AVPlay lists a file's plain text tracks alone, in the file's order. */
+  const avPlayTrackOf = (track: FileSubtitle): AvTrack | undefined => {
+    const texts = ownTracks?.filter((t) => t.kind === 'text') ?? [];
+    const at = texts.indexOf(track);
+    return texts.length === textTracks.length ? textTracks[at] : undefined;
+  };
+
+  const listTracks = () => {
+    const tracks: EngineTrack[] = [
+      ...audioTracks.map((t) => ({
+        id: String(t.index),
+        type: 'audio' as const,
+        label: t.label,
+        lang: t.language,
+        unplayable: DTS.test(t.codec ?? ''),
+      })),
+      ...(ownTracks?.length
+        ? ownTracks.map(ownSubtitleTrack)
+        : textTracks.map((t) => ({
+            id: `${AVPLAY}${t.index}`,
+            type: 'subtitle' as const,
+            label: t.label,
+            lang: t.language,
+          }))),
+    ];
+    emit({ type: 'tracks', tracks });
   };
 
   const setSubtitle = (id: string | null) => {
     subtitle = id;
     externalCues = [];
     embeddedCue = null;
+    ownCues = [];
+    stopOwnText();
+    stopOwnText = () => {};
     layer?.destroy();
     layer = null;
     report({ subtitle: id });
@@ -232,31 +257,49 @@ export const avPlayEngine: EngineFactory = (emit) => {
       assFailed = true;
       setSubtitle(id);
     };
-    const own =
-      id?.startsWith(EMBEDDED) && embedded && !lost.has(id)
-        ? ownTrack(id)
-        : null;
-    if (own && embedded)
-      layer = embedded.draw(own.number, surface, start, {
-        onFail: failed,
-        onLost: (error) => {
-          appLog(
-            'warn',
-            `subtitles: the file's own track could not be read, so avplay draws it: ${String(error)}`
-          );
-          lost.add(id!);
-          setSubtitle(id);
-        },
-      });
-    const native = !!id?.startsWith(EMBEDDED) && !layer;
+    const onLost = (error: unknown) => {
+      appLog(
+        'warn',
+        `subtitles: the file's own track could not be read: ${String(error)}`
+      );
+      lost.add(id!);
+      setSubtitle(id);
+    };
+    const own = ownTracks?.find((t) => `${OWN}${t.number}` === id);
+    let native = own
+      ? avPlayTrackOf(own)
+      : textTracks.find((t) => `${AVPLAY}${t.index}` === id);
+    if (own && embedded && !lost.has(id!)) {
+      const drawn =
+        own.kind === 'pgs' ||
+        (own.kind === 'ass' && canDrawAss() && !assFailed);
+      if (drawn) {
+        layer = embedded.draw(own.number, surface, start, {
+          onFail: failed,
+          onLost,
+        });
+        native = undefined;
+      } else if (!native) {
+        const read: SubtitleCue[] = [];
+        ownCues = read;
+        stopOwnText =
+          embedded.read(own.number, {
+            events(events) {
+              for (const { startMs, endMs, text } of events)
+                read.push({ startMs, endMs, text });
+              showText();
+            },
+            lost: onLost,
+          }) ?? (() => {});
+      }
+    }
     run(() => {
       try {
-        if (native)
-          av.setSelectTrack('TEXT', Number(id!.slice(EMBEDDED.length)));
+        if (native) av.setSelectTrack('TEXT', native.index);
         av.setSilentSubtitle(!native);
       } catch {}
     });
-    if (layer) return showText();
+    if (own || native) return showText();
     const server = file?.subtitles.find((s) => s.id === id);
     if (server?.assUrl && canDrawAss() && !assFailed) {
       layer = assLayer(surface, { url: server.assUrl }, start, failed);
@@ -293,16 +336,24 @@ export const avPlayEngine: EngineFactory = (emit) => {
       playing = false;
       videoSize = null;
       ownTracks = null;
+      audioTracks = [];
       textTracks = [];
+      prepared = false;
       lost.clear();
-      if (isMatroska(next.source)) {
+      if (readsOwnSubtitles(next.source)) {
         const opened = embeddedSubtitles(next.url, next.headers);
         embedded = opened;
         void opened.subtitles.then((found) => {
           if (embedded !== opened) return;
-          ownTracks = found;
-          // A track AVPlay already shows moves to the page's drawing.
-          if (subtitle?.startsWith(EMBEDDED)) setSubtitle(subtitle);
+          ownTracks = found.filter((track) => track.kind);
+          if (!prepared) return;
+          listTracks();
+          const shown = textTracks.findIndex(
+            (t) => `${AVPLAY}${t.index}` === subtitle
+          );
+          const texts = ownTracks.filter((t) => t.kind === 'text');
+          if (shown >= 0 && texts.length === textTracks.length)
+            setSubtitle(`${OWN}${texts[shown].number}`);
         });
       }
       const shown = document.createElement('object');
@@ -315,32 +366,24 @@ export const avPlayEngine: EngineFactory = (emit) => {
       const onPrepared = () => {
         videoSize = videoSizeOf(av);
         moved.forEach((onMoved) => onMoved());
-        const audio = tracksOf(av, 'AUDIO');
-        const text = tracksOf(av, 'TEXT');
-        textTracks = text;
-        const tracks: EngineTrack[] = [
-          ...audio.map((t) => ({
-            id: String(t.index),
-            type: 'audio' as const,
-            label: t.label,
-            lang: t.language,
-            unplayable: DTS.test(t.codec ?? ''),
-          })),
-          ...text.map((t) => ({
-            id: `${EMBEDDED}${t.index}`,
-            type: 'subtitle' as const,
-            label: t.label,
-            lang: t.language,
-          })),
-        ];
-        emit({ type: 'tracks', tracks });
+        audioTracks = tracksOf(av, 'AUDIO');
+        textTracks = tracksOf(av, 'TEXT');
+        prepared = true;
         const duration = av.getDuration();
         if (duration) report({ durationMs: duration });
         const current = av
           .getCurrentStreamInfo()
           .find((t) => t.type === 'AUDIO')?.index;
         report({ audio: current === undefined ? null : String(current) });
-        emit({ type: 'loaded' });
+        const reading = embedded;
+        void Promise.race([
+          reading?.subtitles,
+          new Promise((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
+        ]).then(() => {
+          if (file !== next) return;
+          listTracks();
+          emit({ type: 'loaded' });
+        });
         if (next.startMs) seekTo(next.startMs);
         if (next.paused) return report({ paused: true });
         run(() => {
@@ -359,8 +402,13 @@ export const avPlayEngine: EngineFactory = (emit) => {
             emit({ type: 'failed', error: errorMessage(type) }),
           onsubtitlechange: (duration: number, text: string) => {
             const at = position;
-            embeddedCue = text
-              ? { startMs: at, endMs: at + Number(duration), text }
+            // AVPlay breaks lines with <br> and ends a line, or an empty one, with control characters.
+            const line = text
+              .replace(/<br\s*\/?>/gi, '\n')
+              .replace(/[\0\r]/g, '')
+              .trim();
+            embeddedCue = line
+              ? { startMs: at, endMs: at + Number(duration), text: line }
               : null;
             showText();
           },
@@ -421,6 +469,9 @@ export const avPlayEngine: EngineFactory = (emit) => {
         } catch {}
         layer?.destroy();
         layer = null;
+        stopOwnText();
+        stopOwnText = () => {};
+        ownCues = [];
         embedded?.close();
         embedded = null;
         shown.remove();
@@ -456,6 +507,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
       liftHeight = height;
       layer?.setHeight(height);
     },
+    ...ownLines(() => embedded),
     ownVolume: true,
   };
 };

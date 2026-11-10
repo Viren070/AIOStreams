@@ -1,13 +1,20 @@
+import { readAll, type ByteReader } from '../../byte-reader';
 import type { FetchPastCors } from '../../hosts';
 import type { SourceInfo } from '../../types';
+import type { Span } from '../align';
 import { assHeader, scriptFamilies } from '../ass-script';
 import { assPlainText } from '../cues';
+import type { FileSubtitle } from '../file-subtitle';
 import { assLayer } from '../libass';
 import { openMatroska, type MkvFile, type MkvSubtitle } from '../matroska/file';
+import { indexLines } from '../matroska/lines';
+import { openMp4, sampleLines } from '../mp4/file';
 import { pgsLayer } from '../pgs/layer';
 import type { PictureSurface, SubtitleLayer } from '../surface';
 import { AttachedFonts } from './fonts';
-import { SubtitleHarvest, type HarvestedEvent } from './harvest';
+import type { HarvestedEvent, SubtitleHarvest } from './harvest';
+import { MatroskaHarvest } from './harvest/matroska';
+import { Mp4Harvest } from './harvest/mp4';
 import { rangeReader, SideReader } from './reads';
 
 export type { HarvestedEvent } from './harvest';
@@ -23,7 +30,11 @@ export interface EventSink {
 
 export interface EmbeddedSubtitles {
   /** Empty for a file that can't be read. */
-  readonly subtitles: Promise<MkvSubtitle[]>;
+  readonly subtitles: Promise<FileSubtitle[]>;
+  /** When each track's lines show, from the file's index, by track number; tracks the index leaves out are missing. */
+  index(): Promise<Map<number, Span[]>>;
+  /** When a track's lines show, from the index and then as they're read, until stopped. */
+  watchLines(number: number, onLines: (lines: Span[]) => void): () => void;
   /** ASS with libass, PGS as pictures; null for a track the file hasn't. */
   draw(
     number: number,
@@ -40,10 +51,42 @@ export interface EmbeddedSubtitles {
 }
 
 const SSA = /^S_(TEXT\/)?SSA$/;
+const HEAD_BYTES = 256 * 1024;
 
-export const isMatroska = (source: SourceInfo) =>
+export const readsOwnSubtitles = (source: SourceInfo) =>
   !source.IsInfiniteStream &&
-  /(^|,)\s*(mkv|matroska)\s*(,|$)/i.test(source.Container ?? '');
+  /(^|,)\s*(mkv|matroska|webm|mp4|m4v|mov)\s*(,|$)/i.test(
+    source.Container ?? ''
+  );
+
+interface OpenedFile {
+  subtitles: FileSubtitle[];
+  /** With the attachments and ASS headers only Matroska has. */
+  matroska?: MkvFile;
+  harvest(track: FileSubtitle, lanes: () => number): SubtitleHarvest;
+  lines(track: FileSubtitle): Span[];
+}
+
+async function openFile(reader: ByteReader): Promise<OpenedFile | null> {
+  const start = await readAll(reader, 0, HEAD_BYTES);
+  const matroska = await openMatroska(reader, start);
+  if (matroska)
+    return {
+      subtitles: matroska.subtitles,
+      matroska,
+      harvest: (track, lanes) =>
+        new MatroskaHarvest(matroska, track as MkvSubtitle, lanes),
+      lines: (track) => indexLines(matroska, track as MkvSubtitle),
+    };
+  const mp4 = await openMp4(reader, start);
+  return (
+    mp4 && {
+      subtitles: mp4.subtitles,
+      harvest: (track, lanes) => new Mp4Harvest(mp4, track, lanes),
+      lines: (track) => sampleLines(mp4, track.number),
+    }
+  );
+}
 
 export function embeddedSubtitles(
   url: string,
@@ -52,7 +95,7 @@ export function embeddedSubtitles(
 ): EmbeddedSubtitles {
   const reader = new SideReader(rangeReader(url, headers, fetchFile));
   reader.setPlaying(false);
-  let file: MkvFile | null = null;
+  let file: OpenedFile | null = null;
   let fonts: AttachedFonts | null = null;
   let closed = false;
   let positionMs = 0;
@@ -65,29 +108,30 @@ export function embeddedSubtitles(
   let onFonts = (_fonts: Uint8Array[]) => {};
   const askFonts = (script: string) => fonts?.want(scriptFamilies(script));
 
-  const subtitles = openMatroska(reader)
+  const subtitles = openFile(reader)
     .then((opened) => {
       if (!opened || closed) return [];
       file = opened;
-      fonts = new AttachedFonts(opened, (font) => {
-        pool.push(font);
-        onFonts([font]);
-      });
+      if (opened.matroska)
+        fonts = new AttachedFonts(opened.matroska, (font) => {
+          pool.push(font);
+          onFonts([font]);
+        });
       return opened.subtitles;
     })
     .catch(() => []);
 
   /** `again` sends the events still ahead after a seek back, for a sink that prunes what it passed. One track at a time. */
   const follow = (
-    opened: MkvFile,
-    track: MkvSubtitle,
+    opened: OpenedFile,
+    track: FileSubtitle,
     sink: EventSink,
     again = false
   ) => {
     hide();
     let harvest = harvests.get(track.number);
     if (!harvest) {
-      harvest = new SubtitleHarvest(opened, track, () => reader.lanes);
+      harvest = opened.harvest(track, () => reader.lanes);
       harvests.set(track.number, harvest);
     }
     const reading = harvest;
@@ -140,6 +184,29 @@ export function embeddedSubtitles(
     return file && track && !closed ? { opened: file, track } : null;
   };
 
+  const read = (number: number, sink: EventSink) => {
+    const found = trackOf(number);
+    if (!found || found.track.kind === 'pgs') return null;
+    if (found.track.kind === 'text')
+      return follow(found.opened, found.track, sink);
+    // A styled line is often drawn several times, in layers and effects.
+    const shown = new Set<string>();
+    return follow(found.opened, found.track, {
+      events(events) {
+        const plain = events.flatMap((event) => {
+          // ReadOrder, Layer, Style, Name, three margins and Effect come before the text.
+          const text = assPlainText(event.text.split(',').slice(8).join(','));
+          const key = `${event.startMs}:${event.endMs}:${text}`;
+          if (!text || shown.has(key)) return [];
+          shown.add(key);
+          return [{ ...event, text }];
+        });
+        if (plain.length) sink.events(plain);
+      },
+      lost: sink.lost,
+    });
+  };
+
   return {
     subtitles,
     draw(number, surface, start, on) {
@@ -171,7 +238,10 @@ export function embeddedSubtitles(
       }
       if (found?.track.kind !== 'ass') return null;
       const { opened, track } = found;
-      const header = assHeader(track.header, SSA.test(track.codec));
+      const header = assHeader(
+        (track as MkvSubtitle).header,
+        SSA.test(track.codec)
+      );
       const layer = assLayer(surface, { header }, start, on.onFail);
       const stopReading = follow(
         opened,
@@ -197,27 +267,39 @@ export function embeddedSubtitles(
         },
       };
     },
-    read(number, sink) {
-      const found = trackOf(number);
-      if (!found || found.track.kind === 'pgs') return null;
-      if (found.track.kind === 'text')
-        return follow(found.opened, found.track, sink);
-      // A styled line is often drawn several times, in layers and effects.
-      const shown = new Set<string>();
-      return follow(found.opened, found.track, {
-        events(events) {
-          const plain = events.flatMap((event) => {
-            // ReadOrder, Layer, Style, Name, three margins and Effect come before the text.
-            const text = assPlainText(event.text.split(',').slice(8).join(','));
-            const key = `${event.startMs}:${event.endMs}:${text}`;
-            if (!text || shown.has(key)) return [];
-            shown.add(key);
-            return [{ ...event, text }];
-          });
-          if (plain.length) sink.events(plain);
-        },
-        lost: sink.lost,
+    read,
+    index: () =>
+      subtitles.then(() => {
+        const opened = file;
+        const lines = new Map<number, Span[]>();
+        if (!opened || closed) return lines;
+        for (const track of opened.subtitles) {
+          const found = opened.lines(track);
+          if (found.length) lines.set(track.number, found);
+        }
+        return lines;
+      }),
+    watchLines(number, onLines) {
+      let stopped = false;
+      let stopReading = () => {};
+      void subtitles.then(() => {
+        const found = trackOf(number);
+        if (stopped || !found) return;
+        const indexed = found.opened.lines(found.track);
+        if (indexed.length) onLines(indexed);
+        // Pictures' lines come from the index alone.
+        if (found.track.kind === 'pgs') return;
+        stopReading =
+          read(number, {
+            events: (events) =>
+              onLines(events.map(({ startMs, endMs }) => ({ startMs, endMs }))),
+            lost: () => {},
+          }) ?? (() => {});
       });
+      return () => {
+        stopped = true;
+        stopReading();
+      };
     },
     setPosition(ms, buffered) {
       positionMs = ms;

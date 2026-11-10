@@ -7,12 +7,12 @@ import { parseCues, plainCueText, type SubtitleCue } from '../subtitles/cues';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
-  isMatroska,
+  readsOwnSubtitles,
   type EmbeddedSubtitles,
 } from '../subtitles/embedded';
 import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
 import { assLayer, canDrawAss } from '../subtitles/libass';
-import type { MkvSubtitle } from '../subtitles/matroska/file';
+import type { FileSubtitle } from '../subtitles/file-subtitle';
 import { subtitleHeight } from '../subtitles/style';
 import {
   pictureBox,
@@ -28,7 +28,8 @@ import type {
 } from './engine';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 import { canPlayWithWebGpu } from './player-choice';
-import { EMBEDDED, ownSubtitleTrack, SUBTITLE_TYPES } from './video';
+import { EMBEDDED, ownLines, ownSubtitleTrack } from './own-subtitles';
+import { SUBTITLE_TYPES } from './video';
 import upscalePass from './aiostreams-upscale.wgsl';
 import { onShadersChange, readShaders } from './shaders';
 import { onUpscalingChange, upscalingOn } from './upscaling';
@@ -168,7 +169,7 @@ export function webGpuEngine(
     let layer: SubtitleLayer | null = null;
     let assFailed = false;
     let embedded: EmbeddedSubtitles | null = null;
-    let ownTracks: MkvSubtitle[] = [];
+    let ownTracks: FileSubtitle[] = [];
     let stopOwnText = () => {};
     let files: FileTrack[] = [];
     let cues: SubtitleCue[] = [];
@@ -530,7 +531,7 @@ export function webGpuEngine(
           clearInterval(drops)
         );
         if (next.paused) set({ paused: true });
-        if (isMatroska(next.source)) {
+        if (readsOwnSubtitles(next.source)) {
           const reading = embeddedSubtitles(
             next.url,
             next.headers,
@@ -600,6 +601,7 @@ export function webGpuEngine(
       },
       toggleFullscreen: toggleDocumentFullscreen,
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
+      ...ownLines(() => embedded),
       subtitleFiles: {
         types: SUBTITLE_TYPES,
         add: async (added) => {

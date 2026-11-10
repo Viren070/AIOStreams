@@ -6,39 +6,25 @@ import type { VideoFit } from '../settings';
 import {
   EMBEDDED_WAIT_MS,
   embeddedSubtitles,
-  isMatroska,
+  readsOwnSubtitles,
   type EmbeddedSubtitles,
 } from '../subtitles/embedded';
+import type { FileSubtitle } from '../subtitles/file-subtitle';
 import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
 import { assLayer, canDrawAss } from '../subtitles/libass';
-import type { MkvSubtitle } from '../subtitles/matroska/file';
 import { subtitleHeight, subtitleLine } from '../subtitles/style';
 import { videoSurface, type SubtitleLayer } from '../subtitles/surface';
-import { ownTrackLabel } from './controller';
 import type {
   EngineFactory,
   EngineFile,
   EngineState,
   EngineTrack,
 } from './engine';
+import { ownTrackLabel } from './controller';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
+import { EMBEDDED, ownLines, ownSubtitleTrack } from './own-subtitles';
 
 export const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
-/** Before a file's own subtitle track's Matroska number. */
-export const EMBEDDED = 'mkv:';
-
-export const ownSubtitleTrack = (t: MkvSubtitle, i: number): EngineTrack => ({
-  id: `${EMBEDDED}${t.number}`,
-  type: 'subtitle',
-  label: ownTrackLabel(t.name, t.language, i + 1),
-  lang: t.language,
-  title: t.name,
-  ...(t.kind === 'ass' && { codec: 'ass' }),
-  forced: t.isForced,
-  hearingImpaired: t.hearingImpaired,
-  default: t.isDefault,
-});
-
 /** A cue would show `{\an8}`-style tags as text. */
 const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
 
@@ -93,7 +79,7 @@ export function videoEngine(
     let layer: SubtitleLayer | null = null;
     let assFailed = false;
     let embedded: EmbeddedSubtitles | null = null;
-    let ownTracks: MkvSubtitle[] = [];
+    let ownTracks: FileSubtitle[] = [];
     // The one shown as text goes through this track; a video's text tracks can't be removed.
     let ownText: { el: HTMLVideoElement; track: TextTrack } | null = null;
     let stopOwnText = () => {};
@@ -299,7 +285,7 @@ export function videoEngine(
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
         }
-        if (isMatroska(next.source)) {
+        if (readsOwnSubtitles(next.source)) {
           const opened = embeddedSubtitles(
             next.url,
             next.headers,
@@ -441,6 +427,7 @@ export function videoEngine(
       },
       toggleFullscreen: toggleDocumentFullscreen,
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
+      ...ownLines(() => embedded),
       subtitleFiles: {
         types: SUBTITLE_TYPES,
         add: async (added) => {

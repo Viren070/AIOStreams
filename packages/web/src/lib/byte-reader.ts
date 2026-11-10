@@ -5,6 +5,17 @@ export interface ByteReader {
   stream?(start: number, length: number): AsyncIterable<Uint8Array>;
 }
 
+/** Reads of the first bytes come from `start`. */
+export function withStart(reader: ByteReader, start: Uint8Array): ByteReader {
+  return {
+    read: (at, length) =>
+      at + length <= start.length
+        ? Promise.resolve(start.subarray(at, at + length))
+        : reader.read(at, length),
+    stream: reader.stream && ((at, length) => reader.stream!(at, length)),
+  };
+}
+
 export async function* readsInTurn(
   reader: ByteReader,
   start: number,

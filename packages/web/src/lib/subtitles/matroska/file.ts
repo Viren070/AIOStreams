@@ -4,8 +4,10 @@ import {
   ReadError,
   StreamCursor,
   streamOf,
+  withStart,
   type ByteReader,
 } from '../../byte-reader';
+import type { FileSubtitle, SubtitleKind } from '../file-subtitle';
 import {
   ATTACHED_FILE,
   ATTACHMENTS,
@@ -58,19 +60,7 @@ import {
   type Child,
 } from './ebml';
 
-const HEAD_BYTES = 256 * 1024;
 const MAX_ELEMENT = 16 * 1024 * 1024;
-
-/** Reads of the first bytes come from `start`. */
-function withStart(reader: ByteReader, start: Uint8Array): ByteReader {
-  return {
-    read: (at, length) =>
-      at + length <= start.length
-        ? Promise.resolve(start.subarray(at, at + length))
-        : reader.read(at, length),
-    stream: reader.stream && ((at, length) => reader.stream!(at, length)),
-  };
-}
 
 export interface Encoding {
   /** 0 zlib, 3 header stripping; the others are not read. */
@@ -80,18 +70,7 @@ export interface Encoding {
   scope: number;
 }
 
-export type SubtitleKind = 'ass' | 'text' | 'pgs';
-
-export interface MkvSubtitle {
-  number: number;
-  codec: string;
-  /** Null for a format the page can't draw. */
-  kind: SubtitleKind | null;
-  language?: string;
-  name?: string;
-  isDefault: boolean;
-  isForced: boolean;
-  hearingImpaired: boolean;
+export interface MkvSubtitle extends FileSubtitle {
   /** An ASS track's script header. */
   header: string;
   encoding?: Encoding;
@@ -419,11 +398,11 @@ export async function* attachedFiles(
 export const isFont = (file: Attachment) =>
   /font|truetype|opentype|sfnt/i.test(file.mime) || FONT_NAME.test(file.name);
 
-/** Null for a file that isn't Matroska or has no subtitle track. */
+/** Null for a file that isn't Matroska or has no subtitle track. `start` is the file's first bytes. */
 export async function openMatroska(
-  source: ByteReader
+  source: ByteReader,
+  start: Uint8Array
 ): Promise<MkvFile | null> {
-  const start = await readAll(source, 0, HEAD_BYTES);
   const reader = withStart(source, start);
   const ebml = head(start, 0);
   if (!ebml || ebml.id !== EBML || ebml.size < 0) return null;

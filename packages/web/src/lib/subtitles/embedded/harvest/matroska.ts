@@ -1,96 +1,48 @@
-import { concat, readAll, ReadError } from '../../byte-reader';
+import { concat, readAll, ReadError } from '../../../byte-reader';
 import {
   blockTrack,
   clusterHead,
   readBlock,
   type Block,
   type ClusterHead,
-} from '../matroska/blocks';
-import { BLOCK_GROUP, CLUSTER, SIMPLE_BLOCK, head } from '../matroska/ebml';
+} from '../../matroska/blocks';
+import { BLOCK_GROUP, CLUSTER, SIMPLE_BLOCK, head } from '../../matroska/ebml';
 import {
   blockText,
   decoded,
   type CueEntry,
   type MkvFile,
   type MkvSubtitle,
-} from '../matroska/file';
+} from '../../matroska/file';
+import {
+  MERGE_GAP,
+  MERGE_SPAN,
+  SubtitleHarvest,
+  WINDOWED_OVER,
+  type HarvestedEvent,
+  type HarvestTask,
+} from '.';
 
 const MAX_BLOCK = 4 * 1024 * 1024;
 const BLOCK_READ = 4096;
 const SCAN_WINDOW = 64 * 1024;
 const DEFAULT_DURATION_MS = 5000;
 
-export interface HarvestedEvent {
-  startMs: number;
-  endMs: number;
-  /** An ASS event's fields after its times, or a caption. */
-  text: string;
-  /** A picture track's block. */
-  data?: Uint8Array;
-}
-
-const sizeOf = (event: HarvestedEvent) =>
-  event.text.length + (event.data?.length ?? 0);
-
-interface Task {
-  timeMs: number;
-  run(task: Task): Promise<void>;
-  state: 'waiting' | 'running' | 'done';
-  tries: number;
-  retryAt: number;
-  /** Walks whole clusters, so it waits for the video to buffer. */
-  heavy: boolean;
-  /** Where the events it kept start, so a windowed harvest can drop them. */
-  kept: number[];
-}
-
-const AHEAD_MS = 90_000;
-const BEHIND_MS = 10_000;
-const MERGE_GAP = 64 * 1024;
-const MERGE_SPAN = 256 * 1024;
-const SCAN_BUFFER_MS = 20_000;
-/** A track past this many blocks is read only near the playhead; what is far from it is dropped past KEEP_SIZE. */
-const WINDOWED_OVER = 8000;
-const KEEP_SIZE = 4 * 1024 * 1024;
-/** For a block that won't parse, not a failed read. */
-const BAD_BLOCK_TRIES = 3;
-/** Failed reads before any worked that hand the track to the TV's player while reading goes on. */
-const TROUBLE_AFTER = 2;
-const RETRY_MS = [2000, 5000, 15_000, 30_000, 60_000];
-
 const earliest = (entries: CueEntry[]) =>
   entries.reduce((ms, entry) => Math.min(ms, entry.timeMs), Infinity);
 
-/** Nearest the playhead first, then the rest in the background. */
-export class SubtitleHarvest {
-  readonly events = new Map<number, HarvestedEvent>();
-  onUpdate: (event: HarvestedEvent) => void = () => {};
-  /** `lasting` when the host refused for good; otherwise reading goes on. */
-  onFail: (error: unknown, lasting: boolean) => void = () => {};
-  private readonly tasks: Task[] = [];
+/** Reads the blocks the index points at, or walks the clusters where it has none. */
+export class MatroskaHarvest extends SubtitleHarvest {
   private readonly clusters = new Map<number, Promise<ClusterHead | null>>();
   private readonly heads = new Map<number, ClusterHead>();
   private readonly scanned = new Map<number, Promise<unknown>>();
-  private readonly windowed: boolean;
-  private running = 0;
-  private positionMs = 0;
-  private active = false;
-  private failed = false;
-  private worked = false;
-  private troubled = false;
-  private failures = 0;
-  private roomy = true;
-  private held = 0;
-  private timer = 0;
-  /** No index for the track: the clusters are walked near the playhead only. */
-  private scanning = false;
-  private waiters: { untilMs: number; resolve: () => void }[] = [];
 
   constructor(
     private readonly file: MkvFile,
-    readonly track: MkvSubtitle,
-    private readonly lanes: () => number = () => 1
+    override readonly track: MkvSubtitle,
+    lanes?: () => number
   ) {
+    super(track, lanes);
     const cues = file.cues.get(track.number) ?? [];
     this.windowed = cues.length > WINDOWED_OVER;
     const byCluster = new Map<number, CueEntry[]>();
@@ -104,70 +56,8 @@ export class SubtitleHarvest {
     this.tasks.sort((a, b) => a.timeMs - b.timeMs);
   }
 
-  /** `ms` is the file's own time. A harvest that gave up tries again. */
-  start(ms: number): void {
-    this.active = true;
-    this.positionMs = ms;
-    if (this.failed) {
-      this.failed = false;
-      this.failures = 0;
-    }
-    this.pump();
-  }
-
-  setPosition(ms: number): void {
-    if (Math.abs(ms - this.positionMs) < 1000) return;
-    this.positionMs = ms;
-    if (this.active) this.pump();
-  }
-
-  /** `aheadMs` is null where the player doesn't say. */
-  setBuffered(aheadMs: number | null): void {
-    const roomy = aheadMs === null || aheadMs >= SCAN_BUFFER_MS;
-    if (roomy === this.roomy) return;
-    this.roomy = roomy;
-    if (roomy && this.active) this.pump();
-  }
-
-  pause(): void {
-    this.active = false;
-    window.clearTimeout(this.timer);
-  }
-
-  /** Resolves once everything up to `untilMs` is read, or it can't be. */
-  settled(untilMs: number): Promise<void> {
-    if (this.covered(untilMs)) return Promise.resolve();
-    return new Promise((resolve) => this.waiters.push({ untilMs, resolve }));
-  }
-
-  private covered(untilMs: number): boolean {
-    if (this.failed) return true;
-    const from = this.positionMs - BEHIND_MS;
-    return this.tasks.every(
-      (task) =>
-        task.state === 'done' ||
-        task.timeMs < from ||
-        task.timeMs > untilMs ||
-        task.tries > 0
-    );
-  }
-
-  private add(
-    timeMs: number,
-    run: (task: Task) => Promise<void>,
-    heavy = false
-  ): Task {
-    const task: Task = {
-      timeMs,
-      run,
-      state: 'waiting',
-      tries: 0,
-      retryAt: 0,
-      heavy,
-      kept: [],
-    };
-    this.tasks.push(task);
-    return task;
+  protected override forget(): void {
+    this.scanned.clear();
   }
 
   /** One read per run of nearby blocks, and the whole cluster where the index leaves a block's place out. */
@@ -241,125 +131,6 @@ export class SubtitleHarvest {
     return units * this.file.scaleMs;
   }
 
-  private next(): Task | undefined {
-    const now = Date.now();
-    const from = this.positionMs - BEHIND_MS;
-    const to = this.positionMs + AHEAD_MS;
-    const ready = (task: Task) =>
-      task.state === 'waiting' &&
-      task.retryAt <= now &&
-      (!task.heavy || this.roomy);
-    const near = this.tasks.find(
-      (task) => ready(task) && task.timeMs >= from && task.timeMs <= to
-    );
-    if (near) return near;
-    if (this.running > 0 || this.scanning || this.windowed) return;
-    const later = (task: Task) => ready(task) && !task.heavy;
-    return (
-      this.tasks.find((task) => later(task) && task.timeMs > to) ??
-      this.tasks.find(later)
-    );
-  }
-
-  private pump(): void {
-    if (!this.active || this.failed) return;
-    window.clearTimeout(this.timer);
-    while (this.running < this.lanes()) {
-      const task = this.next();
-      if (!task) break;
-      task.state = 'running';
-      this.running++;
-      task
-        .run(task)
-        .then(
-          () => {
-            task.state = 'done';
-            this.worked = true;
-            this.troubled = false;
-            this.failures = 0;
-            if (this.windowed) this.trim();
-          },
-          (error: unknown) => this.failedTask(task, error)
-        )
-        .finally(() => {
-          this.running--;
-          this.release();
-          this.pump();
-        });
-    }
-    const now = Date.now();
-    const soonest = this.tasks.reduce(
-      (at, task) =>
-        task.state === 'waiting' && task.retryAt > now
-          ? Math.min(at, task.retryAt)
-          : at,
-      Infinity
-    );
-    if (this.running === 0 && Number.isFinite(soonest)) {
-      this.timer = window.setTimeout(
-        () => this.pump(),
-        Math.max(soonest - now, 250)
-      );
-    }
-  }
-
-  private failedTask(task: Task, error: unknown): void {
-    task.state = 'waiting';
-    if (error instanceof ReadError && error.lasting) {
-      this.failed = true;
-      this.onFail(error, true);
-      return;
-    }
-    task.tries++;
-    if (!(error instanceof ReadError) && task.tries >= BAD_BLOCK_TRIES) {
-      task.state = 'done';
-      return;
-    }
-    task.retryAt =
-      Date.now() + RETRY_MS[Math.min(task.tries, RETRY_MS.length) - 1];
-    this.failures++;
-    if (!this.worked && !this.troubled && this.failures >= TROUBLE_AFTER) {
-      this.troubled = true;
-      this.onFail(error, false);
-    }
-  }
-
-  private release(): void {
-    this.waiters = this.waiters.filter((waiter) => {
-      if (!this.covered(waiter.untilMs)) return true;
-      waiter.resolve();
-      return false;
-    });
-  }
-
-  private trim(): void {
-    if (this.held <= KEEP_SIZE) return;
-    const from = this.positionMs - BEHIND_MS - 60_000;
-    const to = this.positionMs + AHEAD_MS + 60_000;
-    const distance = (task: Task) => Math.abs(task.timeMs - this.positionMs);
-    const far = this.tasks
-      .filter(
-        (task) =>
-          task.state === 'done' &&
-          task.kept.length &&
-          (task.timeMs < from || task.timeMs > to)
-      )
-      .sort((a, b) => distance(b) - distance(a));
-    for (const task of far) {
-      if (this.held <= KEEP_SIZE * 0.75) break;
-      for (const at of task.kept) {
-        const event = this.events.get(at);
-        if (!event) continue;
-        this.held -= sizeOf(event);
-        this.events.delete(at);
-      }
-      task.kept = [];
-      task.state = 'waiting';
-      task.tries = 0;
-    }
-    this.scanned.clear();
-  }
-
   private cluster(at: number): Promise<ClusterHead | null> {
     let known = this.clusters.get(at);
     if (!known) {
@@ -374,11 +145,11 @@ export class SubtitleHarvest {
     return known;
   }
 
-  private async keep(
+  private async keepBlock(
     at: number,
     block: Block,
     cluster: ClusterHead,
-    task: Task,
+    task: HarvestTask,
     cue?: CueEntry
   ): Promise<void> {
     if (block.track !== this.track.number || this.events.has(at)) return;
@@ -398,17 +169,14 @@ export class SubtitleHarvest {
       text: picture ? '' : blockText(this.track, payload),
       ...(picture && { data: payload }),
     };
-    this.events.set(at, event);
-    this.held += sizeOf(event);
-    task.kept.push(at);
-    this.onUpdate(event);
+    this.keep(at, event, task);
   }
 
   /** Read together with the cluster's head where it is near. */
   private async readRun(
     clusterAt: number,
     run: CueEntry[],
-    task: Task
+    task: HarvestTask
   ): Promise<void> {
     const first = run[0].relative!;
     const last = run[run.length - 1].relative!;
@@ -444,7 +212,7 @@ export class SubtitleHarvest {
     for (const entry of run) {
       const at = cluster.data + entry.relative!;
       const block = await this.blockAt(at, bytes, bytesAt);
-      if (block) await this.keep(at, block, cluster, task, entry);
+      if (block) await this.keepBlock(at, block, cluster, task, entry);
       else misplaced = true;
     }
     // An index that points beside the block still names its cluster.
@@ -486,7 +254,7 @@ export class SubtitleHarvest {
     return readBlock(local.subarray(0, total), found);
   }
 
-  private async scanCluster(at: number, task: Task): Promise<void> {
+  private async scanCluster(at: number, task: HarvestTask): Promise<void> {
     let scanned = this.scanned.get(at);
     if (!scanned) {
       scanned = this.scan(at, at + 1, task);
@@ -500,7 +268,7 @@ export class SubtitleHarvest {
   private async scan(
     from: number,
     until: number,
-    task: Task
+    task: HarvestTask
   ): Promise<number | null> {
     let at = from;
     while (at < until) {
@@ -537,7 +305,7 @@ export class SubtitleHarvest {
             await ensure(next, found.length + found.size);
             const bytes = chunk.subarray(next - chunkAt, end - chunkAt);
             const block = readBlock(bytes, found);
-            if (block) await this.keep(next, block, cluster, task);
+            if (block) await this.keepBlock(next, block, cluster, task);
           }
         }
         skipped = found.length + found.size > SCAN_WINDOW;
