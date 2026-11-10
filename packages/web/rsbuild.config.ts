@@ -104,6 +104,7 @@ function webGpuPlayer() {
       info: { minimized: true },
     },
     module: `${libraries}/webgpu-player/EmbeddedPlayer.js`,
+    root: dirname(manifest),
   };
 }
 
@@ -148,7 +149,7 @@ export default defineConfig(async ({ envMode }) => {
   };
   if (standalone) {
     return {
-      plugins: [pluginReact(), pluginLicenses()],
+      plugins: [pluginReact(), pluginLicenses([engine.root])],
       source,
       tools,
       html: {
@@ -165,7 +166,7 @@ export default defineConfig(async ({ envMode }) => {
     };
   }
   return {
-    plugins: [pluginReact(), pluginLicenses()],
+    plugins: [pluginReact(), pluginLicenses([engine.root])],
     source,
     tools,
     html: {
