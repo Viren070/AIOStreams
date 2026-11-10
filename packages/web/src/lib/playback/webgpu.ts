@@ -29,7 +29,10 @@ import type {
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 import { canPlayWithWebGpu } from './player-choice';
 import { EMBEDDED, ownSubtitleTrack, SUBTITLE_TYPES } from './video';
-import { gpuStatsRows, type GpuStats } from './webgpu-stats';
+import upscalePass from './aiostreams-upscale.wgsl';
+import { onShadersChange, readShaders } from './shaders';
+import { onUpscalingChange, upscalingOn } from './upscaling';
+import { gpuStatsRows, UPSCALE_PASS, type GpuStats } from './webgpu-stats';
 
 interface GpuAudioTrack {
   ordinal: number;
@@ -71,6 +74,9 @@ interface GpuPlayer {
   setAudio(ordinal: number): Promise<GpuOpened>;
   presentedMs(): number | null;
   stats(): GpuStats | null;
+  setPasses(sources: readonly string[]): Promise<{
+    inactivePasses: readonly { name: string; reason: string; detail: string }[];
+  }>;
   destroy(): void;
 }
 
@@ -110,6 +116,9 @@ function loadModule(): Promise<GpuModule | null> {
 }
 
 const GESTURES = ['pointerdown', 'keydown', 'touchend'];
+/** Upscaling stays off for a video that drops this share of a window's frames with it. */
+const MAX_DROPPED = 0.2;
+const DROP_WINDOW_FRAMES = 60;
 
 /** The engine's audio only starts once the page has had a click or key press. */
 function activated(): Promise<void> {
@@ -169,6 +178,8 @@ export function webGpuEngine(
     const moved = new Set<() => void>();
     let detach: (() => void)[] = [];
     let lastClock: { clockMs: number; at: number } | null = null;
+    let struggling = false;
+    let dropBase: { shown: number; dropped: number } | null = null;
 
     const set = (state: EngineState) => emit({ type: 'state', state });
     const lost = (error: unknown) =>
@@ -344,6 +355,51 @@ export function webGpuEngine(
       player = null;
     };
 
+    const applyPasses = async (shown: GpuPlayer) => {
+      const sources = (await readShaders().catch(() => [])).map((s) => s.text);
+      if (shown !== player) return;
+      if (upscalingOn() && !struggling) sources.push(upscalePass);
+      const { inactivePasses } = await shown.setPasses(sources);
+      for (const { name, reason, detail } of inactivePasses)
+        if (reason !== 'condition-false')
+          appLog('warn', `webgpu: pass ${name} left out: ${reason} ${detail}`);
+    };
+    const reapply = () => {
+      if (player) void applyPasses(player).catch(() => {});
+    };
+
+    const watchDrops = () => {
+      const stats = player?.stats();
+      if (
+        !stats ||
+        paused ||
+        struggling ||
+        !stats.passes.includes(UPSCALE_PASS)
+      ) {
+        dropBase = null;
+        return;
+      }
+      const now = {
+        shown: stats.framesPresented,
+        dropped: stats.framesDropped,
+      };
+      if (!dropBase) {
+        dropBase = now;
+        return;
+      }
+      const dropped = now.dropped - dropBase.dropped;
+      const frames = now.shown - dropBase.shown + dropped;
+      if (frames < DROP_WINDOW_FRAMES) return;
+      dropBase = now;
+      if (dropped / frames < MAX_DROPPED) return;
+      struggling = true;
+      appLog(
+        'info',
+        'webgpu: upscaling is off for this video, which dropped frames with it'
+      );
+      reapply();
+    };
+
     const unplayable = (reason: string, positionMs?: number) => {
       stop();
       emit({ type: 'unplayable', reason, positionMs });
@@ -399,6 +455,10 @@ export function webGpuEngine(
         { container, video: el },
         events(load)
       ));
+      await applyPasses(opened).catch((error: unknown) =>
+        appLog('warn', `webgpu: passes not set: ${String(error)}`)
+      );
+      if (load !== opening) return;
       const asked = paused;
       const result = await opened.open({
         url: next.url,
@@ -444,6 +504,8 @@ export function webGpuEngine(
         file = next;
         position = next.startMs;
         paused = !!next.paused;
+        struggling = false;
+        dropBase = null;
         delayMs = next.subtitleDelayMs;
         subtitle = null;
         if (next.volume) {
@@ -463,6 +525,10 @@ export function webGpuEngine(
           document.removeEventListener('fullscreenchange', onFullscreen)
         );
         onFullscreen();
+        const drops = setInterval(watchDrops, 1000);
+        detach.push(onUpscalingChange(reapply), onShadersChange(reapply), () =>
+          clearInterval(drops)
+        );
         if (next.paused) set({ paused: true });
         if (isMatroska(next.source)) {
           const reading = embeddedSubtitles(
@@ -493,6 +559,7 @@ export function webGpuEngine(
       seek(ms) {
         player?.seek(ms);
         position = ms;
+        dropBase = null;
         shownAt = null;
         embedded?.setPosition(ms, null);
         emit({ type: 'position', positionMs: ms });

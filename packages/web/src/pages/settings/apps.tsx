@@ -46,7 +46,7 @@ import {
 } from '../../lib/settings';
 import { useServerInfo } from '../../lib/server-info';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
-import { onDevice } from './common';
+import { onDevice, ShaderFilesRow } from './common';
 
 function UpdatesCard() {
   const [setting, setSetting] = useSetting(settings.app.updateChannel);
@@ -411,61 +411,13 @@ function MpvConfigCard() {
       >
         <Trans>Save</Trans>
       </Button>
-      <MpvShadersRow />
-    </SettingsCard>
-  );
-}
-
-function MpvShadersRow() {
-  const [names, setNames] = React.useState<string[] | null>(null);
-  const picker = React.useRef<HTMLInputElement>(null);
-  React.useEffect(() => {
-    readMpvShaders().then(setNames, () => setNames([]));
-  }, []);
-  const failed = (e: Error) => toast.error(e.message);
-  return (
-    <div className="flex flex-col gap-3">
-      <SettingsRow
-        label={t`Shaders`}
+      <ShaderFilesRow
         help={t`GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter.`}
-      >
-        <input
-          ref={picker}
-          type="file"
-          accept=".glsl,.hook"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (!file) return;
-            file
-              .text()
-              .then((text) => addMpvShader(file.name, text))
-              .then(setNames, failed);
-          }}
-        />
-        <Button
-          intent="gray-outline"
-          className="w-full rounded-full sm:w-auto"
-          disabled={names === null}
-          onClick={() => picker.current?.click()}
-        >
-          <Trans>Add a shader</Trans>
-        </Button>
-      </SettingsRow>
-      {names?.map((name) => (
-        <div key={name} className="flex items-center justify-between gap-3">
-          <span className="min-w-0 truncate font-mono text-sm">{name}</span>
-          <Button
-            intent="gray-outline"
-            size="sm"
-            className="flex-none rounded-full"
-            onClick={() => removeMpvShader(name).then(setNames, failed)}
-          >
-            <Trans>Remove</Trans>
-          </Button>
-        </div>
-      ))}
-    </div>
+        accept=".glsl,.hook"
+        read={readMpvShaders}
+        add={addMpvShader}
+        remove={removeMpvShader}
+      />
+    </SettingsCard>
   );
 }

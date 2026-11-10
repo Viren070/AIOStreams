@@ -427,7 +427,7 @@ msgstr ""
 msgid "Add a server"
 msgstr ""
 
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/common.tsx
 msgid "Add a shader"
 msgstr ""
 
@@ -3600,7 +3600,7 @@ msgstr ""
 #: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/common.tsx
 msgid "Remove"
 msgstr ""
 
@@ -3989,7 +3989,11 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/playback.tsx
+msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
+msgstr ""
+
+#: src/pages/settings/common.tsx
 msgid "Shaders"
 msgstr ""
 
@@ -4867,6 +4871,10 @@ msgstr ""
 msgid "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
 msgstr ""
 
+#: src/lib/playback/shaders.ts
+msgid "This browser keeps no files for this site."
+msgstr ""
+
 #: src/pages/settings/playback.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
@@ -4883,12 +4891,20 @@ msgstr ""
 msgid "This device couldn't read what the party is playing."
 msgstr ""
 
+#: src/lib/playback/shaders.ts
+msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
+msgstr ""
+
 #: src/pages/settings/subtitles.tsx
 msgid "This is how subtitles will look."
 msgstr ""
 
 #: src/components/crash-report.tsx
 msgid "This is what the device recorded about it. Sending or saving the report helps get it fixed."
+msgstr ""
+
+#: src/lib/playback/shaders.ts
+msgid "This isn't a .wgsl pass file."
 msgstr ""
 
 #: src/lib/queries.ts

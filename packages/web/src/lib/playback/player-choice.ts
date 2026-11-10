@@ -174,7 +174,7 @@ export const playsWithWebGpu = () =>
   canPlayWithWebGpu();
 
 export const canUpscale = () =>
-  !!currentHost().playerFeatures?.includes('upscaling');
+  !!currentHost().playerFeatures?.includes('upscaling') || playsWithWebGpu();
 
 /** `launched` are the players the desktop app found it can start. */
 export function playerOptions(

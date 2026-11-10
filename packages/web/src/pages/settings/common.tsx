@@ -1,12 +1,15 @@
 import React from 'react';
 import { plural, t } from '@lingui/core/macro';
 import { LuArrowDown, LuArrowUp, LuX } from 'react-icons/lu';
+import { Trans } from '@lingui/react/macro';
+import { toast } from 'sonner';
 import { Select } from '@aiostreams/ui/select';
-import { IconButton } from '@aiostreams/ui/button';
+import { Button, IconButton } from '@aiostreams/ui/button';
 import { BasicField } from '@aiostreams/ui/basic-field';
 import { cn } from '@aiostreams/ui/core/styling';
 import { LANGUAGES, languageName } from '../../lib/languages';
 import { focusOn } from '../../lib/input';
+import { SettingsRow } from '../../components/settings-card';
 
 export const onDevice = () => t`Kept on this device.`;
 export const onAccount = () =>
@@ -136,5 +139,68 @@ export function LanguageList({
         />
       )}
     </BasicField>
+  );
+}
+
+export function ShaderFilesRow({
+  help,
+  accept,
+  read,
+  add,
+  remove,
+}: {
+  help: string;
+  accept: string;
+  read(): Promise<string[]>;
+  add(name: string, text: string): Promise<string[]>;
+  remove(name: string): Promise<string[]>;
+}) {
+  const [names, setNames] = React.useState<string[] | null>(null);
+  const picker = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    read().then(setNames, () => setNames([]));
+  }, [read]);
+  const failed = (e: Error) => toast.error(e.message);
+  return (
+    <div className="flex flex-col gap-3">
+      <SettingsRow label={t`Shaders`} help={help}>
+        <input
+          ref={picker}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            file
+              .text()
+              .then((text) => add(file.name, text))
+              .then(setNames, failed);
+          }}
+        />
+        <Button
+          intent="gray-outline"
+          className="w-full rounded-full sm:w-auto"
+          disabled={names === null}
+          onClick={() => picker.current?.click()}
+        >
+          <Trans>Add a shader</Trans>
+        </Button>
+      </SettingsRow>
+      {names?.map((name) => (
+        <div key={name} className="flex items-center justify-between gap-3">
+          <span className="min-w-0 truncate font-mono text-sm">{name}</span>
+          <Button
+            intent="gray-outline"
+            size="sm"
+            className="flex-none rounded-full"
+            onClick={() => remove(name).then(setNames, failed)}
+          >
+            <Trans>Remove</Trans>
+          </Button>
+        </div>
+      ))}
+    </div>
   );
 }

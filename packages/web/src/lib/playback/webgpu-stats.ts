@@ -28,7 +28,11 @@ export interface GpuStats {
   audioAheadMs: number | null;
   clockMs: number;
   presentedMs: number | null;
+  passes: readonly string[];
 }
+
+/** The name of the upscaler's last pass in its pass file. */
+export const UPSCALE_PASS = 'upscale';
 
 /* eslint-disable lingui/no-unlocalized-strings -- a technical readout, as mpv's own is */
 const CODECS: Record<string, string> = {
@@ -123,6 +127,10 @@ export function gpuStatsRows(
   );
   if (stats.audioUnderflows)
     rows.push({ label: 'Underflows', value: String(stats.audioUnderflows) });
+  const passes = stats.passes.filter(
+    (name) => !name.startsWith('upscale layer')
+  );
+  if (passes.length) rows.push({ label: 'Passes', value: passes.join(', ') });
   return rows;
 }
 /* eslint-enable lingui/no-unlocalized-strings */

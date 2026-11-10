@@ -427,7 +427,7 @@ msgstr "Add a language"
 msgid "Add a server"
 msgstr "Add a server"
 
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/common.tsx
 msgid "Add a shader"
 msgstr "Add a shader"
 
@@ -3600,7 +3600,7 @@ msgstr "Reminder set"
 #: src/components/version-settings.tsx
 #: src/pages/search.tsx
 #: src/pages/servers.tsx
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/common.tsx
 msgid "Remove"
 msgstr "Remove"
 
@@ -3989,7 +3989,11 @@ msgstr "Set by hand"
 msgid "Settings"
 msgstr "Settings"
 
-#: src/pages/settings/apps.tsx
+#: src/pages/settings/playback.tsx
+msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
+msgstr "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
+
+#: src/pages/settings/common.tsx
 msgid "Shaders"
 msgstr "Shaders"
 
@@ -4867,6 +4871,10 @@ msgstr "This browser"
 msgid "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
 msgstr "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
 
+#: src/lib/playback/shaders.ts
+msgid "This browser keeps no files for this site."
+msgstr "This browser keeps no files for this site."
+
 #: src/pages/settings/playback.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr "This browser's own player, which plays the formats this browser supports."
@@ -4883,6 +4891,10 @@ msgstr "This copy does not update itself."
 msgid "This device couldn't read what the party is playing."
 msgstr "This device couldn't read what the party is playing."
 
+#: src/lib/playback/shaders.ts
+msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
+msgstr "This is a GLSL shader. Convert it to a .wgsl pass file first."
+
 #: src/pages/settings/subtitles.tsx
 msgid "This is how subtitles will look."
 msgstr "This is how subtitles will look."
@@ -4890,6 +4902,10 @@ msgstr "This is how subtitles will look."
 #: src/components/crash-report.tsx
 msgid "This is what the device recorded about it. Sending or saving the report helps get it fixed."
 msgstr "This is what the device recorded about it. Sending or saving the report helps get it fixed."
+
+#: src/lib/playback/shaders.ts
+msgid "This isn't a .wgsl pass file."
+msgstr "This isn't a .wgsl pass file."
 
 #: src/lib/queries.ts
 msgid "This item was not found"

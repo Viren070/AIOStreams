@@ -136,6 +136,7 @@ export default defineConfig(async ({ envMode }) => {
       module: {
         rules: [
           { test: /\.po$/, use: '@lingui/loader' },
+          { test: /\.wgsl$/, type: 'asset/source' },
           // Its worker imports libass's loader from a URL, and its build drops the webpackIgnore comment.
           {
             test: /[\\/]jassub[\\/]dist[\\/]worker[\\/]worker\.js$/,

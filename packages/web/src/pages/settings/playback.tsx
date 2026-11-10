@@ -22,6 +22,11 @@ import {
   playerOptions,
 } from '../../lib/playback/player-choice';
 import {
+  addShader,
+  removeShader,
+  shaderNames,
+} from '../../lib/playback/shaders';
+import {
   settings,
   useSetting,
   NEXT_COUNTDOWNS,
@@ -44,7 +49,7 @@ import { useFeature } from '../../lib/server-info';
 import { canMinimise } from '../../lib/playback/session';
 import { SettingsCard, SettingsRow } from '../../components/settings-card';
 import { BadgesRow, QuickFiltersRow } from '../../components/version-settings';
-import { onDevice, followsYou, seconds } from './common';
+import { onDevice, followsYou, seconds, ShaderFilesRow } from './common';
 import { ReactionSetting } from '../../components/party/reaction-setting';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
@@ -141,7 +146,6 @@ export function PlaybackSection() {
   const [engine] = useSetting(settings.player.engine);
   const [frameRate, setFrameRate] = useSetting(settings.video.frameRate);
   const [tunneling, setTunneling] = useSetting(settings.video.tunneling);
-  const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
   const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
   // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
   const decoding =
@@ -411,15 +415,7 @@ export function PlaybackSection() {
             value={dolbyVision}
             onValueChange={setDolbyVision}
           />
-          {canUpscale() && (
-            <Switch
-              side="right"
-              label={t`Anime upscaling`}
-              help={t`Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are.`}
-              value={upscaling}
-              onValueChange={setUpscaling}
-            />
-          )}
+          {canUpscale() && <UpscalingSwitch />}
           {androidTv && (
             <Switch
               side="right"
@@ -491,6 +487,19 @@ const LINK_TOKENS = {
   positionMs: '{positionMs}',
   returnUrl: '{returnUrl}',
 };
+
+function UpscalingSwitch() {
+  const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
+  return (
+    <Switch
+      side="right"
+      label={t`Anime upscaling`}
+      help={t`Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are.`}
+      value={upscaling}
+      onValueChange={setUpscaling}
+    />
+  );
+}
 
 function PlayerCard() {
   const [player, setPlayer] = useSetting(settings.player.choice);
@@ -572,17 +581,31 @@ function PlayerCard() {
         !launched &&
         !preset &&
         player !== CUSTOM_LINK && (
-          <Select
-            label={t`Engine`}
-            help={
-              engine === 'webgpu'
-                ? engineHelp(engine)
-                : t`This browser's own player, which plays the formats this browser supports.`
-            }
-            options={browserEngineOptions()}
-            value={engine === 'webgpu' ? engine : 'auto'}
-            onValueChange={(v) => setEngine(v as PlayerEngine)}
-          />
+          <>
+            <Select
+              label={t`Engine`}
+              help={
+                engine === 'webgpu'
+                  ? engineHelp(engine)
+                  : t`This browser's own player, which plays the formats this browser supports.`
+              }
+              options={browserEngineOptions()}
+              value={engine === 'webgpu' ? engine : 'auto'}
+              onValueChange={(v) => setEngine(v as PlayerEngine)}
+            />
+            {engine === 'webgpu' && (
+              <>
+                <UpscalingSwitch />
+                <ShaderFilesRow
+                  help={t`Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter.`}
+                  accept=".wgsl"
+                  read={shaderNames}
+                  add={addShader}
+                  remove={removeShader}
+                />
+              </>
+            )}
+          </>
         )}
       {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
         <>

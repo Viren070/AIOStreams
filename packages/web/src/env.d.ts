@@ -17,6 +17,12 @@ declare const __WEBGPU_PLAYER_MODULE__: string;
 /** Languages with a catalog too little translated to offer. */
 declare const __UNFINISHED_LOCALES__: string[];
 
+/** A WebGPU-Player pass file's text. */
+declare module '*.wgsl' {
+  const source: string;
+  export default source;
+}
+
 /** A translation catalog, compiled by `@lingui/loader`. */
 declare module '*.po' {
   import type { Messages } from '@lingui/core';
