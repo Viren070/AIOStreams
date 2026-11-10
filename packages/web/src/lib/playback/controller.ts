@@ -172,6 +172,7 @@ export interface PlayerOptions {
   /** Moves on from a live source that kept failing; false when there is nothing else to play. */
   onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
+  requestedAudio?: string;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "preview": "rsbuild preview",
     "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
     "i18n:extract": "lingui extract --clean && lingui extract-template"
   },
   "browserslist": [

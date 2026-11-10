@@ -484,6 +484,7 @@ function Unreachable() {
   );
 }
 
+/** The app's frame: navigation, the page, and the player, which plays on in the mini player over other pages. */
 export function WebLayout() {
   const { switchUser, user } = useSession();
   const users = usePickableUsers();
@@ -823,6 +824,8 @@ export function WebLayout() {
           startMs={playback.startMs}
           playlist={playback.playlist}
           mini={playback.mini}
+          startPaused={playback.startPaused}
+          audioSwitch={playback.audioSwitch}
         />
       )}
       <PartyHost />

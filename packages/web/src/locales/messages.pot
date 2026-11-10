@@ -2957,6 +2957,7 @@ msgstr ""
 msgid "Other user"
 msgstr ""
 
+#: src/components/player/options.tsx
 #: src/pages/player.tsx
 msgid "Other versions"
 msgstr ""
@@ -3724,6 +3725,10 @@ msgstr ""
 msgid "Retry"
 msgstr ""
 
+#: src/pages/player.tsx
+msgid "Return to previous version"
+msgstr ""
+
 #: src/components/remote-sheet.tsx
 #: src/lib/input/keys.ts
 msgid "Rewind"
@@ -3894,6 +3899,10 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Select all"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Selecting a language switches the video version"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx
@@ -4299,6 +4308,10 @@ msgstr ""
 
 #: src/pages/settings/interface.tsx
 msgid "Start on"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Started with"
 msgstr ""
 
 #: src/components/remote-sheet.tsx
@@ -4747,6 +4760,10 @@ msgstr ""
 msgid "The same for episodes marked as a recap."
 msgstr ""
 
+#: src/lib/playback/use-player.ts
+msgid "The selected audio language is unavailable in this version."
+msgstr ""
+
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the stream ended early"
@@ -4819,6 +4836,10 @@ msgstr ""
 
 #: src/pages/settings/audio.tsx
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
+msgstr ""
+
+#: src/pages/player.tsx
+msgid "This audio version is no longer available."
 msgstr ""
 
 #. Follows "Playback failed:"

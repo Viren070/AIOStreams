@@ -22,6 +22,7 @@ import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { SUBTITLE_LIFT_MS, subtitleHeight } from '../subtitles/style';
 import type { MediaStream, SourceInfo } from '../types';
 import { useLatest } from '../use-latest';
+import { audioLanguage, sourceDefaultsToAudio } from './alternate-audio';
 import type { Chapter } from './chapters';
 import { useLiveRecovery } from './live-recovery';
 import {
@@ -276,6 +277,7 @@ export function usePlayer(
     positionMs: () => playhead.positionMs,
   });
 
+  const requestedAudio = React.useRef(opts.requestedAudio);
   handle.current = (event) => {
     switch (event.type) {
       case 'state':
@@ -299,6 +301,28 @@ export function usePlayer(
           latest.current.source,
           !!engine.picksTracks
         );
+        const requested = requestedAudio.current;
+        if (requested) {
+          const match = tracks.find(
+            (track) =>
+              track.type === 'audio' &&
+              !track.unplayable &&
+              audioLanguage(track.lang) === requested
+          );
+          const usesDefaultAudio =
+            !engine.picksTracks &&
+            !tracks.some((track) => track.type === 'audio') &&
+            sourceDefaultsToAudio(latest.current.source, requested);
+          if (!match && !usesDefaultAudio) {
+            engine.setPaused(true);
+            patch({
+              error: t`The selected audio language is unavailable in this version.`,
+            });
+            return;
+          }
+          requestedAudio.current = undefined;
+          if (match) picks.audio = match.id;
+        }
         if (picks.audio && picks.audio !== audio) setAudio(picks.audio);
         if (picks.subtitle !== shown) setSubtitle(picks.subtitle);
         return;

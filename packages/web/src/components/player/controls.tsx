@@ -1,3 +1,4 @@
+import type { OtherAudioMenu } from '../../lib/playback/alternate-audio';
 import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -74,6 +75,7 @@ interface Transport {
   onClick?: () => void;
 }
 
+/** The controls over the video: the title bar, seek bar, playback buttons and option menus. */
 export function PlayerControls({
   item,
   player,
@@ -81,6 +83,7 @@ export function PlayerControls({
   onBack,
   onMinimise,
   onVersions,
+  otherAudio,
   onPrevious,
   onNext,
   onEpisode,
@@ -98,6 +101,7 @@ export function PlayerControls({
   onBack(): void;
   onMinimise?: () => void;
   onVersions?: () => void;
+  otherAudio?: OtherAudioMenu;
   onPrevious?: () => void;
   onNext?: () => void;
   onEpisode?: (episode: BaseItemDto) => void;
@@ -756,6 +760,7 @@ export function PlayerControls({
             player={player}
             onMenu={onMenu}
             onVersions={onVersions}
+            otherAudio={otherAudio}
             onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
             onChapters={listsChapters ? () => setChapters(true) : undefined}
             onChannels={

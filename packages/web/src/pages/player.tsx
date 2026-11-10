@@ -1,3 +1,10 @@
+import {
+  audioChoices,
+  canPlayAudioSource,
+  playingAudioLanguage,
+  sourceAudioLanguages,
+  type AlternateAudio,
+} from '../lib/playback/alternate-audio';
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -71,10 +78,13 @@ import {
   canMinimise,
   closePlayback,
   minimisePlayback,
+  playbackNow,
   playOn,
+  returnFromAudioSwitch,
   setLaunched,
   stopPlayback,
   usePlayback,
+  type AudioSwitch,
 } from '../lib/playback/session';
 import { noteChannelPlayed } from '../lib/live-tv';
 import { useZap, type Zap } from '../components/player/live';
@@ -123,6 +133,8 @@ interface PlayerProps {
   source: SourceInfo;
   playSessionId: string | null;
   startMs: number;
+  startPaused?: boolean;
+  audioSwitch?: AudioSwitch;
   prefs: PlaybackPrefs;
   launched?: PlayerOptions['launched'];
   local?: Download;
@@ -159,18 +171,23 @@ export const OBJECT_FIT: Record<VideoFit, string> = {
   stretch: 'object-fill',
 };
 
+/** The player's page: finds the version to play, then plays it or says why it can't. */
 export function PlayerPage({
   itemId,
   sourceId,
   startMs,
   playlist,
   mini,
+  startPaused,
+  audioSwitch,
 }: {
   itemId: string;
   sourceId: string;
   startMs: number;
   playlist?: string;
   mini: boolean;
+  startPaused?: boolean;
+  audioSwitch?: AudioSwitch;
 }) {
   const download = useDownloadOf(itemId);
   // A finished download plays its own file, with or without the server.
@@ -203,6 +220,9 @@ export function PlayerPage({
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = named ? sources.find((s) => s.Id === named) : sources[0];
+  const returnToPrevious = audioSwitch
+    ? () => returnFromAudioSwitch(itemId, playlist, audioSwitch)
+    : undefined;
   const missing =
     !playing &&
     !!item.data &&
@@ -214,7 +234,7 @@ export function PlayerPage({
   const miniNow = React.useRef(mini);
   miniNow.current = mini;
   React.useEffect(() => {
-    if (!missing || !item.data) return;
+    if (!missing || !item.data || audioSwitch) return;
     lastVersions.set(itemId, undefined);
     // In the mini player, a title moved on to has no page to list its versions on.
     if (miniNow.current) {
@@ -224,7 +244,7 @@ export function PlayerPage({
     // A channel stays in the player, which zaps on from it.
     else if (!channel)
       navigate(versionsPath(item.data, playlist), { replace: true });
-  }, [missing, item.data, itemId, playlist, channel]);
+  }, [missing, item.data, itemId, playlist, channel, audioSwitch]);
   React.useEffect(() => {
     if (playing) noteLastPlayed(playing.item, playing.source);
   }, [playing]);
@@ -255,7 +275,7 @@ export function PlayerPage({
     playback.isLoading ||
     picks.isLoading ||
     youTube.isLoading ||
-    (missing && !channel);
+    (missing && !channel && !audioSwitch);
   const failed = missing
     ? t`Nothing plays on this channel right now.`
     : youTubeId && !youTube.data
@@ -279,13 +299,20 @@ export function PlayerPage({
           <Player
             {...playing}
             startMs={startMs}
+            startPaused={startPaused}
+            audioSwitch={audioSwitch}
             playlist={playlist}
             onCovered={setCovered}
             mini={mini}
           />
         </VersionPickerProvider>
       ) : loading ? null : (
-        <Failure itemId={itemId} message={failed} zap={zap} />
+        <Failure
+          itemId={itemId}
+          message={failed}
+          zap={zap}
+          onReturn={returnToPrevious}
+        />
       )}
     </>
   );
@@ -445,12 +472,14 @@ function useReporting(
   }, [subtitle]);
 }
 
+/** Why nothing plays, with the ways on: Back, other versions, the version an audio switch left, or another try. */
 function Failure({
   itemId,
   message,
   item,
   source,
   onVersions,
+  onReturn,
   retry,
   zap,
 }: {
@@ -459,6 +488,7 @@ function Failure({
   item?: BaseItemDto;
   source?: SourceInfo;
   onVersions?: () => void;
+  onReturn?: () => void;
   retry?: { label: string; run(): void };
   zap?: Zap;
 }) {
@@ -492,6 +522,11 @@ function Failure({
           >
             <Trans>Back</Trans>
           </Button>
+          {onReturn && (
+            <Button intent="white" className="rounded-full" onClick={onReturn}>
+              <Trans>Return to previous version</Trans>
+            </Button>
+          )}
           {retry && (
             <Button
               intent="white"
@@ -674,6 +709,8 @@ function Player({
   source,
   playSessionId,
   startMs,
+  startPaused: pausedAtStart,
+  audioSwitch,
   prefs,
   launched,
   local,
@@ -690,7 +727,7 @@ function Player({
   const { connect } = ended;
   const playlistItemId = usePartyBinding(item.Id!);
   // What the party plays opens paused, until the party starts it.
-  const [startPaused] = React.useState(() => !!playlistItemId);
+  const [startPaused] = React.useState(() => pausedAtStart ?? !!playlistItemId);
   const inParty = !!useParty();
   const playForParty = usePlayForParty();
   const queued = usePartyNeighbours(playlistItemId);
@@ -765,6 +802,7 @@ function Player({
     subtitleStyle,
     launched,
     startPaused,
+    requestedAudio: audioSwitch?.language,
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
@@ -800,6 +838,98 @@ function Player({
   });
   connect(next);
   const switchVersion = useSwitchVersion(item, source, player, next.playlist);
+  const nativeAudio =
+    !!hostPlayer && !!currentHost().playerFeatures?.includes('headers');
+  const canSwitchAudio =
+    !mini &&
+    !local &&
+    !launched &&
+    !inParty &&
+    (item.Type === 'Movie' || item.Type === 'Episode') &&
+    canPlayAudioSource(source, nativeAudio);
+  const [audioMenuOpen, setAudioMenuOpen] = React.useState(false);
+  // The list the server kept, so asking once playback starts scrapes nothing again.
+  const versions = usePlaybackInfo(item.Id!, {
+    enabled: canSwitchAudio && (audioMenuOpen || player.state.started),
+    kept: true,
+  });
+  const choices = canSwitchAudio
+    ? audioChoices(
+        source,
+        player.audioTracks,
+        playableSources(versions.data),
+        nativeAudio,
+        audioSwitch?.original
+      )
+    : undefined;
+  // Without other languages there is nothing to add to the audio menu.
+  const otherAudio =
+    choices && (choices.original || choices.options.length)
+      ? { ...choices, onOpenChange: setAudioMenuOpen }
+      : undefined;
+  const queryClient = useQueryClient();
+  const infoOptions = usePlaybackInfoOptions();
+  const switchingAudio = React.useRef(false);
+  const currentPlayer = useLatest(player);
+  // Plays the version with the chosen language from here, once the server confirms it still has it.
+  const selectAlternate = async (choice: AlternateAudio) => {
+    if (!canSwitchAudio || switchingAudio.current) return;
+    switchingAudio.current = true;
+    const previousPlayback = playbackNow();
+    let switched = false;
+    const unavailable = () => {
+      if (playbackNow() === previousPlayback)
+        toast.error(t`This audio version is no longer available.`);
+    };
+    try {
+      const info = await queryClient.fetchQuery({
+        ...infoOptions(item.Id!, choice.source.Id),
+        staleTime: 0,
+      });
+      if (playbackNow() !== previousPlayback) return;
+      const target = playableSources(info).find(
+        (candidate) => candidate.Id === choice.source.Id
+      );
+      if (
+        !target ||
+        !canPlayAudioSource(target, nativeAudio) ||
+        !sourceAudioLanguages(target).includes(choice.language)
+      )
+        return unavailable();
+      const active = currentPlayer.current;
+      const previous = {
+        sourceId: source.Id!,
+        startMs: active.playhead.positionMs,
+        paused: active.state.paused,
+      };
+      const playing = playingAudioLanguage(
+        source,
+        active.audioTracks,
+        active.state.audio
+      );
+      const original =
+        audioSwitch?.original ??
+        (playing ? { sourceId: source.Id!, language: playing } : undefined);
+      playOn({
+        itemId: item.Id!,
+        sourceId: target.Id,
+        startMs: previous.startMs,
+        playlist: next.playlist,
+        startPaused: previous.paused,
+        audioSwitch: { language: choice.language, previous, original },
+      });
+      switched = true;
+    } catch (error) {
+      appLog('warn', `audio: switching to ${choice.language} failed: ${error}`);
+      unavailable();
+    } finally {
+      if (!switched) switchingAudio.current = false;
+    }
+  };
+  const returnToPrevious = audioSwitch
+    ? () => returnFromAudioSwitch(item.Id!, playlist, audioSwitch)
+    : undefined;
+
   const together = () =>
     openPartySheet(
       inParty
@@ -831,8 +961,10 @@ function Player({
   useKeepAwake(player, !hostPlayer);
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
+  const openedPaused = pausedAtStart === true && player.state.loaded;
   const covered =
-    !player.state.pictureInPicture && (!player.state.started || !!launched);
+    !player.state.pictureInPicture &&
+    ((!player.state.started && !openedPaused) || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const [place, setPlace] = React.useState<MiniVideoPlace | null>(null);
   React.useEffect(() => {
@@ -895,6 +1027,7 @@ function Player({
               source={source}
               message={t`Playback failed: ${failure}`}
               onVersions={switchVersion}
+              onReturn={returnToPrevious}
               retry={player.retry}
               zap={zap}
             />
@@ -909,6 +1042,9 @@ function Player({
                   onMinimise={minimise}
                   offeringNext={!!next.element}
                   onVersions={switchVersion}
+                  otherAudio={
+                    otherAudio && { ...otherAudio, onSelect: selectAlternate }
+                  }
                   onPrevious={next.previous ? next.playPrevious : undefined}
                   onNext={next.next ? next.playNext : undefined}
                   onEpisode={next.playEpisode}

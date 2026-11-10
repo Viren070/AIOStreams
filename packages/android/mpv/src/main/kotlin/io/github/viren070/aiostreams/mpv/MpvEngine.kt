@@ -355,12 +355,14 @@ class MpvEngine(private val context: Context) : Engine {
 
         override fun eventProperty(property: String, value: Double) = report(property, JsonPrimitive(value))
 
+        /** A node property's change: audio parameters go to the sound filters, the rest to the page as JSON. */
         override fun eventProperty(property: String, value: MPVNode) = if (property == AUDIO_PARAMS) {
             audioParams(value)
         } else {
-            report(property, runCatching { Json.parseToJsonElement(value.toJson()) }.getOrDefault(JsonNull))
+            report(property, nodeJson(value) ?: JsonNull)
         }
 
+        /** mpv's events: a file starting, loading, restarting playback or ending. */
         override fun event(eventId: Int, data: MPVNode) {
             val listener = listener ?: return
             when (eventId) {
@@ -373,7 +375,8 @@ class MpvEngine(private val context: Context) : Engine {
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
-                    // mpv reports the tracks it picked only after this event, which the page re-picks on.
+                    // Publish this file's tracks before the page applies its audio selection.
+                    mpv.getPropertyNode("track-list")?.let { nodeJson(it) }?.let { report("track-list", it) }
                     for (name in listOf("aid", "sid")) mpv.getPropertyString(name)?.let { report(name, JsonPrimitive(it)) }
                     listener.onEvent("loaded")
                 }
@@ -440,6 +443,10 @@ class MpvEngine(private val context: Context) : Engine {
         set("secondary-sub-delay", "0")
         reportLines(lines)
     }
+
+    /** An mpv node as JSON, or null when it doesn't convert. */
+    private fun nodeJson(node: MPVNode): JsonElement? =
+        runCatching { Json.parseToJsonElement(node.toJson()) }.getOrNull()
 
     /** An observed property's change, in the page's terms. */
     private fun report(name: String, value: JsonElement) {
