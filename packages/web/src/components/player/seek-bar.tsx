@@ -7,6 +7,7 @@ import { chapterAt, type Chapter } from '../../lib/playback/chapters';
 import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
 import type { ThumbnailFeed } from '../../lib/playback/thumbnails';
 import type { Segment } from './segments';
+import { useControlsShown } from './buttons';
 
 const still = () => () => {};
 
@@ -18,7 +19,6 @@ export const arrowDirection = (key: string) =>
 
 export function SeekBar({
   playhead,
-  live,
   durationMs,
   segments,
   chapters,
@@ -31,8 +31,6 @@ export function SeekBar({
   onTogglePlay,
 }: {
   playhead: Playhead;
-  /** Held still while the controls hide. */
-  live: boolean;
   durationMs: number;
   segments: Segment[];
   chapters: Chapter[];
@@ -46,6 +44,8 @@ export function SeekBar({
   onStep(direction: number, held: boolean): void;
   onTogglePlay(): void;
 }) {
+  // Held still while the controls hide.
+  const live = useControlsShown();
   const positionMs = usePlayhead(playhead, (h) => h.positionMs, live);
   const buffered = usePlayhead(playhead, (h) => h.buffered, live);
   const bar = React.useRef<HTMLDivElement>(null);

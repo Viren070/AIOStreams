@@ -47,7 +47,7 @@ import type {
 import { usePlayheadWriter } from './playhead';
 import { thumbnailFeed } from './thumbnails';
 import { chooseTracks, serverFacts, trackFacts } from './track-picks';
-import { createLiveText } from './live-text';
+import { createLive } from './live-value';
 
 /** How long the player says it is syncing; an answer after that still shows. */
 const ASKED_WAIT_MS = 10_000;
@@ -186,13 +186,18 @@ export function usePlayer(
   const playhead = usePlayheadWriter(startMs);
   const [tracks, setTracks] = React.useState<EngineTrack[]>([]);
   const [chapters, setChapters] = React.useState<Chapter[]>();
-  const [subtitleText] = React.useState(createLiveText);
+  const [subtitleText] = React.useState(() =>
+    createLive<string | undefined>(undefined)
+  );
   const [thumbnails, setThumbnails] =
     React.useState<ReturnType<typeof thumbnailFeed>>();
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
-  const [statsText] = React.useState(createLiveText);
+  const [statsText] = React.useState(() =>
+    createLive<string | undefined>(undefined)
+  );
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
-  const [lift, setLift] = React.useState(0);
+  const [lift] = React.useState(() => createLive(0));
+  const [shownLift] = React.useState(() => createLive(0));
   const [fit] = useSetting(settings.video.fit);
   const servers = React.useMemo(
     () =>
@@ -368,50 +373,69 @@ export function usePlayer(
     const timer = setTimeout(() => setPlacing(false), PLACING_MS);
     return () => clearTimeout(timer);
   }, [position]);
-  const lifted = placing ? 0 : lift;
-
   // Subtitles slide to a new height, in the controls' time, rather than jump:
   // a new one every frame, which the players move to at once.
-  const height = subtitleHeight(subtitleStyle, lifted);
-  const shownHeight = React.useRef(height);
+  const shownHeight = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (!engine.setStyle) return;
     const set = engine.setStyle;
-    const from = shownHeight.current;
-    if (
-      from === height ||
-      matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      shownHeight.current = height;
-      set({ subtitleStyle, fit, height });
-      return;
-    }
-    const start = performance.now();
-    let frame = requestAnimationFrame(function step(now) {
-      // A busy page runs a frame that began before the effect did.
-      const done = Math.min(1, Math.max(0, now - start) / SUBTITLE_LIFT_MS);
-      const value = from + (height - from) * (1 - (1 - done) ** 3);
-      shownHeight.current = value;
-      set({ subtitleStyle, fit, height: value });
-      if (done < 1) frame = requestAnimationFrame(step);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [engine, subtitleStyle, fit, height]);
+    let frame = 0;
+    const apply = () => {
+      const lifted = placing ? 0 : lift.get();
+      shownLift.set(lifted);
+      if (!set) return;
+      const height = subtitleHeight(subtitleStyle, lifted);
+      const from = shownHeight.current ?? height;
+      cancelAnimationFrame(frame);
+      if (
+        from === height ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        shownHeight.current = height;
+        set({ subtitleStyle, fit, height });
+        return;
+      }
+      const start = performance.now();
+      frame = requestAnimationFrame(function step(now) {
+        // A busy page runs a frame that began before the effect did.
+        const done = Math.min(1, Math.max(0, now - start) / SUBTITLE_LIFT_MS);
+        const value = from + (height - from) * (1 - (1 - done) ** 3);
+        shownHeight.current = value;
+        set({ subtitleStyle, fit, height: value });
+        if (done < 1) frame = requestAnimationFrame(step);
+      });
+    };
+    apply();
+    const stop = lift.subscribe(apply);
+    return () => {
+      stop();
+      cancelAnimationFrame(frame);
+    };
+  }, [engine, subtitleStyle, fit, placing, lift, shownLift]);
 
   // The controls lift the subtitles exactly while they show; hiding, both
   // still move for a while.
-  const controlsShown = lift > 0;
   React.useEffect(() => {
-    if (controlsShown) {
-      engine.showControls?.(true);
-      return;
-    }
-    const timer = setTimeout(
-      () => engine.showControls?.(false),
-      SUBTITLE_LIFT_MS + 100
-    );
-    return () => clearTimeout(timer);
-  }, [engine, controlsShown]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let shown: boolean | null = null;
+    const follow = () => {
+      const now = lift.get() > 0;
+      if (now === shown) return;
+      shown = now;
+      clearTimeout(timer);
+      if (now) engine.showControls?.(true);
+      else
+        timer = setTimeout(
+          () => engine.showControls?.(false),
+          SUBTITLE_LIFT_MS + 100
+        );
+    };
+    follow();
+    const stop = lift.subscribe(follow);
+    return () => {
+      stop();
+      clearTimeout(timer);
+    };
+  }, [engine, lift]);
   React.useEffect(() => () => engine.showControls?.(false), [engine]);
 
   React.useEffect(() => {
@@ -618,7 +642,7 @@ export function usePlayer(
         .map((t) => ({ ...asTrack(t), facts: trackFacts(t) })),
     ],
     subtitleText,
-    subtitleLift: lifted,
+    subtitleLift: shownLift,
     thumbnails,
     togglePlay: () => engine.setPaused(!live.current.paused),
     setPaused: (paused) => engine.setPaused(paused),
@@ -648,7 +672,7 @@ export function usePlayer(
       }),
     skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
     // Also for players without styles: the page lifts the subtitle it draws for them.
-    liftSubtitles: setLift,
+    liftSubtitles: lift.set,
     canReadSubtitle: (id) =>
       servers.some((s) => s.id === id) || !!engine.ownText?.(id),
     subtitleLines: async () => {

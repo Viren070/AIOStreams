@@ -29,6 +29,7 @@ import {
   ControlsShown,
   MiddleButton,
   PlayerAction,
+  useControlsShown,
 } from './buttons';
 import { BarWindowButtons, pageDrawsWindowButtons } from '../window-controls';
 import { ChaptersSheet } from './chapters';
@@ -45,7 +46,13 @@ import {
   useToggleFlash,
 } from './feedback';
 import { usePlayerGestures } from './gestures';
-import { useBurstSeek, useFileDrop, useIdle, usePositionClock } from './hooks';
+import {
+  useBurstSeek,
+  useFileDrop,
+  useIdle,
+  usePositionClock,
+  type Rest,
+} from './hooks';
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
 import { PauseScreen } from './pause-screen';
@@ -57,6 +64,11 @@ import { useHeldSpeed } from './speed';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { Volume } from './volume';
 import { usePlayhead, type Playhead } from '../../lib/playback/playhead';
+import {
+  createLive,
+  useLive,
+  type LiveWriter,
+} from '../../lib/playback/live-value';
 
 const IDLE_MS = 5000;
 const BRIEF_IDLE_MS = 1500;
@@ -117,7 +129,9 @@ export function PlayerControls({
   const tv = !!currentHost().tv;
   const root = React.useRef<HTMLDivElement>(null);
   const bottomBar = React.useRef<HTMLDivElement>(null);
-  const { idle, hidden, wake, hide, soon, brief } = useIdle(IDLE_MS);
+  const rest = useIdle(IDLE_MS);
+  const { wake, hide, soon, brief } = rest;
+  const [shown] = React.useState(() => createLive(false));
   // Some TVs' web views report a coarse pointer.
   const [touch, setTouch] = React.useState(
     () => !tv && matchMedia('(pointer: coarse)').matches
@@ -154,23 +168,25 @@ export function PlayerControls({
     listing ||
     channels ||
     scrub !== null;
-  // Paused and left alone, the controls give way to what's playing.
-  const pauseScreen =
-    ready &&
-    !player.external &&
-    !locked &&
-    state.paused &&
-    idle &&
-    !busy &&
-    !state.error &&
-    !offeringNext &&
-    steps !== 'trailer';
-  const visible =
-    !!player.external ||
-    (ready &&
+  const view = (idle: boolean, hidden: boolean) => {
+    const pauseScreen =
+      ready &&
+      !player.external &&
       !locked &&
-      !hidden &&
-      (!idle || busy || (state.paused && !pauseScreen)));
+      state.paused &&
+      idle &&
+      !busy &&
+      !state.error &&
+      !offeringNext &&
+      steps !== 'trailer';
+    const visible =
+      !!player.external ||
+      (ready &&
+        !locked &&
+        !hidden &&
+        (!idle || busy || (state.paused && !pauseScreen)));
+    return { visible, pauseScreen };
+  };
   // The video appears without the controls, unless it opens paused.
   React.useEffect(() => {
     if (ready && !latest.current.state.paused) hide();
@@ -181,9 +197,6 @@ export function PlayerControls({
     if (wasPaused.current && !state.paused) soon(BRIEF_IDLE_MS);
     wasPaused.current = state.paused;
   }, [ready, state.paused, soon]);
-  useWindowButtons(visible);
-  useFocusInside(root, visible, wake);
-  useLiftSubtitles(player, bottomBar, visible);
 
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
@@ -298,13 +311,12 @@ export function PlayerControls({
   );
 
   const [fit, setFit] = useSetting(settings.video.fit);
-  const shown = useLatest(visible);
   const gestures = usePlayerGestures({
     player,
     seekBy: (deltaMs) => seekBy(deltaMs, false),
     seekStepMs: seekStep * 1000,
     notice: showNotice,
-    onTap: () => (shown.current ? hide() : wake()),
+    onTap: () => (shown.get() ? hide() : wake()),
     onClick: togglePlay,
     onDoubleClick: () => latest.current.toggleFullscreen?.(),
     hold: speed.start,
@@ -342,7 +354,7 @@ export function PlayerControls({
     player,
     root,
     ready,
-    visible,
+    visible: shown.get,
     wake,
     glance: () => {
       wake();
@@ -366,11 +378,10 @@ export function PlayerControls({
     zap: channel && { step: channel.step, type: numbers.type },
   });
 
-  const fade = visible ? 'opacity-100' : 'pointer-events-none opacity-0';
-  const barFade = cn(
-    'pointer-events-none',
-    visible ? 'opacity-100 [&>*]:pointer-events-auto' : 'opacity-0'
-  );
+  const fade =
+    'pointer-events-none opacity-0 group-data-[visible]/controls:pointer-events-auto group-data-[visible]/controls:opacity-100';
+  const barFade =
+    'pointer-events-none opacity-0 group-data-[visible]/controls:opacity-100 group-data-[visible]/controls:[&>*]:pointer-events-auto';
   const isEpisode = item.Type === 'Episode';
   const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
   const listsChapters = (player.chapters?.length ?? 0) > 1;
@@ -462,7 +473,7 @@ export function PlayerControls({
   const shownAt = scrub?.toMs ?? seekingTo;
   // A remote's scrub shows its pictures in a row rather than over the bar.
   const strip = scrub?.resume !== undefined && player.thumbnails;
-  const timeProps = { playhead: player.playhead, live: visible, atMs: shownAt };
+  const timeProps = { playhead: player.playhead, atMs: shownAt };
 
   if (!ready)
     return (
@@ -484,29 +495,19 @@ export function PlayerControls({
     );
 
   const controls = (
-    <div
-      ref={root}
-      data-ui="player-controls"
-      data-visible={visible || undefined}
-      data-paused={state.paused || undefined}
-      data-waiting={(state.waiting && !state.error) || undefined}
-      // The next episode card moves above the bar as its peer.
-      className={cn(
-        'peer fixed inset-0 z-10 select-none',
-        !visible && 'cursor-none'
-      )}
-      onFocus={wake}
-      onPointerMove={wake}
-      onContextMenu={(e) => e.preventDefault()}
-      onPointerDown={(e) => {
-        setTouch(!tv && e.pointerType === 'touch');
-        // A tap on hidden controls must not press what appears under it.
-        if (e.pointerType !== 'touch' || visible) wake();
-      }}
+    <ControlsLayer
+      rest={rest}
+      shown={shown}
+      view={view}
+      root={root}
+      bottomBar={bottomBar}
+      player={player}
+      item={item}
+      paused={state.paused}
+      waiting={state.waiting && !state.error}
+      onPointerType={(type) => setTouch(!tv && type === 'touch')}
+      under={<div className="absolute inset-0 touch-none" {...gestures} />}
     >
-      <div className="absolute inset-0 touch-none" {...gestures} />
-      {state.paused && <PauseScreen item={item} shown={pauseScreen} />}
-
       <div
         data-ui="player-top-bar"
         className={cn(
@@ -658,28 +659,7 @@ export function PlayerControls({
       )}
 
       {segment && !locked && (
-        // Above the bottom bar, whose padding reaches over it.
-        <div
-          data-ui="skip-segment"
-          data-type={segment.type}
-          data-visible={visible || fresh || undefined}
-          className={cn(
-            'absolute end-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:end-[max(2rem,env(safe-area-inset-right))]',
-            visible
-              ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
-              : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]',
-            !visible && !fresh && 'pointer-events-none opacity-0'
-          )}
-        >
-          <PlayerAction
-            primary
-            className="shadow-lg"
-            rightIcon={<LuSkipForward />}
-            onClick={skip}
-          >
-            {skipLabel(segment)}
-          </PlayerAction>
-        </div>
+        <SkipSegment segment={segment} fresh={fresh} onSkip={skip} />
       )}
 
       <div
@@ -719,7 +699,6 @@ export function PlayerControls({
             </div>
             <SeekBar
               playhead={player.playhead}
-              live={visible}
               durationMs={state.durationMs}
               segments={segments}
               chapters={player.chapters ?? []}
@@ -824,10 +803,112 @@ export function PlayerControls({
           }}
         />
       )}
-    </div>
+    </ControlsLayer>
   );
+  return controls;
+}
+
+/** Its children come from the controls, so resting draws again only what follows it. */
+function ControlsLayer({
+  rest,
+  shown,
+  view,
+  root,
+  bottomBar,
+  player,
+  item,
+  paused,
+  waiting,
+  onPointerType,
+  under,
+  children,
+}: {
+  rest: Rest;
+  shown: LiveWriter<boolean>;
+  view(
+    idle: boolean,
+    hidden: boolean
+  ): { visible: boolean; pauseScreen: boolean };
+  root: React.RefObject<HTMLDivElement | null>;
+  bottomBar: React.RefObject<HTMLDivElement | null>;
+  player: PlayerController;
+  item: BaseItemDto;
+  paused: boolean;
+  waiting: boolean;
+  onPointerType(type: string): void;
+  under: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const idle = useLive(rest.idle);
+  const hidden = useLive(rest.hidden);
+  const { visible, pauseScreen } = view(idle, hidden);
+  React.useLayoutEffect(() => shown.set(visible), [shown, visible]);
+  useWindowButtons(visible);
+  useFocusInside(root, visible, rest.wake);
+  useLiftSubtitles(player, bottomBar, visible);
   return (
-    <ControlsShown.Provider value={visible}>{controls}</ControlsShown.Provider>
+    <ControlsShown.Provider value={shown}>
+      <div
+        ref={root}
+        data-ui="player-controls"
+        data-visible={visible || undefined}
+        data-paused={paused || undefined}
+        data-waiting={waiting || undefined}
+        // The next episode card moves above the bar as its peer.
+        className={cn(
+          'group/controls peer fixed inset-0 z-10 select-none',
+          !visible && 'cursor-none'
+        )}
+        onFocus={rest.wake}
+        onPointerMove={rest.wake}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          onPointerType(e.pointerType);
+          // A tap on hidden controls must not press what appears under it.
+          if (e.pointerType !== 'touch' || visible) rest.wake();
+        }}
+      >
+        {under}
+        {paused && <PauseScreen item={item} shown={pauseScreen} />}
+        {children}
+      </div>
+    </ControlsShown.Provider>
+  );
+}
+
+/** Above the bottom bar, whose padding reaches over it. */
+function SkipSegment({
+  segment,
+  fresh,
+  onSkip,
+}: {
+  segment: NonNullable<ReturnType<typeof useSegmentSkip>['segment']>;
+  fresh: boolean;
+  onSkip?: () => void;
+}) {
+  const visible = useControlsShown();
+  return (
+    <div
+      data-ui="skip-segment"
+      data-type={segment.type}
+      data-visible={visible || fresh || undefined}
+      className={cn(
+        'absolute end-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:end-[max(2rem,env(safe-area-inset-right))]',
+        visible
+          ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]',
+        !visible && !fresh && 'pointer-events-none opacity-0'
+      )}
+    >
+      <PlayerAction
+        primary
+        className="shadow-lg"
+        rightIcon={<LuSkipForward />}
+        onClick={onSkip}
+      >
+        {skipLabel(segment)}
+      </PlayerAction>
+    </div>
   );
 }
 
@@ -906,12 +987,12 @@ const SOFT_FOCUS =
 
 interface TimeProps {
   playhead: Playhead;
-  live: boolean;
   /** Shown in place of the playhead, as a seek is under way. */
   atMs: number | null;
 }
 
-function usePlayedMs({ playhead, live, atMs }: TimeProps): number {
+function usePlayedMs({ playhead, atMs }: TimeProps): number {
+  const live = useControlsShown();
   const seconds = usePlayhead(
     playhead,
     (h) => Math.floor(h.positionMs / 1000),
@@ -976,13 +1057,14 @@ function EndsAt({
   ...props
 }: TimeProps & { durationMs: number; rate: number }) {
   const at = usePlayedMs(props);
+  const live = useControlsShown();
   // The end moves on while paused.
   const [, tick] = React.useReducer((n: number) => n + 1, 0);
   React.useEffect(() => {
-    if (!props.live) return;
+    if (!live) return;
     const timer = window.setInterval(tick, 30_000);
     return () => window.clearInterval(timer);
-  }, [props.live]);
+  }, [live]);
   if (durationMs <= 0) return null;
   const endsAt = clockTime(
     Date.now() + Math.max(0, durationMs - at) / (rate || 1)

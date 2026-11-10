@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import { storage } from '../storage';
 import type { JellyfinClient } from '../client';
 import type { Chapter } from './chapters';
-import type { LiveText } from './live-text';
+import type { Live } from './live-value';
 import type { SubtitleStyle } from '../settings';
 import type { SubtitleLine } from '../subtitles/cues';
 import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
@@ -102,9 +102,9 @@ export interface PlayerController {
     status?: SyncStatus;
   };
   /** The subtitle the page draws, for a player that draws none itself. */
-  subtitleText: LiveText;
+  subtitleText: Live<string | undefined>;
   /** The share `liftSubtitles` last asked for, which the page's own subtitle slides to. */
-  subtitleLift: number;
+  subtitleLift: Live<number>;
   /** Missing where the player has no pictures for the seek bar. */
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
@@ -117,7 +117,7 @@ export interface PlayerController {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
-    text: LiveText;
+    text: Live<string | undefined>;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {

@@ -3,6 +3,7 @@ import { Button, type ButtonProps } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { currentHost } from '../../lib/hosts';
+import { createLive, useLive, type Live } from '../../lib/playback/live-value';
 
 const FOCUS_FILL =
   '[html:not([data-pointer-focus])_&:focus-visible]:shadow-[inset_0_0_0_var(--control)_white] [html:not([data-pointer-focus])_&:focus-visible]:text-black';
@@ -13,8 +14,11 @@ type IconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
 };
 
-/** Whether the controls show; a tooltip left open over a resting pointer goes with them. */
-export const ControlsShown = React.createContext(true);
+export const ControlsShown = React.createContext<Live<boolean>>(
+  createLive(true)
+);
+
+export const useControlsShown = () => useLive(React.useContext(ControlsShown));
 
 export function ControlButton({
   name,
@@ -24,7 +28,15 @@ export function ControlButton({
 }: IconButtonProps) {
   const shown = React.useContext(ControlsShown);
   const [open, setOpen] = React.useState(false);
-  if (open && !shown) setOpen(false);
+  // Only an open tooltip follows the controls hiding.
+  React.useEffect(() => {
+    if (!open) return;
+    const follow = () => {
+      if (!shown.get()) setOpen(false);
+    };
+    follow();
+    return shown.subscribe(follow);
+  }, [open, shown]);
   return (
     <Tooltip
       open={open}

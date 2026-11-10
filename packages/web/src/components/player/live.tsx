@@ -87,7 +87,8 @@ export function useLiveChannel(
   item: BaseItemDto,
   enabled: boolean
 ): LiveChannel | undefined {
-  const now = useNow();
+  // Only a channel's programme moves on.
+  const now = useNow(30_000, enabled);
   const schedules = useSchedules([[item.Id!]], { enabled });
   const zapping = useZap(item.Id!, enabled);
   if (!zapping) return undefined;

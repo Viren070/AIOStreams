@@ -47,7 +47,7 @@ interface PlayerKeys {
   /** False until the first frame. */
   ready: boolean;
   /** Whether the controls show, which Back hides first on a TV. */
-  visible: boolean;
+  visible(): boolean;
   wake(): void;
   /** Shows the controls for a moment. */
   glance(): void;
@@ -164,7 +164,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     const upDown = (sign: number): Outcome => {
       if (!currentHost().tv) return nudgeVolume(sign);
       // Down moves down the list, to the next channel.
-      if (!k().visible && k().zap?.step) return zapStep(-sign);
+      if (!k().visible() && k().zap?.step) return zapStep(-sign);
       focusControls();
     };
     /** The skip button while it shows, else play. */
@@ -179,14 +179,14 @@ export function usePlayerKeys(keys: PlayerKeys): void {
     };
 
     const quietly = () =>
-      !k().visible && !settings.controls.showOnPauseAndSkip.read();
+      !k().visible() && !settings.controls.showOnPauseAndSkip.read();
     const playKey = (toggle: () => void): Outcome => {
       const quiet = quietly();
       toggle();
       if (quiet) return 'quiet';
     };
     const skip = (sign: number, repeat: boolean): Outcome => {
-      const hidden = !k().visible || k().glancing();
+      const hidden = !k().visible() || k().glancing();
       const quiet = quietly();
       const ms = sign * settings.controls.seekStep.read() * 1000;
       if (k().seekBy(ms, repeat) || !hidden) return;
@@ -205,7 +205,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
           )
         )
           return call(k().skipSegment);
-        if (k().visible) return focusControls();
+        if (k().visible()) return focusControls();
         return playKey(() => {
           k().togglePlay();
           if (settings.controls.showOnPauseAndSkip.read()) focusControls();
@@ -315,7 +315,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (el && k().root.current?.contains(el)) {
           el.blur();
           k().hide();
-        } else if (currentHost().tv && k().visible) k().hide();
+        } else if (currentHost().tv && k().visible()) k().hide();
         else if (!currentHost().back?.()) k().onBack();
       })
     );

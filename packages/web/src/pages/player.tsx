@@ -23,7 +23,7 @@ import {
   useSegments,
 } from '../lib/queries';
 import { lastVersions, playableSources } from '../lib/playback/play';
-import { type LiveText, useLiveText } from '../lib/playback/live-text';
+import { type Live, useLive } from '../lib/playback/live-value';
 import { chosenPlayer } from '../lib/playback/player-choice';
 import {
   directUrl,
@@ -938,17 +938,19 @@ function Player({
 
 function PageSubtitle({
   text,
+  lift,
   ...props
-}: { text: LiveText } & Omit<
+}: { text: Live<string | undefined>; lift?: Live<number> } & Omit<
   React.ComponentProps<typeof SubtitleText>,
-  'text'
+  'text' | 'lift'
 >) {
-  const line = useLiveText(text);
-  return line ? <SubtitleText text={line} {...props} /> : null;
+  const line = useLive(text);
+  const shownLift = useLive(lift) ?? 0;
+  return line ? <SubtitleText text={line} lift={shownLift} {...props} /> : null;
 }
 
-function PlayerStats({ text }: { text: LiveText }) {
-  const shown = useLiveText(text);
+function PlayerStats({ text }: { text: Live<string | undefined> }) {
+  const shown = useLive(text);
   if (!shown) return null;
   return (
     <pre
