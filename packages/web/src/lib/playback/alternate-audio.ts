@@ -47,6 +47,26 @@ export function sourceAudioLanguages(source: SourceInfo): string[] {
       );
 }
 
+/** Browsers without an audio-track API play the file's default track. */
+export function sourceDefaultsToAudio(
+  source: SourceInfo,
+  requested: string
+): boolean {
+  const tracks = (source.MediaStreams ?? []).filter(
+    (track) => track.Type === 'Audio'
+  );
+  const index = source.DefaultAudioStreamIndex;
+  const chosen =
+    (index == null
+      ? undefined
+      : tracks.find((track) => track.Index === index)) ??
+    tracks.find((track) => track.IsDefault);
+  const language = audioLanguage(chosen?.Language);
+  if (language) return language === requested;
+  const available = new Set(sourceAudioLanguages(source));
+  return available.size === 1 && available.has(requested);
+}
+
 export function browserAudioSource(
   source: SourceInfo
 ): source is SourceInfo & { Id: string } {

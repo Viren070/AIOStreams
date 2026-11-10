@@ -1,4 +1,4 @@
-import { audioLanguage, sourceAudioLanguages } from './alternate-audio';
+import { audioLanguage, sourceDefaultsToAudio } from './alternate-audio';
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
@@ -309,14 +309,10 @@ export function usePlayer(
               !track.unplayable &&
               audioLanguage(track.lang) === requested
           );
-          const advertised = [
-            ...new Set(sourceAudioLanguages(latest.current.source)),
-          ];
-          const defaultAudioOnly =
+          const usesDefaultAudio =
             !tracks.some((track) => track.type === 'audio') &&
-            advertised.length === 1 &&
-            advertised[0] === requested;
-          if (!match && !defaultAudioOnly) {
+            sourceDefaultsToAudio(latest.current.source, requested);
+          if (!match && !usesDefaultAudio) {
             engine.setPaused(true);
             patch({
               error: t`The selected audio language is unavailable in this version.`,

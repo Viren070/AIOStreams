@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SourceInfo } from '../types';
-import { alternateAudio } from './alternate-audio';
+import { alternateAudio, sourceDefaultsToAudio } from './alternate-audio';
 
 vi.mock('./stream', () => ({
   needsAppPlayer: (source: SourceInfo) => !!source.RequiredHttpHeaders,
@@ -51,4 +51,18 @@ describe('alternate audio', () => {
       []
     );
   });
+});
+
+it('accepts the advertised default language for a browser that cannot enumerate audio tracks', () => {
+  const bilingual = source('bilingual', '1080p', ['eng', 'fra']);
+  bilingual.MediaStreams![0].Index = 0;
+  bilingual.MediaStreams![1].Index = 1;
+  bilingual.DefaultAudioStreamIndex = 1;
+  expect(sourceDefaultsToAudio(bilingual, 'fre')).toBe(true);
+  expect(sourceDefaultsToAudio(bilingual, 'eng')).toBe(false);
+  expect(sourceDefaultsToAudio(source('single', '1080p', ['fra']), 'fre')).toBe(
+    true
+  );
+  bilingual.DefaultAudioStreamIndex = undefined;
+  expect(sourceDefaultsToAudio(bilingual, 'fre')).toBe(false);
 });
