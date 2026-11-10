@@ -18,7 +18,8 @@ import {
 } from '@/lib/downloads';
 import { chosenPlayer } from '@/lib/playback/player-choice';
 import { party } from '@/lib/party/party';
-import { lastVersions, playableSources, usePlay } from '@/lib/playback/play';
+import { lastVersions, playableSources } from '@/lib/playback/sources';
+import { usePlay } from '@/features/player/use-play';
 import { currentHost } from '@/lib/hosts';
 import { useRestoreFocus } from '@/lib/input';
 import { airsLater, itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';

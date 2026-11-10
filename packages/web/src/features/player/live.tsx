@@ -16,7 +16,7 @@ import {
   useSchedules,
 } from '@/features/live-tv/live-tv';
 import { party } from '@/lib/party/party';
-import { lastVersions } from '@/lib/playback/play';
+import { lastVersions } from '@/lib/playback/sources';
 import { zapTo } from '@/lib/playback/session';
 import type { PlayerController } from '@/lib/playback/controller';
 import { useRestoreFocus } from '@/lib/input';

@@ -21,7 +21,7 @@ import {
   listVersionsFromPlayer,
   playOn as moveOn,
 } from '@/lib/playback/session';
-import { playableSources } from '@/lib/playback/play';
+import { playableSources } from '@/lib/playback/sources';
 import { playerUrl, requiredHeaders } from '@/lib/playback/stream';
 import { useFindDownloaded } from '@/lib/downloads';
 import {

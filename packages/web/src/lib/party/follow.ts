@@ -11,7 +11,7 @@ import {
   playOn,
   stopPlayback,
 } from '@/lib/playback/session';
-import { playableSources } from '@/lib/playback/play';
+import { playableSources } from '@/lib/playback/sources';
 import { chosenPlayer } from '@/lib/playback/player-choice';
 import { requestItem } from '@/lib/jellyfin/queries';
 import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';

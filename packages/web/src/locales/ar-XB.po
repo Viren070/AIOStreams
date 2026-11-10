@@ -2629,7 +2629,7 @@ msgstr ""
 msgid "No party has that code on {relay}."
 msgstr ""
 
-#: src/lib/playback/play.ts
+#: src/features/player/use-play.ts
 msgid "No playable version was found"
 msgstr ""
 

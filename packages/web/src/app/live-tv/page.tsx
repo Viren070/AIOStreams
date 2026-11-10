@@ -32,7 +32,7 @@ import {
 import { currentHost } from '@/lib/hosts';
 import { airTime, dayLabel } from '@/lib/format';
 import { toast } from 'sonner';
-import { lastVersions } from '@/lib/playback/play';
+import { lastVersions } from '@/lib/playback/sources';
 import {
   canPreview,
   expandPlayback,

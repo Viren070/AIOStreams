@@ -3,7 +3,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { JellyfinError, type JellyfinClient } from '@/lib/jellyfin/client';
 import { currentHost } from '@/lib/hosts';
-import { playableSources } from '@/lib/playback/play';
+import { playableSources } from '@/lib/playback/sources';
 import { closePlayback, playbackNow } from '@/lib/playback/session';
 import { requiredHeaders } from '@/lib/playback/stream';
 import { requestItem } from '@/lib/jellyfin/queries';

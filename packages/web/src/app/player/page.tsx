@@ -22,7 +22,7 @@ import {
   useSegments,
 } from '@/lib/jellyfin/playback-info';
 import { useRefreshAll } from '@/lib/jellyfin/watch-state';
-import { lastVersions, playableSources } from '@/lib/playback/play';
+import { lastVersions, playableSources } from '@/lib/playback/sources';
 import { type Live, useLive } from '@/lib/playback/live-value';
 import { chosenPlayer } from '@/lib/playback/player-choice';
 import {

@@ -41,8 +41,8 @@ import {
   isNotice,
   placedNotices,
   playableSources,
-  usePlay,
-} from '@/lib/playback/play';
+} from '@/lib/playback/sources';
+import { usePlay } from '@/features/player/use-play';
 import { currentHost } from '@/lib/hosts';
 import { focusOn, keyboardFocus, tab, tabList } from '@/lib/input';
 import { clock } from '@/lib/format';

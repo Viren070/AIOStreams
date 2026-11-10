@@ -2629,7 +2629,7 @@ msgstr "No other device is ready. Open the app on another device signed in here,
 msgid "No party has that code on {relay}."
 msgstr "No party has that code on {relay}."
 
-#: src/lib/playback/play.ts
+#: src/features/player/use-play.ts
 msgid "No playable version was found"
 msgstr "No playable version was found"
 
