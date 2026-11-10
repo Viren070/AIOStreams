@@ -148,6 +148,9 @@ with Jellyfin's standard Live TV API: `/LiveTv/Channels`, `POST /LiveTv/Programs
 `/Items?SearchTerm=…&IncludeItemTypes=TvChannel` for search. A channel plays and reports as any title
 does.
 
+The view carries `"aiostreams": { "guide": true }` when one of its catalogs is a guide. The app offers
+its guide then, or when a channel on the first page of `/LiveTv/Channels` has a `CurrentProgram`.
+
 Its groups are the genres of the Live TV view, from `/Genres?ParentId={view}`. The app asks for a
 group's channels with `/LiveTv/Channels?GenreIds={genre}`, which Jellyfin itself doesn't filter by;
 a server without groups lists no genres there, and the app shows all its channels together.
