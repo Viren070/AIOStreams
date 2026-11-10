@@ -147,7 +147,7 @@ export function HomePage() {
     '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
   );
   const canFollow = pointer || !!currentHost().tv;
-  const [cardPreviews] = useSetting(settings.interface.cardPreviews);
+  const [cardPreview] = useSetting(settings.interface.cardPreview);
   const follow = heroMode !== 'rotate' && canFollow;
 
   const rows = (
@@ -220,7 +220,7 @@ export function HomePage() {
         )}
       >
         {/* A card rested on grows into a preview, as the hero doesn't follow it. */}
-        {canFollow && cardPreviews ? (
+        {canFollow && cardPreview !== 'off' ? (
           <CardPreviewHost>{rows}</CardPreviewHost>
         ) : (
           rows

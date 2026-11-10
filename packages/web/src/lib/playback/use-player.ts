@@ -138,6 +138,7 @@ export function usePlayer(
   } | null>(null);
   const [state, setState] = React.useState<PlayerState>(() => ({
     ...initialState(source),
+    ...(opts.muted !== undefined && { muted: opts.muted }),
     subtitleDelayMs: savedSubtitleDelay(source.Id, null)?.ms ?? 0,
   }));
   // Engines report several things in one go, before the page draws again.
@@ -165,7 +166,8 @@ export function usePlayer(
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
   const [lift] = React.useState(() => createLive(0));
   const [shownLift] = React.useState(() => createLive(0));
-  const [fit] = useSetting(settings.video.fit);
+  const [savedFit] = useSetting(settings.video.fit);
+  const fit = opts.fit ?? savedFit;
   const servers = React.useMemo(
     () =>
       serverSubtitles(client, source, !!engine.ownSubtitles, opts.subtitleUrl),
@@ -182,7 +184,14 @@ export function usePlayer(
     prefs: opts.prefs ?? {},
     subtitles: servers,
     subtitleDelayMs: live.current.subtitleDelayMs,
-    volume: engine.ownVolume ? null : storedVolume(Infinity),
+    volume: engine.ownVolume
+      ? null
+      : {
+          ...storedVolume(Infinity),
+          ...(latest.current.muted !== undefined && {
+            muted: latest.current.muted,
+          }),
+        },
   });
   const latestFile = useLatest(fileFor);
 
@@ -420,6 +429,15 @@ export function usePlayer(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, startMs]);
 
+  const { muted } = opts;
+  const loadedMuted = React.useRef(muted);
+  React.useEffect(() => {
+    if (muted === undefined || muted === loadedMuted.current) return;
+    loadedMuted.current = muted;
+    engine.setVolume(live.current.volume, muted);
+    patch({ muted });
+  }, [engine, muted, patch]);
+
   React.useEffect(() => {
     const read = engine.stats?.read;
     if (!statsPage || !read) return;
@@ -442,7 +460,13 @@ export function usePlayer(
   React.useEffect(() => {
     // A live stream has no seek bar, and opening it again can take the
     // provider's only connection from the player.
-    if (!engine.thumbnails || !thumbnailsOn || liveSource) return;
+    if (
+      !engine.thumbnails ||
+      !thumbnailsOn ||
+      liveSource ||
+      opts.thumbnails === false
+    )
+      return;
     const feed = thumbnailFeed((onThumbnail) =>
       engine.thumbnails!({ url, headers: latest.current.headers }, onThumbnail)
     );
@@ -451,7 +475,7 @@ export function usePlayer(
       feed.stop();
       setThumbnails(undefined);
     };
-  }, [engine, latest, url, thumbnailsOn, liveSource]);
+  }, [engine, latest, url, thumbnailsOn, liveSource, opts.thumbnails]);
 
   React.useEffect(() => {
     if (!thumbnails || !state.started) return;

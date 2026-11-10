@@ -23,6 +23,7 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  VideoFrame,
 } from '@/lib/playback/engine';
 import type { AvPlay } from '.';
 
@@ -93,7 +94,11 @@ function videoSizeOf(av: AvPlay): { width: number; height: number } | null {
  * page lists the file's own tracks from the file, and draws text from its text,
  * and styled scripts and PGS pictures over the picture. Its volume is the TV's.
  */
+/** The engine that opened AVPlay last, which alone may close it. */
+let openedBy: object | null = null;
+
 export const avPlayEngine: EngineFactory = (emit) => {
+  const self = {};
   const av = window.webapis!.avplay!;
   const audioControl = window.tizen?.tvaudiocontrol;
   const report = (state: EngineState) => emit({ type: 'state', state });
@@ -130,6 +135,19 @@ export const avPlayEngine: EngineFactory = (emit) => {
   const run = (fn: () => void) => {
     if (seeking) queued.push(fn);
     else fn();
+  };
+  let frame: VideoFrame | null = null;
+  // AVPlay places its picture in a 1920x1080 space, whatever the screen.
+  const place = () => {
+    const sx = 1920 / innerWidth;
+    const sy = 1080 / innerHeight;
+    const r = frame ?? { x: 0, y: 0, width: innerWidth, height: innerHeight };
+    av.setDisplayRect(
+      Math.round(r.x * sx),
+      Math.round(r.y * sy),
+      Math.round(r.width * sx),
+      Math.round(r.height * sy)
+    );
   };
 
   // AVPlay letterboxes its picture in the whole window, under the page.
@@ -369,6 +387,12 @@ export const avPlayEngine: EngineFactory = (emit) => {
       };
 
       try {
+        // Another engine's file gives way, as AVPlay plays one at a time.
+        if (av.getState() !== 'NONE') {
+          av.stop();
+          av.close();
+        }
+        openedBy = self;
         av.open(next.url);
         av.setListener({
           onbufferingstart: () => report({ waiting: true }),
@@ -389,8 +413,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
             showText();
           },
         });
-        // AVPlay places its picture in a 1920x1080 space, whatever the screen.
-        av.setDisplayRect(0, 0, 1920, 1080);
+        place();
         av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
         // AVPlay starts a trailer's playlist on its smallest size and stays there.
         if (/^https:\/\/[^/]+\.googlevideo\.com\//.test(next.url))
@@ -436,13 +459,15 @@ export const avPlayEngine: EngineFactory = (emit) => {
         clearInterval(tick);
         document.removeEventListener('visibilitychange', onVisibility);
         audioControl?.unsetVolumeChangeListener();
-        try {
-          // While AVPlay is still open, or its subtitle layer can stay on screen.
-          av.setSilentSubtitle(true);
-          av.setListener({});
-          if (!['NONE', 'IDLE'].includes(av.getState())) av.stop();
-          av.close();
-        } catch {}
+        if (openedBy === self)
+          try {
+            openedBy = null;
+            // While AVPlay is still open, or its subtitle layer can stay on screen.
+            av.setSilentSubtitle(true);
+            av.setListener({});
+            if (!['NONE', 'IDLE'].includes(av.getState())) av.stop();
+            av.close();
+          } catch {}
         layer?.destroy();
         layer = null;
         stopOwnText();
@@ -482,6 +507,16 @@ export const avPlayEngine: EngineFactory = (emit) => {
     setStyle({ height }) {
       liftHeight = height;
       layer?.setHeight(height);
+    },
+    // Always beneath the page, which shows it where it draws nothing.
+    setFrame(next) {
+      frame = next;
+      if (object)
+        run(() => {
+          try {
+            place();
+          } catch {}
+        });
     },
     ...ownLines(() => embedded),
     ownVolume: true,

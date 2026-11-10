@@ -1,12 +1,17 @@
 import { t } from '@lingui/core/macro';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { currentHost } from '@/lib/hosts';
-import type { BaseItemDto } from '@/lib/jellyfin/types';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 export interface Trailer {
   name: string;
   url: string;
 }
+
+export const trailerSource = (url: string): SourceInfo => ({
+  Id: `trailer:${url}`,
+  MediaStreams: [],
+});
 
 export const trailersOf = (item: BaseItemDto): Trailer[] =>
   (item.RemoteTrailers ?? []).flatMap((trailer) =>

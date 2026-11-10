@@ -63,6 +63,7 @@ import { PartyHost } from '@/features/party/party-host';
 import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
+import { useTrailerCovers } from '@/features/trailers/preview';
 import { PageScroll } from './page-scroll';
 import { HistoryButtons } from './history-buttons';
 import { ConnectionNote } from './unreachable';
@@ -116,6 +117,7 @@ export function WebLayout() {
   });
   useServerEvents(playing);
   const playback = usePlayback();
+  const trailerCovers = useTrailerCovers();
   usePlayerLeaving();
   // Another user, or signing out, takes what played with the pages.
   React.useEffect(() => closePlayback, [user.Id]);
@@ -265,8 +267,15 @@ export function WebLayout() {
       {!playing && <PagesWork pathname={pathname} playing={!!playback} />}
       <div
         data-ui="shell"
-        inert={playing}
-        className={cn(playing && 'invisible [content-visibility:hidden]')}
+        inert={playing || trailerCovers}
+        className={cn(
+          playing
+            ? 'invisible [content-visibility:hidden]'
+            : // Faded away from a trailer playing behind it, which goes on.
+              trailerCovers
+              ? 'invisible opacity-0 [transition:opacity_300ms,visibility_0s_300ms]'
+              : 'transition-opacity duration-300'
+        )}
       >
         <AppSidebarProvider>
           <AppLayout

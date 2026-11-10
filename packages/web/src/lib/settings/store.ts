@@ -299,15 +299,17 @@ export const syncedText = (key: string) =>
 
 type Valid<T> = readonly T[] | ((value: T) => boolean);
 
-/** A setting kept on this device; `fallback` is also what clears it. */
+/** A setting kept on this device; `fallback` is also what clears it, and a function's is read when needed. */
 export function device<T extends string | number | boolean>(
   key: string,
-  fallback: T,
+  fallback: T | (() => T),
   valid?: Valid<T>,
   was: Was<T>[] = []
 ): Setting<T> {
+  const initial = () =>
+    typeof fallback === 'function' ? fallback() : fallback;
   const ok = (value: unknown): value is T =>
-    typeof value === typeof fallback &&
+    typeof value === typeof initial() &&
     (!valid ||
       (typeof valid === 'function'
         ? valid(value as T)
@@ -316,11 +318,11 @@ export function device<T extends string | number | boolean>(
     read() {
       const stored = storage.get<unknown>(key);
       const value = stored === null ? readWas(was)?.value : stored;
-      return ok(value) ? value : fallback;
+      return ok(value) ? value : initial();
     },
     write(value) {
       forget(was);
-      if (value === fallback) storage.remove(key);
+      if (value === initial()) storage.remove(key);
       else storage.set(key, value);
       announce();
     },

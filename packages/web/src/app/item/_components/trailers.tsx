@@ -16,6 +16,7 @@ import {
   type Trailer,
 } from '@/lib/playback/trailers';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
+import { ItemTrailerContext } from './trailer';
 
 export function TrailerButton({
   item,
@@ -27,11 +28,17 @@ export function TrailerButton({
   const trailers = React.useMemo(() => trailersOf(item), [item]);
   const [listing, setListing] = React.useState(false);
   const prefetch = usePrefetchTrailer();
+  const behind = React.useContext(ItemTrailerContext);
   if (!trailers.length) return null;
   const play = (index: number) => navigate(to.trailer(item.Id!, index));
   const count = trailers.length;
   const label = plural(count, { one: 'Trailer', other: 'Trailers' });
-  const open = () => (trailers.length > 1 ? setListing(true) : play(0));
+  const open = () =>
+    behind?.shown
+      ? behind.openFull()
+      : trailers.length > 1
+        ? setListing(true)
+        : play(0);
   return (
     <>
       {compact ? (

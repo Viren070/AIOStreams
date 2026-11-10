@@ -323,10 +323,6 @@ msgstr ""
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
 msgstr ""
 
-#: src/app/settings/interface.tsx
-msgid "A card you rest on grows into a bigger preview with its details, while the hero rotates."
-msgstr ""
-
 #: src/features/party/not-in-party.tsx
 msgid "A code is looked up on the relay picked above."
 msgstr ""
@@ -840,6 +836,10 @@ msgstr ""
 #: src/features/playlists/playlists.tsx
 #: src/lib/i18n.ts
 msgid "Cancel"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Card you rest on"
 msgstr ""
 
 #: src/app/settings/interface.tsx
@@ -2791,6 +2791,10 @@ msgstr ""
 msgid "Now: {shown}"
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "Nowhere"
+msgstr ""
+
 #: src/app/settings/theme.tsx
 msgid "Ocean"
 msgstr ""
@@ -2805,6 +2809,10 @@ msgstr ""
 
 #: src/app/settings/theme.tsx
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Off, a trailer still plays with sound once you open it whole."
 msgstr ""
 
 #: src/features/party/in-party.tsx
@@ -2837,6 +2845,10 @@ msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Once you rest on a title for a moment. In the hero, only one you went to."
 msgstr ""
 
 #: src/lib/subtitles/files.ts
@@ -2911,6 +2923,10 @@ msgstr ""
 
 #: src/app/downloads/page.tsx
 msgid "Open the app's downloads"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Opens out to its details"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -3198,6 +3214,10 @@ msgstr ""
 msgid "Play anyway"
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "Play by themselves"
+msgstr ""
+
 #: src/app/item/_components/header.tsx
 msgid "Play from the start"
 msgstr ""
@@ -3291,6 +3311,10 @@ msgstr ""
 msgid "Playback"
 msgstr ""
 
+#: src/app/item/_components/trailer.tsx
+msgid "Playback controls"
+msgstr ""
+
 #: src/features/player/mini-player.tsx
 msgid "Playback failed"
 msgstr ""
@@ -3314,6 +3338,7 @@ msgid "Player link"
 msgstr ""
 
 #: src/app/history/_components/sessions.tsx
+#: src/app/item/_components/trailer.tsx
 #: src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx
 #: src/features/player/episodes.tsx
@@ -3369,6 +3394,10 @@ msgstr ""
 msgid "Plays the video."
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "Pops out a preview"
+msgstr ""
+
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr ""
@@ -3393,13 +3422,13 @@ msgstr ""
 msgid "Press Back again to leave"
 msgstr ""
 
+#: src/app/item/_components/trailer.tsx
+msgid "Press Up for playback controls"
+msgstr ""
+
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
-msgstr ""
-
-#: src/app/settings/interface.tsx
-msgid "Previews"
 msgstr ""
 
 #: src/app/settings/playback.tsx
@@ -3863,6 +3892,10 @@ msgstr ""
 msgid "Saw its subtitle"
 msgstr ""
 
+#: src/app/item/_components/trailer.tsx
+msgid "Scroll up for playback controls"
+msgstr ""
+
 #: src/lib/playback/controller.ts
 msgid "SDH"
 msgstr ""
@@ -4292,6 +4325,7 @@ msgid "Something this device cannot read"
 msgstr ""
 
 #: src/app/settings/audio.tsx
+#: src/app/settings/interface.tsx
 #: src/features/player/options.tsx
 msgid "Sound"
 msgstr ""
@@ -4360,6 +4394,10 @@ msgstr ""
 #: src/app/history/page.tsx
 #: src/app/settings/apps.tsx
 msgid "Status"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Stays as it is"
 msgstr ""
 
 #: src/app/settings/audio.tsx
@@ -4996,6 +5034,7 @@ msgstr ""
 
 #: src/app/settings/apps.tsx
 #: src/app/settings/cache.tsx
+#: src/app/settings/interface.tsx
 msgid "Title pages"
 msgstr ""
 
@@ -5041,11 +5080,13 @@ msgid "Tracks"
 msgstr ""
 
 #: src/app/item/_components/actions.tsx
+#: src/features/trailers/preview.tsx
 #: src/lib/playback/trailers.ts
 msgid "Trailer"
 msgstr ""
 
 #: src/app/item/_components/trailers.tsx
+#: src/app/settings/interface.tsx
 msgid "Trailers"
 msgstr ""
 
@@ -5535,6 +5576,10 @@ msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
 msgstr ""
 
 #: src/app/settings/interface.tsx

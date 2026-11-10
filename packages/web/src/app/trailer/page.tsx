@@ -20,13 +20,14 @@ import {
 import { goBack, navigate, to } from '@/lib/paths';
 import { closePlayback } from '@/lib/playback/session';
 import {
+  trailerSource,
   trailersOf,
   useTrailerPlayback,
   youTubeId,
   type Trailer,
 } from '@/lib/playback/trailers';
 import type { PlayerController } from '@/lib/playback/controller';
-import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PlayerControls } from '@/features/player/controls';
 import { Cover } from '@/features/player/cover';
 import { OBJECT_FIT, usePlayerPage } from '@/app/player/page';
@@ -92,11 +93,6 @@ export function TrailerPage({
   return <PlayedTrailer {...props} url={found.url} prefs={prefs.prefs} />;
 }
 
-const sourceOf = (url: string): SourceInfo => ({
-  Id: `trailer:${url}`,
-  MediaStreams: [],
-});
-
 function Controls({
   item,
   trailer,
@@ -137,7 +133,7 @@ function PlayedTrailer({
   const [hostPlayer] = React.useState(() => currentHost().player);
   const [fit] = useSetting(settings.video.fit);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
-  const source = React.useMemo(() => sourceOf(url), [url]);
+  const source = React.useMemo(() => trailerSource(url), [url]);
   const player = usePlayer([hostPlayer ?? videoEngine(video)], {
     client,
     item: props.item,

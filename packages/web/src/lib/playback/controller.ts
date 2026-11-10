@@ -3,7 +3,7 @@ import { storage } from '@/lib/storage';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import type { Chapter } from './chapters';
 import type { Live } from '@/lib/live-value';
-import type { SubtitleStyle } from '@/lib/settings';
+import type { SubtitleStyle, VideoFit } from '@/lib/settings';
 import type { SubtitleLine } from '@/lib/subtitles/cues';
 import { subtitleType, type SubtitleFacts } from '@/lib/subtitles/tracks';
 import { tagName } from '@/lib/languages';
@@ -183,6 +183,10 @@ export interface PlayerOptions {
   /** Moves on from a live source that kept failing; false when there is nothing else to play. */
   onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
+  fit?: VideoFit;
+  /** Kept from the saved volume, which it leaves alone. */
+  muted?: boolean;
+  thumbnails?: boolean;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';

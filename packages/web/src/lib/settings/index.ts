@@ -45,6 +45,12 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
+export const CARD_PREVIEWS = ['open', 'pop', 'off'] as const;
+export type CardPreview = (typeof CARD_PREVIEWS)[number];
+
+export const TRAILER_SPOTS = ['cards', 'hero', 'item'] as const;
+export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
+
 export const TOUCH_NAVIGATIONS = ['rail', 'bar', 'top'] as const;
 export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
 
@@ -297,6 +303,16 @@ const segment = record(SEGMENT_TYPES, (type) =>
   ])
 );
 
+const onTv = () => document.documentElement.hasAttribute('data-tv');
+
+// Off on touch screens, where nothing rests on a card.
+const trailer = record(TRAILER_SPOTS, (spot) =>
+  device<boolean>(
+    `aiostreams-web-interface-trailers-${spot}`,
+    () => onTv() || matchMedia('(hover: hover) and (pointer: fine)').matches
+  )
+);
+
 const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
   device<boolean>(
     `aiostreams-web-audio-passthrough-${format}`,
@@ -373,9 +389,22 @@ export const settings = {
       EPISODE_LAYOUTS,
       ['aiostreams-web-episode-layout']
     ),
-    cardPreviews: device<boolean>(
-      'aiostreams-web-interface-card-previews',
-      true
+    cardPreview: device<CardPreview>(
+      'aiostreams-web-interface-card-preview',
+      'open',
+      CARD_PREVIEWS,
+      [
+        {
+          key: 'aiostreams-web-interface-card-previews',
+          read: (old) => (old === false ? 'off' : undefined),
+        },
+      ]
+    ),
+    trailer,
+    trailers: group(trailer),
+    trailerSound: device<boolean>(
+      'aiostreams-web-interface-trailer-sound',
+      onTv
     ),
     startPage: device<StartPage>(
       'aiostreams-web-interface-start-page',

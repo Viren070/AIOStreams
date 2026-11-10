@@ -18,6 +18,7 @@ import { Seasons } from './_components/seasons';
 import { Members, SubCollections } from './_components/collection';
 import { Details } from './_components/details';
 import { Similar } from './_components/similar';
+import { ItemTrailerContext, useItemTrailer } from './_components/trailer';
 
 export function ItemPage({
   itemId,
@@ -40,6 +41,9 @@ export function ItemPage({
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   const [season, setSeason] = React.useState<BaseItemDto>();
   useExternalReturn();
+  const trailer = useItemTrailer(
+    data && !lacksDetails(data) ? data : undefined
+  );
 
   React.useEffect(() => {
     if (data?.Type === 'Episode' && data.SeriesId) {
@@ -78,7 +82,10 @@ export function ItemPage({
       <Backdrop
         images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
+        trailer={trailer.shown}
       />
+      {trailer.preview}
+      {trailer.hint}
       <div
         data-ui="item-body"
         className="relative z-[1] space-y-12 px-4 pb-16 pt-[38vh] lg:ps-0 lg:pe-10 lg:pt-[26vh]"
@@ -86,7 +93,7 @@ export function ItemPage({
         {!data || data.Type === 'Episode' ? (
           <HeaderSkeleton />
         ) : (
-          <>
+          <ItemTrailerContext.Provider value={trailer.context}>
             <Header item={data} season={season} />
             {data.Type === 'Series' && (
               <Seasons
@@ -103,7 +110,7 @@ export function ItemPage({
             {(data.Type === 'Movie' || data.Type === 'Series') && (
               <Similar itemId={data.Id!} />
             )}
-          </>
+          </ItemTrailerContext.Provider>
         )}
       </div>
     </div>

@@ -47,6 +47,8 @@ const LINGER_MS = 10_000;
 let linger: ReturnType<typeof setTimeout> | undefined;
 /** What a launched player moved on to by itself, which the next page takes over. */
 let advanced: { itemId: string; sourceId: string } | null = null;
+/** The engine that loaded last, which alone may stop the one player. */
+let loadedBy: object | null = null;
 
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
 /** The apps list an added file under its name, cut to this length. */
@@ -154,10 +156,12 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     statsPage = page;
     send('player-stats-overlay', { page });
   };
+  const self = {};
 
   return {
     load(next) {
       unsubscribe();
+      if (!external) loadedBy = self;
       file = next;
       tracks = [];
       added.clear();
@@ -298,7 +302,11 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       unsubscribe();
       unsubscribe = () => {};
       if (statsPage) showOverlay(null);
-      if (!external) return send('player-stop');
+      if (!external) {
+        if (loadedBy !== self) return;
+        loadedBy = null;
+        return send('player-stop');
+      }
       if (!moved) send('player-set', { paused: true });
       linger = setTimeout(
         () => shell.send({ type: 'external-close' }),

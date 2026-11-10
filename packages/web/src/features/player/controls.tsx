@@ -102,6 +102,7 @@ export function PlayerControls({
   playlist,
   onParty,
   live = false,
+  showAtOpen = false,
 }: {
   item: BaseItemDto;
   player: PlayerController;
@@ -122,6 +123,7 @@ export function PlayerControls({
   onParty?: () => void;
   /** A channel: the programme in place of the seek bar, and zapping. */
   live?: boolean;
+  showAtOpen?: boolean;
 }) {
   const { state } = player;
   const latest = useLatest(player);
@@ -187,9 +189,12 @@ export function PlayerControls({
     return { visible, pauseScreen };
   };
   // The video appears without the controls, unless it opens paused.
+  const [wakeFirst] = React.useState(showAtOpen && ready);
   React.useEffect(() => {
-    if (ready && !latest.current.state.paused) hide();
-  }, [ready, latest, hide]);
+    if (!ready || latest.current.state.paused) return;
+    if (wakeFirst) wake();
+    else hide();
+  }, [ready, latest, hide, wake, wakeFirst]);
   const wasPaused = React.useRef<boolean | null>(null);
   React.useEffect(() => {
     if (!ready) return;

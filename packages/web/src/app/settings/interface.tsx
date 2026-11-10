@@ -22,6 +22,8 @@ import {
   type TouchNavigation,
   type TvNavigation,
   HERO_SECONDS,
+  TRAILER_SPOTS,
+  type CardPreview,
   type HeroMode,
   type PosterLine,
   type PosterSize,
@@ -269,8 +271,12 @@ export function InterfaceSection() {
   const [episodeLayout, setEpisodeLayout] = useSetting(
     settings.interface.episodeLayout
   );
-  const [cardPreviews, setCardPreviews] = useSetting(
-    settings.interface.cardPreviews
+  const [cardPreview, setCardPreview] = useSetting(
+    settings.interface.cardPreview
+  );
+  const [trailers, setTrailers] = useSetting(settings.interface.trailers);
+  const [trailerSound, setTrailerSound] = useSetting(
+    settings.interface.trailerSound
   );
   const [blurSpoilers, setBlurSpoilers] = useSetting(
     settings.interface.blurSpoilers
@@ -394,15 +400,52 @@ export function InterfaceSection() {
       </SettingsCard>
       {!touch && (
         <SettingsCard name="cards" title={t`Cards`} description={onDevice()}>
-          <Switch
-            side="right"
-            label={t`Previews`}
-            help={t`A card you rest on grows into a bigger preview with its details, while the hero rotates.`}
-            value={cardPreviews}
-            onValueChange={setCardPreviews}
+          <Select
+            label={t`Card you rest on`}
+            help={t`While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put.`}
+            options={[
+              { value: 'open', label: t`Opens out to its details` },
+              { value: 'pop', label: t`Pops out a preview` },
+              { value: 'off', label: t`Stays as it is` },
+            ]}
+            value={cardPreview}
+            onValueChange={(value) => setCardPreview(value as CardPreview)}
           />
         </SettingsCard>
       )}
+      <SettingsCard
+        name="trailers"
+        title={t`Trailers`}
+        description={onDevice()}
+      >
+        <Combobox
+          multiple
+          label={t`Play by themselves`}
+          help={t`Once you rest on a title for a moment. In the hero, only one you went to.`}
+          placeholder={t`Nowhere`}
+          emptyMessage={t`Nothing matches.`}
+          options={[
+            ...(touch ? [] : [option('cards', t`Cards`)]),
+            option('hero', t`Hero`),
+            option('item', t`Title pages`),
+          ]}
+          value={TRAILER_SPOTS.filter((spot) => trailers[spot])}
+          onValueChange={(value) =>
+            setTrailers(
+              Object.fromEntries(
+                TRAILER_SPOTS.map((spot) => [spot, value.includes(spot)])
+              ) as typeof trailers
+            )
+          }
+        />
+        <Switch
+          side="right"
+          label={t`Sound`}
+          help={t`Off, a trailer still plays with sound once you open it whole.`}
+          value={trailerSound}
+          onValueChange={setTrailerSound}
+        />
+      </SettingsCard>
       <SettingsCard
         name="episodes"
         title={t`Episodes`}

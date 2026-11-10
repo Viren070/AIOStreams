@@ -27,6 +27,11 @@ import { useHold } from '@/hooks/use-hold';
 import { useLatest } from '@/hooks/use-latest';
 import { CachedImage } from '@/components/cached-image';
 import { GlideLayers } from '@/components/shell/glide-layers';
+import {
+  TrailerPreview,
+  TrailerVeil,
+  useTrailersOn,
+} from '@/features/trailers/preview';
 
 const DRAG_SLOP_PX = 8;
 const LAND_SHARE = 0.35;
@@ -34,6 +39,8 @@ const FLICK_PX_MS = 0.4;
 const SETTLE_MS = 300;
 /** How long the pointer or focus rests on a card before the hero follows it. */
 const FOLLOW_DELAY_MS = 300;
+/** How long a title rests in the hero before its trailer starts. */
+const TRAILER_REST_MS = 2500;
 const HERO_BOX =
   'relative -mt-[var(--top-bar,0px)] h-[max(26rem,75svh)] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]';
 const HERO_CONTENT =
@@ -558,6 +565,86 @@ function dotLabel(item: BaseItemDto): string {
   });
 }
 
+/** Starts `item`'s trailer once it rests; one played out waits for another item. */
+function useHeroTrailer(item: BaseItemDto | null, fades: boolean) {
+  const on = useTrailersOn('hero');
+  const [playing, setPlaying] = React.useState<BaseItemDto | null>(null);
+  const [shown, setShown] = React.useState(false);
+  // By id: a refetch hands the same title over as a new object.
+  const id = item?.Id;
+  const latest = useLatest(item);
+  React.useEffect(() => {
+    setPlaying(null);
+    if (!id || !on) return;
+    const timer = setTimeout(() => setPlaying(latest.current), TRAILER_REST_MS);
+    return () => clearTimeout(timer);
+  }, [id, on, latest]);
+  React.useEffect(() => {
+    if (!playing) setShown(false);
+  }, [playing]);
+  const box = playing && (
+    <HeroTrailer
+      key={playing.Id}
+      item={playing}
+      fades={fades}
+      onShown={setShown}
+      onEnded={() => setPlaying(null)}
+    />
+  );
+  return { box, shown: !!playing && shown };
+}
+
+/**
+ * A trailer in a wide box as tall as the hero, at its end, drawn beneath the
+ * backdrop, which fades off it once it plays; where it lies inside a larger
+ * backdrop, its edges fade into the page.
+ */
+function HeroTrailer({
+  item,
+  fades,
+  onShown,
+  onEnded,
+}: {
+  item: BaseItemDto;
+  fades: boolean;
+  onShown(shown: boolean): void;
+  onEnded(): void;
+}) {
+  const [spot, setSpot] = React.useState<HTMLDivElement | null>(null);
+  const [shown, setShown] = React.useState(false);
+  return (
+    <div
+      ref={setSpot}
+      data-ui="hero-trailer"
+      // Wide, so a trailer's own bars are cropped away, even where that runs past the hero's start.
+      className="pointer-events-none absolute end-0 top-0 aspect-[2.39/1] h-full"
+    >
+      <div className="absolute -inset-px">
+        {fades && (
+          <>
+            <div className="absolute inset-y-0 start-0 w-2/5 bg-gradient-to-r from-[--background] via-[--background]/60 via-30% to-transparent rtl:bg-gradient-to-l" />
+            <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[--background] via-[--background]/60 via-30% to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-[--background]/70 to-transparent" />
+          </>
+        )}
+        <TrailerVeil shown={shown} />
+      </div>
+      {spot && (
+        <TrailerPreview
+          item={item}
+          spot={spot}
+          within={spot.parentElement ?? undefined}
+          onShown={(on) => {
+            setShown(on);
+            onShown(on);
+          }}
+          onEnded={onEnded}
+        />
+      )}
+    </div>
+  );
+}
+
 /** A rotating feature of a few titles at the top of the home page. */
 export function Hero({
   items,
@@ -575,7 +662,10 @@ export function Hero({
   // Keys of the previous, current and next slides, passed round as a swipe
   // lands so the slide faded in stays mounted.
   const [slots, setSlots] = React.useState<[number, number, number]>([0, 1, 2]);
+  // Only a title the user went to plays its trailer, not one the page opened on.
+  const [chosen, setChosen] = React.useState(false);
   const swipe = useSwipeFade((step) => {
+    setChosen(true);
     setIndex((i) => (i + step + featured.length) % featured.length);
     setSlots(([prev, main, next]) =>
       step > 0 ? [main, next, prev] : [next, prev, main]
@@ -634,6 +724,7 @@ export function Hero({
     // From the first title, Left leaves for the navigation.
     if (at < 0 || actions[at + step] || (step < 0 && !index)) return false;
     landing.current = step > 0 ? 'first' : 'last';
+    setChosen(true);
     setIndex((i) => (i + step + featured.length) % featured.length);
   };
   const turning = focused && featured.length > 1;
@@ -650,6 +741,11 @@ export function Hero({
     const el = to === 'first' ? actions?.[0] : actions?.[actions.length - 1];
     if (to && el) focusOn(el);
   }, [index]);
+
+  const trailer = useHeroTrailer(
+    chosen && (focused || paused) ? (featured[index] ?? null) : null,
+    false
+  );
 
   if (loading) return <HeroSkeleton />;
   if (!featured[index]) return null;
@@ -674,14 +770,33 @@ export function Hero({
       data-nav-top
       className={cn(HERO_BOX, 'touch-pan-y touch-pinch-zoom')}
       onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setFocused(true)}
-      onBlur={(e) =>
-        !e.currentTarget.contains(e.relatedTarget) && setFocused(false)
-      }
+      onMouseLeave={() => {
+        setPaused(false);
+        if (!focused) setChosen(false);
+      }}
+      onFocus={(e) => {
+        setFocused(true);
+        if (
+          e.relatedTarget instanceof Element &&
+          !e.currentTarget.contains(e.relatedTarget)
+        )
+          setChosen(true);
+      }}
+      onBlur={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget)) return;
+        setFocused(false);
+        setChosen(false);
+      }}
       {...(swipeable ? swipe : {})}
     >
-      <div data-ui="hero-backdrops" className="absolute inset-0 isolate">
+      {trailer.box}
+      <div
+        data-ui="hero-backdrops"
+        className={cn(
+          'absolute inset-0 isolate transition-opacity duration-700',
+          trailer.shown && 'opacity-0'
+        )}
+      >
         {slides.map(({ key, role, item }) => (
           <div
             key={key}
@@ -725,7 +840,10 @@ export function Hero({
               data-current={i === index || undefined}
               data-nav="skip"
               aria-label={dotLabel(f)}
-              onClick={() => setIndex(i)}
+              onClick={() => {
+                setChosen(true);
+                setIndex(i);
+              }}
               className={cn(
                 'h-1.5 rounded-full transition-all',
                 i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
@@ -764,32 +882,52 @@ export function useHeroTarget(item: BaseItemDto) {
 function FollowBackdrop({
   item,
   corner,
+  trailer,
 }: {
   item: BaseItemDto | undefined;
   corner: boolean;
+  trailer: { box: React.ReactNode; shown: boolean };
 }) {
   const { client } = useSession();
   const src = item && backdropSrc(client, item);
+  const fade = cn(
+    'transition-opacity duration-700',
+    trailer.shown && 'opacity-0'
+  );
+  const box = (
+    <div className="absolute inset-x-0 top-0 h-[var(--hero-h)]">
+      {trailer.box}
+    </div>
+  );
 
   if (corner)
     return (
-      <div
-        aria-hidden
-        data-ui="hero-corner"
-        // Masks rather than shades, which leave a seam beside the fading layers.
-        className="pointer-events-none fixed end-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)] rtl:[mask-image:linear-gradient(to_left,transparent,rgb(0_0_0/0.4)_20%,black_45%)]"
-      >
-        <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
-          <Backdrops current={src} />
+      <>
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+          {box}
         </div>
-      </div>
+        <div
+          aria-hidden
+          data-ui="hero-corner"
+          // Masks rather than shades, which leave a seam beside the fading layers.
+          className={cn(
+            'pointer-events-none fixed end-0 top-0 -z-10 aspect-video max-h-[calc(var(--hero-h)*1.4)] w-[70vw] overflow-hidden [mask-image:linear-gradient(to_right,transparent,rgb(0_0_0/0.4)_20%,black_45%)] rtl:[mask-image:linear-gradient(to_left,transparent,rgb(0_0_0/0.4)_20%,black_45%)]',
+            fade
+          )}
+        >
+          <div className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_45%,rgb(0_0_0/0.4)_75%,transparent)]">
+            <Backdrops current={src} />
+          </div>
+        </div>
+      </>
     );
   return (
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
-      <BackdropFrame className="max-w-[calc(100vh*2.6)]">
+      {box}
+      <BackdropFrame className={cn('max-w-[calc(100vh*2.6)]', fade)}>
         <Backdrops current={src} />
       </BackdropFrame>
       <Shade />
@@ -834,6 +972,8 @@ export function FollowHero({
   const { client, user } = useSession();
   const userKey = `${client.base}:${user.Id}`;
   const [picked, setPicked] = React.useState(() => lastPicks.get(userKey));
+  // The picked card, while focus or the pointer is still on it.
+  const [resting, setResting] = React.useState<BaseItemDto | null>(null);
   React.useEffect(() => {
     if (picked) lastPicks.set(userKey, picked);
   }, [picked, userKey]);
@@ -845,7 +985,11 @@ export function FollowHero({
     const pick = (item: BaseItemDto, byPointer: boolean) => {
       pointerPick = byPointer;
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => setPicked(item), FOLLOW_DELAY_MS);
+      setResting(null);
+      timer.current = setTimeout(() => {
+        setPicked(item);
+        setResting(item);
+      }, FOLLOW_DELAY_MS);
     };
     return {
       focus: (item) => pick(item, false),
@@ -857,7 +1001,9 @@ export function FollowHero({
       // Only the pointer's own pick: rows scrolling away from it leave cards too.
       leave: () => {
         pointed = undefined;
-        if (pointerPick) clearTimeout(timer.current);
+        if (!pointerPick) return;
+        clearTimeout(timer.current);
+        setResting(null);
       },
     };
   }, []);
@@ -867,11 +1013,11 @@ export function FollowHero({
   React.useEffect(() => {
     if (!scroller) return;
     const root = document.documentElement;
-    const mark = () =>
-      root.toggleAttribute(
-        'data-in-rows',
-        scroller.contains(document.activeElement)
-      );
+    const mark = () => {
+      const inRows = scroller.contains(document.activeElement);
+      root.toggleAttribute('data-in-rows', inRows);
+      if (!inRows && keyboardFocus()) setResting(null);
+    };
     mark();
     document.addEventListener('focusin', mark);
     return () => {
@@ -880,6 +1026,7 @@ export function FollowHero({
     };
   }, [scroller]);
   const item = picked ?? items.find((i) => backdropSrc(client, i)) ?? items[0];
+  const trailer = useHeroTrailer(resting, true);
 
   return (
     <FollowContext.Provider value={follow}>
@@ -894,7 +1041,7 @@ export function FollowHero({
             : '[--hero-h:calc(55dvh+var(--top-bar,0px)*0.3)]'
         )}
       >
-        <FollowBackdrop item={item} corner={corner} />
+        <FollowBackdrop item={item} corner={corner} trailer={trailer} />
         <section
           data-ui="hero"
           data-follow
