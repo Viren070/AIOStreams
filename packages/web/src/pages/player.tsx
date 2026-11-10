@@ -39,8 +39,10 @@ import {
   usePlayerFullscreen,
 } from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
-import type { StatsRow } from '../lib/playback/engine';
+import type { EngineFactory, StatsRow } from '../lib/playback/engine';
 import { videoEngine } from '../lib/playback/video';
+import { playsWithWebGpu } from '../lib/playback/player-choice';
+import { webGpuEngine } from '../lib/playback/webgpu';
 import { useNowPlaying } from '../lib/playback/now-playing';
 import { usePlayingAnime } from '../lib/playback/upscaling';
 import {
@@ -160,6 +162,13 @@ export const OBJECT_FIT: Record<VideoFit, string> = {
   crop: 'object-cover',
   stretch: 'object-fill',
 };
+
+function pageEngines(
+  video: React.RefObject<HTMLVideoElement | null>
+): EngineFactory[] {
+  const own = videoEngine(video);
+  return playsWithWebGpu() ? [webGpuEngine(video), own] : [own];
+}
 
 export function PlayerPage({
   itemId,
@@ -579,21 +588,28 @@ function SubtitleText({
   text,
   style,
   lift,
+  framed,
 }: {
   text: string;
   style: SubtitleStyle;
   lift: number;
+  framed?: boolean;
 }) {
   const { fontWeight, fontFamily, color, backgroundColor, textShadow } =
     subtitleCss(style);
   const raise = subtitleHeight(style, lift) - subtitleHeight(style);
+  const unit = framed ? 'cqh' : 'vh';
   return (
     <div
       data-ui="player-subtitle"
-      className="pointer-events-none fixed inset-x-0 flex justify-center px-[5%] text-center transition-transform motion-reduce:transition-none"
+      className={cn(
+        'pointer-events-none inset-x-0 flex justify-center px-[5%] text-center transition-transform motion-reduce:transition-none',
+        // Over the engine's canvas.
+        framed ? 'absolute z-[2]' : 'fixed'
+      )}
       style={{
         bottom: `${100 - subtitleLine(style)}%`,
-        transform: `translateY(${-raise}vh)`,
+        transform: `translateY(${-raise}${unit})`,
         transitionDuration: `${SUBTITLE_LIFT_MS}ms`,
         transitionTimingFunction: SUBTITLE_LIFT_EASE,
       }}
@@ -601,7 +617,7 @@ function SubtitleText({
       <span
         className="whitespace-pre-line px-2"
         style={{
-          fontSize: `calc(${subtitleScale(style)} * 5vh)`,
+          fontSize: `calc(${subtitleScale(style)} * 5${unit})`,
           fontWeight,
           fontFamily,
           color,
@@ -742,7 +758,7 @@ function Player({
     },
     [local]
   );
-  const own = usePlayer(hostPlayer ?? videoEngine(video), {
+  const own = usePlayer(hostPlayer ? [hostPlayer] : pageEngines(video), {
     client,
     item,
     url: local?.local
@@ -851,21 +867,38 @@ function Player({
       {!hostPlayer && (
         <>
           <style>{cueCss(subtitleStyle)}</style>
-          <video
-            ref={video}
-            data-ui="video"
-            className={cn(
-              'h-full w-full bg-black transition-opacity duration-700 ease-out',
+          {/* The engine's canvas and the subtitle layers sit here with the video, and move with it. */}
+          <div
+            data-ui="video-frame"
+            className={
               // Over the mini player's card, which comes after it.
-              mini
-                ? 'pointer-events-none fixed left-0 top-0 z-[41] object-contain'
-                : OBJECT_FIT[fit],
-              !player.state.started && 'opacity-0'
-            )}
+              cn(
+                '[container-type:size]',
+                mini
+                  ? 'pointer-events-none fixed left-0 top-0 z-[41] h-full w-full overflow-hidden'
+                  : 'absolute inset-0 isolate'
+              )
+            }
             style={mini && place ? place : undefined}
-            autoPlay
-            playsInline
-          />
+          >
+            <video
+              ref={video}
+              data-ui="video"
+              className={cn(
+                'h-full w-full bg-black transition-opacity duration-700 ease-out',
+                mini ? 'object-contain' : OBJECT_FIT[fit],
+                !player.state.started && 'opacity-0'
+              )}
+              autoPlay
+              playsInline
+            />
+            <PageSubtitle
+              framed
+              text={player.subtitleText}
+              style={subtitleStyle}
+              lift={mini ? undefined : player.subtitleLift}
+            />
+          </div>
         </>
       )}
       {mini && (
@@ -878,11 +911,13 @@ function Player({
       )}
       {!mini && (
         <>
-          <PageSubtitle
-            text={player.subtitleText}
-            style={subtitleStyle}
-            lift={player.subtitleLift}
-          />
+          {hostPlayer && (
+            <PageSubtitle
+              text={player.subtitleText}
+              style={subtitleStyle}
+              lift={player.subtitleLift}
+            />
+          )}
           {player.stats && <PlayerStats rows={player.stats.rows} />}
           {launched && (
             <p

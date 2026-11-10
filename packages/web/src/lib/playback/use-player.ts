@@ -21,6 +21,7 @@ import {
 import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
 import { SUBTITLE_LIFT_MS, subtitleHeight } from '../subtitles/style';
 import type { MediaStream, SourceInfo } from '../types';
+import { appLog } from '../hosts/shell/bridge';
 import { useLatest } from '../use-latest';
 import type { Chapter } from './chapters';
 import { useLiveRecovery } from './live-recovery';
@@ -42,6 +43,7 @@ import type {
   EngineFactory,
   EngineFile,
   EngineTrack,
+  PlayerEngine,
   ServerSubtitle,
   StatsRow,
 } from './engine';
@@ -161,17 +163,42 @@ function delayKey(tracks: EngineTrack[], id: string): string {
 
 const STATS_MS = 1000;
 
-/** One set of controls over an engine, with what every player shares. */
+/**
+ * One set of controls over an engine, with what every player shares. Each of
+ * `engines` plays what the one before it calls unplayable.
+ */
 export function usePlayer(
-  create: EngineFactory,
+  engines: readonly EngineFactory[],
   opts: PlayerOptions
 ): PlayerController {
   const { client, source, startMs, url } = opts;
   const latest = useLatest(opts);
   const handle = React.useRef<(event: EngineEvent) => void>(() => {});
-  const [engine] = React.useState(() =>
-    create((event) => handle.current(event), { launched: opts.launched })
-  );
+  const [chain] = React.useState(() => engines);
+  const make = (index: number) => {
+    const made: PlayerEngine = chain[index](
+      (event) => {
+        if (active.current === made) handle.current(event);
+      },
+      { launched: latest.current.launched }
+    );
+    return made;
+  };
+  const [engine, setEngine] = React.useState(() => make(0));
+  const active = React.useRef(engine);
+  const engineAt = React.useRef(0);
+  const use = (at: number) => {
+    const made = make(at);
+    active.current = made;
+    engineAt.current = at;
+    setEngine(made);
+    return made;
+  };
+  // The picks a version keeps when it moves to the next engine mid-play.
+  const carried = React.useRef<{
+    audio: string | null;
+    subtitle: string | null;
+  } | null>(null);
   const [state, setState] = React.useState<PlayerState>(() => ({
     ...initialState(source),
     subtitleDelayMs: savedSubtitleDelay(source.Id, null)?.ms ?? 0,
@@ -302,6 +329,12 @@ export function usePlayer(
         return setChapters(event.chapters);
       case 'loaded': {
         patch({ loaded: true });
+        const kept = carried.current;
+        carried.current = null;
+        if (kept) {
+          if (kept.audio) setAudio(kept.audio);
+          return setSubtitle(kept.subtitle);
+        }
         const { tracks, audio, subtitle } = live.current;
         const shown = shownSubtitle(tracks, subtitle, retimed);
         const picks = chooseTracks(
@@ -351,6 +384,27 @@ export function usePlayer(
             },
           }
         );
+      }
+      case 'unplayable': {
+        if (!chain[engineAt.current + 1]) return patch({ error: event.reason });
+        appLog(
+          'info',
+          `player: the next engine plays this version: ${event.reason}`
+        );
+        const { positionMs } = event;
+        const now = live.current;
+        carried.current =
+          positionMs !== undefined && now.loaded
+            ? { audio: now.audio, subtitle: now.subtitle }
+            : null;
+        active.current.close();
+        const next = use(engineAt.current + 1);
+        const file = latestFile.current(positionMs ?? startMs);
+        next.load(
+          positionMs === undefined ? file : { ...file, paused: now.paused }
+        );
+        if (now.rate !== 1) next.setRate?.(now.rate);
+        return;
       }
       case 'advanced':
         return latest.current.onAdvance?.(event.next);
@@ -445,8 +499,9 @@ export function usePlayer(
     setRetimed({});
     const file = latestFile.current(startMs);
     if (file.volume) patch(file.volume);
-    engine.load(file);
-    return () => engine.close();
+    carried.current = null;
+    (engineAt.current ? use(0) : active.current).load(file);
+    return () => active.current.close();
     // Reloading restarts playback, so only a new url or start does it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, startMs]);

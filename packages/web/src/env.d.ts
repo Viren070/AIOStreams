@@ -11,6 +11,9 @@ declare const __LICENSES_FILE__: string;
 
 declare let __webpack_public_path__: string;
 
+/** WebGPU-Player's embedding module, under the public path. */
+declare const __WEBGPU_PLAYER_MODULE__: string;
+
 /** Languages with a catalog too little translated to offer. */
 declare const __UNFINISHED_LOCALES__: string[];
 

@@ -161,6 +161,18 @@ export function playerSupport(): { headers: boolean; youtube: boolean } {
   };
 }
 
+/** Each version is still checked as it opens. */
+export const canPlayWithWebGpu = () =>
+  isSecureContext &&
+  'gpu' in navigator &&
+  typeof VideoDecoder === 'function' &&
+  typeof AudioWorkletNode === 'function';
+
+export const playsWithWebGpu = () =>
+  !currentHost().player &&
+  settings.player.engine.read() === 'webgpu' &&
+  canPlayWithWebGpu();
+
 export const canUpscale = () =>
   !!currentHost().playerFeatures?.includes('upscaling');
 

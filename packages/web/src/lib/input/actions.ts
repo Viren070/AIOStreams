@@ -1,7 +1,12 @@
 import { i18n, type MessageDescriptor } from '@lingui/core';
 import { msg, t } from '@lingui/core/macro';
 import type { Host } from '../hosts';
-import { browserFeatures, type PlayerFeature } from '../playback/controller';
+import {
+  browserFeatures,
+  webGpuFeatures,
+  type PlayerFeature,
+} from '../playback/controller';
+import { playsWithWebGpu } from '../playback/player-choice';
 import { settings, useSetting } from '../settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'live' | 'sync';
@@ -301,7 +306,11 @@ export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
   if ((group === 'player' || group === 'live' || group === 'sync') && host.play)
     return false;
-  const features = host.player ? host.playerFeatures : browserFeatures;
+  const features = host.player
+    ? host.playerFeatures
+    : playsWithWebGpu()
+      ? webGpuFeatures
+      : browserFeatures;
   return !needs || !!features?.includes(needs);
 }
 

@@ -89,12 +89,18 @@ export function overlayCanvas(surface: PictureSurface, moved?: () => void) {
   surface.insert(canvas);
   let placed = '';
   let box = surface.box();
+  let shift = { x: 0, y: 0 };
   const place = () => {
     box = surface.box();
-    const { x, y, width, height } = box;
+    // A transformed ancestor, as the mini player's frame is, holds a fixed canvas instead of the window.
+    const held = canvas.getBoundingClientRect();
+    const x = box.x - (held.left - shift.x);
+    const y = box.y - (held.top - shift.y);
+    const { width, height } = box;
     const key = `${x},${y},${width},${height}`;
     if (key === placed) return;
     placed = key;
+    shift = { x, y };
     Object.assign(canvas.style, {
       transform: `translate(${x}px, ${y}px)`,
       width: `${width}px`,

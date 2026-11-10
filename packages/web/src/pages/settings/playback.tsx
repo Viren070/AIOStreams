@@ -16,6 +16,7 @@ import { usePlaybackPrefs } from '../../lib/user-config';
 import {
   CUSTOM_LINK,
   LAUNCHED_PLAYERS,
+  canPlayWithWebGpu,
   linkPreset,
   canUpscale,
   playerOptions,
@@ -459,11 +460,17 @@ const engineOptions = (): { value: PlayerEngine; label: string }[] => [
   { value: 'mpv', label: 'mpv' },
 ];
 
+const browserEngineOptions = (): { value: PlayerEngine; label: string }[] => [
+  { value: 'auto', label: t`This browser` },
+  { value: 'webgpu', label: 'WebGPU' },
+];
+
 const engineHelp = (engine: PlayerEngine) =>
   ({
     auto: t`ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for.`,
     mpv: t`Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.`,
     exoplayer: t`Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.`,
+    webgpu: t`Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player.`,
   })[engine];
 
 const cacheOptions = () =>
@@ -560,6 +567,23 @@ function PlayerCard() {
           onValueChange={(v) => setBack(v as PlayerBack)}
         />
       )}
+      {!currentHost().player &&
+        canPlayWithWebGpu() &&
+        !launched &&
+        !preset &&
+        player !== CUSTOM_LINK && (
+          <Select
+            label={t`Engine`}
+            help={
+              engine === 'webgpu'
+                ? engineHelp(engine)
+                : t`This browser's own player, which plays the formats this browser supports.`
+            }
+            options={browserEngineOptions()}
+            value={engine === 'webgpu' ? engine : 'auto'}
+            onValueChange={(v) => setEngine(v as PlayerEngine)}
+          />
+        )}
       {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
         <>
           {currentHost().name === 'android-app' && (

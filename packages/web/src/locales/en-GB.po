@@ -3282,7 +3282,9 @@ msgstr "Play with mpv"
 msgid "Play/Pause"
 msgstr "Play/Pause"
 
+#: src/lib/hosts/shell/exo-stats.ts
 #: src/lib/hosts/shell/player.ts
+#: src/lib/playback/webgpu.ts
 #: src/pages/settings/index.tsx
 msgid "Playback"
 msgstr "Playback"
@@ -3519,6 +3521,10 @@ msgstr "React with {emoji}"
 #: src/components/party/reaction-setting.tsx
 msgid "Reactions"
 msgstr "Reactions"
+
+#: src/pages/settings/playback.tsx
+msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
+msgstr "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
 
 #: src/lib/format.ts
 msgid "Recap"
@@ -4852,10 +4858,18 @@ msgstr "Thin"
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "This app decodes Dolby and DTS audio itself, which loses Atmos."
 
+#: src/pages/settings/playback.tsx
+msgid "This browser"
+msgstr "This browser"
+
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
 msgid "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
 msgstr "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
+
+#: src/pages/settings/playback.tsx
+msgid "This browser's own player, which plays the formats this browser supports."
+msgstr "This browser's own player, which plays the formats this browser supports."
 
 #: src/pages/sign-in.tsx
 msgid "This code has expired."

@@ -135,7 +135,7 @@ function PlayedTrailer({
   const [fit] = useSetting(settings.video.fit);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
   const source = React.useMemo(() => sourceOf(url), [url]);
-  const player = usePlayer(hostPlayer ?? videoEngine(video), {
+  const player = usePlayer([hostPlayer ?? videoEngine(video)], {
     client,
     item: props.item,
     url,

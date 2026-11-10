@@ -80,6 +80,8 @@ export type EngineEvent =
   | { type: 'loaded' }
   | { type: 'ended' }
   | { type: 'failed'; error: string; retry?: { label: string; run(): void } }
+  /** The next engine plays the version, from `positionMs` where this one stopped. */
+  | { type: 'unplayable'; reason: string; positionMs?: number }
   | { type: 'advanced'; next: QueuedItem }
   /** The user closed the player's own window. */
   | { type: 'closed' }

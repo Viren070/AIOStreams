@@ -59,6 +59,8 @@ export type PlayerFeature =
 export const browserFeatures: readonly PlayerFeature[] =
   'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
 
+export const webGpuFeatures: readonly PlayerFeature[] = ['audio', 'stats'];
+
 /** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
 export type SyncOutcome = { asked: boolean } & (
   | { delayMs: number; movedMs: number; first: boolean; retimed: boolean }
