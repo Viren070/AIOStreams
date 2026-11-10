@@ -1,4 +1,5 @@
-import type { Host } from '.';
+import type { Host } from '..';
+import { serviceFetch } from './service';
 
 interface WebOSSystem {
   deviceInfo?: string;
@@ -13,7 +14,7 @@ declare global {
   }
 }
 
-// PalmSystem is its older name, kept for compatibility without a promise.
+// PalmSystem is its older name.
 const system = () => window.webOSSystem ?? window.PalmSystem;
 
 function device(): { name: string } {
@@ -34,9 +35,9 @@ const host: Host = {
   exit: () => system()?.platformBack?.(),
   keepAwake: (on) =>
     system()?.setWindowProperty?.('blockScreenSaver', String(on)),
+  fetchFile: serviceFetch,
 };
 
-/** LG's TVs, running the packaged app. */
 export function webosHost(): Host | null {
   return system() ? host : null;
 }
