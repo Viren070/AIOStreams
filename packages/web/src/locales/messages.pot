@@ -377,6 +377,7 @@ msgstr ""
 
 #: src/app/settings/page.tsx
 #: src/components/shell/layout.tsx
+#: src/components/shell/nav/mobile-nav.tsx
 msgid "Account"
 msgstr ""
 
@@ -678,7 +679,7 @@ msgstr ""
 #: src/app/settings/_components/licenses.tsx
 #: src/app/sign-in/page.tsx
 #: src/app/trailer/page.tsx
-#: src/components/shell/layout.tsx
+#: src/components/shell/history-buttons.tsx
 #: src/features/party/party-sheet.tsx
 #: src/features/player/controls.tsx
 #: src/features/player/next-episode.tsx
@@ -824,7 +825,7 @@ msgid "Can’t reach"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/lib/jellyfin/client.ts
 msgid "Can't reach the server"
 msgstr ""
@@ -1427,7 +1428,7 @@ msgstr ""
 msgid "Discover"
 msgstr ""
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/features/live-tv/live-reminders.tsx
 msgid "Dismiss"
 msgstr ""
@@ -1522,6 +1523,7 @@ msgstr ""
 #: src/app/settings/interface.tsx
 #: src/app/settings/page.tsx
 #: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 msgid "Downloads"
 msgstr ""
 
@@ -1791,7 +1793,7 @@ msgstr ""
 msgid "Formats"
 msgstr ""
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/history-buttons.tsx
 msgid "Forward"
 msgstr ""
 
@@ -3545,7 +3547,7 @@ msgstr ""
 msgid "Reconnecting to the party…"
 msgstr ""
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/features/player/controls.tsx
 msgid "Reconnecting…"
 msgstr ""
@@ -4073,7 +4075,7 @@ msgstr ""
 msgid "Show time played"
 msgstr ""
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 msgid "Showing saved pages"
 msgstr ""
 
@@ -5589,7 +5591,11 @@ msgstr ""
 msgid "Yesterday"
 msgstr ""
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/nav/account.tsx
+#: src/components/shell/nav/corner-menu.tsx
+#: src/components/shell/nav/mobile-nav.tsx
+#: src/components/shell/nav/touch-rail.tsx
+#: src/components/shell/nav/tv-rail.tsx
 msgid "You"
 msgstr ""
 

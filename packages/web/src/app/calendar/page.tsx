@@ -22,7 +22,7 @@ import {
 } from '@/lib/format';
 import { landscapeUrls } from '@/lib/artwork/images';
 import { href, itemPath, navigate, to } from '@/lib/paths';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { Artwork } from '@/components/media/cards';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { Anchor } from '@/components/anchor';

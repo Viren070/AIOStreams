@@ -72,7 +72,7 @@ import { href, itemPath, navigate, to } from '@/lib/paths';
 import { settings, useSetting } from '@/lib/settings';
 import { useInView, useNear } from '@/hooks/use-in-view';
 import { MediaRow } from '@/components/media/media-row';
-import { PageMessage } from '@/components/shell/layout';
+import { PageMessage } from '@/components/shell/page';
 import { NoDetails } from './_components/no-details';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { PosterCard } from '@/components/media/cards';

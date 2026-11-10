@@ -8,7 +8,7 @@ import { useItem, usePersonItems } from '@/lib/jellyfin/queries';
 import { posterUrl } from '@/lib/artwork/images';
 import { dateFormat, yearsBetween } from '@/lib/format';
 import { useInView } from '@/hooks/use-in-view';
-import { PageBody, PageMessage } from '@/components/shell/layout';
+import { PageBody, PageMessage } from '@/components/shell/page';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { ExternalLinks } from '@/components/media/external-links';
 import { Overview } from '@/components/media/overview';

@@ -59,7 +59,7 @@ import {
   useVersionPicker,
 } from '@/features/versions/version-picker';
 import { NoCatalogs } from '@/components/media/no-catalogs';
-import { FILL_WINDOW } from '@/components/shell/layout';
+import { FILL_WINDOW } from '@/components/shell/page';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { currentHost } from '@/lib/hosts';
 import { Anchor } from '@/components/anchor';

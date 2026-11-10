@@ -43,7 +43,7 @@ import {
 } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { SessionsRow } from './_components/sessions';
 import { PillTabs } from '@/components/pill-tabs';
 import { Artwork, type ArtworkSource } from '@/components/media/cards';

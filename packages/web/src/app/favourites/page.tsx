@@ -15,7 +15,7 @@ import {
 } from '@/features/live-tv/live-tv';
 import { useInView } from '@/hooks/use-in-view';
 import { navigate, to } from '@/lib/paths';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { CardGrid } from '@/components/media/media-row';

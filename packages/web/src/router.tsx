@@ -8,7 +8,8 @@ import {
   createRouter,
   Outlet,
 } from '@tanstack/react-router';
-import { PageMessage, WebLayout } from './components/shell/layout';
+import { PageMessage } from './components/shell/page';
+import { WebLayout } from './components/shell/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
 import { openStartPage } from './lib/start-page';

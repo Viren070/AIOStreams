@@ -24,7 +24,7 @@ import { tab, tabList } from '@/lib/input';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { NoCatalogs } from '@/components/media/no-catalogs';
-import { PageMessage } from '@/components/shell/layout';
+import { PageMessage } from '@/components/shell/page';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 const FILTERS: { value: ItemFilter | undefined; label: string }[] = [

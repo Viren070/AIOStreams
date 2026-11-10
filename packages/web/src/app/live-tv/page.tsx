@@ -43,7 +43,7 @@ import { navigate, to } from '@/lib/paths';
 import { focusOn, isTextField, pickOnFocus, useAction } from '@/lib/input';
 import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
-import { PageMessage } from '@/components/shell/layout';
+import { PageMessage } from '@/components/shell/page';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Select } from '@aiostreams/ui/select';

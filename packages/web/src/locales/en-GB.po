@@ -378,6 +378,7 @@ msgstr "Accent"
 
 #: src/app/settings/page.tsx
 #: src/components/shell/layout.tsx
+#: src/components/shell/nav/mobile-nav.tsx
 msgid "Account"
 msgstr "Account"
 
@@ -679,7 +680,7 @@ msgstr "Automatic lists episodes on narrow screens and puts them in a row on wid
 #: src/app/settings/_components/licenses.tsx
 #: src/app/sign-in/page.tsx
 #: src/app/trailer/page.tsx
-#: src/components/shell/layout.tsx
+#: src/components/shell/history-buttons.tsx
 #: src/features/party/party-sheet.tsx
 #: src/features/player/controls.tsx
 #: src/features/player/next-episode.tsx
@@ -825,7 +826,7 @@ msgid "Can’t reach"
 msgstr "Can’t reach"
 
 #: src/app/sign-in/page.tsx
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/lib/jellyfin/client.ts
 msgid "Can't reach the server"
 msgstr "Can't reach the server"
@@ -1428,7 +1429,7 @@ msgstr "Discord refused the status: {message}"
 msgid "Discover"
 msgstr "Discover"
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/features/live-tv/live-reminders.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
@@ -1523,6 +1524,7 @@ msgstr "Downloading, {percent}%"
 #: src/app/settings/interface.tsx
 #: src/app/settings/page.tsx
 #: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 msgid "Downloads"
 msgstr "Downloads"
 
@@ -1792,7 +1794,7 @@ msgstr "Forced, for foreign parts only"
 msgid "Formats"
 msgstr "Formats"
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/history-buttons.tsx
 msgid "Forward"
 msgstr "Forward"
 
@@ -3546,7 +3548,7 @@ msgstr "Recent searches"
 msgid "Reconnecting to the party…"
 msgstr "Reconnecting to the party…"
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 #: src/features/player/controls.tsx
 msgid "Reconnecting…"
 msgstr "Reconnecting…"
@@ -4074,7 +4076,7 @@ msgstr "Show time left"
 msgid "Show time played"
 msgstr "Show time played"
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
 msgid "Showing saved pages"
 msgstr "Showing saved pages"
 
@@ -5590,7 +5592,11 @@ msgstr "Yellow"
 msgid "Yesterday"
 msgstr "Yesterday"
 
-#: src/components/shell/layout.tsx
+#: src/components/shell/nav/account.tsx
+#: src/components/shell/nav/corner-menu.tsx
+#: src/components/shell/nav/mobile-nav.tsx
+#: src/components/shell/nav/touch-rail.tsx
+#: src/components/shell/nav/tv-rail.tsx
 msgid "You"
 msgstr "You"
 

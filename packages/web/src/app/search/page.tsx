@@ -29,7 +29,7 @@ import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/images';
 import { itemSubtitle, progressOf } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import { BATCH } from '@/features/live-tv/channel-list';

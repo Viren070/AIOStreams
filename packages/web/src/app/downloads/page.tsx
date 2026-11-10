@@ -31,7 +31,7 @@ import {
   useDownloadSpeeds,
   type Download,
 } from '@/lib/downloads';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { CachedImage } from '@/components/cached-image';
 import { ProgressRing, percentOf } from '@/features/downloads/download-button';
 import { useVersionPicker } from '@/features/versions/version-picker';

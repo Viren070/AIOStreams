@@ -29,7 +29,7 @@ import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
 import { appBridge } from '@/lib/hosts/shell/bridge';
-import { PageBody } from '@/components/shell/layout';
+import { PageBody } from '@/components/shell/page';
 import { ShortcutSettings } from './_components/shortcut-settings';
 import { SettingsPageHeader } from './_components/settings-card';
 import { PlaybackSection } from './playback';
