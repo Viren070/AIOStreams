@@ -91,6 +91,7 @@ function Menu({
   action,
   pages = [],
   more,
+  alternate,
 }: {
   name: string;
   label: string;
@@ -104,6 +105,7 @@ function Menu({
   pages?: MenuPage[];
   /** Listed after a press on `label`, which stands in for them until the menu closes. */
   more?: { label: string; options: Track[] };
+  alternate?: { label: string; description: string; options: Track[] };
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const [pageName, setPageName] = React.useState<string | null>(null);
@@ -141,11 +143,6 @@ function Menu({
       />
       <span className="min-w-0 [overflow-wrap:anywhere]">
         {option.label}
-        {option.badge && (
-          <span className="ms-2 rounded bg-white/10 px-1.5 py-0.5 text-xs">
-            {option.badge}
-          </span>
-        )}
         {option.detail && (
           <span
             data-name="detail"
@@ -245,6 +242,19 @@ function Menu({
             )}
             <div className="min-h-0 overflow-y-auto [@media(max-height:640px)]:shrink-0 [@media(max-height:640px)]:overflow-y-visible">
               {options.map((option) => item(option))}
+              {!!alternate?.options.length && (
+                <div
+                  role="group"
+                  aria-label={alternate.label}
+                  className="mt-1 border-t pt-1"
+                >
+                  <DropdownMenuLabel>{alternate.label}</DropdownMenuLabel>
+                  <p className="px-2 pb-1 text-xs text-gray-400">
+                    {alternate.description}
+                  </p>
+                  {alternate.options.map((option) => item(option))}
+                </div>
+              )}
               {more &&
                 more.options.length > 0 &&
                 (expanded ? (
@@ -646,18 +656,18 @@ export function OptionButtons({
           name="audio"
           label={t`Audio`}
           icon={<LuAudioLines />}
-          options={[
-            ...player.audioTracks,
-            ...(otherAudio?.options.map((choice) => ({
-              id: `alternate:${choice.language}`,
-              label: choice.label,
-              badge: t`Available from another version`,
-              detail:
-                choice.source.aiostreams?.resolution ??
-                choice.source.Name ??
-                undefined,
-            })) ?? []),
-          ]}
+          options={player.audioTracks}
+          alternate={
+            otherAudio && {
+              label: t`Other versions`,
+              description: t`Selecting a language switches the video version`,
+              options: otherAudio.options.map((choice) => ({
+                id: `alternate:${choice.language}`,
+                label: choice.label,
+                detail: choice.source.aiostreams?.resolution,
+              })),
+            }
+          }
           value={state.audio}
           onSelect={(id) => {
             if (!id) return;

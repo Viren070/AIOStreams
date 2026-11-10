@@ -656,10 +656,6 @@ msgstr ""
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr ""
 
-#: src/components/player/options.tsx
-msgid "Available from another version"
-msgstr ""
-
 #: src/components/layout.tsx
 #: src/components/licenses.tsx
 #: src/components/party/party-sheet.tsx
@@ -2961,6 +2957,7 @@ msgstr ""
 msgid "Other user"
 msgstr ""
 
+#: src/components/player/options.tsx
 #: src/pages/player.tsx
 msgid "Other versions"
 msgstr ""
@@ -3902,6 +3899,10 @@ msgstr ""
 
 #: src/pages/history.tsx
 msgid "Select all"
+msgstr ""
+
+#: src/components/player/options.tsx
+msgid "Selecting a language switches the video version"
 msgstr ""
 
 #: src/components/party/party-sheet.tsx

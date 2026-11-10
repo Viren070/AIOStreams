@@ -16,7 +16,6 @@ import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 export interface Track {
   id: string;
   label: string;
-  badge?: string;
   /** A smaller line under the label. */
   detail?: string;
   lang?: string;
