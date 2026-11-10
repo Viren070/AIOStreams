@@ -589,6 +589,7 @@ class ExoEngine(private val context: Context) : Engine {
                 Player.STATE_READY -> {
                     if (!loaded) {
                         loaded = true
+                        reportTracks()
                         listener?.onEvent("loaded")
                         player.duration.takeIf { it != C.TIME_UNSET }?.let { state(PlayerState(durationMs = it.toDouble())) }
                     }

@@ -373,7 +373,12 @@ class MpvEngine(private val context: Context) : Engine {
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
-                    // mpv reports the tracks it picked only after this event, which the page re-picks on.
+                    // Publish this file's tracks before the page applies its audio selection.
+                    mpv.getPropertyNode("track-list")?.let { node ->
+                        runCatching { Json.parseToJsonElement(node.toJson()) }.getOrNull()?.let {
+                            report("track-list", it)
+                        }
+                    }
                     for (name in listOf("aid", "sid")) mpv.getPropertyString(name)?.let { report(name, JsonPrimitive(it)) }
                     listener.onEvent("loaded")
                 }

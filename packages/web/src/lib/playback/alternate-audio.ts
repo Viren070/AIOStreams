@@ -69,13 +69,13 @@ export function sourceDefaultsToAudio(
 
 export function canPlayAudioSource(
   source: SourceInfo,
-  desktop = false
+  nativeAudio = false
 ): source is SourceInfo & { Id: string } {
   return (
     !!source.Id &&
     source.Type !== 'Placeholder' &&
     !source.IsInfiniteStream &&
-    (desktop ||
+    (nativeAudio ||
       (!needsAppPlayer(source) && source.SupportsDirectPlay !== false))
   );
 }
@@ -85,7 +85,7 @@ export function alternateAudio(
   current: SourceInfo,
   currentTracks: readonly { lang?: string }[],
   sources: readonly SourceInfo[],
-  desktop = false
+  nativeAudio = false
 ): AlternateAudio[] {
   const currentLanguages = currentTracks.flatMap(
     (track) => audioLanguage(track.lang) ?? []
@@ -98,7 +98,7 @@ export function alternateAudio(
   const sameResolution = (source: SourceInfo) =>
     !!resolution && source.aiostreams?.resolution === resolution;
   for (const source of sources) {
-    if (!canPlayAudioSource(source, desktop) || source.Id === current.Id)
+    if (!canPlayAudioSource(source, nativeAudio) || source.Id === current.Id)
       continue;
     for (const language of sourceAudioLanguages(source)) {
       if (present.has(language)) continue;
