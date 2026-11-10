@@ -125,9 +125,18 @@ export default function PrivacyPage() {
         The apps keep your settings, sign-ins and downloads on your device. They
         connect to the server you sign in to and to the sources its streams and
         subtitles come from, to YouTube for trailers, and, in the desktop and
-        Android apps, to GitHub to check for new versions. They have no
-        analytics or tracking of their own, and send a report only when you
-        choose to.
+        Android apps, to GitHub to check for new versions. They send a report
+        only when you choose to.
+      </p>
+      <p>
+        Once a day, the apps also send usage statistics to Aptabase, which runs
+        on our own server: that the app was used, the device&apos;s model and
+        system, the app&apos;s version and your language. Aptabase works out
+        your country and region from your IP address and doesn&apos;t keep the
+        address. No ID is sent with them, so the counts can&apos;t be tied to
+        you, your server or what you watch. The apps tell you before sending
+        any, and you can turn it off in their settings, under{' '}
+        <strong>About</strong>.
       </p>
 
       <h2>How long it&apos;s kept</h2>
@@ -140,6 +149,7 @@ export default function PrivacyPage() {
           Usage counts: single requests for 7 days, and daily totals for 90.
         </li>
         <li>Reports from the apps: 7 days.</li>
+        <li>Usage statistics from the apps: 5 years.</li>
         <li>
           Server logs: only as long as needed to run and protect the instance.
         </li>
