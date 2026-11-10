@@ -368,12 +368,12 @@ export async function userViews(
 ): Promise<JellyfinItem[]> {
   const [views, live, playlists] = await Promise.all([
     viewItems(ctx),
-    ctx.engine().then((engine) => liveCatalogs(engine).length > 0),
+    ctx.engine().then(liveCatalogs),
     JellyfinPlaylistRepository.any(playlistOwner(ctx)),
   ]);
   return [
     ...views,
-    ...(live ? [buildLiveTvView(ctx.build)] : []),
+    ...(live.length ? [buildLiveTvView(ctx.build, live)] : []),
     ...(playlists ? [buildPlaylistsFolder(ctx.build)] : []),
   ];
 }
@@ -617,7 +617,7 @@ export async function itemFromDescriptor(
     case 'source':
       return null;
     case 'livetv':
-      return buildLiveTvView(ctx.build);
+      return buildLiveTvView(ctx.build, liveCatalogs(await ctx.engine()));
     case 'program':
       return programItem(ctx, d);
     case 'boxset': {

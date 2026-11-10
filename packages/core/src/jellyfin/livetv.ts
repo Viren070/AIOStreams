@@ -46,11 +46,15 @@ export function liveCatalogs(engine: AIOStreams): Catalog[] {
 }
 
 /** The one view that stands for every live catalog, as Jellyfin's Live TV does. */
-export function buildLiveTvView(ctx: ItemBuildContext): JellyfinItem {
+export function buildLiveTvView(
+  ctx: ItemBuildContext,
+  catalogs: Catalog[]
+): JellyfinItem {
   return {
     ...baseItem(ctx, LIVE_TV_VIEW_ID, 'Live TV', 'UserView', true),
     CollectionType: 'livetv',
     DisplayPreferencesId: LIVE_TV_VIEW_ID,
+    ...(catalogs.some(hasGuide) && { aiostreams: { guide: true } }),
     _aio: { descriptor: { k: 'livetv' } },
   };
 }
