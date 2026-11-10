@@ -1,5 +1,6 @@
 import type { Host } from '..';
 import { serviceFetch } from './service';
+import { youTubeResolver } from '../youtube';
 
 interface WebOSSystem {
   deviceInfo?: string;
@@ -36,6 +37,7 @@ const host: Host = {
   keepAwake: (on) =>
     system()?.setWindowProperty?.('blockScreenSaver', String(on)),
   fetchFile: serviceFetch,
+  resolveYouTube: youTubeResolver(serviceFetch),
 };
 
 export function webosHost(): Host | null {

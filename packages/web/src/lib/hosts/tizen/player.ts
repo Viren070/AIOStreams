@@ -368,6 +368,13 @@ export const avPlayEngine: EngineFactory = (emit) => {
         // AVPlay places its picture in a 1920x1080 space, whatever the screen.
         av.setDisplayRect(0, 0, 1920, 1080);
         av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+        // AVPlay starts a trailer's playlist on its smallest size and stays there.
+        if (/^https:\/\/[^/]+\.googlevideo\.com\//.test(next.url))
+          av.setStreamingProperty(
+            'ADAPTIVE_INFO',
+            // eslint-disable-next-line lingui/no-unlocalized-strings -- AVPlay's syntax
+            'STARTBITRATE=HIGHEST|SKIPBITRATE=LOWEST'
+          );
         av.prepareAsync(onPrepared, (error) =>
           emit({ type: 'failed', error: errorMessage(error) })
         );
