@@ -12,7 +12,7 @@ import { VerticalMenu } from '@aiostreams/ui/vertical-menu';
 import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { useOwnAvatar } from '@/lib/jellyfin/queries';
+import { useOwnAvatar } from '@/lib/jellyfin/history';
 import { serverAddress } from '@/lib/jellyfin/servers';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { useDownloadList } from '@/lib/downloads';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { currentHost } from '@/lib/hosts';
-import { useRefreshWatchState } from '@/lib/jellyfin/queries';
+import { useRefreshWatchState } from '@/lib/jellyfin/watch-state';
 import { REMOTE_CAPABILITIES } from '@/lib/remote/capabilities';
 import {
   commandOf,

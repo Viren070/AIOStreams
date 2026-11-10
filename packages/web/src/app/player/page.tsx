@@ -15,13 +15,13 @@ import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
+import { useItem } from '@/lib/jellyfin/queries';
 import {
-  useItem,
   usePlaybackInfo,
   usePlaybackInfoOptions,
-  useRefreshAll,
   useSegments,
-} from '@/lib/jellyfin/queries';
+} from '@/lib/jellyfin/playback-info';
+import { useRefreshAll } from '@/lib/jellyfin/watch-state';
 import { lastVersions, playableSources } from '@/lib/playback/play';
 import { type Live, useLive } from '@/lib/playback/live-value';
 import { chosenPlayer } from '@/lib/playback/player-choice';

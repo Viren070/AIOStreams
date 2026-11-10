@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { useOwnAvatar } from '@/lib/jellyfin/queries';
+import { useOwnAvatar } from '@/lib/jellyfin/history';
 import { useFollowing } from '@/lib/playlists';
 import { useLatest } from '@/hooks/use-latest';
 import { useServerInfo } from '@/lib/jellyfin/server-info';

@@ -7,7 +7,7 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { useSession } from '@/lib/jellyfin/session';
-import { useOwnAvatar, usePickableUsers } from '@/lib/jellyfin/queries';
+import { useOwnAvatar, usePickableUsers } from '@/lib/jellyfin/history';
 import { configureUrl } from '@/lib/paths';
 import { serverAddress } from '@/lib/jellyfin/servers';
 import { settings, useSetting } from '@/lib/settings';

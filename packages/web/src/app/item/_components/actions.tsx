@@ -20,8 +20,8 @@ import {
   offersFavourite,
   useSetFavorite,
   useSetPlayed,
-  useRemoteDevices,
-} from '@/lib/jellyfin/queries';
+} from '@/lib/jellyfin/watch-state';
+import { useRemoteDevices } from '@/lib/jellyfin/history';
 import { fullTitle } from '@/lib/format';
 import { RatingButton } from './rating';
 import { useVersionPicker } from '@/features/versions/version-picker';

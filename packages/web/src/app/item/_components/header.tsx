@@ -18,8 +18,8 @@ import {
   useNextUpFor,
   useFetchNextUp,
   useSeasons,
-  offersFavourite,
 } from '@/lib/jellyfin/queries';
+import { offersFavourite } from '@/lib/jellyfin/watch-state';
 import {
   cardShape,
   landscapeUrls,

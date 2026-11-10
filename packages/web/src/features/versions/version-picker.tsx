@@ -33,12 +33,12 @@ import { useSession } from '@/lib/jellyfin/session';
 import { useFeature } from '@/lib/jellyfin/server-info';
 import {
   PRELOADED_MS,
-  useItem,
   usePlaybackInfo,
   usePlaybackInfoOptions,
   useRefreshPlaybackInfo,
-  useSetPlayed,
-} from '@/lib/jellyfin/queries';
+} from '@/lib/jellyfin/playback-info';
+import { useItem } from '@/lib/jellyfin/queries';
+import { useSetPlayed } from '@/lib/jellyfin/watch-state';
 import { directUrl } from '@/lib/playback/stream';
 import {
   downloadable,

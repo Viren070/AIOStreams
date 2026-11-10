@@ -2,7 +2,7 @@ import React from 'react';
 import { ConnectionError, type JellyfinClient } from '@/lib/jellyfin/client';
 import { useReachable } from '@/lib/jellyfin/connection';
 import { TICKS_PER_MS } from '@/lib/format';
-import { useRefreshWatchState } from '@/lib/jellyfin/queries';
+import { useRefreshWatchState } from '@/lib/jellyfin/watch-state';
 import { useSession } from '@/lib/jellyfin/session';
 import { storage } from '@/lib/storage';
 

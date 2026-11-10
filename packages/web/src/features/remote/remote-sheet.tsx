@@ -23,7 +23,7 @@ import { landscapeUrl, posterUrl } from '@/lib/artwork/images';
 import { useRestoreFocus } from '@/lib/input';
 import { trackLabel } from '@/lib/playback/controller';
 import { itemPath, navigate } from '@/lib/paths';
-import { useRemoteDevices } from '@/lib/jellyfin/queries';
+import { useRemoteDevices } from '@/lib/jellyfin/history';
 import { useRemoteControl, type RemotePlaystate } from '@/lib/remote/control';
 import type { TrackKind } from '@/lib/remote/tracks';
 import { useSession } from '@/lib/jellyfin/session';

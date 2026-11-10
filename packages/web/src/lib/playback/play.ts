@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { useQueryClient } from '@tanstack/react-query';
 import { currentHost } from '@/lib/hosts';
-import { usePlaybackInfoOptions } from '@/lib/jellyfin/queries';
+import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';
 import { fullTitle, ticksToMs } from '@/lib/format';
 import { navigate, to } from '@/lib/paths';
 import { externalReturnUrl } from './external-return';

@@ -6,7 +6,7 @@ import { Button, IconButton } from '@aiostreams/ui/button';
 import { Popover } from '@aiostreams/ui/popover';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { pageRtl } from '@/lib/direction';
-import { useSetRating } from '@/lib/jellyfin/queries';
+import { useSetRating } from '@/lib/jellyfin/watch-state';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 const STARS = 10;

@@ -4,7 +4,8 @@ import { Alert } from '@aiostreams/ui/alert';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
-import { usePickableUsers, useViews } from '@/lib/jellyfin/queries';
+import { usePickableUsers } from '@/lib/jellyfin/history';
+import { useViews } from '@/lib/jellyfin/queries';
 import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
 import { configureUrl } from '@/lib/paths';
 

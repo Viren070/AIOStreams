@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/jellyfin/session';
 import { currentHost } from '@/lib/hosts';
-import { usePlaybackInfoOptions } from '@/lib/jellyfin/queries';
+import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';
 import { usePlaylistName, useUpNext, type UpNext } from '@/lib/playlists';
 import type { PartyNeighbours } from '@/lib/party/follow';
 import { landscapeUrl } from '@/lib/artwork/images';

@@ -26,13 +26,12 @@ import { useSession } from '@/lib/jellyfin/session';
 import { useFeature } from '@/lib/jellyfin/server-info';
 import {
   useActivity,
-  useClearHistory,
   useHistory,
   useOwnHistory,
   useOwnSessions,
   useOwnTotals,
-  useSetPlayed,
-} from '@/lib/jellyfin/queries';
+} from '@/lib/jellyfin/history';
+import { useClearHistory, useSetPlayed } from '@/lib/jellyfin/watch-state';
 import { posterUrl, landscapeUrls } from '@/lib/artwork/images';
 import {
   clock,

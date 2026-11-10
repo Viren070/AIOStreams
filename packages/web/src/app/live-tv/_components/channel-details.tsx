@@ -15,7 +15,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import { posterUrl } from '@/lib/artwork/images';
 import { airTime, dayLabel, duration, episodeCode } from '@/lib/format';
-import { useSetFavorite } from '@/lib/jellyfin/queries';
+import { useSetFavorite } from '@/lib/jellyfin/watch-state';
 import { useDockRef } from '@/lib/playback/dock';
 import {
   airedShare,

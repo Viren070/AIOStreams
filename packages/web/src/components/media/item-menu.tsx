@@ -29,11 +29,11 @@ import {
 import {
   offersFavourite,
   useClearResume,
-  useRemoteDevices,
   useSetFavorite,
   useSetPlayed,
   useSetPlayedUpTo,
-} from '@/lib/jellyfin/queries';
+} from '@/lib/jellyfin/watch-state';
+import { useRemoteDevices } from '@/lib/jellyfin/history';
 import { openRemote } from '@/features/remote/remote-sheet';
 import { openRandom } from './random-pick';
 import { toast } from 'sonner';

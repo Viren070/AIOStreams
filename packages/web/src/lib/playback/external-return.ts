@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { currentHost } from '@/lib/hosts';
 import { itemPath } from '@/lib/paths';
 import { PlaybackReporter } from './reporter';
-import { useRefreshAll } from '@/lib/jellyfin/queries';
+import { useRefreshAll } from '@/lib/jellyfin/watch-state';
 import { useSession } from '@/lib/jellyfin/session';
 import { clock } from '@/lib/format';
 import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';

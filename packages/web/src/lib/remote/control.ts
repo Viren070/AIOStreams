@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { TICKS_PER_MS } from '@/lib/format';
-import { REMOTE_DEVICES } from '@/lib/jellyfin/queries';
+import { REMOTE_DEVICES } from '@/lib/jellyfin/history';
 import { useSession } from '@/lib/jellyfin/session';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import type { TrackKind } from './tracks';

@@ -13,7 +13,8 @@ import {
 } from '@/lib/playback/session';
 import { playableSources } from '@/lib/playback/play';
 import { chosenPlayer } from '@/lib/playback/player-choice';
-import { requestItem, usePlaybackInfoOptions } from '@/lib/jellyfin/queries';
+import { requestItem } from '@/lib/jellyfin/queries';
+import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';
 import { useSession } from '@/lib/jellyfin/session';
 import type {
   BaseItemDto,
