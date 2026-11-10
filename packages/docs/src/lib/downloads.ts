@@ -239,7 +239,7 @@ export const DOWNLOADS: DownloadOption[] = [
     requirement: 'Nothing to install',
     files: [],
     notes: [
-      'Press Open in browser under Save & Install → AIOStreams app. A browser only plays what it can decode.',
+      'Press Open in browser under Save & Install → AIOStreams app. A browser plays what it can decode, and more with the experimental WebGPU engine.',
     ],
     guide: { label: 'Using a browser', href: '/apps#in-a-browser' },
   },

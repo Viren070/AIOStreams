@@ -21,7 +21,7 @@ The AIOStreams app browses and plays what your configuration finds, with your ca
 | Samsung TVs                       | The [TV app for Samsung](/apps/smart-tv#samsung-tvs)                                                          |
 | iPhone, iPad and Apple TV         | A browser on iPhone and iPad, or a [Jellyfin app](/apps/jellyfin)                                             |
 
-It is the same app everywhere: the same home page, title pages and settings. What it plays with differs. A browser only plays what it can decode, the desktop app plays nearly anything with mpv, the Android app has ExoPlayer and mpv, and the TV apps use the TV's own player.
+It is the same app everywhere: the same home page, title pages and settings. What it plays with differs. A browser plays what it can decode, and more with the experimental [WebGPU engine](#in-a-browser), the desktop app plays nearly anything with mpv, the Android app has ExoPlayer and mpv, and the TV apps use the TV's own player.
 
 <Callout type="info">
   The apps draw their screens the way a browser draws a page, with the device's
@@ -63,7 +63,7 @@ It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and S
 - **Next episode.** The next episode plays on its own, and the app can ask whether you are still watching after a few in a row. It can also skip filler and recap episodes where your metadata marks them, and skip by the file's chapters.
 - **Playlists.** **Add to playlist**, in a title's menu or on a film's page, puts it in one of your playlists or a new one. **Playlists** lists them: play one, reorder or remove its titles, or add what you are part way through. A title played from a playlist plays on to the playlist's next title rather than its next episode, and the player's **Playlist** button shows the rest. **Shuffle** plays a playlist in a mixed order that stays the same until you turn it off, and **Repeat** goes back to its first title after the last; each device keeps its own. Playlists are kept on the server, so [Jellyfin apps](/apps/jellyfin) see them too.
 - **Languages.** List your audio and subtitle languages in order of preference under **Settings → Audio** and **Settings → Subtitles**. A track you pick while watching a show sets the language for its other episodes. When a version has more than one subtitle in your language, **Subtitle types** picks which: full subtitles, SDH, forced or signs and songs.
-- **Subtitles.** Style them under **Settings → Subtitles**. To watch with a subtitle file of your own, drop it on the player or pick it with **Add a file** in the subtitle menu.
+- **Subtitles.** Style them under **Settings → Subtitles**. ASS subtitles, such as most anime releases, keep their own styling, signs and fonts in every app, drawn with libass. To watch with a subtitle file of your own, drop it on the player or pick it with **Add a file** in the subtitle menu.
 - **Versions.** Search a title's versions by words or a regular expression, save searches as quick filters that show as pills above the list, and label versions with badges, your own or a pack someone shares. See [version filters and badges](/reference/version-badges).
 - **On another device.** **Play on another device**, on a title's page or in its menu, sends it to another device with the app open, and the app becomes its remote: pause, seek, skip, stop, and pick the audio and subtitles. While it plays, a button at the bottom of the screen brings the remote back. See [who controls what](/apps/media-server#playing-on-another-device).
 - **Other players.** Choose another player under **Settings → Playback → Player** and **Play** opens versions in it: VLC, Infuse, Outplayer, IINA or another Android app where your device has them, or a link of your own. Each version also has **Copy stream link**.
@@ -72,7 +72,7 @@ It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and S
 
 ## Anime upscaling
 
-The desktop and Android apps can upscale anime as it plays: lines come out sharper and compression cleaner, most of all in older and lower-resolution shows. Turn on **Anime upscaling** under **Settings → Playback → Video**. It applies to titles your catalogs mark as anime, and in the desktop app **U** turns it on and off for what's playing, so you can compare.
+The desktop and Android apps, and the [WebGPU engine](#in-a-browser) in a browser, can upscale anime as it plays: lines come out sharper and compression cleaner, most of all in older and lower-resolution shows. Turn on **Anime upscaling** under **Settings → Playback → Video**. It applies to titles your catalogs mark as anime, and in the desktop app and a browser **U** turns it on and off for what's playing, so you can compare. The WebGPU engine also takes your own shaders as `.wgsl` files, under **Shaders** in **Settings → Playback → Player**.
 
 <CompareSlider
   before={{
@@ -161,4 +161,5 @@ Under **Settings → Theme** you can pick a preset or your own accent and backgr
 Press **Open in browser** under **Save & Install → AIOStreams app**. It opens on your [address with a sign-in picker](/apps/jellyfin#connecting-an-app), and signs you straight in if you are signed in on the configure page in the same browser. Opening the plain server address in a browser works too; type your UUID or alias as well there.
 
 - **On a phone**, add it to your home screen from the browser's menu and it opens like an app. The first time, you sign in again there.
-- **What plays.** A browser only plays what it can decode, so MKV files, HEVC video and surround audio often fail. Use another player as above, or one of the apps, which play nearly anything.
+- **What plays.** A browser only plays what it can decode, so MKV files, HEVC video and surround audio often fail. The experimental **WebGPU** engine, under **Settings → Playback → Player → Engine**, decodes the file in the page instead and draws it with the graphics card, so HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS play too. It shows in a browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened over HTTPS. A version it can't play goes to the browser's own player at the same point. Otherwise, use another player as above, or one of the apps, which play nearly anything.
+- **Subtitles inside the file.** The subtitle tracks inside an MKV or MP4 file show in the subtitle menu: ASS, SRT, WebVTT, MP4's own text subtitles and PGS. Subtitles from your addons, or a file you add, line up with them by themselves, as in the apps. Both need the file's host to let the browser read it: streams through AIOStreams' proxy or its usenet streaming do, and so does TorBox.

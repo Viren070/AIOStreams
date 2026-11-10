@@ -168,7 +168,7 @@ const FEATURES: Feature[] = [
     id: 'player',
     eyebrow: 'Playback',
     title: 'A player that just works',
-    body: 'The desktop app plays with mpv, and the Android app with ExoPlayer or mpv, set up so you don’t have to touch a thing. Styled subtitles, such as most anime releases, are drawn by libass in both engines, signs and all.',
+    body: 'The desktop app plays with mpv, and the Android app with ExoPlayer or mpv, set up so you don’t have to touch a thing. Styled subtitles, such as most anime releases, are drawn by libass in every app, signs and all, in a browser and on TVs too.',
     points: [
       'Dolby Vision and HDR, with profile 7 converted where the device only takes profile 8',
       'Surround passed through format by format, or turned into Dolby Digital for optical and ARC',
@@ -192,7 +192,7 @@ const FEATURES: Feature[] = [
     id: 'upscaling',
     eyebrow: 'Anime upscaling',
     title: 'Sharper anime, as it plays',
-    body: 'Older and lower-resolution anime comes out with cleaner lines and less blocking, scaled up on your own device as it plays. It turns on by itself for titles your catalogs mark as anime, in the desktop and Android apps.',
+    body: 'Older and lower-resolution anime comes out with cleaner lines and less blocking, scaled up on your own device as it plays. It turns on by itself for titles your catalogs mark as anime, in the desktop and Android apps and in a browser’s WebGPU engine.',
     points: [
       'Press U in the player to compare',
       'Leaves HDR alone, and steps aside on a device that can’t keep up',

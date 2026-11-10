@@ -154,7 +154,7 @@ for your computer, phone or TV.
 
 | Where | App | Plays with |
 | --- | --- | --- |
-| Any browser | Nothing to install; add it to a phone's home screen to open it like an app | The browser |
+| Any browser | Nothing to install; add it to a phone's home screen to open it like an app | The browser, or the experimental WebGPU engine for HEVC, Dolby Vision, TrueHD and DTS |
 | Windows, macOS, Linux | [Desktop app](https://docs.aiostreams.viren070.me/apps/desktop) | mpv: nearly any format, HDR, surround passthrough, styled subtitles |
 | Android phones and tablets | [Android app](https://docs.aiostreams.viren070.me/apps/android) | ExoPlayer or mpv: HDR and Dolby Vision, passthrough, styled subtitles |
 | Android TV, Google TV, Fire TV | [Android app](https://docs.aiostreams.viren070.me/apps/android#on-a-tv), with a layout made for the remote | ExoPlayer or mpv |
@@ -165,14 +165,15 @@ The apps play streams with a link, such as debrid and Usenet ones; P2P torrents 
 
 **It works as it comes.** The player needs no setting up:
 
-- Styled subtitles, such as most anime releases, drawn by libass in both mpv and ExoPlayer, signs and all.
+- Styled subtitles, such as most anime releases, drawn by libass in every app, signs and all, in a browser and on
+  TVs too.
 - Dolby Vision and HDR, with profile 7 converted where a device only plays profile 8.
 - Surround sound passed through to your receiver format by format, or turned into Dolby Digital for an
   optical or ARC link, and the TV switched to each video's frame rate.
 - Subtitles from your addons synced to the video by themselves, or by ear, or by picking the spoken line.
 - Seek previews, skipped intros and credits, and the next episode on its own.
-- **Anime upscaling** in the desktop and Android apps, which sharpens older and lower-resolution anime as it
-  plays.
+- **Anime upscaling** in the desktop and Android apps and the browser's WebGPU engine, which sharpens older and
+  lower-resolution anime as it plays.
 
 **It runs on your addons.** Catalogs, details, ratings, streams, subtitles and Live TV all come from addons.
 Tracker addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state)
@@ -293,7 +294,9 @@ terms of every service you use with AIOStreams.
 AIOStreams builds on the work of many others, especially the developers of the addons it integrates.
 
 - [mpv](https://mpv.io), [FFmpeg](https://ffmpeg.org), [libass](https://github.com/libass/libass) and
-  [Media3 ExoPlayer](https://github.com/androidx/media), which the apps play video with.
+  [Media3 ExoPlayer](https://github.com/androidx/media), which the apps play video with, and
+  [WebGPU-Player](https://github.com/alchemyyy/WebGPU-Player) and [JASSUB](https://github.com/ThaUnknown/jassub),
+  which play video and draw subtitles in a browser.
 - [Jellyfin](https://jellyfin.org), whose API the media server speaks.
 - [mhdzumair/mediaflow-proxy](https://github.com/mhdzumair/mediaflow-proxy) and [MunifTanjim/stremthru](https://github.com/MunifTanjim/stremthru).
 - UI components and issue templates adapted with permission from [5rahim/seanime](https://github.com/5rahim/seanime).
