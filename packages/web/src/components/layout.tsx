@@ -823,6 +823,8 @@ export function WebLayout() {
           startMs={playback.startMs}
           playlist={playback.playlist}
           mini={playback.mini}
+          startPaused={playback.startPaused}
+          audioSwitch={playback.audioSwitch}
         />
       )}
       <PartyHost />

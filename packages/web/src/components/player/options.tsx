@@ -1,3 +1,4 @@
+import type { OtherAudioMenu } from '../../lib/playback/alternate-audio';
 import { plural, t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
@@ -140,6 +141,11 @@ function Menu({
       />
       <span className="min-w-0 [overflow-wrap:anywhere]">
         {option.label}
+        {option.badge && (
+          <span className="ms-2 rounded bg-white/10 px-1.5 py-0.5 text-xs">
+            {option.badge}
+          </span>
+        )}
         {option.detail && (
           <span
             data-name="detail"
@@ -553,6 +559,7 @@ export function OptionButtons({
   player,
   onMenu,
   onVersions,
+  otherAudio,
   onEpisodes,
   onChapters,
   onChannels,
@@ -567,6 +574,7 @@ export function OptionButtons({
   onMenu(open: boolean): void;
   onParty?: () => void;
   onVersions?: () => void;
+  otherAudio?: OtherAudioMenu;
   onEpisodes?: () => void;
   onChapters?: () => void;
   onChannels?: () => void;
@@ -633,15 +641,37 @@ export function OptionButtons({
           <LuLayers />
         </ControlButton>
       )}
-      {(player.audioTracks.length > 1 || player.sound) && (
+      {(player.audioTracks.length > 1 || player.sound || otherAudio) && (
         <Menu
           name="audio"
           label={t`Audio`}
           icon={<LuAudioLines />}
-          options={player.audioTracks}
+          options={[
+            ...player.audioTracks,
+            ...(otherAudio?.options.map((choice) => ({
+              id: `alternate:${choice.language}`,
+              label: choice.label,
+              badge: t`Available from another version`,
+              detail:
+                choice.source.aiostreams?.resolution ??
+                choice.source.Name ??
+                undefined,
+            })) ?? []),
+          ]}
           value={state.audio}
-          onSelect={(id) => id && player.setAudio(id)}
+          onSelect={(id) => {
+            if (!id) return;
+            const choice = otherAudio?.options.find(
+              (entry) => id === `alternate:${entry.language}`
+            );
+            if (choice) otherAudio?.onSelect(choice);
+            else player.setAudio(id);
+          }}
           {...menuState('audio')}
+          onOpenChange={(open) => {
+            menuState('audio').onOpenChange(open);
+            otherAudio?.onOpenChange(open);
+          }}
           pages={
             player.sound
               ? [

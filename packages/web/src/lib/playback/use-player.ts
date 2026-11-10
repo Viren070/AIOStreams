@@ -1,3 +1,4 @@
+import { audioLanguage, sourceAudioLanguages } from './alternate-audio';
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import type { JellyfinClient } from '../client';
@@ -276,6 +277,7 @@ export function usePlayer(
     positionMs: () => playhead.positionMs,
   });
 
+  const requestedAudio = React.useRef(opts.requestedAudio);
   handle.current = (event) => {
     switch (event.type) {
       case 'state':
@@ -299,6 +301,31 @@ export function usePlayer(
           latest.current.source,
           !!engine.picksTracks
         );
+        const requested = requestedAudio.current;
+        if (requested) {
+          const match = tracks.find(
+            (track) =>
+              track.type === 'audio' &&
+              !track.unplayable &&
+              audioLanguage(track.lang) === requested
+          );
+          const advertised = [
+            ...new Set(sourceAudioLanguages(latest.current.source)),
+          ];
+          const defaultAudioOnly =
+            !tracks.some((track) => track.type === 'audio') &&
+            advertised.length === 1 &&
+            advertised[0] === requested;
+          if (!match && !defaultAudioOnly) {
+            engine.setPaused(true);
+            patch({
+              error: t`The selected audio language is unavailable in this version.`,
+            });
+            return;
+          }
+          requestedAudio.current = undefined;
+          if (match) picks.audio = match.id;
+        }
         if (picks.audio && picks.audio !== audio) setAudio(picks.audio);
         if (picks.subtitle !== shown) setSubtitle(picks.subtitle);
         return;

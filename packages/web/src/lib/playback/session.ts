@@ -6,17 +6,25 @@ import { settings } from '../settings';
 import { chosenPlayer } from './player-choice';
 
 /** The title the player plays, which plays on in the mini player while pages open over it. */
+export interface AudioSwitch {
+  language: string;
+  previous: { sourceId: string; startMs: number; paused: boolean };
+}
+
 export interface Playback {
   itemId: string;
   sourceId: string;
   startMs: number;
   playlist?: string;
+  startPaused?: boolean;
+  audioSwitch?: AudioSwitch;
 }
 
 /** `docked` when it plays in a page's preview, which Back from the player returns to. */
 let current: (Playback & { mini: boolean; docked?: boolean }) | null = null;
 /** A channel zapped to in the player keeps the preview Back returns to. */
 let zapping = false;
+let pendingSwitch: Playback | undefined;
 /** What leaving the player's page does, when the player itself chose. */
 let leaving: 'keep' | 'stop' | null = null;
 const listeners = new Set<() => void>();
@@ -52,6 +60,13 @@ export const canPreview = (): boolean =>
 
 /** The player's page opened: the same title grows back, any other starts afresh. */
 export function openPlayback(next: Playback): void {
+  if (
+    pendingSwitch?.itemId === next.itemId &&
+    pendingSwitch.sourceId === next.sourceId
+  ) {
+    next = pendingSwitch;
+  }
+  pendingSwitch = undefined;
   if (
     current?.itemId === next.itemId &&
     current.sourceId === next.sourceId &&
@@ -132,9 +147,11 @@ export function zapTo(next: Playback): void {
 
 /** A title the player moves on to: its page shows it, or the mini player plays it on. */
 export function playOn(next: Playback): void {
-  if (onPlayerPage())
+  if (onPlayerPage()) {
+    pendingSwitch =
+      next.audioSwitch || next.startPaused !== undefined ? next : undefined;
     navigate(to.play(next.itemId, next.sourceId, next.startMs, next.playlist), {
       replace: true,
     });
-  else set({ ...next, mini: true, docked: current?.docked });
+  } else set({ ...next, mini: true, docked: current?.docked });
 }

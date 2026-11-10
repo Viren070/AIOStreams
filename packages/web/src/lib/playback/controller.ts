@@ -16,6 +16,7 @@ import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 export interface Track {
   id: string;
   label: string;
+  badge?: string;
   /** A smaller line under the label. */
   detail?: string;
   lang?: string;
@@ -172,6 +173,7 @@ export interface PlayerOptions {
   /** Moves on from a live source that kept failing; false when there is nothing else to play. */
   onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
+  requestedAudio?: string;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';
