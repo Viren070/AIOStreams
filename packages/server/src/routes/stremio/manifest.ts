@@ -24,6 +24,7 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
   let resources: Manifest['resources'] = [];
   let addonCatalogs: Manifest['addonCatalogs'] = [];
   let epgProvider = false;
+  let catchupDays = 0;
   if (config) {
     const aiostreams = new AIOStreams(config, { skipFailedAddons: true });
 
@@ -33,6 +34,7 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
     resources = aiostreams.getResources();
     addonCatalogs = aiostreams.getAddonCatalogs();
     epgProvider = aiostreams.isEpgProvider();
+    catchupDays = aiostreams.catchupDays();
   }
   return {
     name: config?.addonName || appConfig.branding.addonName,
@@ -58,6 +60,7 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
       configurable: true,
       configurationRequired: config ? false : true,
       ...(epgProvider && { epgProvider }),
+      ...(catchupDays && { catchupDays }),
     },
     addonCatalogs,
     stremioAddonsConfig:

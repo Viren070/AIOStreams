@@ -127,7 +127,7 @@ router.get(
   '/LiveTv/GuideInfo',
   jf(async (_req, res, ctx) => {
     const today = Math.floor(Date.now() / DAY_MS) * DAY_MS;
-    const back = await guideDaysBack(await ctx.engine(), ctx.scope());
+    const back = guideDaysBack(await ctx.engine());
     res.json({
       StartDate: new Date(today - back * DAY_MS).toISOString(),
       EndDate: new Date(today + GUIDE_DAYS * DAY_MS).toISOString(),
