@@ -84,11 +84,11 @@ msgstr ""
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
 msgstr ""
 
@@ -158,11 +158,11 @@ msgstr ""
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
 msgstr ""
 
@@ -174,7 +174,7 @@ msgstr ""
 msgid "{name} left the party"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr ""
 
@@ -495,7 +495,7 @@ msgstr ""
 #: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
 #: src/components/media/kind-tabs.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "All"
 msgstr ""
 
@@ -1084,7 +1084,7 @@ msgstr ""
 msgid "Copy link"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Copy stream link"
 msgstr ""
 
@@ -1118,7 +1118,7 @@ msgid "Could not copy the invite link"
 msgstr ""
 
 #: src/app/player/page.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Could not copy the link"
 msgstr ""
 
@@ -1168,7 +1168,7 @@ msgstr ""
 msgid "Could not load the playlists."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Could not load the versions: {loadError}"
 msgstr ""
 
@@ -1369,7 +1369,7 @@ msgstr ""
 
 #: src/app/item/_components/details.tsx
 #: src/components/media/item-menu.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Details"
 msgstr ""
 
@@ -1481,11 +1481,11 @@ msgstr ""
 #: src/app/settings/about.tsx
 #: src/components/media/item-menu.tsx
 #: src/features/downloads/download-button.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Download"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/unaired-question.tsx
 msgid "Download anyway"
 msgstr ""
 
@@ -1715,7 +1715,7 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Filter versions"
 msgstr ""
 
@@ -1733,7 +1733,7 @@ msgstr ""
 msgid "Finding a version…"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Finding versions"
 msgstr ""
 
@@ -1803,7 +1803,7 @@ msgstr ""
 
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/features/player/live.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "From the start"
 msgstr ""
 
@@ -2304,7 +2304,7 @@ msgstr ""
 msgid "Main"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr ""
 
@@ -2388,7 +2388,7 @@ msgstr ""
 #: src/components/media/episodes.tsx
 #: src/components/media/overview.tsx
 #: src/features/playlists/playlists.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "More"
 msgstr ""
 
@@ -2651,11 +2651,11 @@ msgstr ""
 msgid "No version was found to match. Pick one."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "No versions match."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "No versions were found."
 msgstr ""
 
@@ -2679,7 +2679,7 @@ msgstr ""
 msgid "Normal speed"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/unaired-question.tsx
 msgid "Not aired yet"
 msgstr ""
 
@@ -2695,7 +2695,7 @@ msgstr ""
 msgid "Not found on this computer. Choose where {name} is installed."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/external-prompt.tsx
 msgid "Not now"
 msgstr ""
 
@@ -2896,7 +2896,7 @@ msgstr ""
 msgid "Open its page"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Open link"
 msgstr ""
 
@@ -3138,7 +3138,7 @@ msgstr ""
 msgid "Pick the line you heard at {heardAt}."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Pick the version to download."
 msgstr ""
 
@@ -3193,7 +3193,7 @@ msgstr ""
 msgid "Play {code}"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/unaired-question.tsx
 msgid "Play anyway"
 msgstr ""
 
@@ -3317,7 +3317,7 @@ msgstr ""
 #: src/features/player/chapters.tsx
 #: src/features/player/episodes.tsx
 #: src/features/playlists/playlists.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Playing"
 msgstr ""
 
@@ -3325,7 +3325,7 @@ msgstr ""
 msgid "Playing in {launchedName}"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
 msgstr ""
 
@@ -3462,7 +3462,7 @@ msgid "Quick Connect is unavailable: {message}"
 msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Quick filters"
 msgstr ""
 
@@ -3741,7 +3741,7 @@ msgid "Resume all"
 msgstr ""
 
 #: src/app/item/_components/header.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 #: src/lib/playback/use-player.ts
 msgid "Resume from {resumeAt}"
 msgstr ""
@@ -3880,7 +3880,7 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Search again"
 msgstr ""
 
@@ -4380,7 +4380,7 @@ msgid "Stops playing"
 msgstr ""
 
 #: src/app/player/page.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "Stream link copied"
 msgstr ""
 
@@ -4616,7 +4616,7 @@ msgstr ""
 msgid "That party is not letting anyone new in."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 msgid "That pattern is not a valid regular expression."
 msgstr ""
 
@@ -5060,7 +5060,7 @@ msgstr ""
 #: src/app/sign-in/page.tsx
 #: src/components/media/random-pick.tsx
 #: src/features/party/party-sheet.tsx
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/version-list.tsx
 #: src/lib/playback/use-player.ts
 msgid "Try again"
 msgstr ""
@@ -5627,7 +5627,7 @@ msgstr ""
 msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
 msgstr ""
 
-#: src/features/versions/version-picker.tsx
+#: src/features/versions/external-prompt.tsx
 msgid "Your player does not report back, so mark it as watched once you finish."
 msgstr ""
 
