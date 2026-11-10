@@ -41,6 +41,9 @@ function extension(name: string): string {
   return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
 }
 
+/** What `readSubtitleFile` reads. */
+export const READABLE_SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
+
 /** Throws why a player can't take the file. */
 export function checkSubtitleFile(file: File, types: readonly string[]): void {
   if (!types.includes(extension(file.name))) {

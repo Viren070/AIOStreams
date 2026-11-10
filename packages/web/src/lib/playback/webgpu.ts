@@ -5,12 +5,15 @@ import { appLog } from '@/lib/hosts/shell/bridge';
 import type { VideoFit } from '@/lib/settings';
 import { plainCueText, type SubtitleCue } from '@/lib/subtitles/cues';
 import {
-  EMBEDDED_WAIT_MS,
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
 } from '@/lib/subtitles/embedded';
-import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
+import {
+  checkSubtitleFile,
+  readSubtitleFile,
+  READABLE_SUBTITLE_TYPES,
+} from '@/lib/subtitles/files';
 import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
 import { subtitleHeight } from '@/lib/subtitles/style';
 import {
@@ -35,7 +38,6 @@ import {
   ownTrackLost,
   readOwnCues,
 } from './page-subtitles';
-import { SUBTITLE_TYPES } from './video';
 import upscalePass from './aiostreams-upscale.wgsl';
 import { onShadersChange, readShaders } from './shaders';
 import { onUpscalingChange, upscalingOn } from './upscaling';
@@ -474,12 +476,7 @@ export function webGpuEngine(
         audio:
           result.audioOrdinal === null ? null : String(result.audioOrdinal),
       });
-      const reading = embedded;
-      if (reading)
-        await Promise.race([
-          reading.subtitles,
-          new Promise((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
-        ]);
+      if (embedded) await embedded.listed();
       if (load === opening) emit({ type: 'loaded' });
     };
 
@@ -525,7 +522,7 @@ export function webGpuEngine(
           embedded = reading;
           void reading.subtitles.then((found) => {
             if (embedded !== reading) return;
-            ownTracks = found.filter((track) => track.kind);
+            ownTracks = found;
             if (ownTracks.length) listTracks();
           });
         }
@@ -588,9 +585,9 @@ export function webGpuEngine(
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       ...ownLines(() => embedded),
       subtitleFiles: {
-        types: SUBTITLE_TYPES,
+        types: READABLE_SUBTITLE_TYPES,
         add: async (added) => {
-          checkSubtitleFile(added, SUBTITLE_TYPES);
+          checkSubtitleFile(added, READABLE_SUBTITLE_TYPES);
           const { text, cues: read } = await readSubtitleFile(added);
           const id = `file:${files.length}`;
           files = [...files, { id, label: added.name, text, cues: read }];

@@ -1,7 +1,6 @@
 import { t } from '@lingui/core/macro';
 import { plainCueText, type SubtitleCue } from '@/lib/subtitles/cues';
 import {
-  EMBEDDED_WAIT_MS,
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
@@ -326,7 +325,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
         embedded = opened;
         void opened.subtitles.then((found) => {
           if (embedded !== opened) return;
-          ownTracks = found.filter((track) => track.kind);
+          ownTracks = found;
           if (!prepared) return;
           listTracks();
           const shown = textTracks.findIndex(
@@ -356,11 +355,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
           .getCurrentStreamInfo()
           .find((t) => t.type === 'AUDIO')?.index;
         report({ audio: current === undefined ? null : String(current) });
-        const reading = embedded;
-        void Promise.race([
-          reading?.subtitles,
-          new Promise((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
-        ]).then(() => {
+        void (embedded?.listed() ?? Promise.resolve()).then(() => {
           if (file !== next) return;
           listTracks();
           emit({ type: 'loaded' });

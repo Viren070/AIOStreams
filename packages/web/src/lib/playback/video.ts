@@ -3,13 +3,16 @@ import type React from 'react';
 import { currentHost } from '@/lib/hosts';
 import type { VideoFit } from '@/lib/settings';
 import {
-  EMBEDDED_WAIT_MS,
   embeddedSubtitles,
   readsOwnSubtitles,
   type EmbeddedSubtitles,
 } from '@/lib/subtitles/embedded';
 import type { FileSubtitle } from '@/lib/subtitles/file-subtitle';
-import { checkSubtitleFile, readSubtitleFile } from '@/lib/subtitles/files';
+import {
+  checkSubtitleFile,
+  readSubtitleFile,
+  READABLE_SUBTITLE_TYPES,
+} from '@/lib/subtitles/files';
 import { subtitleHeight, subtitleLine } from '@/lib/subtitles/style';
 import { videoSurface, type SubtitleLayer } from '@/lib/subtitles/surface';
 import type {
@@ -27,7 +30,6 @@ import {
   ownTrackLost,
 } from './page-subtitles';
 
-export const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
 /** A cue would show `{\an8}`-style tags as text. */
 const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
 
@@ -272,17 +274,14 @@ export function videoEngine(
           embedded = opened;
           void opened.subtitles.then((found) => {
             if (embedded !== opened) return;
-            ownTracks = found.filter((track) => track.kind);
+            ownTracks = found;
             if (ownTracks.length) listTracks();
           });
         }
         const loaded = () => {
           const reading = embedded;
           if (!reading) return emit({ type: 'loaded' });
-          void Promise.race([
-            reading.subtitles,
-            new Promise((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
-          ]).then(() => {
+          void reading.listed().then(() => {
             if (embedded === reading) emit({ type: 'loaded' });
           });
         };
@@ -407,9 +406,9 @@ export function videoEngine(
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       ...ownLines(() => embedded),
       subtitleFiles: {
-        types: SUBTITLE_TYPES,
+        types: READABLE_SUBTITLE_TYPES,
         add: async (added) => {
-          checkSubtitleFile(added, SUBTITLE_TYPES);
+          checkSubtitleFile(added, READABLE_SUBTITLE_TYPES);
           const { text, cues } = await readSubtitleFile(added);
           const el = video.current;
           if (!el) return;

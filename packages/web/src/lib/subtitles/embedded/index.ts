@@ -24,7 +24,7 @@ import { rangeReader, SideReader } from './reads';
 export type { HarvestedEvent } from './harvest';
 
 /** How long the user's picks wait for the file's own tracks. */
-export const EMBEDDED_WAIT_MS = 3000;
+const EMBEDDED_WAIT_MS = 3000;
 
 export interface EventSink {
   events(events: HarvestedEvent[]): void;
@@ -33,8 +33,10 @@ export interface EventSink {
 }
 
 export interface EmbeddedSubtitles {
-  /** Empty for a file that can't be read. */
+  /** The tracks the page can show; empty for a file that can't be read. */
   readonly subtitles: Promise<FileSubtitle[]>;
+  /** Once `subtitles` is in, or after a wait for it. */
+  listed(): Promise<void>;
   /** When each track's lines show, from the file's index, by track number; tracks the index leaves out are missing. */
   index(): Promise<Map<number, Span[]>>;
   /** When a track's lines show, from the index and then as they're read, until stopped. */
@@ -121,7 +123,7 @@ export function embeddedSubtitles(
           pool.push(font);
           onFonts([font]);
         });
-      return opened.subtitles;
+      return opened.subtitles.filter((track) => track.kind);
     })
     .catch(() => []);
 
@@ -213,6 +215,11 @@ export function embeddedSubtitles(
 
   return {
     subtitles,
+    listed: () =>
+      Promise.race([
+        subtitles.then(() => {}),
+        new Promise<void>((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
+      ]),
     draw(number, surface, start, on) {
       const found = trackOf(number);
       if (found?.track.kind === 'pgs') {
