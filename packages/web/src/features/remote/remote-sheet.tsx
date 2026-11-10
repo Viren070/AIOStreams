@@ -29,6 +29,7 @@ import type { TrackKind } from '@/lib/remote/tracks';
 import { useSession } from '@/lib/jellyfin/session';
 import { storage } from '@/lib/storage';
 import type { BaseItemDto, SessionInfoDto } from '@/lib/jellyfin/types';
+import { createLive, useLive } from '@/lib/live-value';
 
 interface Opening {
   /** What picking a device plays there. */
@@ -45,18 +46,16 @@ interface Sheet {
 
 const FOLLOWING_KEY = 'aiostreams-web-remote-following';
 
-let sheet: Sheet = {
+const sheet = createLive<Sheet>({
   open: false,
   opening: {},
   following: storage.get<Sheet['following']>(FOLLOWING_KEY),
-};
-const listeners = new Set<() => void>();
+});
 
 function setSheet(next: Partial<Sheet>): void {
-  sheet = { ...sheet, ...next };
   if (next.following) storage.set(FOLLOWING_KEY, next.following);
   else if (next.following === null) storage.remove(FOLLOWING_KEY);
-  for (const listener of listeners) listener();
+  sheet.set({ ...sheet.get(), ...next });
 }
 
 export const openRemote = (opening: Opening = {}) =>
@@ -64,15 +63,7 @@ export const openRemote = (opening: Opening = {}) =>
 
 const closeRemote = () => setSheet({ open: false });
 
-function useSheet() {
-  return React.useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
-    () => sheet
-  );
-}
+const useSheet = () => useLive(sheet);
 
 const OPEN_POLL_MS = 5_000;
 const FOLLOW_POLL_MS = 20_000;

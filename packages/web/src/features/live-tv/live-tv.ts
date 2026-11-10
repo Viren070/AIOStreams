@@ -10,6 +10,7 @@ import { useSession } from '@/lib/jellyfin/session';
 import { useGenres, useKey, useLiveTvView } from '@/lib/jellyfin/queries';
 import { storage, storedMap } from '@/lib/storage';
 import type { BaseItemDto, BaseItemDtoQueryResult } from '@/lib/jellyfin/types';
+import { createLive, useLive } from '@/lib/live-value';
 
 /** Groups of the app's own, before the server's. */
 export const FAVOURITES = 'favourites';
@@ -39,22 +40,11 @@ export const recentChannels = (userId: string): string[] =>
   recents.get(userId) ?? [];
 
 /** The channels the live page lists, which the player steps through. */
-let lineup: BaseItemDto[] = [];
-const lineupListeners = new Set<() => void>();
+const lineup = createLive<BaseItemDto[]>([]);
 
-export function setLineup(channels: BaseItemDto[]): void {
-  if (channels === lineup) return;
-  lineup = channels;
-  for (const listener of lineupListeners) listener();
-}
+export const setLineup = lineup.set;
 
-const subscribeLineup = (listener: () => void) => {
-  lineupListeners.add(listener);
-  return () => void lineupListeners.delete(listener);
-};
-
-export const useLineup = () =>
-  React.useSyncExternalStore(subscribeLineup, () => lineup);
+export const useLineup = () => useLive(lineup);
 
 /** A later programme to be told about as it starts. */
 export interface Reminder {
@@ -67,30 +57,20 @@ export interface Reminder {
 
 /** Reminders on this device, by user. */
 const reminders = storedMap<Reminder[]>('aiostreams-web-live-reminders', 20);
-const reminderListeners = new Set<() => void>();
-let remindersVersion = 0;
+const remindersVersion = createLive(0);
 
 export const remindersOf = (userId: string): Reminder[] =>
   reminders.get(userId) ?? [];
 
 export function setReminders(userId: string, list: Reminder[]): void {
   reminders.set(userId, list.length ? list : undefined);
-  remindersVersion++;
-  for (const listener of reminderListeners) listener();
+  remindersVersion.set(remindersVersion.get() + 1);
 }
-
-const subscribeReminders = (listener: () => void) => {
-  reminderListeners.add(listener);
-  return () => void reminderListeners.delete(listener);
-};
 
 export function useReminders() {
   const { user } = useSession();
   const userId = user.Id!;
-  const version = React.useSyncExternalStore(
-    subscribeReminders,
-    () => remindersVersion
-  );
+  const version = useLive(remindersVersion);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- read again on each change
   const list = React.useMemo(() => remindersOf(userId), [userId, version]);
   return {

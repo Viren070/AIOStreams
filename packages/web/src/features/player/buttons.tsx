@@ -3,7 +3,7 @@ import { Button, type ButtonProps } from '@aiostreams/ui/button';
 import { cn } from '@aiostreams/ui/core/styling';
 import { Tooltip } from '@aiostreams/ui/tooltip';
 import { currentHost } from '@/lib/hosts';
-import { createLive, useLive, type Live } from '@/lib/playback/live-value';
+import { createLive, useLive, type Live } from '@/lib/live-value';
 
 const FOCUS_FILL =
   '[html:not([data-pointer-focus])_&:focus-visible]:shadow-[inset_0_0_0_var(--control)_white] [html:not([data-pointer-focus])_&:focus-visible]:text-black';

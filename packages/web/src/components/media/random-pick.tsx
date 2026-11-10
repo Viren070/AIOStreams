@@ -22,6 +22,7 @@ import { useFetchNextUp } from '@/lib/jellyfin/queries';
 import { useSession } from '@/lib/jellyfin/session';
 import type { BaseItemDto, BaseItemDtoQueryResult } from '@/lib/jellyfin/types';
 import { useVersionPicker } from '@/features/versions/version-picker';
+import { createLive, useLive } from '@/lib/live-value';
 
 export type RandomSource =
   | { kind: 'episode'; series: BaseItemDto }
@@ -33,28 +34,17 @@ interface Opening {
   id: number;
 }
 
-let opening: Opening = { open: false, source: null, id: 0 };
-const listeners = new Set<() => void>();
+const opening = createLive<Opening>({ open: false, source: null, id: 0 });
 
-function setOpening(next: Partial<Opening>): void {
-  opening = { ...opening, ...next };
-  for (const listener of listeners) listener();
-}
+const setOpening = (next: Partial<Opening>) =>
+  opening.set({ ...opening.get(), ...next });
 
 export const openRandom = (source: RandomSource) =>
-  setOpening({ open: true, source, id: opening.id + 1 });
+  setOpening({ open: true, source, id: opening.get().id + 1 });
 
 const closeRandom = () => setOpening({ open: false });
 
-function useOpening() {
-  return React.useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
-    () => opening
-  );
-}
+const useOpening = () => useLive(opening);
 
 interface Draw {
   items: BaseItemDto[];

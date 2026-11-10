@@ -67,11 +67,7 @@ import { useHeldSpeed } from './speed';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { Volume } from './volume';
 import { usePlayhead, type Playhead } from '@/lib/playback/playhead';
-import {
-  createLive,
-  useLive,
-  type LiveWriter,
-} from '@/lib/playback/live-value';
+import { createLive, useLive, type LiveWriter } from '@/lib/live-value';
 
 const IDLE_MS = 5000;
 const BRIEF_IDLE_MS = 1500;

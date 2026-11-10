@@ -1,5 +1,5 @@
-import React from 'react';
 import type { Invite as PartyInvite } from '@/lib/party/invite';
+import { createLive, useLive } from '@/lib/live-value';
 
 export interface Opening {
   /** What starting a party plays for it, once it has started. */
@@ -8,13 +8,15 @@ export interface Opening {
   invite?: PartyInvite;
 }
 
-let sheet: { open: boolean; opening: Opening } = { open: false, opening: {} };
-const sheetListeners = new Set<() => void>();
-
-function setSheet(next: Partial<typeof sheet>): void {
-  sheet = { ...sheet, ...next };
-  for (const listener of sheetListeners) listener();
+interface Sheet {
+  open: boolean;
+  opening: Opening;
 }
+
+const sheet = createLive<Sheet>({ open: false, opening: {} });
+
+const setSheet = (next: Partial<Sheet>) =>
+  sheet.set({ ...sheet.get(), ...next });
 
 export const openPartySheet = (opening: Opening = {}) =>
   setSheet({ open: true, opening });
@@ -22,16 +24,8 @@ export const openPartySheet = (opening: Opening = {}) =>
 export const closePartySheet = () => setSheet({ open: false });
 
 export const showInvite = (invite?: PartyInvite) =>
-  setSheet({ opening: { ...sheet.opening, invite } });
+  setSheet({ opening: { ...sheet.get().opening, invite } });
 
-export function useSheet() {
-  return React.useSyncExternalStore(
-    (listener) => {
-      sheetListeners.add(listener);
-      return () => void sheetListeners.delete(listener);
-    },
-    () => sheet
-  );
-}
+export const useSheet = () => useLive(sheet);
 
 export const usePartySheetOpen = () => useSheet().open;

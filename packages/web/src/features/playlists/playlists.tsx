@@ -59,6 +59,7 @@ import {
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { Artwork, ProgressBar, WatchedMark } from '@/components/media/cards';
 import { useVersionPicker } from '@/features/versions/version-picker';
+import { createLive, useLive } from '@/lib/live-value';
 
 const NAME_LENGTH = 200;
 /** Suggestions offered under a playlist. */
@@ -70,13 +71,10 @@ interface Sheet {
   adding: BaseItemDto[] | null;
 }
 
-let sheet: Sheet = { open: false, adding: null };
-const listeners = new Set<() => void>();
+const sheet = createLive<Sheet>({ open: false, adding: null });
 
-function setSheet(next: Partial<Sheet>): void {
-  sheet = { ...sheet, ...next };
-  for (const listener of listeners) listener();
-}
+const setSheet = (next: Partial<Sheet>) =>
+  sheet.set({ ...sheet.get(), ...next });
 
 export const openPlaylists = (playlist?: string) =>
   setSheet({ open: true, playlist });
@@ -84,15 +82,7 @@ export const openPlaylists = (playlist?: string) =>
 export const openAddToPlaylist = (items: BaseItemDto[]) =>
   setSheet({ adding: items });
 
-function useSheet() {
-  return React.useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
-    () => sheet
-  );
-}
+const useSheet = () => useLive(sheet);
 
 const resumeMs = (item: BaseItemDto) =>
   item.UserData?.Played ? 0 : ticksToMs(item.UserData?.PlaybackPositionTicks);

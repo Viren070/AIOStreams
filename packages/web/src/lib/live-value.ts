@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** A value that changes often, kept out of React's state so only what reads it draws again. */
+/** A value outside React's state, so only what reads it draws again when it changes. */
 export interface Live<T> {
   get(): T;
   subscribe(listener: () => void): () => void;

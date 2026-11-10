@@ -1,28 +1,18 @@
 import React from 'react';
+import { createLive, useLive } from '@/lib/live-value';
 
 /** A place in a page the mini player draws its video into, in place of its card. */
-let dock: HTMLElement | null = null;
-const listeners = new Set<() => void>();
+const dock = createLive<HTMLElement | null>(null);
 
-function set(next: HTMLElement | null) {
-  dock = next;
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => void listeners.delete(listener);
-}
-
-export const useDock = () => React.useSyncExternalStore(subscribe, () => dock);
+export const useDock = () => useLive(dock);
 
 /** For the element a page shows a preview in, while it is mounted. */
 export function useDockRef(): React.RefCallback<HTMLElement> {
   return React.useCallback((el: HTMLElement | null) => {
     if (el) {
-      set(el);
+      dock.set(el);
       return () => {
-        if (dock === el) set(null);
+        if (dock.get() === el) dock.set(null);
       };
     }
   }, []);

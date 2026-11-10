@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLatest } from '@/hooks/use-latest';
-import { createLive, type Live } from '@/lib/playback/live-value';
+import { createLive, type Live } from '@/lib/live-value';
 import type { PlayerController } from '@/lib/playback/controller';
 
 /** Skips this close together add up to one seek. */

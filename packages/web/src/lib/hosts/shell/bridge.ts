@@ -1,9 +1,9 @@
 import { t } from '@lingui/core/macro';
-import React from 'react';
 import type { HostEvent } from '@/lib/downloads/types';
 import type { LicenseList } from '@/lib/licenses';
 import type { TimeRange } from '@/lib/playback/playhead';
 import type { Span } from '@/lib/subtitles/align';
+import { createLive, useLive } from '@/lib/live-value';
 
 /** A track as the app's player lists it; `url` is where an added one came from. */
 export interface AppTrack {
@@ -265,19 +265,9 @@ export function ask<T extends ShellMessage['type']>(
 
 /** The last `type` message the app sent, for a page that opens after it came. */
 export function bridgeStore<T extends ShellMessage['type']>(type: T) {
-  let last: ShellAnswer<T> | null = null;
-  const listeners = new Set<() => void>();
+  const last = createLive<ShellAnswer<T> | null>(null);
   appBridge()?.subscribe((m) => {
-    if (m.type !== type) return;
-    last = m as ShellAnswer<T>;
-    for (const listener of listeners) listener();
+    if (m.type === type) last.set(m as ShellAnswer<T>);
   });
-  const subscribe = (listener: () => void) => {
-    listeners.add(listener);
-    return () => void listeners.delete(listener);
-  };
-  return {
-    get: () => last,
-    use: () => React.useSyncExternalStore(subscribe, () => last),
-  };
+  return { get: last.get, use: () => useLive(last) };
 }

@@ -36,7 +36,7 @@ import type {
 import { usePlayheadWriter } from './playhead';
 import { thumbnailFeed } from './thumbnails';
 import { chooseTracks, serverFacts, trackFacts } from './track-picks';
-import { createLive } from './live-value';
+import { createLive } from '@/lib/live-value';
 import { copyOf, shownSubtitle, useSubtitleTiming } from './subtitle-timing';
 
 /** An end of file this far before the duration is a stream that gave out, not the end. */

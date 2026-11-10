@@ -1,4 +1,4 @@
-import React from 'react';
+import { createLive, useLive } from '@/lib/live-value';
 
 /*
  * Whether the server answers. A request that cannot reach it marks it
@@ -7,40 +7,23 @@ import React from 'react';
 
 const PROBE_MS = [2_000, 5_000, 10_000, 15_000];
 
-let reachable = true;
+const reachable = createLive(true);
 let probeUrl: string | null = null;
 let probes = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
-const listeners = new Set<() => void>();
+export const isReachable = (): boolean => reachable.get();
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => void listeners.delete(listener);
-}
-
-function set(value: boolean) {
-  if (value === reachable) return;
-  reachable = value;
-  listeners.forEach((l) => l());
-}
-
-export function isReachable(): boolean {
-  return reachable;
-}
-
-export function useReachable(): boolean {
-  return React.useSyncExternalStore(subscribe, isReachable);
-}
+export const useReachable = (): boolean => useLive(reachable);
 
 export function reached(): void {
   probes = 0;
   clearTimeout(timer);
   timer = undefined;
-  set(true);
+  reachable.set(true);
 }
 
 export function unreachable(): void {
-  set(false);
+  reachable.set(false);
   if (!timer) schedule();
 }
 
@@ -51,12 +34,12 @@ function schedule() {
 
 async function probe() {
   timer = undefined;
-  if (!probeUrl || reachable) return;
+  if (!probeUrl || reachable.get()) return;
   try {
     const res = await fetch(probeUrl, { cache: 'no-store' });
     if (res.ok) return reached();
   } catch {}
-  if (!reachable && !timer) schedule();
+  if (!reachable.get() && !timer) schedule();
 }
 
 /** The address a probe asks, for the server the app is signed in to. */
@@ -80,6 +63,6 @@ window.addEventListener('online', retryNow);
 
 /** For TanStack's `onlineManager`, so changes made offline wait for the server. */
 export function followReachable(setOnline: (online: boolean) => void) {
-  setOnline(reachable);
-  return subscribe(() => setOnline(reachable));
+  setOnline(reachable.get());
+  return reachable.subscribe(() => setOnline(reachable.get()));
 }
