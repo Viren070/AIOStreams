@@ -11,6 +11,7 @@ import { useGenres, useKey, useLiveTvView } from '@/lib/jellyfin/queries';
 import { storage, storedMap } from '@/lib/storage';
 import type { BaseItemDto, BaseItemDtoQueryResult } from '@/lib/jellyfin/types';
 import { createLive, useLive } from '@/lib/live-value';
+import { lacksDetails } from '@/lib/format';
 
 /** Groups of the app's own, before the server's. */
 export const FAVOURITES = 'favourites';
@@ -132,12 +133,12 @@ export function useChannelGroups(): {
   groups: ChannelGroup[];
   isLoading: boolean;
 } {
-  const { user } = useSession();
   const view = useLiveTvView();
   const genres = useGenres(view.data?.Id ?? '');
   const favourites = useChannelPages(FAVOURITES, { pageSize: 1 });
   const hasFavourites = !!favourites.data?.pages[0]?.TotalRecordCount;
-  const hasRecents = recentChannels(user.Id!).length > 0;
+  const recent = useChannelPages(RECENT);
+  const hasRecents = !!recent.data?.pages[0]?.Items?.length;
   const groups = React.useMemo(
     () => [
       ...(hasFavourites ? [{ id: FAVOURITES, name: t`Favourites` }] : []),
@@ -150,7 +151,10 @@ export function useChannelGroups(): {
     ],
     [hasFavourites, hasRecents, genres.data]
   );
-  return { groups, isLoading: view.isLoading || genres.isLoading };
+  return {
+    groups,
+    isLoading: view.isLoading || genres.isLoading || recent.isLoading,
+  };
 }
 
 export function useChannelPages(
@@ -175,7 +179,9 @@ export function useChannelPages(
           : { Items: [] };
         const items = ids
           .map((id) => found.Items?.find((c) => c.Id === id))
-          .filter((c): c is BaseItemDto => c?.Type === 'TvChannel');
+          .filter(
+            (c): c is BaseItemDto => c?.Type === 'TvChannel' && !lacksDetails(c)
+          );
         return { Items: items, TotalRecordCount: items.length };
       }
       return client.get<BaseItemDtoQueryResult>(
