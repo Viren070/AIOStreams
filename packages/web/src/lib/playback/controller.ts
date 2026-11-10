@@ -9,7 +9,7 @@ import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
 import { tagName } from '../languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
-import type { PlannedSkip, VideoFrame } from './engine';
+import type { PlannedSkip, StatsRow, VideoFrame } from './engine';
 import type { PlaybackPrefs } from '../user-config';
 import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
 
@@ -112,12 +112,12 @@ export interface PlayerController {
   setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
-  /** Playback statistics over the video, as `text` the page draws for a player that draws none. */
+  /** `rows` are the shown page's, for a player that doesn't draw its own. */
   stats?: {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
-    text: Live<string | undefined>;
+    rows: Live<StatsRow[] | undefined>;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {

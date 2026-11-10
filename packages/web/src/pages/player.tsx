@@ -39,6 +39,7 @@ import {
   usePlayerFullscreen,
 } from '../lib/playback/fullscreen';
 import { usePlayer } from '../lib/playback/use-player';
+import type { StatsRow } from '../lib/playback/engine';
 import { videoEngine } from '../lib/playback/video';
 import { useNowPlaying } from '../lib/playback/now-playing';
 import { usePlayingAnime } from '../lib/playback/upscaling';
@@ -882,7 +883,7 @@ function Player({
             style={subtitleStyle}
             lift={player.subtitleLift}
           />
-          {player.stats && <PlayerStats text={player.stats.text} />}
+          {player.stats && <PlayerStats rows={player.stats.rows} />}
           {launched && (
             <p
               data-ui="player-external"
@@ -949,15 +950,20 @@ function PageSubtitle({
   return line ? <SubtitleText text={line} lift={shownLift} {...props} /> : null;
 }
 
-function PlayerStats({ text }: { text: Live<string | undefined> }) {
-  const shown = useLive(text);
-  if (!shown) return null;
+function PlayerStats({ rows }: { rows: Live<StatsRow[] | undefined> }) {
+  const shown = useLive(rows);
+  if (!shown?.length) return null;
   return (
-    <pre
+    <dl
       data-ui="player-stats"
-      className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
+      className="pointer-events-none fixed start-[calc(1rem+env(safe-area-inset-left))] top-[calc(4.5rem+env(safe-area-inset-top))] grid max-w-[calc(100vw-2rem)] grid-cols-[auto_1fr] gap-x-3 rounded-lg bg-black/60 px-3 py-2 font-mono text-xs leading-relaxed text-white/90"
     >
-      {shown}
-    </pre>
+      {shown.map(({ label, value }, i) => (
+        <React.Fragment key={i}>
+          <dt className="text-white/60">{label}</dt>
+          <dd>{value}</dd>
+        </React.Fragment>
+      ))}
+    </dl>
   );
 }

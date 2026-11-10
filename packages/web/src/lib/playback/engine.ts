@@ -83,8 +83,21 @@ export type EngineEvent =
   | { type: 'advanced'; next: QueuedItem }
   /** The user closed the player's own window. */
   | { type: 'closed' }
-  | { type: 'subtitle-text'; text: string }
-  | { type: 'stats-text'; text: string | undefined };
+  | { type: 'subtitle-text'; text: string };
+
+export interface StatsRow {
+  label: string;
+  value: string;
+}
+
+/** Pages of playback statistics. */
+export interface EngineStats {
+  pages: Track[];
+  /** For an engine that draws a page over the video itself; null hides it. */
+  draw?(page: string | null): void;
+  /** For an engine whose pages the page draws, which asks for them while one shows. */
+  read?(page: string): Promise<StatsRow[]>;
+}
 
 /** A picture of the keyframe at `positionMs`, for the seek bar. */
 export interface Thumbnail {
@@ -156,7 +169,7 @@ export interface PlayerEngine {
     stop(): void;
   };
   subtitleFiles?: { types: readonly string[]; add(file: File): Promise<void> };
-  stats?: { pages: Track[]; show(page: string | null): void };
+  stats?: EngineStats;
   /** Picks tracks from the user's settings as the file opens. */
   picksTracks?: boolean;
   /** Lists the file's own subtitles, so the server's copies of them are left out. */

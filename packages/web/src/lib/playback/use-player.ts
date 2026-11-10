@@ -43,6 +43,7 @@ import type {
   EngineFile,
   EngineTrack,
   ServerSubtitle,
+  StatsRow,
 } from './engine';
 import { usePlayheadWriter } from './playhead';
 import { thumbnailFeed } from './thumbnails';
@@ -158,6 +159,8 @@ function delayKey(tracks: EngineTrack[], id: string): string {
     : id;
 }
 
+const STATS_MS = 1000;
+
 /** One set of controls over an engine, with what every player shares. */
 export function usePlayer(
   create: EngineFactory,
@@ -192,8 +195,8 @@ export function usePlayer(
   const [thumbnails, setThumbnails] =
     React.useState<ReturnType<typeof thumbnailFeed>>();
   const [statsPage, setStatsPage] = React.useState<string | null>(null);
-  const [statsText] = React.useState(() =>
-    createLive<string | undefined>(undefined)
+  const [statsRows] = React.useState(() =>
+    createLive<StatsRow[] | undefined>(undefined)
   );
   const [retry, setRetry] = React.useState<PlayerController['retry']>();
   const [lift] = React.useState(() => createLive(0));
@@ -355,8 +358,6 @@ export function usePlayer(
         return latest.current.onClosed?.();
       case 'subtitle-text':
         return subtitleText.set(event.text);
-      case 'stats-text':
-        return statsText.set(event.text);
     }
   };
 
@@ -441,7 +442,6 @@ export function usePlayer(
   React.useEffect(() => {
     setRetry(undefined);
     setStatsPage(null);
-    statsText.set(undefined);
     setRetimed({});
     const file = latestFile.current(startMs);
     if (file.volume) patch(file.volume);
@@ -450,6 +450,24 @@ export function usePlayer(
     // Reloading restarts playback, so only a new url or start does it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, startMs]);
+
+  React.useEffect(() => {
+    const read = engine.stats?.read;
+    if (!statsPage || !read) return;
+    let stopped = false;
+    const ask = () =>
+      read(statsPage).then(
+        (rows) => !stopped && statsRows.set(rows),
+        () => {}
+      );
+    void ask();
+    const timer = setInterval(ask, STATS_MS);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      statsRows.set(undefined);
+    };
+  }, [engine, statsPage, statsRows]);
 
   const [thumbnailsOn] = useSetting(settings.controls.thumbnails);
   React.useEffect(() => {
@@ -699,10 +717,10 @@ export function usePlayer(
       pages: stats.pages,
       page: statsPage,
       show: (page) => {
-        stats.show(page);
+        stats.draw?.(page);
         setStatsPage(page);
       },
-      text: statsText,
+      rows: statsRows,
     },
     external: engine.external,
     close: engine.closeWindow && (() => engine.closeWindow!()),
