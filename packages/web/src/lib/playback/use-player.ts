@@ -71,6 +71,10 @@ function serverSubtitles(
     .filter((s) => !ownSubtitles || s.IsExternal)
     .flatMap((stream, i) => {
       const url = urlOf ? urlOf(stream) : subtitleUrl(client, stream);
+      const assUrl =
+        !urlOf && stream.Codec === 'ass'
+          ? subtitleUrl(client, stream, { original: true })
+          : null;
       return url
         ? [
             {
@@ -79,6 +83,7 @@ function serverSubtitles(
               label: trackLabel(stream, i + 1),
               lang: stream.Language ?? undefined,
               stream,
+              ...(assUrl && { assUrl }),
             },
           ]
         : [];

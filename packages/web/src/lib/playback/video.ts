@@ -1,7 +1,19 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
+import { currentHost } from '../hosts';
+import { appLog } from '../hosts/shell/bridge';
+import type { VideoFit } from '../settings';
+import {
+  EMBEDDED_WAIT_MS,
+  embeddedSubtitles,
+  isMatroska,
+  type EmbeddedSubtitles,
+} from '../subtitles/embedded';
 import { checkSubtitleFile, readSubtitleFile } from '../subtitles/files';
-import { subtitleLine } from '../subtitles/style';
+import { assLayer, canDrawAss } from '../subtitles/libass';
+import type { MkvSubtitle } from '../subtitles/matroska/file';
+import { subtitleHeight, subtitleLine } from '../subtitles/style';
+import { videoSurface, type SubtitleLayer } from '../subtitles/surface';
 import { ownTrackLabel } from './controller';
 import type {
   EngineFactory,
@@ -11,7 +23,33 @@ import type {
 } from './engine';
 import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
 
-const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
+export const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
+/** Before a file's own subtitle track's Matroska number. */
+export const EMBEDDED = 'mkv:';
+
+export const ownSubtitleTrack = (t: MkvSubtitle, i: number): EngineTrack => ({
+  id: `${EMBEDDED}${t.number}`,
+  type: 'subtitle',
+  label: ownTrackLabel(t.name, t.language, i + 1),
+  lang: t.language,
+  title: t.name,
+  ...(t.kind === 'ass' && { codec: 'ass' }),
+  forced: t.isForced,
+  hearingImpaired: t.hearingImpaired,
+  default: t.isDefault,
+});
+
+/** A cue would show `{\an8}`-style tags as text. */
+const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
+
+/** Null before the video says. */
+function bufferedAhead(el: HTMLVideoElement): number | null {
+  const { buffered, currentTime } = el;
+  for (let i = 0; i < buffered.length; i++)
+    if (buffered.start(i) <= currentTime && currentTime <= buffered.end(i))
+      return (buffered.end(i) - currentTime) * 1000;
+  return buffered.length ? 0 : null;
+}
 
 interface AudioTrack {
   enabled: boolean;
@@ -38,8 +76,8 @@ interface FileTrack {
 }
 
 /**
- * The page's own `<video>`. The server's subtitles are `<track>`s, and files
- * the user adds are text tracks after them.
+ * The page's own `<video>`. Styled scripts and a file's own pictures draw in
+ * layers over it; text shows as its text tracks.
  */
 export function videoEngine(
   video: React.RefObject<HTMLVideoElement | null>
@@ -49,7 +87,16 @@ export function videoEngine(
     let elements: HTMLTrackElement[] = [];
     let files: FileTrack[] = [];
     let delayMs = 0;
+    let height = subtitleHeight();
+    let fit: VideoFit | undefined;
     let line = subtitleLine();
+    let layer: SubtitleLayer | null = null;
+    let assFailed = false;
+    let embedded: EmbeddedSubtitles | null = null;
+    let ownTracks: MkvSubtitle[] = [];
+    // The one shown as text goes through this track; a video's text tracks can't be removed.
+    let ownText: { el: HTMLVideoElement; track: TextTrack } | null = null;
+    let stopOwnText = () => {};
     let detach = () => {};
     // A text track's cues load late, so each one remembers the shift it has.
     const shifted = new WeakMap<TextTrack, number>();
@@ -59,6 +106,7 @@ export function videoEngine(
     const textTracks = () => [
       ...elements.map((e) => e.track),
       ...files.map((f) => f.track),
+      ...(ownText ? [ownText.track] : []),
     ];
     const shiftCues = () => {
       for (const track of textTracks()) {
@@ -73,17 +121,62 @@ export function videoEngine(
         shifted.set(track, delayMs);
       }
     };
+    const placeCue = (vtt: VTTCue) => {
+      if (vtt.line !== 'auto' && !placed.has(vtt)) return;
+      placed.add(vtt);
+      vtt.snapToLines = false;
+      vtt.line = line;
+      vtt.lineAlign = 'end';
+    };
     const placeCues = () => {
-      for (const track of textTracks()) {
-        for (const cue of Array.from(track.cues ?? [])) {
-          const vtt = cue as VTTCue;
-          if (vtt.line !== 'auto' && !placed.has(vtt)) continue;
-          placed.add(vtt);
-          vtt.snapToLines = false;
-          vtt.line = line;
-          vtt.lineAlign = 'end';
-        }
-      }
+      for (const track of textTracks())
+        for (const cue of Array.from(track.cues ?? [])) placeCue(cue as VTTCue);
+    };
+    const hideOwnText = () => {
+      stopOwnText();
+      stopOwnText = () => {};
+      const track = ownText?.track;
+      if (!track) return;
+      // A disabled track has no cues to remove.
+      track.mode = 'hidden';
+      for (const cue of Array.from(track.cues ?? [])) track.removeCue(cue);
+      track.mode = 'disabled';
+      shifted.delete(track);
+    };
+    const showOwnText = (
+      el: HTMLVideoElement,
+      reading: EmbeddedSubtitles,
+      number: number
+    ) => {
+      if (ownText?.el !== el)
+        ownText = { el, track: el.addTextTrack('subtitles') };
+      const { track } = ownText;
+      const stop = reading.read(number, {
+        events(events) {
+          const by = (shifted.get(track) ?? 0) / 1000;
+          for (const event of events) {
+            const text = cueText(event.text);
+            if (!text) continue;
+            const cue = new VTTCue(
+              event.startMs / 1000 + by,
+              event.endMs / 1000 + by,
+              text
+            );
+            track.addCue(cue);
+            placeCue(cue);
+          }
+          shiftCues();
+        },
+        lost: (error) =>
+          appLog(
+            'warn',
+            `subtitles: the file's own track could not be read: ${String(error)}`
+          ),
+      });
+      if (!stop) return false;
+      stopOwnText = stop;
+      track.mode = 'showing';
+      return true;
     };
     const listTracks = () => {
       const audio = video.current && audioTracksOf(video.current);
@@ -96,6 +189,7 @@ export function videoEngine(
           lang: t.language,
           title: t.label,
         })),
+        ...ownTracks.map(ownSubtitleTrack),
         ...files.map(({ id, label }) => ({
           id,
           type: 'subtitle' as const,
@@ -113,7 +207,49 @@ export function videoEngine(
     };
     const setSubtitle = (id: string | null) => {
       const at = file?.subtitles.findIndex((s) => s.id === id) ?? -1;
-      const shown = elements[at];
+      layer?.destroy();
+      layer = null;
+      hideOwnText();
+      const failed = (error: unknown) => {
+        appLog(
+          'warn',
+          `subtitles: libass could not start, so they show as text: ${String(error)}`
+        );
+        assFailed = true;
+        setSubtitle(id);
+      };
+      const assUrl = file?.subtitles[at]?.assUrl;
+      const own = ownTracks.find((t) => `${EMBEDDED}${t.number}` === id);
+      const el = video.current;
+      const libass = canDrawAss() && !assFailed;
+      if (
+        el &&
+        embedded &&
+        (own?.kind === 'pgs' || (own?.kind === 'ass' && libass))
+      )
+        layer = embedded.draw(
+          own.number,
+          videoSurface(el),
+          { delayMs, height },
+          {
+            onFail: failed,
+            onLost: (error) =>
+              appLog(
+                'warn',
+                `subtitles: the file's own track could not be read: ${String(error)}`
+              ),
+          }
+        );
+      else if (assUrl && el && libass)
+        layer = assLayer(
+          videoSurface(el),
+          { url: assUrl },
+          { delayMs, height },
+          failed
+        );
+      else if (el && own && embedded && own.kind !== 'pgs')
+        showOwnText(el, embedded, own.number);
+      const shown = layer ? undefined : elements[at];
       if (shown && shown.readyState >= HTMLTrackElement.LOADED) {
         const fresh = shown.cloneNode() as HTMLTrackElement;
         fresh.addEventListener('load', onTrackLoad);
@@ -122,7 +258,8 @@ export function videoEngine(
         elements[at] = fresh;
       }
       elements.forEach((e, i) => {
-        e.track.mode = file?.subtitles[i]?.id === id ? 'showing' : 'disabled';
+        e.track.mode =
+          !layer && file?.subtitles[i]?.id === id ? 'showing' : 'disabled';
       });
       for (const f of files)
         f.track.mode = f.id === id ? 'showing' : 'disabled';
@@ -133,6 +270,12 @@ export function videoEngine(
     const removeElements = () => {
       for (const e of elements) e.remove();
       elements = [];
+      layer?.destroy();
+      layer = null;
+      hideOwnText();
+      embedded?.close();
+      embedded = null;
+      ownTracks = [];
     };
 
     return {
@@ -156,6 +299,29 @@ export function videoEngine(
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
         }
+        if (isMatroska(next.source)) {
+          const opened = embeddedSubtitles(
+            next.url,
+            next.headers,
+            currentHost().fetchFile
+          );
+          embedded = opened;
+          void opened.subtitles.then((found) => {
+            if (embedded !== opened) return;
+            ownTracks = found.filter((track) => track.kind);
+            if (ownTracks.length) listTracks();
+          });
+        }
+        const loaded = () => {
+          const reading = embedded;
+          if (!reading) return emit({ type: 'loaded' });
+          void Promise.race([
+            reading.subtitles,
+            new Promise((done) => setTimeout(done, EMBEDDED_WAIT_MS)),
+          ]).then(() => {
+            if (embedded === reading) emit({ type: 'loaded' });
+          });
+        };
         // Each read is a new snapshot, whose ranges may have merged since the last.
         const buffered = () => {
           const ranges = el.buffered;
@@ -169,20 +335,25 @@ export function videoEngine(
             if (next.startMs) el.currentTime = next.startMs / 1000;
             set({ durationMs: el.duration * 1000 || 0 });
             listTracks();
-            emit({ type: 'loaded' });
+            loaded();
           },
           durationchange: () => set({ durationMs: el.duration * 1000 || 0 }),
-          playing: () => set({ started: true, paused: false, waiting: false }),
+          playing: () => {
+            embedded?.setPlaying(true);
+            set({ started: true, paused: false, waiting: false });
+          },
           pause: () => set({ paused: true }),
           play: () => set({ paused: false }),
           waiting: () => set({ waiting: true }),
           canplay: () => set({ waiting: false }),
-          timeupdate: () =>
+          timeupdate: () => {
+            embedded?.setPosition(el.currentTime * 1000, bufferedAhead(el));
             emit({
               type: 'position',
               positionMs: el.currentTime * 1000,
               buffered: buffered(),
-            }),
+            });
+          },
           progress: () => emit({ type: 'position', buffered: buffered() }),
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
@@ -258,10 +429,15 @@ export function videoEngine(
       setSubtitleDelay(ms) {
         delayMs = ms;
         shiftCues();
+        layer?.setDelay(ms);
       },
-      setStyle({ subtitleStyle, height }) {
-        line = subtitleLine(subtitleStyle, height);
+      setStyle({ subtitleStyle, fit: nextFit, height: next }) {
+        height = next;
+        line = subtitleLine(subtitleStyle, next);
         placeCues();
+        layer?.setHeight(next);
+        if (nextFit !== fit) layer?.place();
+        fit = nextFit;
       },
       toggleFullscreen: toggleDocumentFullscreen,
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,

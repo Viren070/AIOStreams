@@ -109,7 +109,16 @@ export default defineConfig(async ({ envMode }) => {
   const tools: RsbuildConfig['tools'] = {
     swc: { jsc: { experimental: { plugins: [['@lingui/swc-plugin', {}]] } } },
     rspack: {
-      module: { rules: [{ test: /\.po$/, use: '@lingui/loader' }] },
+      module: {
+        rules: [
+          { test: /\.po$/, use: '@lingui/loader' },
+          // Its worker imports libass's loader from a URL, and its build drops the webpackIgnore comment.
+          {
+            test: /[\\/]jassub[\\/]dist[\\/]worker[\\/]worker\.js$/,
+            parser: { importDynamic: false },
+          },
+        ],
+      },
     },
   };
   if (standalone) {

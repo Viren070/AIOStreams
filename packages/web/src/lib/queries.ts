@@ -598,11 +598,15 @@ export function useSimilar(itemId: string, enabled: boolean) {
 
 /**
  * Any file plays as it is. A server gives a text subtitle an address only for
- * a client that says it takes one; the player asks for WebVTT whatever it is.
+ * a client that says it takes one; a styled script keeps its own, and the
+ * player asks for WebVTT otherwise.
  */
 const DEVICE_PROFILE = {
   DirectPlayProfiles: [{ Type: 'Video' }],
-  SubtitleProfiles: [{ Format: 'vtt', Method: 'External' }],
+  SubtitleProfiles: [
+    { Format: 'ass', Method: 'External' },
+    { Format: 'vtt', Method: 'External' },
+  ],
 };
 
 /** The first version carries the item's id; the web app keys every version by its own. */

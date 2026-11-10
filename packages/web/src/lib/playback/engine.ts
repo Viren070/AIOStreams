@@ -10,6 +10,8 @@ import type { TimeRange } from './playhead';
 export interface ServerSubtitle extends Track {
   url: string;
   stream: MediaStream;
+  /** A styled script's own address, for an engine that draws ASS itself. */
+  assUrl?: string;
 }
 
 export interface EngineTrack extends Track {

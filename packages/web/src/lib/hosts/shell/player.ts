@@ -27,6 +27,7 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  ServerSubtitle,
   VideoFrame,
 } from '../../playback/engine';
 import { audioCodes } from '../../playback/track-picks';
@@ -223,6 +224,9 @@ const fromPlayer = (m: ShellMessage) =>
  * downloaded only once picked: a version can carry dozens.
  */
 
+// The apps' players draw a styled script with libass.
+const subtitleAddress = (s: ServerSubtitle) => s.assUrl ?? s.url;
+
 /**
  * In the app's own measure: a TV lays the page out zoomed to fit its width
  * (lib/tv.ts), which the app's pixels don't follow.
@@ -290,7 +294,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       visualImpaired: t.visualImpaired,
       default: t.default,
       external: t.external,
-      server: file?.subtitles.find((s) => s.url === t.url)?.id,
+      server: file?.subtitles.find((s) => subtitleAddress(s) === t.url)?.id,
     }));
 
   const showExoStats = (page: string | null) => {
@@ -481,9 +485,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       const server = file?.subtitles.find((s) => s.id === id);
       if (!server) return send('player-set', { subtitle: id });
       // Fetched again on each pick: an addon may still be writing it.
-      const loaded = tracks.find((t) => t.url === server.url);
+      const url = subtitleAddress(server);
+      const loaded = tracks.find((t) => t.url === url);
       send('player-subtitle-add', {
-        url: server.url,
+        url,
         title: server.label,
         language: server.lang ?? '',
         ...(loaded && { replace: Number(loaded.id) }),

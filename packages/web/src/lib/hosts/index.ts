@@ -49,6 +49,12 @@ export interface Hearing {
  * The app the page runs in, from the bridge it injects. Anything left out
  * falls back to what a browser does.
  */
+/** `fetch` past CORS, for what the page's own fetch can't read. */
+export type FetchPastCors = (
+  url: string,
+  init: { method?: string; headers: Record<string, string>; body?: string }
+) => Promise<Response>;
+
 export interface Host {
   /** `data-host` on the page's root, which custom CSS matches, so it can't change. */
   name: string;
@@ -94,6 +100,7 @@ export interface Host {
   signedIn?(client: JellyfinClient): void;
   /** Saves what the page asks for to the device. */
   downloads?: DownloadsHost;
+  fetchFile?: FetchPastCors;
   /** A YouTube video's stream, which only plays from the address that asked. */
   resolveYouTube?(id: string): Promise<string | null>;
   /** Shows these above the on-screen keyboard's keys, for the field it types into. */
