@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.view.Choreographer
 import android.view.View
 import androidx.annotation.OptIn
@@ -139,9 +138,8 @@ class ExoEngine(private val context: Context) : Engine {
     /** A load or seek waits for its first frame, which mpv reports as `playback-restart`. */
     private var restarting = false
 
-    /** Where the tunnel's video was last restarted, and when. */
-    private var resyncedAtMs = Long.MIN_VALUE / 2
-    private var resyncedAtRealtimeMs = 0L
+    /** Where the tunnel's video was last restarted, until the page seeks or picks the sound again. */
+    private var resyncedAtMs: Long? = null
     private var volume = 100.0
     private var muted = false
     private var skips: List<Skip> = emptyList()
@@ -221,30 +219,40 @@ class ExoEngine(private val context: Context) : Engine {
             state(PlayerState(muted = it))
         }
         change.speed?.let { player.playbackParameters = PlaybackParameters(it.toFloat()) }
-        change.audio?.let { selectTrack("audio", it.id?.toIntOrNull()) }
+        change.audio?.let {
+            resyncedAtMs = null
+            selectTrack("audio", it.id?.toIntOrNull())
+        }
         change.subtitle?.let { selectSubtitle(it.id?.toIntOrNull()) }
         change.subtitleDelayMs?.let(subtitles::setDelayMs)
     }
 
     override fun seek(positionMs: Double, snapMs: Double) = post {
         if (url == null) return@post
-        val snapUs = (snapMs * 1000).toLong()
+        resyncedAtMs = null
+        seekTo(positionMs.toLong(), (snapMs * 1000).toLong())
+    }
+
+    private fun seekTo(positionMs: Long, snapUs: Long) {
         player.setSeekParameters(if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
-        player.seekTo(positionMs.toLong().coerceAtLeast(0))
+        player.seekTo(positionMs.coerceAtLeast(0))
         seeking = true
         restarting = true
         state(PlayerState(seeking = true))
         updatePolling()
     }
 
-    /** Not twice at one place: a stream whose sound changes format there would be sent back before it for ever. */
+    /**
+     * Not twice at one place: a stream whose sound changes format there would be sent back before it for ever.
+     * Nor in a file that can't seek, which Exo would start over.
+     */
     private fun resync() {
+        if (!player.isCurrentMediaItemSeekable) return
         val position = player.currentPosition
-        val now = SystemClock.elapsedRealtime()
-        if (abs(position - resyncedAtMs) < RESYNC_SPAN_MS && now - resyncedAtRealtimeMs < RESYNC_SPAN_MS) return
+        if (resyncedAtMs?.let { abs(position - it) < RESYNC_SPAN_MS } == true) return
         resyncedAtMs = position
-        resyncedAtRealtimeMs = now
-        seek((position - RESYNC_BACK_MS).coerceAtLeast(0).toDouble())
+        // Now, not queued: behind a seek or a load of the page's it would undo that one.
+        seekTo(position - RESYNC_BACK_MS, 0)
     }
 
     override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
@@ -381,6 +389,7 @@ class ExoEngine(private val context: Context) : Engine {
         dolbyVision = null
         audioTrack = null
         decoders.clear()
+        resyncedAtMs = null
         loaded = false
         chosen = false
         restarting = true
