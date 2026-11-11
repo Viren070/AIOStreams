@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-08 00:06+0000\n"
+"PO-Revision-Date: 2026-11-11 23:55+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -315,11 +315,11 @@ msgstr "1 avança para 10% do vídeo, 5 vai para a metade e 0 volta ao início."
 
 #: src/app/settings/interface.tsx
 msgid "12-hour ({twelve})"
-msgstr ""
+msgstr "12 horas ({twelve})"
 
 #: src/app/settings/interface.tsx
 msgid "24-hour ({twentyFour})"
-msgstr ""
+msgstr "24 horas ({twentyFour})"
 
 #: src/app/settings/audio.tsx
 msgid "5.1 surround"
@@ -429,9 +429,8 @@ msgid "Add a server"
 msgstr "Adicionar um servidor"
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "Add a shader"
-msgstr "Adicionar um selo"
+msgstr "Adicionar shader"
 
 #: src/app/settings/_components/common.tsx
 msgid "Add another language"
@@ -557,15 +556,15 @@ msgstr "Reprodutor nativo do Android, que consome menos bateria: a tela exibe o 
 
 #: src/app/settings/playback.tsx src/lib/input/actions.ts
 msgid "Anime upscaling"
-msgstr ""
+msgstr "Melhoria de imagem para animes"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: off"
-msgstr ""
+msgstr "Melhoria de imagem para animes: desativada"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: on"
-msgstr ""
+msgstr "Melhoria de imagem para animes: ativada"
 
 #: src/features/party/not-in-party.tsx
 msgid "Another relay"
@@ -821,7 +820,7 @@ msgstr "Cancelar"
 
 #: src/app/settings/interface.tsx
 msgid "Card you rest on"
-msgstr ""
+msgstr "Ao focar em um card"
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1603,9 +1602,8 @@ msgid "Exit full screen"
 msgstr "Sair da tela cheia"
 
 #: src/features/player/picture-in-picture.tsx
-#, fuzzy
 msgid "Exit picture-in-picture"
-msgstr "Modo picture-in-picture (PiP)"
+msgstr "Voltar à janela normal"
 
 #: src/app/settings/playback.tsx
 msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
@@ -1728,7 +1726,7 @@ msgstr "Use esta opção com um receiver conectado por cabo óptico ou HDMI ARC.
 
 #: src/app/settings/interface.tsx
 msgid "For clocks and times of day, such as the player's clock and the TV guide."
-msgstr ""
+msgstr "Define o formato de hora no relógio do player e no guia de programação."
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
@@ -1778,7 +1776,7 @@ msgstr "Envie este código para quem for investigar o problema."
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
-msgstr ""
+msgstr "Shaders GLSL para o mpv integrado, aplicados em ordem alfabética durante a reprodução. Os mais pesados podem causar engasgos."
 
 #: src/router.tsx
 msgid "Go home"
@@ -1825,9 +1823,8 @@ msgid "Has a PIN"
 msgstr "Tem um PIN"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "HDR output"
-msgstr "Saída de vídeo"
+msgstr "Saída HDR"
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Heard"
