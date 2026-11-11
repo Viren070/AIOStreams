@@ -9,15 +9,15 @@ body:
   - type: markdown
     attributes:
       value: >-
-        **Before you file**, check [troubleshooting](https://docs.aiostreams.viren070.me/troubleshooting#the-aiostreams-app-and-jellyfin-apps).
+        **Before you file**, check [troubleshooting](https://aiostreams.org/troubleshooting#the-aiostreams-app-and-jellyfin-apps).
         Most questions about the app are about setup, not bugs:
 
 
         - **Home is empty, or a title won't open:** your configuration needs a catalog and metadata addon.
-        See [step 7 of the setup guide](https://docs.aiostreams.viren070.me/configuration/setup#step-7-add-catalogs-and-metadata).
+        See [step 7 of the setup guide](https://aiostreams.org/configuration/setup#step-7-add-catalogs-and-metadata).
 
         - **What you watched elsewhere is missing from Continue Watching, or doesn't sync:** that needs a
-        [tracker](https://docs.aiostreams.viren070.me/apps/media-server#trackers). Without one,
+        [tracker](https://aiostreams.org/apps/media-server#trackers). Without one,
         AIOStreams only knows what you played in its apps.
 
         - **No versions, or the wrong ones:** if Stremio shows the same with your configuration, use

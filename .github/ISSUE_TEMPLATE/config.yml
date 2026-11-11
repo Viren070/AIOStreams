@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: '📖 Troubleshooting and FAQ'
-    url: 'https://docs.aiostreams.viren070.me/troubleshooting'
+    url: 'https://aiostreams.org/troubleshooting'
     about: 'Fixes for the most common problems, in the addon, the apps and self-hosting.'
   - name: '❓ Help and questions'
     url: 'https://github.com/Viren070/AIOStreams/discussions/categories/help'

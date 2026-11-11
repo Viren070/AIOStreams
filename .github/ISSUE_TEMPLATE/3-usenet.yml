@@ -10,7 +10,7 @@ body:
   - type: markdown
     attributes:
       value: >-
-        **Before you file**, check the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet).
+        **Before you file**, check the [Usenet guide](https://aiostreams.org/guides/usenet).
         A release can fail because its articles are gone from your providers, which no engine can fix.
         Downloading the same NZB with SABnzbd or NZBGet, or streaming it with NzbDAV, tells that apart
         from a bug in the engine.

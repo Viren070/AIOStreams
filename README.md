@@ -25,10 +25,10 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.aiostreams.viren070.me"><strong>Docs</strong></a> ·
-  <a href="https://docs.aiostreams.viren070.me/getting-started/public-instances">Public instances</a> ·
-  <a href="https://docs.aiostreams.viren070.me/download">Download the app</a> ·
-  <a href="https://docs.aiostreams.viren070.me/changelog">Changelog</a> ·
+  <a href="https://aiostreams.org"><strong>Docs</strong></a> ·
+  <a href="https://aiostreams.org/getting-started/public-instances">Public instances</a> ·
+  <a href="https://aiostreams.org/download">Download the app</a> ·
+  <a href="https://aiostreams.org/changelog">Changelog</a> ·
   <a href="https://discord.viren070.me">Discord</a>
 </p>
 
@@ -60,7 +60,7 @@ flowchart LR
   A & B & C --> P --> E & F & G
 ```
 
-Everything here works on a [public instance](https://docs.aiostreams.viren070.me/getting-started/public-instances).
+Everything here works on a [public instance](https://aiostreams.org/getting-started/public-instances).
 Host your own and you also get [a Usenet engine and more](#-on-your-own-instance).
 
 ---
@@ -73,18 +73,18 @@ Because every source goes through AIOStreams, you set your rules once and they a
   age, cache status, keywords and regular expressions, with matching that checks titles, years and episodes so
   you only see the right file.
 - **Sorting** by any stack of criteria, separately for movies, series and anime and for cached and uncached
-  results, with ranked preferences and [scores](https://docs.aiostreams.viren070.me/guides/scored-sorting).
+  results, with ranked preferences and [scores](https://aiostreams.org/guides/scored-sorting).
 - **Deduplication** by file name, info hash, or a fingerprint of the file's details.
-- **[Stream expressions](https://docs.aiostreams.viren070.me/reference/stream-expressions)** for rules that depend
+- **[Stream expressions](https://aiostreams.org/reference/stream-expressions)** for rules that depend
   on the whole list, such as dropping 720p only when there's enough 1080p.
-- **A [formatter](https://docs.aiostreams.viren070.me/reference/custom-formatter)** that names each stream the way
+- **A [formatter](https://aiostreams.org/reference/custom-formatter)** that names each stream the way
   you want, with a live preview and ready-made formats to start from.
 - **Catalogs** renamed, reordered, merged, shuffled or hidden, with better posters from services like RPDB.
-- **[Groups](https://docs.aiostreams.viren070.me/guides/groups)** that ask backup addons only when the main ones
-  come up short, and **[variants](https://docs.aiostreams.viren070.me/reference/config-expressions)** that serve
+- **[Groups](https://aiostreams.org/guides/groups)** that ask backup addons only when the main ones
+  come up short, and **[variants](https://aiostreams.org/reference/config-expressions)** that serve
   several differently tuned addons from one configuration.
-- **[Templates](https://docs.aiostreams.viren070.me/reference/templates)** to start from a complete setup someone
-  shared, and **[profiles](https://docs.aiostreams.viren070.me/guides/config-profiles)** to reopen yours by signing in.
+- **[Templates](https://aiostreams.org/reference/templates)** to start from a complete setup someone
+  shared, and **[profiles](https://aiostreams.org/guides/config-profiles)** to reopen yours by signing in.
 
 <p align="center">
   <img src="packages/docs/public/showcase/formatter-preview.webp" alt="The formatter's live preview, naming a stream from its release's filename" width="850">
@@ -145,7 +145,7 @@ Link your Stremio account and changes you save reinstall themselves.
 
 Your catalogs become a streaming app of AIOStreams' own, and your streams become versions of each title,
 sorted and named by your rules. There's nothing extra to host: every configuration is also a media server, so
-the app signs in to it, and so does any Jellyfin app. **[Download it](https://docs.aiostreams.viren070.me/download)**
+the app signs in to it, and so does any Jellyfin app. **[Download it](https://aiostreams.org/download)**
 for your computer, phone or TV.
 
 <p align="center">
@@ -155,11 +155,11 @@ for your computer, phone or TV.
 | Where | App | Plays with |
 | --- | --- | --- |
 | Any browser | Nothing to install; add it to a phone's home screen to open it like an app | A WebGPU engine: HEVC, Dolby Vision, TrueHD and DTS, audio tracks, styled subtitles |
-| Windows, macOS, Linux | [Desktop app](https://docs.aiostreams.viren070.me/apps/desktop) | mpv: nearly any format, HDR, surround passthrough, styled subtitles |
-| Android phones and tablets | [Android app](https://docs.aiostreams.viren070.me/apps/android) | ExoPlayer or mpv: HDR and Dolby Vision, passthrough, styled subtitles |
-| Android TV, Google TV, Fire TV | [Android app](https://docs.aiostreams.viren070.me/apps/android#on-a-tv), with a layout made for the remote | ExoPlayer or mpv |
-| LG and Samsung TVs (beta) | [TV apps](https://docs.aiostreams.viren070.me/apps/smart-tv), installed from a file | The TV's own player |
-| iPhone, iPad, Apple TV, Kodi… | A browser, or any [Jellyfin app](https://docs.aiostreams.viren070.me/apps/jellyfin) such as Infuse or Swiftfin | The app's own player |
+| Windows, macOS, Linux | [Desktop app](https://aiostreams.org/apps/desktop) | mpv: nearly any format, HDR, surround passthrough, styled subtitles |
+| Android phones and tablets | [Android app](https://aiostreams.org/apps/android) | ExoPlayer or mpv: HDR and Dolby Vision, passthrough, styled subtitles |
+| Android TV, Google TV, Fire TV | [Android app](https://aiostreams.org/apps/android#on-a-tv), with a layout made for the remote | ExoPlayer or mpv |
+| LG and Samsung TVs (beta) | [TV apps](https://aiostreams.org/apps/smart-tv), installed from a file | The TV's own player |
+| iPhone, iPad, Apple TV, Kodi… | A browser, or any [Jellyfin app](https://aiostreams.org/apps/jellyfin) such as Infuse or Swiftfin | The app's own player |
 
 The apps play streams with a link, such as debrid and Usenet ones; P2P torrents stay in Stremio.
 
@@ -176,13 +176,13 @@ The apps play streams with a link, such as debrid and Usenet ones; P2P torrents 
   lower-resolution anime as it plays.
 
 **It runs on your addons.** Catalogs, details, ratings, streams, subtitles and Live TV all come from addons.
-Tracker addons that support [Watch State](https://docs.aiostreams.viren070.me/reference/addon-protocol/watch-state)
+Tracker addons that support [Watch State](https://aiostreams.org/reference/addon-protocol/watch-state)
 bring in your history, watchlist and ratings, and get your progress, ratings and drops back as you watch.
 
 - **Browse** a home page with a featured title, rows for Continue Watching, Next Up and each catalog,
   Discover, search, collections, favourites, a calendar of airing episodes, trailers, and a page for every
   title and person.
-- **[Live TV](https://docs.aiostreams.viren070.me/apps/live-tv)** from IPTV addons or your Xtream login, with
+- **[Live TV](https://aiostreams.org/apps/live-tv)** from IPTV addons or your Xtream login, with
   channel groups and numbers, a programme guide with the channel playing above it, catch-up and reminders.
 - **Versions** are your streams. Search them, save quick filters, label them with badges, switch mid-play, or
   open one in VLC, Infuse or another player.
@@ -193,7 +193,7 @@ bring in your history, watchlist and ratings, and get your progress, ratings and
 - **Playlists**, a **mini player** that keeps playing while you browse, and **downloads** for offline viewing
   on desktop and Android.
 - **Make it yours**: navigation along the top, down the side or in a corner on solid, frosted or liquid glass,
-  themes and your own colours, and [custom CSS](https://docs.aiostreams.viren070.me/reference/web-app-css)
+  themes and your own colours, and [custom CSS](https://aiostreams.org/reference/web-app-css)
   with hooks on every part of the app. The apps are in your language too, translated on
   [Weblate](https://hosted.weblate.org/engage/aiostreams/).
 
@@ -204,29 +204,29 @@ bring in your history, watchlist and ratings, and get your progress, ratings and
 
 ### Elsewhere
 
-From the same page you can also add AIOStreams to [Seanime](https://docs.aiostreams.viren070.me/guides/seanime),
-Chillio and Aniyomi, or query it through the [search API](https://docs.aiostreams.viren070.me/apis/search).
+From the same page you can also add AIOStreams to [Seanime](https://aiostreams.org/guides/seanime),
+Chillio and Aniyomi, or query it through the [search API](https://aiostreams.org/apis/search).
 
 ---
 
 ## 🏠 On your own instance
 
-[Hosting AIOStreams yourself](https://docs.aiostreams.viren070.me/getting-started/deployment) (or on a private
+[Hosting AIOStreams yourself](https://aiostreams.org/getting-started/deployment) (or on a private
 ElfHosted instance) adds what a public instance can't offer.
 
 - **A built-in Usenet engine.** Give it your NNTP provider and it streams releases straight from Usenet,
   archives included, with no NzbDAV, AltMount or SABnzbd in between. In the public
   [Usenet streaming benchmark](https://github.com/Viren070/nzb-streaming-benchmarks), which runs nine
   applications over the same releases, it is first to the first byte and first to finish a seek.
-  [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet).
-- **[Sonarr and Radarr](https://docs.aiostreams.viren070.me/guides/sonarr-radarr)** can use the engine as their
+  [Usenet guide](https://aiostreams.org/guides/usenet).
+- **[Sonarr and Radarr](https://aiostreams.org/guides/sonarr-radarr)** can use the engine as their
   SABnzbd download client: they grab as usual, and Plex, Jellyfin or Emby stream the release from Usenet on
   demand, a library that takes no disk space. AIOStreams can also be their Newznab and Torznab indexer.
-- **A [release blocklist](https://docs.aiostreams.viren070.me/guides/release-blocklist)** that remembers dead and
+- **A [release blocklist](https://aiostreams.org/guides/release-blocklist)** that remembers dead and
   fake releases, drops them before they're tried, and can be shared between instances.
 - **A dashboard** for the instance: live streams and bandwidth, analytics, logs, users, the Usenet library and
   providers, cache, tasks, crash reports from the apps, and every runtime setting.
-- **Accounts** from `AIOSTREAMS_AUTH` or any OpenID Connect provider through [SSO](https://docs.aiostreams.viren070.me/guides/sso),
+- **Accounts** from `AIOSTREAMS_AUTH` or any OpenID Connect provider through [SSO](https://aiostreams.org/guides/sso),
   with per-user permissions, on SQLite or PostgreSQL, with Redis for several replicas.
 - **Proxies**: the built-in proxy, MediaFlow Proxy or StremThru, for services that limit how many IPs can stream.
 
@@ -239,8 +239,8 @@ ElfHosted instance) adds what a public instance can't offer.
 ## 🚀 Getting started
 
 1. **Pick an instance**
-   - A [public instance](https://docs.aiostreams.viren070.me/getting-started/public-instances): free, nothing to set up.
-   - [Your own](https://docs.aiostreams.viren070.me/getting-started/deployment):
+   - A [public instance](https://aiostreams.org/getting-started/public-instances): free, nothing to set up.
+   - [Your own](https://aiostreams.org/getting-started/deployment):
 
      ```bash
      curl -O https://raw.githubusercontent.com/Viren070/AIOStreams/main/compose.yaml
@@ -251,12 +251,12 @@ ElfHosted instance) adds what a public instance can't offer.
 
    - Managed hosting from **[ElfHosted](https://store.elfhosted.com/product/aiostreams/?utm_source=github&utm_medium=readme&utm_campaign=aiostreams-readme)**, a project sponsor.
 2. **Configure it** at `/stremio/configure`: add your services, pick addons and set your rules, or import a
-   [template](https://docs.aiostreams.viren070.me/configuration/setup) to start from a complete setup.
+   [template](https://aiostreams.org/configuration/setup) to start from a complete setup.
 3. **Save** with a password.
 4. **Install or open it** from **Save & Install**: in Stremio, in the AIOStreams app, in a Jellyfin app, or in
    any of the other apps listed there.
 
-The [documentation](https://docs.aiostreams.viren070.me) covers every option, environment variable and guide.
+The [documentation](https://aiostreams.org) covers every option, environment variable and guide.
 
 ---
 

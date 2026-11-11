@@ -11,7 +11,7 @@ body:
       value: >-
         **Before you file:** AIOStreams gathers streams from other addons and from debrid and Usenet
         services. If the problem also happens with that addon or service on its own, without AIOStreams,
-        report it to them instead. Check [troubleshooting](https://docs.aiostreams.viren070.me/troubleshooting)
+        report it to them instead. Check [troubleshooting](https://aiostreams.org/troubleshooting)
         first, and for help and questions, ask on [Discord](https://discord.viren070.me) or in
         [Discussions](https://github.com/Viren070/AIOStreams/discussions/categories/help).
 
