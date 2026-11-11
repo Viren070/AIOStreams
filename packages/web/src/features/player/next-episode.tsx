@@ -372,8 +372,9 @@ export function useUpNextPrompt({
       return;
     }
     let current = true;
+    // Whole, as the player is given the version itself rather than its name.
     queryClient
-      .fetchQuery(infoOptions(next.Id!))
+      .fetchQuery(infoOptions(next.Id!, undefined, { full: true }))
       .then(async (info) => {
         const target = carryOn(playableSources(info), source, fallbackFirst);
         if (!current || !target) return;

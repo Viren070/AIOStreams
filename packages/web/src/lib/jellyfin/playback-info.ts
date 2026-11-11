@@ -34,6 +34,10 @@ function withOwnId(source: SourceInfo): SourceInfo {
   return id ? { ...source, Id: id } : source;
 }
 
+/** What a list is read for; playing a version names it, which answers with all of it. */
+// eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's field names
+const LISTED_FIELDS = ['Id', 'Type', 'Name', 'RunTimeTicks', 'aiostreams'];
+
 /**
  * Naming a version also gets its subtitles from subtitle addons, as does a
  * download's list, which saves the first version's.
@@ -51,9 +55,14 @@ export async function requestPlaybackInfo(
     /** What the versions may need; the chosen player's by default. */
     support?: { headers: boolean; youtube: boolean };
     purpose?: Purpose;
+    full?: boolean;
   } = {}
 ): Promise<PlaybackInfoResponse> {
   const support = opts.support ?? playerSupport();
+  const listed =
+    !opts.sourceId && !opts.full && opts.purpose !== 'download'
+      ? { MediaSourceFields: LISTED_FIELDS.join(',') }
+      : {};
   const info = await client.post<PlaybackInfoResponse>(
     `/Items/${itemId}/PlaybackInfo`,
     {
@@ -69,7 +78,7 @@ export async function requestPlaybackInfo(
       ...(support.headers && { EnableRequiredHttpHeaders: true }),
       ...(support.youtube && { EnableYouTube: true }),
     },
-    { userId },
+    { userId, ...listed },
     opts.purpose
   );
   return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
@@ -85,6 +94,7 @@ function usePlaybackInfoRequest() {
         sourceId?: string;
         kept?: boolean;
         purpose?: Purpose;
+        full?: boolean;
       } = {}
     ) => requestPlaybackInfo(client, user.Id!, itemId, opts),
     [client, user.Id]
@@ -95,16 +105,21 @@ export function usePlaybackInfoOptions() {
   const request = usePlaybackInfoRequest();
   const key = useKey();
   return React.useCallback(
-    (itemId: string, sourceId?: string, purpose?: Purpose) =>
+    (
+      itemId: string,
+      sourceId?: string,
+      opts: { purpose?: Purpose; full?: boolean } = {}
+    ) =>
       queryOptions({
         queryKey: [
           ...key,
           'playback-info',
           itemId,
           sourceId ?? null,
-          ...(purpose ? [purpose] : []),
+          ...(opts.purpose ? [opts.purpose] : []),
+          ...(opts.full ? ['full'] : []),
         ],
-        queryFn: () => request(itemId, { sourceId, purpose }),
+        queryFn: () => request(itemId, { sourceId, ...opts }),
         staleTime: 10 * 60_000,
       }),
     [key, request]
@@ -134,7 +149,7 @@ export function usePlaybackInfo(
   const options = usePlaybackInfoOptions();
   const request = usePlaybackInfoRequest();
   return useQuery({
-    ...options(itemId, opts.sourceId, opts.purpose),
+    ...options(itemId, opts.sourceId, { purpose: opts.purpose }),
     ...(opts.kept && {
       queryFn: () => request(itemId, { kept: true }),
       staleTime: Infinity,
@@ -158,7 +173,7 @@ export function useRefreshPlaybackInfo(itemId: string, purpose?: Purpose) {
     mutationFn: () => request(itemId, { refresh: true, purpose }),
     onSuccess: (data) =>
       queryClient.setQueryData(
-        options(itemId, undefined, purpose).queryKey,
+        options(itemId, undefined, { purpose }).queryKey,
         data
       ),
   });
