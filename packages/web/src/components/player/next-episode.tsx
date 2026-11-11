@@ -411,7 +411,8 @@ export function useUpNextPrompt({
   }, [shown, countdown]);
   React.useEffect(() => {
     if (!counting) return;
-    const timer = setInterval(() => setLeftMs((ms) => ms - 250), 250);
+    // Stopping at zero, so that reaching it plays on once.
+    const timer = setInterval(() => setLeftMs((ms) => Math.max(0, ms - 250)), 250);
     return () => clearInterval(timer);
   }, [counting]);
   React.useEffect(() => {
