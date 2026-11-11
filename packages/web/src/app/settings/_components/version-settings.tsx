@@ -42,7 +42,7 @@ import {
 import { SettingsRow } from './settings-card';
 import { BadgeChip, badgePackQuery } from '@/features/versions/version-badges';
 
-const DOCS = 'https://docs.aiostreams.viren070.me/reference/version-badges';
+const DOCS = 'https://aiostreams.org/reference/version-badges';
 
 const names = (list: string[]) =>
   new Intl.ListFormat(formatLocale(), { type: 'conjunction' }).format(list);

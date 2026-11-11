@@ -17,7 +17,7 @@ export const onAccount = () =>
 export const followsYou = () =>
   t`Saved to your account, so it follows you to every device.`;
 
-export const DOCS_URL = 'https://docs.aiostreams.viren070.me';
+export const DOCS_URL = 'https://aiostreams.org';
 
 export const seconds = (count: number) =>
   plural(count, { one: '# second', other: '# seconds' });
