@@ -7,7 +7,7 @@ import { itemPath } from '../paths';
 import { PlaybackReporter } from './reporter';
 import { useRefreshAll } from '../queries';
 import { useSession } from '../session';
-import { clock } from '../format';
+import { clock, ticksToMs } from '../format';
 import type { BaseItemDto, SourceInfo } from '../types';
 
 /**
@@ -26,6 +26,9 @@ export function externalReturnUrl(
   if (!app && template.startsWith('intent:')) return undefined;
   const path = itemPath(item);
   const marks = new URLSearchParams({ played: item.Id!, source: source.Id! });
+  // For a player that says how long what it played was, to tell a notice clip from the title.
+  const runtime = Math.round(ticksToMs(item.RunTimeTicks) / 1000);
+  if (runtime > 0) marks.set('runtime', String(runtime));
   const marked = `${path}${path.includes('?') ? '&' : '?'}${marks}`;
   if (app) return `aiostreams://return${marked}`;
   const { origin, pathname } = window.location;
@@ -35,6 +38,7 @@ export function externalReturnUrl(
 const MARKS = [
   'played',
   'source',
+  'runtime',
   'position',
   'finished',
   'lost',

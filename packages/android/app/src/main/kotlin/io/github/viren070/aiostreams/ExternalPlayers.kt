@@ -75,7 +75,10 @@ class ExternalPlayers(private val activity: ComponentActivity, private val onRet
         // stream it can't time puts its position past the end: none is a place worth keeping,
         // but the last is worth a word, since the page would otherwise look as if nothing played.
         val duration = millis(extras, "duration")
+        // A link can answer with a short notice clip in the title's place; its end isn't the title's.
+        val runtime = Uri.parse(back).getQueryParameter("runtime")?.toLongOrNull()?.times(1000)
         val mark = when {
+            vimu && duration != null && duration > 0 && runtime != null && duration < runtime / 2 -> return
             vimu && result.resultCode == VIMU_COMPLETED -> "finished=1"
             vimu && duration != null && duration > 0 && position != null && position > duration -> "lost=1"
             vimu && (duration == null || duration <= 0 || position == null) -> return
