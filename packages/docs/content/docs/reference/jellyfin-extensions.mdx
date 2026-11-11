@@ -86,6 +86,7 @@ object:
 | Field         | Shape  | What the web app does with it                                                            |
 | ------------- | ------ | ---------------------------------------------------------------------------------------- |
 | `id`          | string | The version's own id, the same in every listing; the app remembers it to resume on it    |
+| `release`     | string | Its release, the same from any addon; resuming falls back to it on the same `service`    |
 | `name`        | string | The version's title in the version list, instead of `Name`                               |
 | `description` | string | The lines under the title in the version list                                            |
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
@@ -120,9 +121,15 @@ In the `PlaybackInfo` body:
 | `SkipSubtitles`             | Don't ask subtitle addons for the first version; the app asks for the version it plays   |
 | `EnableRequiredHttpHeaders` | The app's player sends a version's standard `RequiredHttpHeaders` with its requests      |
 | `EnableYouTube`             | The app's player opens a version by its `ytId`                                           |
+| `AllVersions`               | List versions past the configured limit, up to the app's own; one named joins the list   |
 
 Other clients send neither, so a version that only plays with its headers, or only as a YouTube
 video, is listed only when the body says the app can play it.
+
+In the query, `MediaSourceFields` takes a comma-separated list of the `MediaSources` fields to send,
+in any case, such as `Id,Type,Name,RunTimeTicks,aiostreams`. The app asks for those when it lists
+versions, as it reads nothing else from a list and names a version to play it, which answers with
+all of it. A list without `MediaStreams` is also quicker to build, as the server skips the tracks.
 
 ## Playback reports
 
