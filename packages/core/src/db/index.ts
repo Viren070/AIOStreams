@@ -50,6 +50,12 @@ export {
   type UsenetIndexerLastError,
 } from './repositories/usenet-indexer-metrics.js';
 export {
+  UsenetIndexerSearchesRepository,
+  type UsenetIndexerSearchDelta,
+  type UsenetIndexerSearchRollup,
+  type UsenetIndexerSearchScope,
+} from './repositories/usenet-indexer-searches.js';
+export {
   StreamSessionRepository,
   type StreamTransport,
   type StreamEndReason,

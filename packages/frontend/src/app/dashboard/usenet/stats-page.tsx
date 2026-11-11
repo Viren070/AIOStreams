@@ -25,6 +25,8 @@ import {
   ResetStatsModal,
   type ResetStatsTarget,
 } from './_components/reset-stats-modal';
+import { IndexerSearchTable } from './_components/indexer-searches';
+import { tabIds, ToggleGroup } from './_components/toggle-group';
 import {
   formatBytes,
   formatSpeed,
@@ -872,6 +874,13 @@ function ResetAllButton({
   );
 }
 
+type IndexerView = 'grabs' | 'search';
+
+const INDEXER_VIEWS: { value: IndexerView; label: string }[] = [
+  { value: 'grabs', label: 'Grabs' },
+  { value: 'search', label: 'Search' },
+];
+
 function StatsSection({
   data,
   onReset,
@@ -888,6 +897,9 @@ function StatsSection({
     .slice(0, 6)
     .map((p) => ({ name: p.name || p.host, value: p.articles }));
   const totalGrabs = data.indexers.reduce((s, i) => s + i.grabs, 0);
+  const [indexerView, setIndexerView] = React.useState<IndexerView>('grabs');
+  const indexerTabsId = React.useId();
+  const indexerTab = tabIds(indexerTabsId, indexerView);
   const grabShare = data.indexers
     .filter((i) => i.grabs > 0)
     .slice(0, 6)
@@ -981,8 +993,17 @@ function StatsSection({
       </Card>
 
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold">Indexer performance</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-sm font-semibold">Indexer performance</h3>
+            <ToggleGroup
+              options={INDEXER_VIEWS}
+              value={indexerView}
+              onChange={setIndexerView}
+              idPrefix={indexerTabsId}
+              label="Indexer stats view"
+            />
+          </div>
           <ResetAllButton
             label="Reset all indexer stats"
             onClick={() =>
@@ -990,21 +1011,29 @@ function StatsSection({
             }
           />
         </div>
-        {grabShare.length > 0 ? (
-          <div className="grid lg:grid-cols-[1fr,240px] gap-6 items-center">
-            <IndexerTable indexers={data.indexers} onReset={onReset} />
-            <div className="mx-auto w-full max-w-[240px] aspect-square">
-              <DonutChart
-                data={grabShare}
-                centerLabel="grabs"
-                centerValue={formatCompact(totalGrabs)}
-                height={240}
-              />
+        <div
+          role="tabpanel"
+          id={indexerTab.panel}
+          aria-labelledby={indexerTab.tab}
+        >
+          {indexerView === 'search' ? (
+            <IndexerSearchTable rows={data.indexerSearches} />
+          ) : grabShare.length > 0 ? (
+            <div className="grid lg:grid-cols-[1fr,240px] gap-6 items-center">
+              <IndexerTable indexers={data.indexers} onReset={onReset} />
+              <div className="mx-auto w-full max-w-[240px] aspect-square">
+                <DonutChart
+                  data={grabShare}
+                  centerLabel="grabs"
+                  centerValue={formatCompact(totalGrabs)}
+                  height={240}
+                />
+              </div>
             </div>
-          </div>
-        ) : (
-          <IndexerTable indexers={data.indexers} onReset={onReset} />
-        )}
+          ) : (
+            <IndexerTable indexers={data.indexers} onReset={onReset} />
+          )}
+        </div>
       </Card>
     </div>
   );
