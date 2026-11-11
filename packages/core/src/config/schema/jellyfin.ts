@@ -111,11 +111,22 @@ export const jellyfinSchema = {
     default: 25,
     label: 'Max versions per item',
     description:
-      'Upper bound on how many streams an item offers as versions. Configurations can pick a lower number.',
+      'Upper bound on how many streams an item offers as versions in Jellyfin apps. Configurations can pick a lower number. Neither applies to the AIOStreams app, which has its own limit below.',
     env: 'JELLYFIN_MAX_VERSIONS',
     requiresRestart: false,
     secret: false,
     ui: { min: 1, max: 500 },
+  },
+  maxAppVersions: {
+    schema: z.number().int().min(1).max(10_000),
+    default: 500,
+    label: 'Max versions in the app',
+    description:
+      'How many versions the AIOStreams app lists for a title, whatever Max versions per item is set to. Those past that limit are kept only for a few minutes, so they cost far less, but each one still adds to the search and to the reply. Configurations limit their results with Result Limits.',
+    env: 'JELLYFIN_MAX_APP_VERSIONS',
+    requiresRestart: false,
+    secret: false,
+    ui: { min: 1, max: 10_000 },
   },
   maxPersonas: {
     schema: z.number().int().min(0).max(100),

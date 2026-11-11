@@ -1933,6 +1933,7 @@ const StatusResponseSchema = z.object({
         enabled: z.boolean(),
         /** Cap on versions per item; a configuration may ask for fewer. */
         maxVersions: z.number(),
+        maxAppVersions: z.number(),
         /** `user` leaves the per-configuration switch free; the others force it. */
         resolveOnOpen: z.enum(['always', 'never', 'user']),
         /** How deep a client may page into one library. 0 = uncapped. */

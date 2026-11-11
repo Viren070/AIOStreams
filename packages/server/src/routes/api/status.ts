@@ -65,6 +65,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       jellyfin: {
         enabled: appConfig.jellyfin.enabled === true,
         maxVersions: appConfig.jellyfin.maxVersions,
+        maxAppVersions: appConfig.jellyfin.maxAppVersions,
         resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
         maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
         maxLibraries: libraryLimit(),
