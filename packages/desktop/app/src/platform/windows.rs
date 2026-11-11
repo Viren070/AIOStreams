@@ -15,6 +15,7 @@ use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT,
     WPARAM,
 };
+use windows_sys::Win32::Globalization::{GetLocaleInfoEx, LOCALE_SSHORTTIME};
 use windows_sys::Win32::Graphics::Gdi::{
     BLACK_BRUSH, CreateRoundRectRgn, GetStockObject, SetWindowRgn,
 };
@@ -586,6 +587,21 @@ pub fn fatal(message: &str) -> ! {
 /// The computer's name, which Jellyfin apps give as their device.
 pub fn device_name() -> String {
     std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Windows".into())
+}
+
+/// From the regional format, which WebView2's own formats ignore for the display language.
+pub fn hours24() -> Option<bool> {
+    let mut pattern = [0u16; 80];
+    // SAFETY: the buffer's length is passed with it; a null name is the user's own locale.
+    let len = unsafe {
+        GetLocaleInfoEx(
+            std::ptr::null(),
+            LOCALE_SSHORTTIME,
+            pattern.as_mut_ptr(),
+            pattern.len() as i32,
+        )
+    };
+    (len > 0).then(|| String::from_utf16_lossy(&pattern[..len as usize - 1]).contains('H'))
 }
 
 pub fn total_memory() -> Option<u64> {

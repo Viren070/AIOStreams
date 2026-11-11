@@ -23,6 +23,7 @@
     version: __VERSION__,
     platform: __PLATFORM__,
     miniPlayer: true,
+    hours24: __HOURS24__,
     device: __DEVICE__,
     send,
     subscribe(listener) {

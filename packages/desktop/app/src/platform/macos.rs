@@ -1016,6 +1016,17 @@ pub fn device_name() -> String {
         .unwrap_or_else(|| "Mac".into())
 }
 
+/// The locale's hours, which follow the system's 24-hour switch.
+pub fn hours24() -> Option<bool> {
+    let pattern = objc2_foundation::NSDateFormatter::dateFormatFromTemplate_options_locale(
+        &NSString::from_str("j"),
+        0,
+        Some(&objc2_foundation::NSLocale::currentLocale()),
+    )?
+    .to_string();
+    Some(pattern.contains('H') || pattern.contains('k'))
+}
+
 /// `("2026-09-24", "21:03:04.123")`.
 pub fn local_time() -> (String, String) {
     let mut ts: libc::timespec = unsafe { std::mem::zeroed() };

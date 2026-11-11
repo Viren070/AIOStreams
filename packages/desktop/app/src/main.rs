@@ -260,6 +260,10 @@ fn bridge_script() -> String {
             "__DEVICE__",
             &serde_json::to_string(&platform::device_name()).unwrap(),
         )
+        .replace(
+            "__HOURS24__",
+            &platform::hours24().map_or("undefined".into(), |on| on.to_string()),
+        )
 }
 
 fn main() {
