@@ -38,6 +38,7 @@ import {
   dateFormat,
   duration,
   episodeCode,
+  hourCycle,
   relativeTime,
 } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
@@ -861,6 +862,7 @@ function HistoryTable({
                       ? dateFormat({
                           dateStyle: 'medium',
                           timeStyle: 'short',
+                          ...hourCycle(),
                         }).format(at(entry)!)
                       : '—'}
                   </td>

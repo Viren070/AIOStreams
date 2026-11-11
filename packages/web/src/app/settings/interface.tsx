@@ -3,7 +3,7 @@ import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
 import { useViews } from '@/lib/jellyfin/queries';
-import { libraryLabel } from '@/lib/format';
+import { dateFormat, libraryLabel } from '@/lib/format';
 import { currentHost } from '@/lib/hosts';
 import { HIDDEN_LOCALES, LOCALES, localeName, systemLocale } from '@/lib/i18n';
 import { canRefract } from '@/components/shell/bar-surface';
@@ -19,6 +19,7 @@ import {
   type StartPage,
   type TopBar,
   type TabNames,
+  type TimeFormat,
   type TouchNavigation,
   type TvNavigation,
   HERO_SECONDS,
@@ -225,9 +226,23 @@ function NavigationCard() {
   );
 }
 
-/** The app's own language, each user's. */
+/** Half past seven in the evening, as `cycle` writes it. */
+function sampleTime(cycle: 'h12' | 'h23'): string {
+  const at = new Date();
+  at.setHours(19, 30, 0, 0);
+  return dateFormat({
+    hour: 'numeric',
+    minute: '2-digit',
+    hourCycle: cycle,
+  }).format(at);
+}
+
+/** The app's own language and clock, each user's. */
 function LanguageCard() {
+  const [timeFormat, setTimeFormat] = useSetting(settings.interface.timeFormat);
   const [language, setLanguage] = useSetting(settings.interface.language);
+  const twelve = sampleTime('h12');
+  const twentyFour = sampleTime('h23');
   const listed = LOCALES.filter(
     (l) => !HIDDEN_LOCALES.includes(l) || import.meta.env.DEV || l === language
   )
@@ -246,6 +261,17 @@ function LanguageCard() {
         options={[{ value: 'auto', label: t`System (${system})` }, ...listed]}
         value={LOCALES.includes(language) ? language : 'auto'}
         onValueChange={setLanguage}
+      />
+      <Select
+        label={t`Time format`}
+        help={t`For clocks and times of day, such as the player's clock and the TV guide.`}
+        options={[
+          { value: 'auto', label: t`Automatic` },
+          { value: '12', label: t`12-hour (${twelve})` },
+          { value: '24', label: t`24-hour (${twentyFour})` },
+        ]}
+        value={timeFormat}
+        onValueChange={(value) => setTimeFormat(value as TimeFormat)}
       />
     </SettingsCard>
   );

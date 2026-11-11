@@ -311,6 +311,14 @@ msgstr ""
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "12-hour ({twelve})"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "24-hour ({twentyFour})"
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "5.1 surround"
 msgstr ""
@@ -1779,6 +1787,10 @@ msgstr ""
 
 #: src/app/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "For clocks and times of day, such as the player's clock and the TV guide."
 msgstr ""
 
 #: src/lib/playback/controller.ts
@@ -5038,6 +5050,10 @@ msgstr ""
 
 #: src/app/settings/cache.tsx
 msgid "Three days"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Time format"
 msgstr ""
 
 #: src/app/settings/interface.tsx

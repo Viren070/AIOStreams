@@ -195,6 +195,8 @@ interface ShellBridge {
   miniPlayer?: boolean;
   /** The app sends a controller's buttons as `gamepad` messages. */
   gamepadButtons?: boolean;
+  /** The system's 12- or 24-hour clock, where the app can tell. */
+  hours24?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */

@@ -54,6 +54,9 @@ export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
 export const TOUCH_NAVIGATIONS = ['rail', 'bar', 'top'] as const;
 export type TouchNavigation = (typeof TOUCH_NAVIGATIONS)[number];
 
+export const TIME_FORMATS = ['auto', '12', '24'] as const;
+export type TimeFormat = (typeof TIME_FORMATS)[number];
+
 export const START_PAGES = [
   'home',
   'discover',
@@ -349,6 +352,8 @@ export const settings = {
       (value) => (value === 'auto' ? undefined : value),
       ['aiostreams-web-interface-language']
     ),
+    /** `auto` follows the device. */
+    timeFormat: syncedChoice<TimeFormat>('timeFormat', TIME_FORMATS, 'auto'),
     featured: synced<Featured>(
       'featured',
       parseFeatured,
