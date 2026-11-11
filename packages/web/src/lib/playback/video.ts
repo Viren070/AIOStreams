@@ -42,6 +42,21 @@ function bufferedAhead(el: HTMLVideoElement): number | null {
   return buffered.length ? 0 : null;
 }
 
+const LINK_TYPES = new Map([
+  ['m3u8', 'application/vnd.apple.mpegurl'],
+  ['m3u', 'application/vnd.apple.mpegurl'],
+  ['ts', 'video/mp2t'],
+]);
+
+/** A failed load from another site hides its cause, but a link's type can be asked about. */
+function declinesLink(el: HTMLVideoElement, url: string): boolean {
+  const name = url.split(/[?#]/)[0].split('/').pop() ?? '';
+  const type = LINK_TYPES.get(
+    name.slice(name.lastIndexOf('.') + 1).toLowerCase()
+  );
+  return !!type && !el.canPlayType(type);
+}
+
 interface AudioTrack {
   enabled: boolean;
   label: string;
@@ -329,6 +344,7 @@ export function videoEngine(
                 message:
                   'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
               }),
+              unsupported: declinesLink(el, next.url),
             }),
         };
         for (const [event, handler] of Object.entries(handlers))

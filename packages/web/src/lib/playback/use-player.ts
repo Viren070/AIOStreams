@@ -224,16 +224,18 @@ export function usePlayer(
   const liveSource = !!source.IsInfiniteStream;
   const recovery = useLiveRecovery(liveSource, url, state, {
     reopen,
-    failed: async (retry) => {
+    failed: async (error, retry) => {
       if (await latest.current.onLiveFailed?.()) return;
       patch({
         waiting: false,
-        error: t({
-          comment: 'Follows "Playback failed:"',
-          message: 'the live stream stopped',
-        }),
+        error:
+          error ??
+          t({
+            comment: 'Follows "Playback failed:"',
+            message: 'the live stream stopped',
+          }),
       });
-      setRetry({ label: t`Try again`, run: retry });
+      setRetry(retry && { label: t`Try again`, run: retry });
     },
     showNotice: (shown) => patch({ reconnecting: shown }),
     positionMs: () => playhead.positionMs,
@@ -293,6 +295,8 @@ export function usePlayer(
         });
       }
       case 'failed': {
+        if (recovery && event.unsupported && !recovery.played)
+          return recovery.unsupported(event.error);
         // Another engine's offer comes first for a source that never played here.
         if (recovery && (!event.retry || recovery.played))
           return recovery.dropped(`failed: ${event.error}`);
