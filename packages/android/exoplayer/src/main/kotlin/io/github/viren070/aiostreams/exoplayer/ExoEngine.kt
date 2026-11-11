@@ -638,7 +638,8 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onTracksChanged(tracks: Tracks) {
             this@ExoEngine.tracks.update(tracks)
             if (!tracks.isEmpty) selector.tracksKnown = true
-            if (!chosen && !this@ExoEngine.tracks.isEmpty()) {
+            // Media3's list, not the playable ones: a file with nothing to play has none of those.
+            if (!chosen && !tracks.isEmpty) {
                 chosen = true
                 Failures.undecodable(tracks)?.let { error ->
                     url = null
