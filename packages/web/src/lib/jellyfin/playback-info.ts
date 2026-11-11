@@ -65,6 +65,7 @@ export async function requestPlaybackInfo(
       ...(!opts.sourceId &&
         opts.purpose !== 'download' && { SkipSubtitles: true }),
       ...(opts.refresh && { Refresh: true }),
+      AllVersions: true,
       ...(support.headers && { EnableRequiredHttpHeaders: true }),
       ...(support.youtube && { EnableYouTube: true }),
     },
