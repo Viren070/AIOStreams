@@ -37,6 +37,7 @@ use objc2_quartz_core::{
     CAAutoresizingMask, CACornerMask, CALayer, CAMetalLayer, CAOpenGLLayer, CATransaction,
     kCAContentsFormatRGBA16Float,
 };
+use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::{Icon, Window};
 
@@ -48,6 +49,13 @@ use video::Output;
 /// Custom protocols are served from `<scheme>://localhost` on macOS.
 pub const APP_URL: &str = "aiostreams://localhost/";
 pub const PLATFORM: &str = "macos";
+pub const PIP: bool = false;
+
+pub fn work_area(_window: &Window) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+    None
+}
+
+pub fn keep_aspect(_window: &Window, _aspect: Option<f64>) {}
 pub const WEB_DATA_DIR: &str = "WebKit";
 
 /// Held for as long as the app runs.

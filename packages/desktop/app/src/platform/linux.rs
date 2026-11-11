@@ -19,6 +19,7 @@ use super::small::{Small, event};
 /// Custom protocols are served from `<scheme>://localhost` on Linux.
 pub const APP_URL: &str = "aiostreams://localhost/";
 pub const PLATFORM: &str = "linux";
+pub const PIP: bool = false;
 pub const WEB_DATA_DIR: &str = "WebKit";
 
 /// Held for as long as the app runs.

@@ -40,6 +40,8 @@ const SUBTITLE_LINES: u64 = 1001;
 /// Observed for the app's HDR output.
 const VIDEO_GAMMA: u64 = 1002;
 const VIDEO_PRIMARIES: u64 = 1003;
+/// Observed for the app's picture-in-picture window.
+const VIDEO_ASPECT: u64 = 1004;
 const READ_AHEAD_EVERY: Duration = Duration::from_secs(15);
 const READ_AHEAD_STEPS: usize = 500;
 
@@ -250,6 +252,7 @@ impl Player {
         mpv.observe(REFERENCE_LINES, Kind::String, SUBTITLE_LINES)?;
         mpv.observe("video-params/gamma", Kind::String, VIDEO_GAMMA)?;
         mpv.observe("video-params/primaries", Kind::String, VIDEO_PRIMARIES)?;
+        mpv.observe("video-params/aspect", Kind::Double, VIDEO_ASPECT)?;
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -970,6 +973,13 @@ fn pump(
                         emit(Outbound::VideoColour { gamma, primaries });
                     }
                 }
+                Event::Property {
+                    id: VIDEO_ASPECT,
+                    value,
+                    ..
+                } => emit(Outbound::VideoAspect {
+                    aspect: value.as_f64(),
+                }),
                 Event::Property { name, value, .. } => {
                     follow_subtitle(mpv, subtitles, &name, &value);
                     if name == "track-list"

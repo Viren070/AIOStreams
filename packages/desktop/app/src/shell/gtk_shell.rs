@@ -185,7 +185,7 @@ impl Shell {
                 maximized: self.window.is_maximized(),
             }),
             UserEvent::VideoFrame(frame) => self.video.frame(frame),
-            UserEvent::WindowButtons(_) => {}
+            UserEvent::WindowButtons(_) | UserEvent::Pip(_) => {}
             UserEvent::Link(link) => {
                 self.window.present();
                 let now = self.links.borrow_mut().receive(link);
@@ -247,6 +247,7 @@ fn placement_of(window: &gtk4::Window) -> Placement {
         height: height.max(MIN_SIZE.1 as i32) as u32,
         position: None,
         maximized: window.is_maximized(),
+        pip: None,
     }
 }
 

@@ -28,6 +28,7 @@ use updates::{Command, Updater};
 pub enum UserEvent {
     Emit(String),
     Fullscreen(Option<bool>),
+    Pip(Option<bool>),
     VideoFrame(Option<VideoFrame>),
     Minimize,
     Close,
@@ -256,6 +257,7 @@ fn bridge_script() -> String {
             "__PLATFORM__",
             &serde_json::to_string(platform::PLATFORM).unwrap(),
         )
+        .replace("__PIP__", &platform::PIP.to_string())
         .replace(
             "__DEVICE__",
             &serde_json::to_string(&platform::device_name()).unwrap(),
@@ -352,6 +354,13 @@ fn mpv_config_dir(config_dir: &Path) -> PathBuf {
 }
 
 /// `emit` is called on mpv's event thread.
+static VIDEO_ASPECT: Mutex<Option<f64>> = Mutex::new(None);
+
+#[cfg(not(target_os = "linux"))]
+pub fn video_aspect() -> Option<f64> {
+    VIDEO_ASPECT.lock().ok().and_then(|aspect| *aspect)
+}
+
 pub fn start_player(
     video: &platform::VideoSurface,
     paths: &Paths,
@@ -413,6 +422,12 @@ pub fn start_player(
         }
         if let Outbound::VideoColour { gamma, primaries } = message {
             platform::update_hdr(gamma, primaries);
+            return;
+        }
+        if let Outbound::VideoAspect { aspect } = message {
+            if let Ok(mut shown) = VIDEO_ASPECT.lock() {
+                *shown = aspect;
+            }
             return;
         }
         now_playing::observe(&message);
@@ -680,6 +695,7 @@ pub fn handle(
         },
         Inbound::ExternalClose => external.close(),
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
+        Inbound::Pip { value } => send(UserEvent::Pip(value)),
         Inbound::PlayerFrame { frame } => {
             if let Some(p) = player.as_ref() {
                 let shown = frame.is_none_or(|frame| frame.subtitles);

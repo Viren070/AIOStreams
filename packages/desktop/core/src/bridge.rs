@@ -158,6 +158,10 @@ pub enum Inbound {
     Fullscreen {
         value: Option<bool>,
     },
+    /// Shrinks the window to the video, over other windows; `None` toggles.
+    Pip {
+        value: Option<bool>,
+    },
     /// The video small over the page, where its mini player leaves room; none fills the window
     /// behind the page again.
     PlayerFrame {
@@ -384,6 +388,10 @@ pub enum Outbound {
         gamma: Option<String>,
         primaries: Option<String>,
     },
+    /// For the app's picture-in-picture window; never sent to the page.
+    VideoAspect {
+        aspect: Option<f64>,
+    },
     PlayerEnded {
         reason: &'static str,
         error: Option<String>,
@@ -404,6 +412,9 @@ pub enum Outbound {
         error: Option<String>,
     },
     Fullscreen {
+        value: bool,
+    },
+    Pip {
         value: bool,
     },
     /// A click on the small video (`tap`), a drag of it starting (`grabbed`), where it is as it
