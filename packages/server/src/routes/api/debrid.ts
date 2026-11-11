@@ -21,6 +21,7 @@ import {
   type PlaybackTarget,
   maskSensitiveInfo,
   onPlay,
+  PlayAttemptTracker,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import {
@@ -168,24 +169,36 @@ router.get(
             : Promise.reject(new Error('unparseable fallback url'));
         };
 
+      const tracker = new PlayAttemptTracker();
+      const clickedTarget: PlaybackTarget = {
+        encryptedStoreAuth,
+        fileInfoRaw,
+        metadataId,
+        filename,
+      };
+      const usenetTarget = (item: PlayChainItem) =>
+        item.type === 'usenet' && item.kind !== 'external'
+          ? parsePlaybackUrl(item.url)
+          : undefined;
+
       const attempts: FailoverAttempt[] = [
         {
           label: chain?.clicked
             ? describeChainItem(chain.clicked, 'clicked')
             : describeChainItem({ type: clickedType, filename }, 'clicked'),
           rank: 0,
-          resolve: (signal) =>
-            resolveOwned(
-              { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
-              chain?.clickedProxied,
-              signal
-            ),
+          resolve: tracker.wrap(
+            0,
+            clickedType === 'usenet' ? clickedTarget : undefined,
+            (signal) =>
+              resolveOwned(clickedTarget, chain?.clickedProxied, signal)
+          ),
         },
         ...fallbacks.map(
-          (f): FailoverAttempt => ({
+          (f, i): FailoverAttempt => ({
             label: describeChainItem(f),
             rank: f.rank,
-            resolve: resolveTarget(f),
+            resolve: tracker.wrap(i + 1, usenetTarget(f), resolveTarget(f)),
           })
         ),
       ];
@@ -222,7 +235,17 @@ router.get(
         );
       }
 
-      const run = () => runPlayChain(attempts, runCfg);
+      // Only the request that runs the chain records it, not lock waiters.
+      const run = async () => {
+        let urlWon = false;
+        try {
+          const result = await runPlayChain(attempts, runCfg);
+          urlWon = result.url !== undefined;
+          return result;
+        } finally {
+          void tracker.flush(urlWon);
+        }
+      };
 
       // Share one running chain across concurrent requests for the same click.
       const result = hasFailover

@@ -50,6 +50,14 @@ export {
   type UsenetIndexerLastError,
 } from './repositories/usenet-indexer-metrics.js';
 export {
+  UsenetIndexerAttemptsRepository,
+  type UsenetIndexerAttemptDelta,
+  type UsenetIndexerAttemptScope,
+  type UsenetIndexerAttemptRollup,
+  type UsenetAttemptKind,
+  type UsenetAgeBucket,
+} from './repositories/usenet-indexer-attempts.js';
+export {
   StreamSessionRepository,
   type StreamTransport,
   type StreamEndReason,

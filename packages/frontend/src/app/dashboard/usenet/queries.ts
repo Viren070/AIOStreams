@@ -130,6 +130,29 @@ export interface UsenetIndexerStatRow {
   avgGrabMs: number | null;
   avgImportMs: number | null;
   lastError?: { status?: number; message: string; atMs: number };
+  /** Playback attempts across all usenet services. */
+  playback?: UsenetIndexerPlayback;
+}
+
+export type UsenetAgeBucket =
+  | 'day'
+  | 'week'
+  | 'month'
+  | 'year'
+  | 'older'
+  | 'unknown';
+
+export interface UsenetAttemptCounts {
+  ok: number;
+  failed: number;
+}
+
+export interface UsenetIndexerPlayback {
+  first: UsenetAttemptCounts;
+  firstByAge: Partial<Record<UsenetAgeBucket, UsenetAttemptCounts>>;
+  failover: UsenetAttemptCounts;
+  /** Failovers that played after an earlier attempt failed. */
+  rescues: number;
 }
 
 export interface UsenetStatsOverview {
@@ -351,6 +374,8 @@ export interface UsenetStatsResetResult {
   providerBytes: number;
   indexerRows: number;
   indexerGrabs: number;
+  attemptRows: number;
+  attempts: number;
   lastErrorRows: number;
 }
 

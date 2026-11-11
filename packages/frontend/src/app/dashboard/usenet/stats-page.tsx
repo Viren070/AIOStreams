@@ -20,6 +20,9 @@ import {
   type UsenetProviderStatRow,
   type UsenetIndexerStatRow,
   type UsenetStatsOverview,
+  type UsenetAgeBucket,
+  type UsenetAttemptCounts,
+  type UsenetIndexerPlayback,
 } from './queries';
 import {
   ResetStatsModal,
@@ -631,6 +634,45 @@ function indexerFailBreakdown(i: UsenetIndexerStatRow): string {
   return parts.join(' · ');
 }
 
+const AGE_LABELS: [UsenetAgeBucket, string][] = [
+  ['day', '<1d'],
+  ['week', '<1w'],
+  ['month', '<1m'],
+  ['year', '<1y'],
+  ['older', 'older'],
+];
+
+const tries = (c: UsenetAttemptCounts) => c.ok + c.failed;
+
+function firstTryTitle(p: UsenetIndexerPlayback): string {
+  const ages = AGE_LABELS.flatMap(([bucket, label]) => {
+    const c = p.firstByAge[bucket];
+    return c && tries(c) > 0
+      ? [`${label} ${formatPercent(c.ok / tries(c))}`]
+      : [];
+  });
+  return [`${p.first.ok} of ${tries(p.first)} played`, ...ages].join(' · ');
+}
+
+function FirstTryCell({ playback }: { playback?: UsenetIndexerPlayback }) {
+  const n = playback ? tries(playback.first) : 0;
+  if (!playback || n === 0) {
+    return <td className="py-2 px-3 text-right">—</td>;
+  }
+  const rate = playback.first.ok / n;
+  return (
+    <td
+      className={cn(
+        'py-2 px-3 text-right tabular-nums',
+        1 - rate > 0.1 && 'text-red-400'
+      )}
+      title={firstTryTitle(playback)}
+    >
+      {formatPercent(rate)}
+    </td>
+  );
+}
+
 /** Popover shape mirroring {@link ProviderHealthPopover} for grab errors. */
 function indexerErrorInfo(e: NonNullable<UsenetIndexerStatRow['lastError']>): {
   tone: 'bad' | 'warn';
@@ -726,13 +768,13 @@ function IndexerTable({
   if (indexers.length === 0) {
     return (
       <p className="text-sm text-[--muted]">
-        No grabs recorded in this window yet.
+        No grabs or playback recorded in this window yet.
       </p>
     );
   }
   return (
     <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
-      <table className="w-full text-sm min-w-[720px]">
+      <table className="w-full text-sm min-w-[880px]">
         <thead className="text-[--muted] text-xs uppercase">
           <tr className="text-left border-b border-[--border]">
             <th className="py-2 pr-3">Indexer</th>
@@ -756,6 +798,18 @@ function IndexerTable({
               title="How long the import/inspection of the release took after the grab."
             >
               Avg import
+            </th>
+            <th
+              className="py-2 px-3 text-right"
+              title="Share of first tries (the stream you picked) that played, across all usenet services. Account errors aren't counted. Hover for the rate by post age."
+            >
+              First try
+            </th>
+            <th
+              className="py-2 px-3 text-right"
+              title="Failovers from this indexer that played after an earlier attempt failed."
+            >
+              Rescues
             </th>
             <th className="py-2 pl-3 w-8" aria-label="Actions" />
           </tr>
@@ -805,7 +859,7 @@ function IndexerTable({
                     : undefined
                 }
               >
-                {formatPercent(i.successRate)}
+                {i.grabs > 0 ? formatPercent(i.successRate) : '—'}
               </td>
               <td
                 className="py-2 px-3 text-right tabular-nums"
@@ -818,6 +872,17 @@ function IndexerTable({
               </td>
               <td className="py-2 px-3 text-right tabular-nums">
                 {i.avgImportMs == null ? '—' : formatDurationMs(i.avgImportMs)}
+              </td>
+              <FirstTryCell playback={i.playback} />
+              <td
+                className="py-2 px-3 text-right tabular-nums"
+                title={
+                  i.playback
+                    ? `${i.playback.failover.ok} of ${tries(i.playback.failover)} failovers played`
+                    : undefined
+                }
+              >
+                {i.playback ? formatCompact(i.playback.rescues) : '—'}
               </td>
               <td className="py-2 pl-3 text-right">
                 <Tooltip

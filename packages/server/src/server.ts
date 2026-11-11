@@ -217,7 +217,7 @@ function registerUsenetTasks() {
     id: 'usenet-metrics-prune',
     label: 'Prune old usenet metrics',
     description:
-      'Deletes native usenet provider rollups older than the retention window.',
+      'Deletes usenet provider, indexer and playback-attempt rollups older than the retention window.',
     category: 'usenet',
     kind: 'scheduled',
     intervalMs: 24 * 60 * 60_000,

@@ -256,6 +256,30 @@ const TorrentInfoSchema = BaseFileInfoSchema.extend({
 const TorrentPlaybackInfoSchema =
   BasePlaybackInfoSchema.merge(TorrentInfoSchema);
 
+export const USENET_AGE_BUCKETS = [
+  'day',
+  'week',
+  'month',
+  'year',
+  'older',
+] as const;
+
+/**
+ * Coarse post age, so playback URLs stay stable as a release ages. Addons round
+ * ages up to whole hours, so `<=` keeps posts in the bucket of their real age.
+ */
+export function usenetAgeBucket(
+  ageHours: number | undefined
+): UsenetInfo['ageBucket'] {
+  if (ageHours === undefined || !Number.isFinite(ageHours) || ageHours < 0)
+    return undefined;
+  if (ageHours <= 24) return 'day';
+  if (ageHours <= 24 * 7) return 'week';
+  if (ageHours <= 24 * 30) return 'month';
+  if (ageHours <= 24 * 365) return 'year';
+  return 'older';
+}
+
 const UsenetInfoSchema = BaseFileInfoSchema.extend({
   hash: z.string(),
   easynewsUrl: z.string().optional(),
@@ -263,6 +287,7 @@ const UsenetInfoSchema = BaseFileInfoSchema.extend({
   releaseKey: z.string().regex(WD1_KEY_REGEX).optional().catch(undefined),
   indexer: z.string().optional(),
   infoUrl: z.string().optional(),
+  ageBucket: z.enum(USENET_AGE_BUCKETS).optional().catch(undefined),
   type: z.literal('usenet'),
 });
 

@@ -50,7 +50,7 @@ function impactOf(
   target: UsenetStatsResetTarget,
   r: UsenetStatsResetResult
 ): string {
-  const rows = r.providerRows + r.indexerRows;
+  const rows = r.providerRows + r.indexerRows + r.attemptRows;
   if (rows === 0) return 'Nothing recorded in this range.';
   const detail: string[] = [];
   if (target !== 'indexers' && r.providerRows > 0) {
@@ -60,6 +60,9 @@ function impactOf(
   }
   if (target !== 'providers' && r.indexerRows > 0) {
     detail.push(`${formatCompact(r.indexerGrabs)} grabs`);
+  }
+  if (target !== 'providers' && r.attempts > 0) {
+    detail.push(`${formatCompact(r.attempts)} playback attempts`);
   }
   const plural = rows === 1 ? 'row' : 'rows';
   return `Removes ${formatCompact(rows)} hourly ${plural}${
@@ -122,7 +125,7 @@ export function ResetStatsModal({
         id: target.id,
         sinceMs: sinceMsFor(range),
       });
-      const rows = r.providerRows + r.indexerRows;
+      const rows = r.providerRows + r.indexerRows + r.attemptRows;
       toast.success(
         rows === 0
           ? 'Nothing to reset'
@@ -170,7 +173,11 @@ export function ResetStatsModal({
           <Button
             intent="alert"
             loading={commit.isPending}
-            disabled={preview?.providerRows === 0 && preview?.indexerRows === 0}
+            disabled={
+              preview?.providerRows === 0 &&
+              preview?.indexerRows === 0 &&
+              preview?.attemptRows === 0
+            }
             onClick={submit}
           >
             Reset stats

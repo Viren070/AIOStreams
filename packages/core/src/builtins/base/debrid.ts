@@ -37,6 +37,7 @@ import {
   metadataStore,
   fileInfoStore,
   FileInfo,
+  usenetAgeBucket,
 } from '../../debrid/index.js';
 import {
   processTorrents,
@@ -899,6 +900,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             releaseKey: torrentOrNzb.releaseKey,
             indexer: torrentOrNzb.indexer,
             infoUrl: torrentOrNzb.infoUrl,
+            ageBucket: usenetAgeBucket(torrentOrNzb.age),
             index: torrentOrNzb.file.index,
             easynewsUrl:
               torrentOrNzb.service?.id === 'easynews'

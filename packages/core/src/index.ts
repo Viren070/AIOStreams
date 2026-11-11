@@ -99,6 +99,7 @@ export {
   parsePlaybackUrl,
   decodeFileInfo,
 } from './main/failover.js';
+export { PlayAttemptTracker } from './main/attempt-stats.js';
 export type {
   PlaybackTarget,
   FailoverAttempt,

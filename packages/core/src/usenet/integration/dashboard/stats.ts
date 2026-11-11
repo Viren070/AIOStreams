@@ -3,6 +3,9 @@ import { createLogger } from '../../../logging/logger.js';
 import {
   UsenetMetricsRepository,
   UsenetIndexerMetricsRepository,
+  UsenetIndexerAttemptsRepository,
+  type UsenetAgeBucket,
+  type UsenetIndexerRollup,
   type UsenetMetricDelta,
 } from '../../../db/index.js';
 import {
@@ -94,7 +97,30 @@ export interface UsenetIndexerStatRow {
   avgImportMs: number | null;
   /** Most recent grab-fetch error, regardless of window. */
   lastError?: { status?: number; message: string; atMs: number };
+  /** Playback attempts across all usenet services. */
+  playback?: UsenetIndexerPlayback;
 }
+
+export interface UsenetAttemptCounts {
+  ok: number;
+  failed: number;
+}
+
+export interface UsenetIndexerPlayback {
+  first: UsenetAttemptCounts;
+  firstByAge: Partial<Record<UsenetAgeBucket, UsenetAttemptCounts>>;
+  failover: UsenetAttemptCounts;
+  /** Failovers that played after an earlier attempt failed. */
+  rescues: number;
+}
+
+function addCounts(c: UsenetAttemptCounts, d: UsenetAttemptCounts): void {
+  c.ok += d.ok;
+  c.failed += d.failed;
+}
+
+const firstTries = (p?: UsenetIndexerPlayback): number =>
+  p ? p.first.ok + p.first.failed : 0;
 
 export interface UsenetThroughputPoint {
   bucketMs: number;
@@ -228,11 +254,12 @@ export async function pruneUsenetMetrics(
   retentionDays: number
 ): Promise<number> {
   const cutoff = Date.now() - retentionDays * DAY_MS;
-  const [providerRows, indexerRows] = await Promise.all([
+  const [providerRows, indexerRows, attemptRows] = await Promise.all([
     UsenetMetricsRepository.pruneOlderThan(cutoff),
     UsenetIndexerMetricsRepository.pruneOlderThan(cutoff),
+    UsenetIndexerAttemptsRepository.pruneOlderThan(cutoff),
   ]);
-  return providerRows + indexerRows;
+  return providerRows + indexerRows + attemptRows;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +288,8 @@ export interface UsenetStatsResetResult {
   providerBytes: number;
   indexerRows: number;
   indexerGrabs: number;
+  attemptRows: number;
+  attempts: number;
   lastErrorRows: number;
 }
 
@@ -296,6 +325,9 @@ export async function resetUsenetStats(
   const indexer = touchesIndexers
     ? await UsenetIndexerMetricsRepository.sumScope(indexerScope)
     : { rows: 0, grabs: 0 };
+  const attempt = touchesIndexers
+    ? await UsenetIndexerAttemptsRepository.sumScope(indexerScope)
+    : { rows: 0, attempts: 0 };
 
   // The last-error row carries no hour, so only an unbounded reset can clear it.
   const clearsLastError =
@@ -305,8 +337,10 @@ export async function resetUsenetStats(
   if (!dryRun) {
     if (touchesProviders)
       await UsenetMetricsRepository.deleteScope(providerScope);
-    if (touchesIndexers)
+    if (touchesIndexers) {
       await UsenetIndexerMetricsRepository.deleteScope(indexerScope);
+      await UsenetIndexerAttemptsRepository.deleteScope(indexerScope);
+    }
     if (clearsLastError)
       lastErrorRows = await UsenetIndexerMetricsRepository.deleteLastError(id);
     logger.warn(
@@ -318,6 +352,7 @@ export async function resetUsenetStats(
         untilMs,
         providerRows: provider.rows,
         indexerRows: indexer.rows,
+        attemptRows: attempt.rows,
       },
       'usenet stats reset'
     );
@@ -330,6 +365,8 @@ export async function resetUsenetStats(
     providerBytes: provider.bytes,
     indexerRows: indexer.rows,
     indexerGrabs: indexer.grabs,
+    attemptRows: attempt.rows,
+    attempts: attempt.attempts,
     lastErrorRows,
   };
 }
@@ -404,14 +441,21 @@ export async function getUsenetStatsOverview(
   const { live, pool, cache } = getUsenetLiveStats();
   const poolById = new Map(pool.providers.map((p) => [p.id, p]));
 
-  const [summary, series, firstSeenAt, indexerSummary, indexerErrors] =
-    await Promise.all([
-      UsenetMetricsRepository.summaryByProvider(sinceMs),
-      UsenetMetricsRepository.timeSeries(sinceMs, bucketMs),
-      UsenetMetricsRepository.firstHour(),
-      UsenetIndexerMetricsRepository.summaryByIndexer(sinceMs),
-      UsenetIndexerMetricsRepository.lastErrors(),
-    ]);
+  const [
+    summary,
+    series,
+    firstSeenAt,
+    indexerSummary,
+    indexerErrors,
+    indexerAttempts,
+  ] = await Promise.all([
+    UsenetMetricsRepository.summaryByProvider(sinceMs),
+    UsenetMetricsRepository.timeSeries(sinceMs, bucketMs),
+    UsenetMetricsRepository.firstHour(),
+    UsenetIndexerMetricsRepository.summaryByIndexer(sinceMs),
+    UsenetIndexerMetricsRepository.lastErrors(),
+    UsenetIndexerAttemptsRepository.summary(sinceMs),
+  ]);
   const summaryById = new Map(summary.map((s) => [s.providerId, s]));
 
   const totalArticles = summary.reduce((s, p) => s + p.articles, 0);
@@ -496,9 +540,49 @@ export async function getUsenetStatsOverview(
   // Sort by usage desc, keeping configured-but-idle providers after active ones.
   providers.sort((a, b) => b.articles - a.articles || a.priority - b.priority);
 
+  const playbackByIndexer = new Map<string, UsenetIndexerPlayback>();
+  for (const r of indexerAttempts) {
+    let p = playbackByIndexer.get(r.indexer);
+    if (!p) {
+      p = {
+        first: { ok: 0, failed: 0 },
+        firstByAge: {},
+        failover: { ok: 0, failed: 0 },
+        rescues: 0,
+      };
+      playbackByIndexer.set(r.indexer, p);
+    }
+    if (r.attempt === 'first') {
+      addCounts(p.first, r);
+      addCounts((p.firstByAge[r.ageBucket] ??= { ok: 0, failed: 0 }), r);
+    } else {
+      addCounts(p.failover, r);
+    }
+    p.rescues += r.rescues;
+  }
+
   const lastErrorByIndexer = new Map(indexerErrors.map((e) => [e.indexer, e]));
   const totalGrabs = indexerSummary.reduce((s, i) => s + i.grabs, 0);
-  const indexers: UsenetIndexerStatRow[] = indexerSummary
+  // Indexers only seen in playback (no built-in grabs) get empty grab stats.
+  const grabbed = new Set(indexerSummary.map((i) => i.indexer));
+  const playbackOnly = [...playbackByIndexer.keys()]
+    .filter((indexer) => !grabbed.has(indexer))
+    .map((indexer): UsenetIndexerRollup => ({
+      indexer,
+      grabs: 0,
+      ok: 0,
+      degraded: 0,
+      failed: 0,
+      failedMissing: 0,
+      failedFetch: 0,
+      fetchAuth: 0,
+      fetchLimited: 0,
+      grabSamples: 0,
+      sumGrabMs: 0,
+      importSamples: 0,
+      sumImportMs: 0,
+    }));
+  const indexers: UsenetIndexerStatRow[] = [...indexerSummary, ...playbackOnly]
     .map((agg) => {
       const err = lastErrorByIndexer.get(agg.indexer);
       return {
@@ -524,9 +608,13 @@ export async function getUsenetStatsOverview(
         lastError: err
           ? { status: err.status, message: err.message, atMs: err.atMs }
           : undefined,
+        playback: playbackByIndexer.get(agg.indexer),
       };
     })
-    .sort((a, b) => b.grabs - a.grabs);
+    .sort(
+      (a, b) =>
+        b.grabs - a.grabs || firstTries(b.playback) - firstTries(a.playback)
+    );
 
   const throughput: UsenetThroughputPoint[] = series.map((b) => ({
     bucketMs: b.bucketMs,
