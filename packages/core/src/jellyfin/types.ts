@@ -45,6 +45,8 @@ export interface AiostreamsSourceExtension {
   description: string;
   addon: string;
   service?: string;
+  /** Opaque, and the same from every addon that lists the file. */
+  release?: string;
   cached?: boolean;
   proxied?: boolean;
   resolution?: string;
