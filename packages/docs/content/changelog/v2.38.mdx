@@ -107,8 +107,10 @@ the apps:
   with the file's own subtitles by itself, and one made for another frame rate is retimed first.
 - **Anime upscaling and your own shaders.** See [Anime upscaling](#anime-upscaling).
 - **A stats panel** on **I**.
+- **The screen stays on** while a video plays.
 
-None of it needs setting up.
+None of it needs setting up. On a screen with HDR, turn on **HDR output** under **Settings →
+Playback → Player** to show HDR video in HDR, instead of converted to standard range.
 
 ![Sintel playing in a browser with the WebGPU engine: a styled sign reading The Land of the Gatekeepers over the picture, a subtitle line below it, and the audio menu open on the file's AC-3 5.1 and DTS 5.1 tracks](/changelog/v2.38/browser.webp)
 
@@ -202,6 +204,13 @@ short, as on Home, the first three show. AIOMetadata sends them once its critic 
   their pictures, titles and descriptions until you're on one.
 - **Titles without details.** A title no addon in your configuration has details for now opens,
   with a page saying a metadata addon is needed. A film still plays from it.
+- **Every version.** The app lists up to 500 versions of a title, where before it stopped at your
+  configuration's **Versions per item**, which now applies only to Jellyfin apps. **Result
+  Limits** under **Filters** on the configure page sets how many you get.
+- **Resuming a version that's gone.** If the version you were watching is no longer offered, as
+  when the copy in your debrid library takes its place, resuming plays the same release from the
+  same service. Failing that, with **Auto-play the first version** on, it plays the first version
+  instead of listing them.
 
 ### Home
 
@@ -279,6 +288,11 @@ device asks for reduced motion or your browser is saving data.
 - **The time** shows in the player's top bar.
 - **Find versions when a title opens**, under **Settings → Playback**, looks for versions as soon
   as a title's page opens, so **Play** doesn't wait.
+- **Picture-in-picture button.** A button in the player's controls moves the video into a small
+  window that stays over your other apps. Picture-in-picture is new in a browser and in the desktop
+  app on Windows, where the app's window shrinks to the video with its own controls, keeps the
+  video's shape as you resize it, and opens where you left it. In the Android app on phones and
+  tablets, the button does what leaving the app already did.
 
 ![Sintel paused in the desktop app with the Chapters sheet open beside it, showing a picture for each chapter and Chapter 03 marked as playing](/changelog/v2.38/chapters.webp)
 
@@ -292,6 +306,8 @@ _Sintel_ is © Blender Foundation, shared under
 - **Smoother menus.** On a screen with a high refresh rate, the controls and menus over the video
   move at its fastest rate, while the video itself keeps its own.
 - **Opening the app** shows its logo until the app is ready, instead of a blank screen.
+- **`hwdec` in your `mpv.conf`** now takes effect, where the app's own hardware decoding choice used
+  to win.
 - **Fuller reports.** **Report a problem** sends more of the app's log, and after a crash, what the
   app was doing just before.
 
@@ -302,6 +318,9 @@ _Sintel_ is © Blender Foundation, shared under
 - **Faster on TVs.** Rows scroll with less work, artwork loads nearest first, at the size it's
   drawn, and the player's controls show and hide with about a third of the work they took.
 - **Licences.** **About** lists the open source projects in the app, with their licences.
+- **Time format** under **Settings → Interface** shows times of day, such as the player's clock and
+  the TV guide, in a 12- or 24-hour clock. On **Automatic**, the desktop and Android apps follow the
+  device's own setting.
 - **More to style with custom CSS.** The new pages, the mini player, the player's top bar and
   chapters, and the episode states have hooks. See [Web app CSS](/reference/web-app-css).
 
@@ -375,6 +394,9 @@ may use (`BUILTIN_XTREAM_LINEUP_MEMORY`, `BUILTIN_XTREAM_GUIDE_MEMORY`).
   See [Upgrading](#upgrading).
 - **Max variant work per request**, under **Settings → User Limits** (`MAX_VARIANT_WORK`,
   100000), in place of six variant limits. See [Upgrading](#upgrading).
+- **Max versions in the app**, under **Settings → Media server** (`JELLYFIN_MAX_APP_VERSIONS`,
+  500), how many versions the AIOStreams app lists. **Max versions per item**
+  (`JELLYFIN_MAX_VERSIONS`) now applies only to Jellyfin apps.
 - **Cinemeta**'s address, timeout and user agent, under **Settings → Presets** (`CINEMETA_URL`,
   `DEFAULT_CINEMETA_TIMEOUT`, `DEFAULT_CINEMETA_USER_AGENT`).
 
