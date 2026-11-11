@@ -173,6 +173,44 @@ function groupDuplicates(
   return [...groups.values()];
 }
 
+/**
+ * Per row (`rowOf`): the distinct releases it returned, and those no other
+ * source (`sourceOf`) returned. Matched by filename, or info hash for
+ * torrents, ignoring the user's dedup config; streams with neither are
+ * skipped.
+ */
+export function countUnique(
+  streams: ParsedStream[],
+  sourceOf: (stream: ParsedStream) => string | undefined,
+  rowOf: (stream: ParsedStream) => string | undefined = sourceOf
+): Map<string, { kept: number; unique: number }> {
+  const keysByStream = new Map<ParsedStream, string[]>();
+  for (const s of streams) {
+    if (s.type === 'info') continue;
+    // Usenet's infoHash key is the nzbUrl, which differs per indexer.
+    const isUsenet = s.type === 'usenet' || s.type === 'stremio-usenet';
+    const keys = dedupKeys(
+      s,
+      isUsenet ? ['filename'] : ['filename', 'infoHash']
+    );
+    if (keys.length > 0) keysByStream.set(s, keys);
+  }
+  const counts = new Map<string, { kept: number; unique: number }>();
+  for (const group of groupDuplicates([...keysByStream.keys()], (s) =>
+    keysByStream.get(s)!
+  )) {
+    const alone = new Set(group.map(sourceOf)).size === 1;
+    for (const row of new Set(group.map(rowOf))) {
+      if (!row) continue;
+      const c = counts.get(row) ?? { kept: 0, unique: 0 };
+      c.kept++;
+      if (alone) c.unique++;
+      counts.set(row, c);
+    }
+  }
+  return counts;
+}
+
 class StreamDeduplicator {
   private userData: UserData;
 
