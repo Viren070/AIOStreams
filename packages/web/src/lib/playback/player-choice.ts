@@ -254,7 +254,9 @@ export function playerLink(
     subtitle?: string;
   } = {}
 ): string {
-  const startMs = Math.floor(opts.startMs ?? 0);
+  // A start in the first tenth of a second is none: Vimu reads 2 to 99 as a percentage.
+  const start = Math.floor(opts.startMs ?? 0);
+  const startMs = start < 100 ? 0 : start;
   let filled = template
     .replace('{scheme}', new URL(url, location.href).protocol.slice(0, -1))
     .replace('{positionMs}', String(startMs))
