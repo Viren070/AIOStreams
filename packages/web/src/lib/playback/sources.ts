@@ -1,11 +1,49 @@
 import { storedMap } from '@/lib/storage';
 import type { PlaybackInfoResponse, SourceInfo } from '@/lib/jellyfin/types';
 
-/** The version each item last played in, which resuming it goes straight to. */
-export const lastVersions = storedMap<string>(
+export interface LastVersion {
+  id: string;
+  release?: string;
+  service?: string;
+}
+
+const stored = storedMap<LastVersion | string>(
   'aiostreams-web-last-versions',
   500
 );
+
+/** The version each item last played in, which resuming it goes straight to. */
+export const lastVersions = {
+  get(itemId: string): LastVersion | undefined {
+    const last = stored.get(itemId);
+    return typeof last === 'string' ? { id: last } : last;
+  },
+  set: (itemId: string, last: LastVersion | undefined) =>
+    stored.set(itemId, last),
+};
+
+export const lastVersionOf = (source: SourceInfo): LastVersion => ({
+  id: source.Id!,
+  release: source.aiostreams?.release,
+  service: source.aiostreams?.service,
+});
+
+export function findVersion(
+  sources: SourceInfo[],
+  last: LastVersion | undefined
+): SourceInfo | undefined {
+  if (!last) return undefined;
+  return (
+    sources.find((s) => s.Id === last.id) ??
+    (last.release
+      ? sources.find(
+          (s) =>
+            s.aiostreams?.release === last.release &&
+            s.aiostreams?.service === last.service
+        )
+      : undefined)
+  );
+}
 
 /** Notices from addons carry text only. */
 export function isNotice(source: SourceInfo): boolean {

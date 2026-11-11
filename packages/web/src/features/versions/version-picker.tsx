@@ -18,7 +18,11 @@ import {
 } from '@/lib/downloads';
 import { chosenPlayer } from '@/lib/playback/player-choice';
 import { party } from '@/lib/party/party';
-import { lastVersions, playableSources } from '@/lib/playback/sources';
+import {
+  findVersion,
+  lastVersions,
+  playableSources,
+} from '@/lib/playback/sources';
 import { usePlay } from '@/features/player/use-play';
 import { currentHost } from '@/lib/hosts';
 import { useRestoreFocus } from '@/lib/input';
@@ -173,14 +177,16 @@ export function VersionPickerProvider({
     ) => {
       const { queryClient, infoOptions, playVersion } = latest.current;
       const { replace, playlist } = opts;
-      const last = opts.version ?? rememberedVersion(item, startMs);
+      const last = opts.version
+        ? { id: opts.version }
+        : rememberedVersion(item, startMs);
       // The player page finds the version itself, and lists them if it is gone.
       if (
         !currentHost().play &&
         chosenPlayer().kind !== 'link' &&
         party.state()?.status !== 'live'
       ) {
-        navigate(to.play(item.Id!, last ?? '', startMs, playlist), {
+        navigate(to.play(item.Id!, last?.id ?? '', startMs, playlist), {
           replace,
         });
         return;
@@ -189,7 +195,7 @@ export function VersionPickerProvider({
       try {
         const info = await queryClient.fetchQuery(infoOptions(item.Id!));
         const sources = playableSources(info);
-        const source = sources.find((s) => s.Id === last) ?? sources[0];
+        const source = findVersion(sources, last) ?? sources[0];
         if (!source) setRequest({ item, startMs, replace, playlist });
         else
           await playVersion(item, {

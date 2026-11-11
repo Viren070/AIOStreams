@@ -277,7 +277,7 @@ export function LiveTvPage({
     if (canPreview())
       playDocked({
         itemId: channel.Id!,
-        sourceId: lastVersions.get(channel.Id!) ?? '',
+        sourceId: lastVersions.get(channel.Id!)?.id ?? '',
         startMs: 0,
       });
     else picker.play(channel);

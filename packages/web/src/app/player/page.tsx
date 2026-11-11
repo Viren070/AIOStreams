@@ -22,7 +22,12 @@ import {
   useSegments,
 } from '@/lib/jellyfin/playback-info';
 import { useRefreshAll } from '@/lib/jellyfin/watch-state';
-import { lastVersions, playableSources } from '@/lib/playback/sources';
+import {
+  findVersion,
+  lastVersionOf,
+  lastVersions,
+  playableSources,
+} from '@/lib/playback/sources';
 import { type Live, useLive } from '@/lib/live-value';
 import { chosenPlayer } from '@/lib/playback/player-choice';
 import {
@@ -192,7 +197,10 @@ export function PlayerPage({
   const fetched = useItem(itemId);
   const item = { ...fetched, data: fetched.data ?? local?.item };
   const listed = usePlaybackInfo(itemId, { enabled: !local && !sourceId });
-  const named = sourceId || playableSources(listed.data)[0]?.Id || undefined;
+  const [instead, setInstead] = React.useState<string>();
+  const [autoPlay] = useSetting(settings.playback.autoPlayFirst);
+  const named =
+    instead || sourceId || playableSources(listed.data)[0]?.Id || undefined;
   const info = usePlaybackInfo(itemId, {
     sourceId: named,
     enabled: !local && !!named,
@@ -211,11 +219,22 @@ export function PlayerPage({
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = named ? sources.find((s) => s.Id === named) : sources[0];
-  const missing =
+  const channel = item.data?.Type === 'TvChannel';
+  const gone =
     !playing &&
     !!item.data &&
     (info.data ? !source : !sourceId && !!listed.error);
-  const channel = item.data?.Type === 'TvChannel';
+  // A named version that is gone: its release from another addon, else the
+  // first where the setting skips the list.
+  let standIn: SourceInfo | undefined;
+  if (gone && info.data && !instead && !channel) {
+    const last = lastVersions.get(itemId);
+    standIn =
+      findVersion(sources, last?.id === named ? last : undefined) ??
+      (autoPlay ? sources[0] : undefined);
+    if (standIn) setInstead(standIn.Id!);
+  }
+  const missing = gone && !standIn;
   const zap = useZap(itemId, channel);
   const youTubeId = playing ? undefined : source?.aiostreams?.ytId;
   const youTube = useYouTubeStream(youTubeId);
@@ -401,8 +420,8 @@ function useReporting(
   const lasting = useFeature('versions') || !source.aiostreams;
 
   React.useEffect(() => {
-    if (started && lasting) lastVersions.set(item.Id!, source.Id!);
-  }, [started, lasting, item.Id, source.Id]);
+    if (started && lasting) lastVersions.set(item.Id!, lastVersionOf(source));
+  }, [started, lasting, item.Id, source]);
   React.useEffect(() => {
     if (started && item.Type === 'TvChannel')
       noteChannelPlayed(user.Id!, item.Id!);

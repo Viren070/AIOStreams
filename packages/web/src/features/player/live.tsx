@@ -29,7 +29,7 @@ let previousChannel: string | null = null;
 function zap(from: string, to: string) {
   previousChannel = from;
   rememberChannel(to);
-  zapTo({ itemId: to, sourceId: lastVersions.get(to) ?? '', startMs: 0 });
+  zapTo({ itemId: to, sourceId: lastVersions.get(to)?.id ?? '', startMs: 0 });
 }
 
 export interface Zap {
