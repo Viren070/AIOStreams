@@ -412,7 +412,10 @@ export function useUpNextPrompt({
   React.useEffect(() => {
     if (!counting) return;
     // Stopping at zero, so that reaching it plays on once.
-    const timer = setInterval(() => setLeftMs((ms) => Math.max(0, ms - 250)), 250);
+    const timer = setInterval(
+      () => setLeftMs((ms) => Math.max(0, ms - 250)),
+      250
+    );
     return () => clearInterval(timer);
   }, [counting]);
   React.useEffect(() => {
@@ -503,7 +506,7 @@ export function useUpNextPrompt({
               className="flex-1"
               onClick={() => void playNext()}
             >
-              {counting ? t`Play in ${seconds}s` : t`Play now`}
+              {counting && leftMs > 0 ? t`Play in ${seconds}s` : t`Play now`}
             </PlayerAction>
             <PlayerAction
               data-ui="next-episode-action"
