@@ -23,7 +23,7 @@ import type { PlayerController } from '@/lib/playback/controller';
 import { settings, useSetting } from '@/lib/settings';
 import { delayNotice, syncNotice } from '@/lib/subtitles/delay';
 import { useLatest } from '@/hooks/use-latest';
-import type { BaseItemDto, MediaSegmentDto } from '@/lib/jellyfin/types';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 import {
   ControlButton,
   ControlsShown,
@@ -62,7 +62,7 @@ import { PauseScreen } from './pause-screen';
 import { fitLabel, OptionButtons } from './options';
 import { ScrubStrip } from './scrub-strip';
 import { SeekBar } from './seek-bar';
-import { skipLabel, useSegmentSkip } from './segments';
+import { skipLabel, type Segment, type SegmentSkip } from './segments';
 import { useHeldSpeed } from './speed';
 import { SyncByEar, SyncToLine } from './subtitle-sync';
 import { Volume } from './volume';
@@ -71,6 +71,7 @@ import { createLive, useLive, type LiveWriter } from '@/lib/live-value';
 
 const IDLE_MS = 5000;
 const BRIEF_IDLE_MS = 1500;
+const NO_SEGMENTS: Segment[] = [];
 
 /** Presses closer than this are a held key's repeats. */
 const HELD_GAP_MS = 250;
@@ -88,7 +89,7 @@ interface Transport {
 export function PlayerControls({
   item,
   player,
-  segments: segmentItems,
+  skipping,
   onBack,
   onMinimise,
   onVersions,
@@ -106,7 +107,7 @@ export function PlayerControls({
 }: {
   item: BaseItemDto;
   player: PlayerController;
-  segments: MediaSegmentDto[] | null | undefined;
+  skipping?: SegmentSkip;
   onBack(): void;
   onMinimise?: () => void;
   onVersions?: () => void;
@@ -275,12 +276,6 @@ export function PlayerControls({
       latest.current.togglePlay();
     return true;
   };
-  const { segments, segment, fresh, skip } = useSegmentSkip({
-    items: segmentItems,
-    player,
-    offeringNext,
-    notice: showNotice,
-  });
   const speed = useHeldSpeed(player);
 
   const positionNow = usePositionClock(player);
@@ -377,7 +372,7 @@ export function PlayerControls({
     onBack,
     onPrevious,
     onNext,
-    skipSegment: skip,
+    skipSegment: skipping?.skip,
     speedUp: speed.start,
     zap: channel && { step: channel.step, type: numbers.type },
   });
@@ -603,6 +598,7 @@ export function PlayerControls({
       {!touch && <div className="contents max-lg:hidden">{flash}</div>}
       {seekFlash}
       {notice ||
+        skipping?.notice ||
         (state.reconnecting && <Notice text={t`Reconnecting…`} />) ||
         (player.autoSync?.waiting && <Notice text={t`Syncing subtitles…`} />)}
       {scrub && !tv && (
@@ -662,8 +658,12 @@ export function PlayerControls({
         />
       )}
 
-      {segment && !locked && (
-        <SkipSegment segment={segment} fresh={fresh} onSkip={skip} />
+      {skipping?.segment && !locked && (
+        <SkipSegment
+          segment={skipping.segment}
+          fresh={skipping.fresh}
+          onSkip={skipping.skip}
+        />
       )}
 
       <div
@@ -704,7 +704,7 @@ export function PlayerControls({
             <SeekBar
               playhead={player.playhead}
               durationMs={state.durationMs}
-              segments={segments}
+              segments={skipping?.segments ?? NO_SEGMENTS}
               chapters={player.chapters ?? []}
               previewMs={shownAt}
               previewPicture={!strip && (!!scrub || seekPicture)}
@@ -886,7 +886,7 @@ function SkipSegment({
   fresh,
   onSkip,
 }: {
-  segment: NonNullable<ReturnType<typeof useSegmentSkip>['segment']>;
+  segment: Segment;
   fresh: boolean;
   onSkip?: () => void;
 }) {
@@ -1005,7 +1005,7 @@ function usePlayedMs({ playhead, atMs }: TimeProps): number {
   return atMs ?? seconds * 1000;
 }
 
-function PlayerTime({
+export function PlayerTime({
   durationMs,
   ...props
 }: TimeProps & { durationMs: number }) {

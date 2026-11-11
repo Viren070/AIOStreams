@@ -70,7 +70,6 @@ export type EngineState = Partial<
     | 'fullscreen'
     | 'audio'
     | 'subtitle'
-    | 'pictureInPicture'
     | 'passthrough'
   >
 >;

@@ -7,6 +7,7 @@ import type { PlayerController } from '@/lib/playback/controller';
 import type { PlannedSkip } from '@/lib/playback/engine';
 import type { MediaSegmentDto } from '@/lib/jellyfin/types';
 import { usePlayhead } from '@/lib/playback/playhead';
+import { useNotice } from './feedback';
 import { endsEpisode } from './next-episode';
 
 /** How long the skip button stays once its segment starts, with the controls hidden. */
@@ -55,23 +56,25 @@ const skippedNotice = (s: Segment) =>
     }) as Record<string, string>
   )[s.type] ?? t`Skipped segment`;
 
+export type SegmentSkip = ReturnType<typeof useSegmentSkip>;
+
 /**
- * `fresh` is set for the first few seconds of the offered segment. The player
- * is told which segments it will skip and which it may, so it leaves out the
- * first and fetches past the others early.
+ * `fresh` is set for the first few seconds of the offered segment, and
+ * `notice` says what was skipped automatically. The player is told which
+ * segments it will skip and which it may, so it leaves out the first and
+ * fetches past the others early.
  */
 export function useSegmentSkip({
   items,
   player,
   offeringNext,
-  notice,
 }: {
   items: MediaSegmentDto[] | null | undefined;
   player: PlayerController;
   /** The next episode's card covers skipping the credits. */
   offeringNext: boolean;
-  notice(text: string): void;
 }) {
+  const [notice, showNotice] = useNotice();
   const segments = React.useMemo(() => segmentsOf(items), [items]);
   const [actions] = useSetting(settings.playback.segmentActions);
   const { started } = player.state;
@@ -105,8 +108,8 @@ export function useSegmentSkip({
     skipped.current.add(segmentId(autoSkip));
     if (offeringNext) return;
     latest.current.seek(autoSkip.endMs, SKIP_SNAP_MS);
-    notice(skippedNotice(autoSkip));
-  }, [autoSkip, started, offeringNext, notice, latest]);
+    showNotice(skippedNotice(autoSkip));
+  }, [autoSkip, started, offeringNext, showNotice, latest]);
 
   const [fresh, setFresh] = React.useState(false);
   const offeredId = offered && segmentId(offered);
@@ -141,5 +144,6 @@ export function useSegmentSkip({
     skip: segment
       ? () => latest.current.seek(segment.endMs, SKIP_SNAP_MS)
       : undefined,
+    notice,
   };
 }

@@ -49,8 +49,6 @@ export interface PlayerState {
   subtitleDelayMs: number;
   error: string | null;
   reconnecting?: boolean;
-  /** The video plays in a small window of its own, with nothing over it. */
-  pictureInPicture?: boolean;
   /** The sound goes out undecoded, which a change of speed can't stretch. */
   passthrough?: boolean;
 }

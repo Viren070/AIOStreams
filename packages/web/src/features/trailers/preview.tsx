@@ -498,7 +498,6 @@ function PlayedPreview({
             <PlayerControls
               item={item}
               player={player}
-              segments={null}
               onBack={back}
               caption={trailer.name}
               steps={several ? 'trailer' : undefined}

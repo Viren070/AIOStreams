@@ -83,11 +83,14 @@ import {
   canMinimise,
   closePlayback,
   minimisePlayback,
+  playbackNow,
   playOn,
   setLaunched,
   stopPlayback,
   usePlayback,
 } from '@/lib/playback/session';
+import { leaveAppPip, useAppPip } from '@/lib/hosts/shell/pip';
+import { PictureInPicture } from '@/features/player/picture-in-picture';
 import { noteChannelPlayed } from '@/features/live-tv/live-tv';
 import { useZap, type Zap } from '@/features/player/live';
 import { useAction } from '@/lib/input';
@@ -95,6 +98,7 @@ import { MiniPlayer, type MiniVideoPlace } from '@/features/player/mini-player';
 import { noteLastPlayed } from '@/lib/last-played';
 import { PlayerControls } from '@/features/player/controls';
 import { countPlayedOn, useUpNextPrompt } from '@/features/player/next-episode';
+import { useSegmentSkip } from '@/features/player/segments';
 import {
   useVersionPicker,
   VersionPickerProvider,
@@ -283,6 +287,15 @@ export function PlayerPage({
     picks.isLoading ||
     youTube.isLoading ||
     (missing && !channel);
+  useFullWindowFor(mini || (!playing && !loading));
+  // Unless the next title's page took over.
+  React.useEffect(
+    () => () => {
+      const open = playbackNow();
+      if (!open || open.mini) leaveAppPip();
+    },
+    []
+  );
   const failed = missing
     ? t`Nothing plays on this channel right now.`
     : youTubeId && !youTube.data
@@ -316,6 +329,13 @@ export function PlayerPage({
       )}
     </>
   );
+}
+
+/** The window shrunk to the video takes its size back for what it can't show. */
+function useFullWindowFor(needed: boolean) {
+  React.useEffect(() => {
+    if (needed) leaveAppPip();
+  }, [needed]);
 }
 
 /**
@@ -857,6 +877,12 @@ function Player({
     );
   const queue = useQueue(item, next.playlist);
   const controls = useShowTrackPicks(player, item, source);
+  // Here rather than in a view, so it skips in picture-in-picture too.
+  const skipping = useSegmentSkip({
+    items: segments,
+    player: controls,
+    offeringNext: !!next.element,
+  });
   useReporting(player, { item, source, playSessionId });
   const act = useNowPlaying(item, player, {
     onStop: stop,
@@ -867,16 +893,29 @@ function Player({
   useKeepAwake(player, !hostPlayer);
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
-  const covered =
-    !player.state.pictureInPicture && (!player.state.started || !!launched);
+  const pip = useAppPip();
+  useFullWindowFor(!!failure || next.asking || !!launched);
+  const covered = !pip && (!player.state.started || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const [place, setPlace] = React.useState<MiniVideoPlace | null>(null);
   React.useEffect(() => {
     if (mini) leaveFullscreen();
   }, [mini]);
 
-  if (player.state.pictureInPicture)
-    return <div data-page="player" className="fixed inset-0" />;
+  if (pip)
+    return (
+      <div data-page="player" className="fixed inset-0">
+        {/* Android draws its own controls over the small window. */}
+        {currentHost().name === 'desktop' && (
+          <PictureInPicture
+            player={controls}
+            skipping={skipping}
+            live={!!source.IsInfiniteStream}
+            onClose={stop}
+          />
+        )}
+      </div>
+    );
   // The same element either way, as a new video would start the file again.
   return (
     <div data-page="player" className={mini ? 'contents' : 'fixed inset-0'}>
@@ -959,7 +998,7 @@ function Player({
                 <PlayerControls
                   item={item}
                   player={controls}
-                  segments={segments}
+                  skipping={skipping}
                   onBack={back}
                   onMinimise={minimise}
                   offeringNext={!!next.element}

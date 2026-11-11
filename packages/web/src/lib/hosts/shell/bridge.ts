@@ -189,7 +189,7 @@ interface ShellBridge {
   tv?: boolean;
   /** The Android app on a device with a speech recogniser. */
   voice?: boolean;
-  /** The Android app on a device with picture-in-picture. */
+  /** The app can play in picture-in-picture: the Android app where the device has it, and the Windows app. */
   pip?: boolean;
   /** The app can draw its video small over the page, with `player-frame`. */
   miniPlayer?: boolean;

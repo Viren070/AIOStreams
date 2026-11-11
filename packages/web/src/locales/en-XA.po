@@ -224,10 +224,12 @@ msgid "{shown}×"
 msgstr ""
 
 #: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
 msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
 msgstr ""
 
 #: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
 msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
 msgstr ""
 
@@ -981,6 +983,7 @@ msgstr ""
 #: src/components/shell/crash-report.tsx
 #: src/components/shell/window-controls.tsx
 #: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
 msgid "Close"
 msgstr ""
 
@@ -1664,6 +1667,10 @@ msgstr ""
 #: src/components/shell/window-controls.tsx
 #: src/features/player/options.tsx
 msgid "Exit full screen"
+msgstr ""
+
+#: src/features/player/picture-in-picture.tsx
+msgid "Exit picture-in-picture"
 msgstr ""
 
 #: src/app/settings/playback.tsx
@@ -2485,6 +2492,7 @@ msgstr ""
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr ""
 
+#: src/features/player/picture-in-picture.tsx
 #: src/features/player/volume.tsx
 #: src/lib/input/actions.ts
 msgid "Mute"
@@ -3114,6 +3122,7 @@ msgstr ""
 #: src/app/downloads/page.tsx
 #: src/features/player/controls.tsx
 #: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
 #: src/features/remote/remote-sheet.tsx
 #: src/lib/input/actions.ts
 #: src/lib/input/keys.ts
@@ -3225,6 +3234,7 @@ msgstr ""
 #: src/components/media/random-pick.tsx
 #: src/features/player/controls.tsx
 #: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
 #: src/features/playlists/playlists.tsx
 #: src/features/remote/remote-sheet.tsx
 #: src/lib/input/actions.ts
@@ -3605,6 +3615,7 @@ msgstr ""
 
 #: src/components/shell/unreachable.tsx
 #: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
 msgid "Reconnecting…"
 msgstr ""
 
@@ -5206,6 +5217,7 @@ msgstr ""
 msgid "Unknown language"
 msgstr ""
 
+#: src/features/player/picture-in-picture.tsx
 #: src/features/player/volume.tsx
 msgid "Unmute"
 msgstr ""

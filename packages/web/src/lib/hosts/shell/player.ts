@@ -268,8 +268,6 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
           case 'fullscreen':
             if (!external) report({ fullscreen: m.value });
             return;
-          case 'pip':
-            return report({ pictureInPicture: m.value });
           case 'error':
             return console.warn(m.message);
           case 'external-ended':

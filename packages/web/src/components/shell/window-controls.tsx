@@ -9,6 +9,7 @@ import {
 } from 'react-icons/vsc';
 import { cn } from '@aiostreams/ui/core/styling';
 import { appBridge } from '@/lib/hosts/shell/bridge';
+import { useAppPip } from '@/lib/hosts/shell/pip';
 import { currentHost } from '@/lib/hosts';
 
 const STRIP_PX = 40;
@@ -119,22 +120,24 @@ export function BarWindowButtons() {
  * it, the top edge resizes it (the page covers the one the system offers), and
  * these buttons stand in for the system's, staying in full screen so a mouse
  * can leave it. macOS keeps its own buttons and edges, so only the moving is
- * left to the page there.
+ * left to the page there. In picture-in-picture the player moves the window.
  */
 export function WindowControls() {
   const shell = appBridge()!;
   const native = shell.platform === 'macos';
   const { maximized, fullscreen } = useWindowState();
-  const latest = React.useRef({ maximized, fullscreen });
-  latest.current = { maximized, fullscreen };
+  const pip = useAppPip();
+  const latest = React.useRef({ maximized, fullscreen, pip });
+  latest.current = { maximized, fullscreen, pip };
 
   React.useEffect(() => {
     document.documentElement.dataset.platform = shell.platform;
     const taken = (e: MouseEvent): 'resize' | 'move' | null => {
-      const { maximized, fullscreen } = latest.current;
+      const { maximized, fullscreen, pip } = latest.current;
       if (e.button !== 0 || fullscreen || e.clientY > STRIP_PX) return null;
       if (e.clientY <= EDGE_PX && !maximized && !native) return 'resize';
-      if ((e.target as HTMLElement | null)?.closest(INTERACTIVE)) return null;
+      if (pip || (e.target as HTMLElement | null)?.closest(INTERACTIVE))
+        return null;
       return 'move';
     };
     // The system keeps the release of a press that moves the window, so the
@@ -180,14 +183,16 @@ export function WindowControls() {
           <span className="w-3 cursor-nesw-resize" />
         </div>
       )}
-      <div
-        data-ui="window-controls"
-        data-fullscreen={fullscreen || undefined}
-        data-modal-passthrough
-        className="pointer-events-auto fixed right-2 top-0 z-[9999] flex h-10 items-center gap-1 transition-opacity duration-300"
-      >
-        <WindowButtons maximized={maximized} fullscreen={fullscreen} />
-      </div>
+      {!pip && (
+        <div
+          data-ui="window-controls"
+          data-fullscreen={fullscreen || undefined}
+          data-modal-passthrough
+          className="pointer-events-auto fixed right-2 top-0 z-[9999] flex h-10 items-center gap-1 transition-opacity duration-300"
+        >
+          <WindowButtons maximized={maximized} fullscreen={fullscreen} />
+        </div>
+      )}
     </>
   );
 }

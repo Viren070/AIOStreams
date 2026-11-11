@@ -113,7 +113,6 @@ function Controls({
     <PlayerControls
       item={item}
       player={player}
-      segments={null}
       onBack={onBack}
       caption={trailer.name}
       steps={several ? 'trailer' : undefined}
