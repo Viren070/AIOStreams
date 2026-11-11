@@ -254,6 +254,7 @@ class MainActivity : ComponentActivity() {
                 put("ac3Encoder", AudioEncoder.has("ac3"))
             })
             "fullscreen" -> setFullscreen(message["value"]?.jsonPrimitive?.booleanOrNull ?: !screen.fullscreen)
+            "pip" -> pip.enter()
             "levels" -> bridge.send(buildJsonObject {
                 put("type", "levels")
                 put("volume", levels.volume)
