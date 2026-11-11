@@ -99,7 +99,7 @@ export function Variants() {
           Use it for a second formatter, a different debrid account, or a
           tighter filter set without maintaining a second config.{' '}
           <a
-            href="https://docs.aiostreams.viren070.me/reference/config-expressions"
+            href="https://aiostreams.org/reference/config-expressions"
             target="_blank"
             rel="noreferrer"
             className="underline"

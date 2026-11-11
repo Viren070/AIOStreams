@@ -1127,7 +1127,7 @@ const DESKTOP_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
 const DESKTOP_ASSET_URL =
   'https://github.com/Viren070/AIOStreams/releases/download/desktop/aiostreams-desktop-';
-const DOCS_APPS_URL = 'https://docs.aiostreams.viren070.me/apps';
+const DOCS_APPS_URL = 'https://aiostreams.org/apps';
 const ANDROID_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/download/android/aiostreams-android-arm64-v8a.apk';
 
