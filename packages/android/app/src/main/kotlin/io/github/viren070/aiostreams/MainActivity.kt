@@ -18,6 +18,7 @@ import android.os.Environment
 import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.text.format.DateFormat
 import android.text.format.Formatter
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -180,6 +181,7 @@ class MainActivity : ComponentActivity() {
             PictureInPicture.supported(this),
             miniPlayer = true,
             gamepadButtons = true,
+            hours24 = DateFormat.is24HourFormat(this),
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }
