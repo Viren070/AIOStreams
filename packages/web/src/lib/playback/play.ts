@@ -5,7 +5,11 @@ import { navigate, to } from '../paths';
 import { externalReturnUrl } from './external-return';
 import { chosenPlayer, playerLink } from './player-choice';
 import { directUrl } from './stream';
-import { subtitleUrl, textSubtitles } from '../subtitles/tracks';
+import {
+  preferredSubtitle,
+  subtitleUrl,
+  textSubtitles,
+} from '../subtitles/tracks';
 import { useSession } from '../session';
 import { storedMap } from '../storage';
 import { subtitleLanguages, usePlaybackPrefs } from '../user-config';
@@ -82,9 +86,13 @@ function useOpenLink() {
     const subtitles = ranked
       .map((s) => subtitleUrl(client, s, { original: true }))
       .filter((u): u is string => !!u);
-    // A player that takes one subtitle gets the preferred one, as SRT.
+    // A player that takes one subtitle gets the one the settings start with, as SRT.
+    const preferred = preferredSubtitle(
+      textSubtitles(source).filter((s) => s.DeliveryUrl),
+      prefs
+    );
     const subtitle =
-      (ranked[0] && subtitleUrl(client, ranked[0], { format: 'srt' })) ??
+      (preferred && subtitleUrl(client, preferred, { format: 'srt' })) ??
       undefined;
     window.location.href = playerLink(
       template,
