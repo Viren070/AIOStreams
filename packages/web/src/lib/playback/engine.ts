@@ -164,6 +164,7 @@ export interface PlayerEngine {
   /** Draws the video in `frame` over the page, or back behind it filling the window. */
   setFrame?(frame: VideoFrame | null): void;
   toggleFullscreen?(): void;
+  togglePictureInPicture?(): void;
   /** The text of a subtitle file it was given, null for one it can't read; server ones are read from their address. */
   ownText?(id: string): string | null;
   /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */

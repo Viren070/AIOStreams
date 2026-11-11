@@ -9,6 +9,7 @@ import { nativeShellHost } from './native-shell';
 import { shellHost } from './shell';
 import type { MediaKey } from './shell/bridge';
 import { tizenHost } from './tizen';
+import { keepScreenOn } from './wake-lock';
 import { webosHost } from './webos';
 
 export interface NowPlaying {
@@ -118,7 +119,7 @@ export interface Host {
   watchNext?(items: WatchNextItem[]): void;
 }
 
-const browserHost: Host = { name: 'browser' };
+const browserHost: Host = { name: 'browser', keepAwake: keepScreenOn };
 
 /**
  * Checked on every call, since some apps inject their bridge late or switch

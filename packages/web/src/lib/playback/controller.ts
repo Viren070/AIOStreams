@@ -119,6 +119,7 @@ export interface PlayerController {
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
+  togglePictureInPicture?: () => void;
   setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];

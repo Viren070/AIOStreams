@@ -362,6 +362,8 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     toggleFullscreen: external
       ? () => send('player-set', { fullscreen: !fullscreen })
       : () => shell.send({ type: 'fullscreen' }),
+    togglePictureInPicture:
+      external || !shell.pip ? undefined : () => shell.send({ type: 'pip' }),
     ownText(id) {
       const track = tracks.find((t) => t.id === id && t.external);
       return (track?.title && added.get(track.title)) || null;

@@ -1880,6 +1880,10 @@ msgstr "Hardware decoding"
 msgid "Has a PIN"
 msgstr "Has a PIN"
 
+#: src/app/settings/playback.tsx
+msgid "HDR output"
+msgstr "HDR output"
+
 #: src/features/player/subtitle-sync.tsx
 msgid "Heard"
 msgstr "Heard"
@@ -3169,6 +3173,7 @@ msgid "Pick the version to download."
 msgstr "Pick the version to download."
 
 #: src/app/settings/apps.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Picture-in-picture"
 
@@ -4142,6 +4147,10 @@ msgstr "Shows"
 #: src/app/settings/playback.tsx
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
 msgstr "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+
+#: src/app/settings/playback.tsx
+msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
+msgstr "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
 
 #: src/app/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."

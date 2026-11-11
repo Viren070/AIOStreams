@@ -1879,6 +1879,10 @@ msgstr ""
 msgid "Has a PIN"
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "HDR output"
+msgstr ""
+
 #: src/features/player/subtitle-sync.tsx
 msgid "Heard"
 msgstr ""
@@ -3168,6 +3172,7 @@ msgid "Pick the version to download."
 msgstr ""
 
 #: src/app/settings/apps.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr ""
 
@@ -4140,6 +4145,10 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
 msgstr ""
 
 #: src/app/settings/interface.tsx

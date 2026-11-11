@@ -4,10 +4,10 @@ import React from 'react';
 import {
   LuArrowLeft,
   LuCaptions,
+  LuChevronDown,
   LuLoaderCircle,
   LuLock,
   LuPause,
-  LuPictureInPicture2,
   LuPlay,
   LuRotateCcw,
   LuRotateCw,
@@ -549,7 +549,7 @@ export function PlayerControls({
               label={t`Mini player`}
               onClick={onMinimise}
             >
-              <LuPictureInPicture2 />
+              <LuChevronDown />
             </ControlButton>
           )}
           {touch && !tv && (

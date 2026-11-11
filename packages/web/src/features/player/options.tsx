@@ -21,6 +21,7 @@ import {
   LuMaximize,
   LuMinimize,
   LuMinus,
+  LuPictureInPicture,
   LuPlus,
   LuRatio,
   LuSlidersHorizontal,
@@ -776,6 +777,15 @@ export function OptionButtons({
           onSelect={player.stats.show}
           {...menuState('statistics')}
         />
+      )}
+      {player.togglePictureInPicture && !tv && (
+        <ControlButton
+          name="picture-in-picture"
+          label={t`Picture-in-picture`}
+          onClick={player.togglePictureInPicture}
+        >
+          <LuPictureInPicture />
+        </ControlButton>
       )}
       {player.toggleFullscreen && !tv && (
         <ControlButton

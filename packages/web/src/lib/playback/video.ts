@@ -419,6 +419,15 @@ export function videoEngine(
         fit = nextFit;
       },
       toggleFullscreen: toggleDocumentFullscreen,
+      ...(document.pictureInPictureEnabled && {
+        togglePictureInPicture() {
+          const el = video.current;
+          if (!el) return;
+          if (document.pictureInPictureElement === el)
+            void document.exitPictureInPicture().catch(() => {});
+          else void el.requestPictureInPicture().catch(() => {});
+        },
+      }),
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       ...ownLines(() => embedded),
       subtitleFiles: {

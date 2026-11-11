@@ -490,6 +490,19 @@ const LINK_TOKENS = {
   returnUrl: '{returnUrl}',
 };
 
+function HdrOutputSwitch() {
+  const [hdrOutput, setHdrOutput] = useSetting(settings.video.hdrOutput);
+  return (
+    <Switch
+      side="right"
+      label={t`HDR output`}
+      help={t`Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR.`}
+      value={hdrOutput}
+      onValueChange={setHdrOutput}
+    />
+  );
+}
+
 function UpscalingSwitch() {
   const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
   return (
@@ -595,6 +608,7 @@ function PlayerCard() {
             {browserEngine === 'webgpu' && (
               <>
                 <UpscalingSwitch />
+                <HdrOutputSwitch />
                 <ShaderFilesRow
                   help={t`Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter.`}
                   accept=".wgsl"

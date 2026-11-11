@@ -43,8 +43,11 @@ import { usePendingStops } from '@/lib/playback/reporter';
 import {
   closePlayback,
   leftPlayback,
+  playbackNow,
   usePlayback,
 } from '@/lib/playback/session';
+import { playsWithWebGpu } from '@/lib/playback/player-choice';
+import { warmWebGpu } from '@/lib/playback/webgpu';
 import { settings, useSetting } from '@/lib/settings';
 import { useAction } from '@/lib/input';
 import { VersionPickerProvider } from '@/features/versions/version-picker';
@@ -103,6 +106,26 @@ export function PageBackground() {
 function pageName(pathname: string): string {
   return pathname.split('/')[1] || 'home';
 }
+
+/** Phones and TVs leave it to their first video. */
+function useWebGpuWarmUp() {
+  React.useEffect(() => {
+    if (
+      !playsWithWebGpu() ||
+      currentHost().tv ||
+      !matchMedia('(pointer: fine)').matches
+    )
+      return;
+    const timer = setTimeout(
+      () => void warmWebGpu(() => !!playbackNow()),
+      WARM_UP_AFTER_MS
+    );
+    return () => clearTimeout(timer);
+  }, []);
+}
+
+/** After the app's first pages have loaded what they need. */
+const WARM_UP_AFTER_MS = 10_000;
 
 export function WebLayout() {
   const { switchUser, user } = useSession();
@@ -496,6 +519,7 @@ function PagesWork({
 }) {
   useDiscordBrowsing(pathname);
   usePendingStops();
+  useWebGpuWarmUp();
   useAction('search', () => navigate(to.search()));
   useAction('home', () => navigate(to.home));
   return (

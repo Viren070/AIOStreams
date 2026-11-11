@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import type React from 'react';
 import { currentHost } from '@/lib/hosts';
 import { appLog } from '@/lib/hosts/shell/bridge';
-import type { VideoFit } from '@/lib/settings';
+import { onSettingsChange, settings, type VideoFit } from '@/lib/settings';
 import { plainCueText, type SubtitleCue } from '@/lib/subtitles/cues';
 import {
   embeddedSubtitles,
@@ -87,6 +87,8 @@ interface GpuPlayer {
   setPasses(sources: readonly string[]): Promise<{
     inactivePasses: readonly { name: string; reason: string; detail: string }[];
   }>;
+  setHDROutput(enabled: boolean): Promise<void>;
+  captureStream(): MediaStream | null;
   destroy(): void;
 }
 
@@ -101,6 +103,7 @@ interface GpuEvents {
 
 interface GpuModule {
   isEmbeddedPlayerSupported(): boolean;
+  warmUp(isPlaybackActive: () => boolean): Promise<void>;
   createEmbeddedPlayer(
     surface: { container: HTMLDivElement; video: HTMLVideoElement },
     events: GpuEvents
@@ -124,6 +127,11 @@ function loadModule(): Promise<GpuModule | null> {
     }
   );
   return loading;
+}
+
+/** Runs the engine's decoder tests and compiles its GPU decoders before the first playback needs them. */
+export async function warmWebGpu(isPlaybackActive: () => boolean) {
+  await (await loadModule())?.warmUp(isPlaybackActive);
 }
 
 const GESTURES = ['pointerdown', 'keydown', 'touchend'];
@@ -190,6 +198,21 @@ export function webGpuEngine(
     let detach: (() => void)[] = [];
     let lastClock: { clockMs: number; at: number } | null = null;
     let struggling = false;
+    // Picture-in-picture shows the canvas as a stream in a video of its own.
+    let pip: HTMLVideoElement | null = null;
+    const leavePip = () => {
+      const shown = pip;
+      pip = null;
+      if (!shown) return;
+      if (document.pictureInPictureElement === shown)
+        void document.exitPictureInPicture().catch(() => {});
+      for (const track of (
+        shown.srcObject as MediaStream | null
+      )?.getTracks() ?? [])
+        track.stop();
+      shown.srcObject = null;
+      shown.remove();
+    };
     let dropBase: { shown: number; dropped: number } | null = null;
 
     const set = (state: EngineState) => emit({ type: 'state', state });
@@ -341,6 +364,7 @@ export function webGpuEngine(
       ownTracks = [];
       audioTracks = [];
       size = null;
+      leavePip();
       player?.destroy();
       player = null;
     };
@@ -402,10 +426,12 @@ export function webGpuEngine(
           if (!current()) return;
           if (state === 'playing') {
             paused = false;
+            void pip?.play().catch(() => {});
             embedded?.setPlaying(true);
             set({ started: true, paused: false, waiting: false });
           } else if (state === 'paused') {
             paused = true;
+            pip?.pause();
             set({ paused: true, waiting: false });
           } else if (state === 'ended') emit({ type: 'ended' });
           else set({ waiting: true });
@@ -448,9 +474,12 @@ export function webGpuEngine(
         { container, video: el },
         events(load)
       ));
-      await applyPasses(opened).catch((error: unknown) =>
-        appLog('warn', `webgpu: passes not set: ${String(error)}`)
-      );
+      await Promise.all([
+        applyPasses(opened).catch((error: unknown) =>
+          appLog('warn', `webgpu: passes not set: ${String(error)}`)
+        ),
+        opened.setHDROutput(settings.video.hdrOutput.read()).catch(() => {}),
+      ]);
       if (load !== opening) return;
       const asked = paused;
       const result = await opened.open({
@@ -514,8 +543,15 @@ export function webGpuEngine(
         );
         onFullscreen();
         const drops = setInterval(watchDrops, 1000);
-        detach.push(onUpscalingChange(reapply), onShadersChange(reapply), () =>
-          clearInterval(drops)
+        detach.push(
+          onUpscalingChange(reapply),
+          onShadersChange(reapply),
+          onSettingsChange(() => {
+            void player
+              ?.setHDROutput(settings.video.hdrOutput.read())
+              .catch(() => {});
+          }),
+          () => clearInterval(drops)
         );
         if (next.paused) set({ paused: true });
         if (readsOwnSubtitles(next.source)) {
@@ -587,6 +623,36 @@ export function webGpuEngine(
         fit = next.fit;
       },
       toggleFullscreen: toggleDocumentFullscreen,
+      ...(document.pictureInPictureEnabled &&
+        'captureStream' in HTMLCanvasElement.prototype && {
+          async togglePictureInPicture() {
+            if (pip) return leavePip();
+            const stream = player?.captureStream();
+            if (!stream) return;
+            const shown = document.createElement('video');
+            shown.muted = true;
+            shown.playsInline = true;
+            shown.srcObject = stream;
+            shown.className = 'pointer-events-none absolute size-px opacity-0';
+            (video.current?.parentElement ?? document.body).append(shown);
+            pip = shown;
+            shown.addEventListener('leavepictureinpicture', leavePip);
+            // The window's own play and pause buttons act on this video.
+            shown.addEventListener('pause', () => {
+              if (pip === shown && !paused) player?.pause();
+            });
+            shown.addEventListener('play', () => {
+              if (pip === shown && paused) player?.play();
+            });
+            try {
+              await shown.play();
+              await shown.requestPictureInPicture();
+            } catch (error) {
+              appLog('warn', `webgpu: picture-in-picture: ${String(error)}`);
+              leavePip();
+            }
+          },
+        }),
       ownText: (id) => files.find((f) => f.id === id)?.text ?? null,
       ...ownLines(() => embedded),
       subtitleFiles: {
