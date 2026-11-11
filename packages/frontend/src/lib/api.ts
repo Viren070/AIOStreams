@@ -607,6 +607,7 @@ export interface UserAnalyticsAddon {
   avgRawCount: number;
   avgFinalContribution: number;
   finalShare: number;
+  uniqueShare: number | null;
   cutOffRate: number;
   errorRate: number;
   emptyRate: number;

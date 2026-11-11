@@ -48,6 +48,7 @@ import { appReports } from './0047_app_reports.js';
 import { watchSessionTracks } from './0048_watch_session_tracks.js';
 import { jellyfinPlaylists } from './0049_jellyfin_playlists.js';
 import { watchSessionLive } from './0050_watch_session_live.js';
+import { analyticsUniqueCount } from './0051_analytics_unique_count.js';
 import type { Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -101,6 +102,7 @@ export const MIGRATIONS: readonly Migration[] = [
   watchSessionTracks,
   jellyfinPlaylists,
   watchSessionLive,
+  analyticsUniqueCount,
 ];
 
 export type { Migration } from './types.js';

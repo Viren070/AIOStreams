@@ -286,11 +286,13 @@ export const AnalyticsRepository = {
       latency_ms: number | string | null;
       result_count: number | string | null;
       final_count: number | string | null;
+      kept_count: number | string | null;
+      unique_count: number | string | null;
       service_breakdown: string | null;
     }>(
       sql`SELECT preset_id, addon_instance_hash, addon_name, disposition,
                  status, error_kind, latency_ms, result_count, final_count,
-                 service_breakdown
+                 kept_count, unique_count, service_breakdown
           FROM analytics_events
           WHERE uuid_hash = ${uuidHash}
             AND event_type = 'addon_contribution'
@@ -316,6 +318,8 @@ export const AnalyticsRepository = {
       rawCount: number;
       finalSum: number;
       mergedFinalSum: number;
+      keptSum: number;
+      uniqueSum: number;
     };
     const perAddon = new Map<string, AddonAgg>();
 
@@ -356,6 +360,8 @@ export const AnalyticsRepository = {
           rawCount: 0,
           finalSum: 0,
           mergedFinalSum: 0,
+          keptSum: 0,
+          uniqueSum: 0,
         } satisfies AddonAgg);
 
       // Rows are ordered DESC by ts, so the first non-null value we see is
@@ -378,6 +384,10 @@ export const AnalyticsRepository = {
       const fc = r.final_count != null ? Number(r.final_count) : 0;
       a.finalSum += fc;
       totalFinal += fc;
+      if (r.kept_count != null && r.unique_count != null) {
+        a.keptSum += Number(r.kept_count);
+        a.uniqueSum += Number(r.unique_count);
+      }
 
       switch (r.disposition) {
         case 'merged':
@@ -452,6 +462,9 @@ export const AnalyticsRepository = {
         const finalShare = totalMergedFinal
           ? +((a.mergedFinalSum / totalMergedFinal) * 100).toFixed(1)
           : 0;
+        const uniqueShare = a.keptSum
+          ? +((a.uniqueSum / a.keptSum) * 100).toFixed(1)
+          : null;
         const cutOffRate = a.requests
           ? +((a.cutOff / a.requests) * 100).toFixed(1)
           : 0;
@@ -471,10 +484,12 @@ export const AnalyticsRepository = {
           avgRawCount,
           avgFinalContribution,
           finalShare,
+          uniqueShare,
           cutOffRate,
           errorRate,
           emptyRate,
-          redundant: a.merged >= 5 && finalShare < 1,
+          // Unique share when recorded, else final share (older rows).
+          redundant: a.merged >= 5 && (uniqueShare ?? finalShare) < 1,
           slow: a.requests >= 5 && cutOffRate > 30,
         };
       })

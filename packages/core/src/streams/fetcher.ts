@@ -12,10 +12,11 @@ import {
 } from '../parser/streamExpression.js';
 import StreamFilter from './filterer.js';
 import StreamPrecompute from './precomputer.js';
-import StreamDeduplicator from './deduplicator.js';
+import StreamDeduplicator, { countUniqueByAddon } from './deduplicator.js';
 import { StreamContext } from './context.js';
 import {
   classifyAddonError,
+  userAnalyticsEnabled,
   type AnalyticsDisposition,
   type AnalyticsErrorKind,
   type AnalyticsStatus,
@@ -44,6 +45,8 @@ export interface AddonDispositionInfo {
   latencyMs: number;
   status: AnalyticsStatus;
   errorKind?: AnalyticsErrorKind;
+  keptCount?: number;
+  uniqueCount?: number;
 }
 
 export type AddonDispositionMap = Map<string, AddonDispositionInfo>;
@@ -98,6 +101,8 @@ class StreamFetcher {
       description: string;
     }[] = [];
     let allStreams: ParsedStream[] = [];
+    // Post-filter, pre-dedup streams for the per-addon unique counts.
+    const keptStreams: ParsedStream[] = [];
     let mediaInfoMs = 0;
     const start = Date.now();
 
@@ -263,11 +268,11 @@ class StreamFetcher {
 
       // Blocklist runs before dedup so a flagged candidate never survives
       // as a failover variant harvested from discarded duplicates.
-      const filteredStreams = await this.deduplicate.deduplicate(
-        await this.filter.filterBlocklisted(
-          await this.filter.filter(groupStreams, context)
-        )
+      const keptGroupStreams = await this.filter.filterBlocklisted(
+        await this.filter.filter(groupStreams, context)
       );
+      const filteredStreams =
+        await this.deduplicate.deduplicate(keptGroupStreams);
 
       // Run preferred matching AFTER filter
       await this.precompute.precomputePreferred(filteredStreams, context);
@@ -279,6 +284,7 @@ class StreamFetcher {
       return {
         totalTime: Date.now() - groupStart,
         streams: filteredStreams,
+        keptStreams: keptGroupStreams,
         statistics: groupStatistics,
         errors: groupErrors,
       };
@@ -446,6 +452,7 @@ class StreamFetcher {
               }
 
               allStreams.push(...result.streams);
+              keptStreams.push(...result.keptStreams);
               allErrors.push(...result.errors);
               if (result.statistics) {
                 allStatisticStreams.push(...result.statistics);
@@ -531,6 +538,7 @@ class StreamFetcher {
         const mergeGroupResult = (groupResult: GroupResult | undefined) => {
           if (!groupResult) return;
           allStreams.push(...groupResult.streams);
+          keptStreams.push(...groupResult.keptStreams);
           allErrors.push(...groupResult.errors);
           allStatisticStreams.push(...groupResult.statistics);
           totalTimeTaken = Math.max(totalTimeTaken, groupResult.totalTime);
@@ -647,6 +655,7 @@ class StreamFetcher {
           const groupResult = await fetchAndProcessAddons(groupAddons);
 
           allStreams.push(...groupResult.streams);
+          keptStreams.push(...groupResult.keptStreams);
           allErrors.push(...groupResult.errors);
           allStatisticStreams.push(...groupResult.statistics);
           totalTimeTaken += groupResult.totalTime;
@@ -658,8 +667,18 @@ class StreamFetcher {
       // If no groups configured, fetch from all addons in parallel
       const result = await fetchAndProcessAddons(addons);
       allStreams.push(...result.streams);
+      keptStreams.push(...result.keptStreams);
       allErrors.push(...result.errors);
       allStatisticStreams.push(...result.statistics);
+    }
+
+    if (userAnalyticsEnabled()) {
+      const counts = countUniqueByAddon(keptStreams);
+      for (const [url, info] of dispositions) {
+        const c = counts.get(url);
+        info.keptCount = c?.kept ?? 0;
+        info.uniqueCount = c?.unique ?? 0;
+      }
     }
 
     logger.debug(
