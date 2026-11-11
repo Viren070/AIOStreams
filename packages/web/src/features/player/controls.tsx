@@ -1021,7 +1021,8 @@ function PlayerTime({
       title={showLeft ? t`Show time played` : t`Show time left`}
       className={cn(
         TIME,
-        '-mx-1.5 rounded-md px-1.5 py-0.5 text-gray-200 transition-colors hover:text-white',
+        // Over the space above the seek bar, which takes presses too.
+        'relative z-[1] -mx-1.5 rounded-md px-1.5 py-0.5 text-gray-200 transition-colors hover:text-white',
         SOFT_FOCUS
       )}
       onClick={() => setLeft(!left)}
