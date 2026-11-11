@@ -203,7 +203,8 @@ export function useUpNextPrompt({
     playhead,
     (h) => h.positionMs >= (at ?? durationMs - OPEN_LEAD_MS)
   );
-  const due = !!next && pastPrompt;
+  // Until it starts, a file still has the length of the one before it.
+  const due = !!next && pastPrompt && player.state.started;
   const [dismissed, setDismissed] = React.useState(false);
   // Seeking back before the prompt brings it back next time.
   if (!due && dismissed) setDismissed(false);
