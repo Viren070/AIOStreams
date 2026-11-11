@@ -3,9 +3,11 @@ package io.github.viren070.aiostreams.exoplayer
 import android.content.Context
 import android.media.MediaFormat
 import android.net.Uri
+import android.os.Build
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Choreographer
 import android.view.View
 import androidx.annotation.OptIn
@@ -70,6 +72,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.json.JsonArray
@@ -135,6 +138,10 @@ class ExoEngine(private val context: Context) : Engine {
 
     /** A load or seek waits for its first frame, which mpv reports as `playback-restart`. */
     private var restarting = false
+
+    /** Where the tunnel's video was last restarted, and when. */
+    private var resyncedAtMs = Long.MIN_VALUE / 2
+    private var resyncedAtRealtimeMs = 0L
     private var volume = 100.0
     private var muted = false
     private var skips: List<Skip> = emptyList()
@@ -228,6 +235,16 @@ class ExoEngine(private val context: Context) : Engine {
         restarting = true
         state(PlayerState(seeking = true))
         updatePolling()
+    }
+
+    /** Not twice at one place: a stream whose sound changes format there would be sent back before it for ever. */
+    private fun resync() {
+        val position = player.currentPosition
+        val now = SystemClock.elapsedRealtime()
+        if (abs(position - resyncedAtMs) < RESYNC_SPAN_MS && now - resyncedAtRealtimeMs < RESYNC_SPAN_MS) return
+        resyncedAtMs = position
+        resyncedAtRealtimeMs = now
+        seek((position - RESYNC_BACK_MS).coerceAtLeast(0).toDouble())
     }
 
     override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
@@ -709,6 +726,11 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
             audioTrack = audioTrackConfig
+            // An Amlogic tunnel's video waits for the sound to start again and
+            // never hears that a new audio output did: the picture stands
+            // still while the sound plays on. A seek restarts both; Exo skips
+            // one to where it already is, so it goes back a moment.
+            if (player.isTunnelingEnabled && AMLOGIC && loaded && !restarting && url != null) resync()
             val passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)
             if (passthrough) decoders.remove("audio")
             state(PlayerState(passthrough = passthrough))
@@ -717,6 +739,9 @@ class ExoEngine(private val context: Context) : Engine {
 
     private companion object {
         const val TAG = "exo"
+        const val RESYNC_BACK_MS = 100L
+        const val RESYNC_SPAN_MS = 3000L
+        val AMLOGIC = Build.VERSION.SDK_INT >= 31 && Build.SOC_MANUFACTURER.equals("Amlogic", ignoreCase = true)
         const val POLL_MS = 250L
         const val IDLE_POLL_MS = 1000L
         const val IDLE_POLLS = 10
