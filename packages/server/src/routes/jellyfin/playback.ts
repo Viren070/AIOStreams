@@ -234,6 +234,13 @@ function pickSource(
     : memo.sources.find((s) => !s.needs);
 }
 
+function fieldsOf(req: Request): ReadonlySet<string> | undefined {
+  const asked = qs(req, 'MediaSourceFields');
+  return asked
+    ? new Set(asked.split(',').map((f) => f.trim().toLowerCase()))
+    : undefined;
+}
+
 function playSupportOf(req: Request): PlaySupport {
   const body = bodyOf(req);
   return {
@@ -315,6 +322,7 @@ async function playbackInfo(req: Request, res: Response) {
     support,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
+    fields: fieldsOf(req),
   });
   res.json({ MediaSources: sources, PlaySessionId: memo.psid });
 }

@@ -936,6 +936,7 @@ export function mediaSourcesFrom(
     tracks: TrackPreferences;
     requestedMsid?: string;
     offered?: MediaSourceRecord[];
+    fields?: ReadonlySet<string>;
     support?: PlaySupport;
     profile?: DeviceProfile;
     hasSegments?: boolean;
@@ -976,6 +977,7 @@ export function mediaSourcesFrom(
       noticePath: nothingToPlayPath(req, ctx),
       tracks: opts.tracks,
       originalLanguage: memo.titleMetadata?.originalLanguage,
+      fields: opts.fields,
     })
   );
 }
