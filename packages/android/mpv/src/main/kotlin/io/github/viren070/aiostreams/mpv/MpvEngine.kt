@@ -301,18 +301,28 @@ class MpvEngine(private val context: Context) : Engine {
             else -> "mediacodec,mediacodec-copy"
         }
         // Any setting sends them all, and setting it mid-file overrides the file's own choice.
-        if (hwdec != this.hwdec) {
+        if (!configSets("hwdec") && hwdec != this.hwdec) {
             this.hwdec = hwdec
             set("hwdec", hwdec)
         }
         set("audio-channels", settings.audioChannels.takeIf { it in setOf("stereo", "5.1", "7.1") } ?: "auto-safe")
         set("audio-spdif", settings.passthrough.joinToString(","))
         set("audio-delay", seconds(settings.audioDelayMs))
-        // The user's mpv.conf may size it instead.
-        if (configFile(context).takeIf { it.exists() }?.readText()?.contains("demuxer-max-bytes") != true) {
+        if (!configSets("demuxer-max-bytes")) {
             val budget = CacheBudget.bytes(context, settings.cacheMb)
             set("demuxer-max-bytes", (budget - budget / 4).toString())
             set("demuxer-max-back-bytes", (budget / 4).toString())
+        }
+    }
+
+    /** Whether the user's mpv.conf sets `name` for every file, which the app's settings then leave to it. */
+    private fun configSets(name: String): Boolean {
+        val file = configFile(context).takeIf { it.exists() } ?: return false
+        var everyFile = true
+        return file.readLines().any { raw ->
+            val line = raw.trim()
+            if (line.startsWith("[")) everyFile = line == "[default]"
+            everyFile && line.substringBefore('=').trim().removePrefix("--") == name
         }
     }
 
