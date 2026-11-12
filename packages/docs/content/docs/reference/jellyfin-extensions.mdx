@@ -158,10 +158,11 @@ does.
 The view carries `"aiostreams": { "guide": true }` when one of its catalogs is a guide. The app offers
 its guide then, or when a channel on the first page of `/LiveTv/Channels` has a `CurrentProgram`.
 
-Its groups are the genres of the Live TV view, from `/Genres?ParentId={view}`. The app asks for a
-group's channels with `/LiveTv/Channels?GenreIds={genre}`, which Jellyfin itself doesn't filter by;
-a server without groups lists no genres there, and the app shows all its channels together.
-Favourite channels come from `/LiveTv/Channels?IsFavorite=true`.
+With `"aiostreams": { "groups": true }` on the view, its genres, from `/Genres?ParentId={view}`, are
+its channels' groups. The app asks for a group's channels with `/LiveTv/Channels?GenreIds={genre}`,
+which Jellyfin itself doesn't filter by. Without it the app offers no groups, as Jellyfin's genres
+there are its programmes', and shows all channels together. Favourite channels come from
+`/LiveTv/Channels?IsFavorite=true`.
 
 A programme its channel keeps carries `"aiostreams": { "catchup": true }`, and plays from its start
 by its own id: `PlaybackInfo` and the stream answer with its archive rather than the channel live.
