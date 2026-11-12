@@ -105,7 +105,7 @@ function SegmentActionSelect({ type }: { type: SegmentType }) {
 }
 
 export function PlaybackSection() {
-  const { prefs, update } = usePlaybackPrefs();
+  const { prefs, update, locked } = usePlaybackPrefs();
   const [seekStep, setSeekStep] = useSetting(settings.controls.seekStep);
   const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
   const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
@@ -196,6 +196,7 @@ export function PlaybackSection() {
               : t`Counts down, then plays the next episode. Off, the prompt waits for you.`
           }
           value={autoplay}
+          disabled={locked}
           onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
         />
         <Switch

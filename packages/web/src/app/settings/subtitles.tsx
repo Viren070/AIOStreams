@@ -80,7 +80,7 @@ const subtitleTypeOptions = (): { value: SubtitleType; label: string }[] => [
 ];
 
 export function SubtitlesSection() {
-  const { prefs, update } = usePlaybackPrefs();
+  const { prefs, update, locked } = usePlaybackPrefs();
   const mode: SubtitleMode = prefs.SubtitleMode ?? 'Default';
   const subtitleLists = Array.isArray(prefs.SubtitleLanguages);
   const [size, setSize] = useSetting(settings.subtitle.size);
@@ -110,54 +110,56 @@ export function SubtitlesSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount()}
+        description={onAccount(locked)}
       >
-        <LanguageList
-          label={t`Subtitle languages`}
-          help={t`Tried in order for the subtitles the setting below shows.`}
-          options={languageOptions()}
-          value={subtitleLanguages(prefs)}
-          max={subtitleLists ? undefined : 1}
-          onChange={(next) =>
-            update({
-              ...(subtitleLists && { SubtitleLanguages: next }),
-              SubtitleLanguagePreference: next[0] ?? '',
-            })
-          }
-        />
-        <Select
-          label={t`Subtitles`}
-          help={modes.find((m) => m.value === mode)?.help}
-          options={modes.map(({ value, label }) => ({ value, label }))}
-          value={mode}
-          onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
-        />
-        {Array.isArray(prefs.SubtitleTypes) && (
+        <fieldset disabled={locked} className="contents">
           <LanguageList
-            label={t`Subtitle types`}
-            help={t`When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last.`}
-            options={subtitleTypeOptions()}
-            value={subtitleTypes(prefs)}
-            fixed
-            onChange={(next) => update({ SubtitleTypes: next })}
+            label={t`Subtitle languages`}
+            help={t`Tried in order for the subtitles the setting below shows.`}
+            options={languageOptions()}
+            value={subtitleLanguages(prefs)}
+            max={subtitleLists ? undefined : 1}
+            onChange={(next) =>
+              update({
+                ...(subtitleLists && { SubtitleLanguages: next }),
+                SubtitleLanguagePreference: next[0] ?? '',
+              })
+            }
           />
-        )}
-        {typeof prefs.ListPreferredSubtitlesOnly === 'boolean' && (
+          <Select
+            label={t`Subtitles`}
+            help={modes.find((m) => m.value === mode)?.help}
+            options={modes.map(({ value, label }) => ({ value, label }))}
+            value={mode}
+            onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
+          />
+          {Array.isArray(prefs.SubtitleTypes) && (
+            <LanguageList
+              label={t`Subtitle types`}
+              help={t`When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last.`}
+              options={subtitleTypeOptions()}
+              value={subtitleTypes(prefs)}
+              fixed
+              onChange={(next) => update({ SubtitleTypes: next })}
+            />
+          )}
+          {typeof prefs.ListPreferredSubtitlesOnly === 'boolean' && (
+            <Switch
+              side="right"
+              label={t`List only my languages`}
+              help={t`The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages.`}
+              value={prefs.ListPreferredSubtitlesOnly}
+              onValueChange={(v) => update({ ListPreferredSubtitlesOnly: v })}
+            />
+          )}
           <Switch
             side="right"
-            label={t`List only my languages`}
-            help={t`The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages.`}
-            value={prefs.ListPreferredSubtitlesOnly}
-            onValueChange={(v) => update({ ListPreferredSubtitlesOnly: v })}
+            label={t`Remember picks per show`}
+            help={t`Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it.`}
+            value={prefs.RememberSubtitleSelections !== false}
+            onValueChange={(v) => update({ RememberSubtitleSelections: v })}
           />
-        )}
-        <Switch
-          side="right"
-          label={t`Remember picks per show`}
-          help={t`Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it.`}
-          value={prefs.RememberSubtitleSelections !== false}
-          onValueChange={(v) => update({ RememberSubtitleSelections: v })}
-        />
+        </fieldset>
       </SettingsCard>
       <SettingsCard name="preview" title={t`Preview`}>
         <div className="relative aspect-[16/5] rounded-lg bg-gradient-to-br from-gray-700 to-gray-950">

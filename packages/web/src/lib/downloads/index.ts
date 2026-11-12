@@ -41,6 +41,12 @@ export function downloadsHost(): DownloadsHost | null {
   return currentHost().downloads ?? null;
 }
 
+/** Whether this device can start downloads that the server allows the user. */
+export function useMayDownload(): boolean {
+  const { user } = useSession();
+  return !!downloadsHost() && user.Policy?.EnableContentDownloading !== false;
+}
+
 const downloadSupport = () => ({
   headers: !!downloadsHost()?.headers,
   youtube: false,

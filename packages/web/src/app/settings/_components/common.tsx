@@ -12,8 +12,10 @@ import { focusOn } from '@/lib/input';
 import { SettingsRow } from './settings-card';
 
 export const onDevice = () => t`Kept on this device.`;
-export const onAccount = () =>
-  t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
+export const onAccount = (locked?: boolean) =>
+  locked
+    ? t`This server doesn't let your account change these.`
+    : t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
 export const followsYou = () =>
   t`Saved to your account, so it follows you to every device.`;
 

@@ -56,7 +56,7 @@ const passthroughHelp = (passthrough: Passthrough) =>
   })[passthrough];
 
 export function AudioSection() {
-  const { prefs, update } = usePlaybackPrefs();
+  const { prefs, update, locked } = usePlaybackPrefs();
   const audio = audioLanguages(prefs);
   const audioLists = Array.isArray(prefs.AudioLanguages);
   return (
@@ -64,50 +64,52 @@ export function AudioSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount()}
+        description={onAccount(locked)}
       >
-        <LanguageList
-          label={t`Audio languages`}
-          help={t`A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in.`}
-          options={[
-            { value: ORIGINAL_LANGUAGE, label: t`Original language` },
-            ...languageOptions(),
-          ]}
-          value={audio}
-          max={audioLists ? undefined : 1}
-          onChange={(next) =>
-            update({
-              ...(audioLists && { AudioLanguages: next }),
-              AudioLanguagePreference: next[0] ?? '',
-            })
-          }
-        />
-        {audio.length > 0 && (
+        <fieldset disabled={locked} className="contents">
+          <LanguageList
+            label={t`Audio languages`}
+            help={t`A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in.`}
+            options={[
+              { value: ORIGINAL_LANGUAGE, label: t`Original language` },
+              ...languageOptions(),
+            ]}
+            value={audio}
+            max={audioLists ? undefined : 1}
+            onChange={(next) =>
+              update({
+                ...(audioLists && { AudioLanguages: next }),
+                AudioLanguagePreference: next[0] ?? '',
+              })
+            }
+          />
+          {audio.length > 0 && (
+            <Switch
+              side="right"
+              label={t`Play the version's default track first`}
+              help={t`A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win.`}
+              value={prefs.PlayDefaultAudioTrack !== false}
+              onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+            />
+          )}
+          {Array.isArray(prefs.AudioTypes) && (
+            <LanguageList
+              label={t`Audio types`}
+              help={t`When a version has more than one kind of audio track, the first of these it has plays.`}
+              options={audioTypeOptions()}
+              value={audioTypes(prefs)}
+              fixed
+              onChange={(next) => update({ AudioTypes: next })}
+            />
+          )}
           <Switch
             side="right"
-            label={t`Play the version's default track first`}
-            help={t`A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win.`}
-            value={prefs.PlayDefaultAudioTrack !== false}
-            onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+            label={t`Remember picks per show`}
+            help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it.`}
+            value={prefs.RememberAudioSelections !== false}
+            onValueChange={(v) => update({ RememberAudioSelections: v })}
           />
-        )}
-        {Array.isArray(prefs.AudioTypes) && (
-          <LanguageList
-            label={t`Audio types`}
-            help={t`When a version has more than one kind of audio track, the first of these it has plays.`}
-            options={audioTypeOptions()}
-            value={audioTypes(prefs)}
-            fixed
-            onChange={(next) => update({ AudioTypes: next })}
-          />
-        )}
-        <Switch
-          side="right"
-          label={t`Remember picks per show`}
-          help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it.`}
-          value={prefs.RememberAudioSelections !== false}
-          onValueChange={(v) => update({ RememberAudioSelections: v })}
-        />
+        </fieldset>
       </SettingsCard>
       {shellHost() && (
         <>

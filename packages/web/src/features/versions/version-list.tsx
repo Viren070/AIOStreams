@@ -34,6 +34,7 @@ import { directUrl } from '@/lib/playback/stream';
 import {
   downloadable,
   useAddDownloads,
+  useMayDownload,
   useReplaceVersion,
   type Download,
 } from '@/lib/downloads';
@@ -108,6 +109,7 @@ export function Versions({
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const addDownloads = useAddDownloads();
+  const mayDownload = useMayDownload();
   const replaceVersion = useReplaceVersion();
   const download = request.download;
   const [startMs, setStartMs] = React.useState(request.startMs);
@@ -495,7 +497,7 @@ export function Versions({
             return <Notice key={source.Id} notice={source} />;
           const link = directUrl(client, item.Id!, source);
           const actions = [
-            ...(!download && downloadable(source)
+            ...(!download && mayDownload && downloadable(source)
               ? [
                   {
                     name: 'download',

@@ -72,10 +72,15 @@ export function usePlaybackPrefs() {
     },
   });
   const prefs = (query.data ?? {}) as PlaybackPrefs;
+  // A server can keep a user from changing their own configuration.
+  const locked = user.Policy?.EnableUserPreferenceAccess === false;
   return {
     prefs,
     isLoading: query.isLoading,
-    update: (patch: PlaybackPrefs) =>
-      save.mutate({ ...(query.data ?? {}), ...patch } as Configuration),
+    locked,
+    update: (patch: PlaybackPrefs) => {
+      if (!locked)
+        save.mutate({ ...(query.data ?? {}), ...patch } as Configuration);
+    },
   };
 }

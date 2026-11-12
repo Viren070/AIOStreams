@@ -43,6 +43,7 @@ import {
   downloadsHost,
   useDownloadOf,
   useEpisodesToDownload,
+  useMayDownload,
 } from '@/lib/downloads';
 import {
   useStraightPlay,
@@ -97,6 +98,7 @@ function DownloadEntry({
   const picker = useVersionPicker();
   const episodes = useEpisodesToDownload();
   const download = useDownloadOf(item.Id);
+  const mayDownload = useMayDownload();
   if (!downloadsHost() || (!playable && item.Type !== 'Series')) return null;
   if (download)
     return (
@@ -107,6 +109,7 @@ function DownloadEntry({
         <BiDownload /> <Trans>See the download</Trans>
       </ContextMenuItem>
     );
+  if (!mayDownload) return null;
   return (
     <ContextMenuItem
       data-name="download"

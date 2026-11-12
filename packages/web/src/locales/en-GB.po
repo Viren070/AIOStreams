@@ -5035,6 +5035,10 @@ msgstr "This server"
 msgid "This server can't list what you've watched."
 msgstr "This server can't list what you've watched."
 
+#: src/app/settings/_components/common.tsx
+msgid "This server doesn't let your account change these."
+msgstr "This server doesn't let your account change these."
+
 #: src/app/item/_components/no-details.tsx
 msgid "This server has no details for {id}."
 msgstr "This server has no details for {id}."
