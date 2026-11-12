@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-12 01:14+0000\n"
+"PO-Revision-Date: 2026-11-12 18:26+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -824,7 +824,7 @@ msgstr "Ao focar em um card"
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
-msgstr "Cartões"
+msgstr "Cards"
 
 #: src/components/media/people.tsx
 msgid "Cast"
@@ -3782,7 +3782,7 @@ msgstr "Role para cima para ver os controles"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
-msgstr "LSE"
+msgstr "SDH"
 
 #: src/app/settings/subtitles.tsx
 msgid "SDH, with sounds described"
@@ -5465,7 +5465,7 @@ msgstr "Quem está assistindo?"
 
 #: src/app/settings/subtitles.tsx
 msgid "Width"
-msgstr "Largura"
+msgstr "Espessura"
 
 #: src/lib/input/keys.ts
 msgid "Win"
