@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-11 23:55+0000\n"
+"PO-Revision-Date: 2026-11-12 00:47+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -2705,9 +2705,8 @@ msgid "Now: {shown}"
 msgstr "Agora: {shown}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Nowhere"
-msgstr "Nada aqui."
+msgstr "Nenhum"
 
 #: src/app/settings/theme.tsx
 msgid "Ocean"
@@ -2725,7 +2724,7 @@ msgstr "Desativado nesta visita porque o endereço termina em <0>?safe</0>. Corr
 
 #: src/app/settings/interface.tsx
 msgid "Off, a trailer still plays with sound once you open it whole."
-msgstr ""
+msgstr "Mesmo com esta opção desativada, o trailer terá som ao ser aberto."
 
 #: src/features/party/in-party.tsx
 msgid "Off, the video jumps instead."
@@ -2733,7 +2732,7 @@ msgstr "Desativado — o vídeo passa a dar pequenos saltos."
 
 #: src/components/shell/usage-stats.tsx
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/app/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
@@ -2761,7 +2760,7 @@ msgstr "Em telas largas"
 
 #: src/components/shell/usage-stats.tsx
 msgid "Once a day, the app sends an anonymous count with your type of device, system, app version, language, and country and region. Nothing that identifies you or what you watch is kept."
-msgstr ""
+msgstr "O app envia diariamente estatísticas anônimas de uso, com o tipo de dispositivo, sistema operacional, versão do app, idioma, país e região. Não armazena dados que identifiquem você nem o que assiste."
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
@@ -2769,7 +2768,7 @@ msgstr "Após selecionar um dos controles, use as teclas de seta para navegar en
 
 #: src/app/settings/interface.tsx
 msgid "Once you rest on a title for a moment. In the hero, only one you went to."
-msgstr ""
+msgstr "O trailer começa após manter o foco no título por alguns instantes. No destaque, só ao navegar até ele."
 
 #: src/lib/subtitles/files.ts
 msgid "Only {names} files can be added"
@@ -2843,7 +2842,7 @@ msgstr "Abrir a pasta de downloads do aplicativo"
 
 #: src/app/settings/interface.tsx
 msgid "Opens out to its details"
-msgstr ""
+msgstr "Expande para mostrar detalhes"
 
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
@@ -3126,9 +3125,8 @@ msgid "Play anyway"
 msgstr "Reproduzir mesmo assim"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Play by themselves"
-msgstr "Reproduzir a primeira versão"
+msgstr "Onde reproduzir automaticamente"
 
 #: src/app/item/_components/header.tsx
 msgid "Play from the start"
@@ -3221,9 +3219,8 @@ msgid "Playback"
 msgstr "Reprodução"
 
 #: src/app/item/_components/trailer.tsx
-#, fuzzy
 msgid "Playback controls"
-msgstr "Reprodução"
+msgstr "Controles de reprodução"
 
 #: src/features/player/mini-player.tsx
 msgid "Playback failed"
@@ -3299,9 +3296,8 @@ msgid "Plays the video."
 msgstr "Reproduz o vídeo."
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Pops out a preview"
-msgstr "Pular prévia"
+msgstr "Abre uma prévia"
 
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
@@ -3329,7 +3325,7 @@ msgstr "Pressione Voltar novamente para sair"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Press Up for playback controls"
-msgstr ""
+msgstr "Pressione ↑ para ver os controles"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
@@ -3452,7 +3448,7 @@ msgstr "Reações"
 
 #: src/app/settings/playback.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
-msgstr ""
+msgstr "Lê e decodifica o arquivo, usando a placa de vídeo para exibir a imagem. Reproduz formatos que o navegador não suporta, como HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD e DTS. Se não conseguir reproduzir uma versão, usa o player do navegador."
 
 #: src/lib/format.ts
 msgid "Recap"
@@ -3782,7 +3778,7 @@ msgstr "Vi a legenda"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Scroll up for playback controls"
-msgstr ""
+msgstr "Role para cima para ver os controles"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
@@ -3856,9 +3852,8 @@ msgid "Send report"
 msgstr "Enviar relatório"
 
 #: src/app/settings/about.tsx
-#, fuzzy
 msgid "Send usage statistics"
-msgstr "Estatísticas"
+msgstr "Enviar estatísticas de uso"
 
 #: src/features/party/chat.tsx
 msgid "Sending…"
@@ -3910,12 +3905,11 @@ msgstr "Configurações"
 
 #: src/app/settings/playback.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
-msgstr ""
+msgstr "Shaders (.wgsl) para o WebGPU, aplicados em ordem alfabética durante a reprodução. Ficam salvos neste navegador. Os mais pesados podem causar engasgos."
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "Shaders"
-msgstr "Sombra"
+msgstr "Shaders"
 
 #: src/app/settings/subtitles.tsx
 msgid "Shadow"
@@ -3927,7 +3921,7 @@ msgstr "Compartilhar o convite"
 
 #: src/app/settings/playback.tsx
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr ""
+msgstr "Deixa os traços dos animes mais nítidos e reduz falhas de compressão, especialmente nos mais antigos ou de baixa resolução. Funciona em títulos identificados como anime nos seus catálogos. No player, pressione U no teclado para ligar ou desligar a melhoria. Consome mais energia e desativa automaticamente se o dispositivo não der conta. Vídeos HDR ou com resolução próxima à da tela não são alterados."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -4014,7 +4008,7 @@ msgstr "Mostra uma imagem do vídeo onde você aponta, arrasta ou pula na barra 
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
-msgstr ""
+msgstr "Exibe vídeos em HDR em telas compatíveis, sem convertê-los para SDR. Deixe desativado em telas sem HDR."
 
 #: src/app/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
