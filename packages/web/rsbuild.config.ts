@@ -11,7 +11,8 @@ const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
 
 /**
  * The commit this build comes from, e.g. `a1b2c3d4 (2026-09-25)`: from git, or
- * from the metadata CI writes where there is none, as in the Docker build.
+ * where there is none, as in the Docker build, from `SOURCE_COMMIT` or the
+ * metadata CI writes.
  */
 function buildCommit(): string {
   try {
@@ -24,6 +25,8 @@ function buildCommit(): string {
       .split('\n');
     if (hash) return `${hash} (${date})`;
   } catch {}
+  const sourceCommit = process.env.SOURCE_COMMIT;
+  if (sourceCommit) return sourceCommit.slice(0, 8);
   try {
     const { commitHash, commitTime } = JSON.parse(
       readFileSync(
