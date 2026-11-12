@@ -391,15 +391,13 @@ export function PlaybackSection() {
           value={clock}
           onValueChange={setClock}
         />
-        {shell && (
-          <Switch
-            side="right"
-            label={t`Seek bar previews`}
-            help={t`Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data.`}
-            value={thumbnails}
-            onValueChange={setThumbnails}
-          />
-        )}
+        <Switch
+          side="right"
+          label={t`Seek bar previews`}
+          help={t`Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it.`}
+          value={thumbnails}
+          onValueChange={setThumbnails}
+        />
       </SettingsCard>
       {shell && (
         <SettingsCard name="video" title={t`Video`} description={onDevice()}>

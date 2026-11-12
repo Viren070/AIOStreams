@@ -8,7 +8,7 @@ import type { SubtitleLine } from '@/lib/subtitles/cues';
 import { subtitleType, type SubtitleFacts } from '@/lib/subtitles/tracks';
 import { tagName } from '@/lib/languages';
 import type { Playhead } from './playhead';
-import type { ThumbnailFeed } from './thumbnails';
+import type { Open, ThumbnailFeed } from './thumbnails';
 import type { PlannedSkip, StatsRow, VideoFrame } from './engine';
 import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
 import type {
@@ -189,6 +189,10 @@ export interface PlayerOptions {
   /** Kept from the saved volume, which it leaves alone. */
   muted?: boolean;
   thumbnails?: boolean;
+  /** The title's chapters, for an engine that reads none from the file. */
+  chapters?: Chapter[];
+  /** Seek bar pictures that need no read of the file, taken over the engine's own. */
+  pictures?: Open | null;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';

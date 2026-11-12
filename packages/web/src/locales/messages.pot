@@ -4228,7 +4228,7 @@ msgid "Shows"
 msgstr ""
 
 #: src/app/settings/playback.tsx
-msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 msgstr ""
 
 #: src/app/settings/playback.tsx

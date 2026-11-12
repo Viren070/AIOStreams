@@ -461,25 +461,37 @@ export function usePlayer(
   }, [engine, statsPage, statsRows]);
 
   const [thumbnailsOn] = useSetting(settings.controls.thumbnails);
+  const { pictures } = opts;
   React.useEffect(() => {
+    const read = engine.thumbnails;
     // A live stream has no seek bar, and opening it again can take the
     // provider's only connection from the player.
     if (
-      !engine.thumbnails ||
+      (!pictures && !read) ||
       !thumbnailsOn ||
       liveSource ||
       opts.thumbnails === false
     )
       return;
-    const feed = thumbnailFeed((onThumbnail) =>
-      engine.thumbnails!({ url, headers: latest.current.headers }, onThumbnail)
+    const feed = thumbnailFeed(
+      pictures ??
+        ((onThumbnail) =>
+          read!({ url, headers: latest.current.headers }, onThumbnail))
     );
     setThumbnails(feed);
     return () => {
       feed.stop();
       setThumbnails(undefined);
     };
-  }, [engine, latest, url, thumbnailsOn, liveSource, opts.thumbnails]);
+  }, [
+    engine,
+    latest,
+    url,
+    thumbnailsOn,
+    liveSource,
+    opts.thumbnails,
+    pictures,
+  ]);
 
   React.useEffect(() => {
     if (!thumbnails || !state.started) return;
@@ -554,7 +566,7 @@ export function usePlayer(
     togglePictureInPicture:
       engine.togglePictureInPicture && (() => engine.togglePictureInPicture!()),
     setFrame: engine.setFrame && ((frame) => engine.setFrame!(frame)),
-    chapters,
+    chapters: chapters?.length ? chapters : opts.chapters,
     stats: stats && {
       pages: stats.pages,
       page: statsPage,

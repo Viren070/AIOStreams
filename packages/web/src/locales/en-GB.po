@@ -4229,8 +4229,8 @@ msgid "Shows"
 msgstr "Shows"
 
 #: src/app/settings/playback.tsx
-msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
-msgstr "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
+msgstr "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."

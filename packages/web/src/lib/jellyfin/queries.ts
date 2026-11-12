@@ -395,6 +395,7 @@ export function useSearchSuggestions(
 /* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's field names */
 const DETAIL_FIELDS = [
   'AirTime',
+  'Chapters',
   'ExternalUrls',
   'Genres',
   'Overview',
@@ -405,6 +406,7 @@ const DETAIL_FIELDS = [
   'RemoteTrailers',
   'Studios',
   'Taglines',
+  'Trickplay',
 ].join(',');
 /* eslint-enable lingui/no-unlocalized-strings */
 

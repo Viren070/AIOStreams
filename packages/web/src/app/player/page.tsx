@@ -55,6 +55,7 @@ import {
   transcodingEngine,
 } from '@/lib/playback/transcoding';
 import { mayConvert } from '@/lib/playback/quality';
+import { serverChapters, trickplayFeed } from '@/lib/playback/trickplay';
 import { useNowPlaying } from '@/lib/playback/now-playing';
 import { usePlayingAnime } from '@/lib/playback/upscaling';
 import {
@@ -851,6 +852,15 @@ function Player({
     !local?.local &&
     !youTube &&
     !launched;
+  // A download plays offline, and a YouTube video has none of these.
+  const fromServer = React.useMemo(() => {
+    if (local?.local || youTube) return {};
+    const chapters = serverChapters(item);
+    return {
+      chapters: chapters.length ? chapters : undefined,
+      pictures: trickplayFeed(client, item, source),
+    };
+  }, [local, youTube, client, item, source]);
   const own = usePlayer(engines, {
     client,
     item,
@@ -878,6 +888,8 @@ function Player({
     subtitleStyle,
     launched,
     startPaused,
+    chapters: fromServer.chapters,
+    pictures: fromServer.pictures,
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
