@@ -17,6 +17,8 @@ import {
   type Download,
 } from '@/lib/downloads';
 import { chosenPlayer } from '@/lib/playback/player-choice';
+import { streamsItself } from '@/lib/playback/stream';
+import { useSession } from '@/lib/jellyfin/session';
 import { party } from '@/lib/party/party';
 import {
   findVersion,
@@ -29,7 +31,7 @@ import { useRestoreFocus } from '@/lib/input';
 import { airsLater, itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
 import { itemPath, navigate, to } from '@/lib/paths';
 import { settings, useSetting } from '@/lib/settings';
-import type { BaseItemDto } from '@/lib/jellyfin/types';
+import type { BaseItemDto, PlaybackInfoResponse } from '@/lib/jellyfin/types';
 import { type Request, Versions, focusSelf } from './version-list';
 import { type Unaired, UnairedQuestion } from './unaired-question';
 import { ExternalPrompt } from './external-prompt';
@@ -68,6 +70,14 @@ interface PickerValue {
 }
 
 const PickerContext = React.createContext<PickerValue | null>(null);
+
+/** How long Play waits on a list that should come at once before showing it to wait in. */
+const LIST_WAIT_MS = 350;
+
+const onlyVersion = (info: PlaybackInfoResponse | undefined) => {
+  const sources = playableSources(info);
+  return sources.length === 1 ? sources[0] : undefined;
+};
 
 const isLive = (item: BaseItemDto) =>
   item.Type === 'TvChannel' || item.Type === 'Program';
@@ -140,6 +150,8 @@ export function VersionPickerProvider({
   children: React.ReactNode;
 }) {
   const [request, setRequest] = React.useState<Request | null>(null);
+  const shown = React.useRef(request);
+  shown.current = request;
   const [external, setExternal] = React.useState<BaseItemDto | null>(null);
   const [unaired, setUnaired] = React.useState<Unaired | null>(null);
   const straight = useStraightPlay();
@@ -149,6 +161,7 @@ export function VersionPickerProvider({
   const addDownloads = useAddDownloads();
   const downloaded = useFindDownloaded();
   const [autoPick] = useSetting(settings.playback.autoPlayFirst);
+  const { base } = useSession().client;
   const latest = React.useRef({
     straight,
     queryClient,
@@ -157,6 +170,7 @@ export function VersionPickerProvider({
     addDownloads,
     downloaded,
     autoPick,
+    base,
   });
   latest.current = {
     straight,
@@ -166,6 +180,7 @@ export function VersionPickerProvider({
     addDownloads,
     downloaded,
     autoPick,
+    base,
   };
 
   const value = React.useMemo<PickerValue>(() => {
@@ -211,6 +226,41 @@ export function VersionPickerProvider({
         setTimeout(() => toast.dismiss(notice));
       }
     };
+    // A title with one version plays it. A list that should come at once, kept
+    // or of a server's own files, is waited for so it shows no list at all.
+    const listOrPlay = async (
+      item: BaseItemDto,
+      startMs: number,
+      opts: { replace?: boolean; playlist?: string }
+    ) => {
+      const { queryClient, infoOptions, base } = latest.current;
+      const options = infoOptions(item.Id!);
+      const soon =
+        streamsItself(base) || !!queryClient.getQueryData(options.queryKey);
+      const asked = queryClient.fetchQuery(options).catch(() => undefined);
+      const quick = soon
+        ? await Promise.race([
+            asked,
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), LIST_WAIT_MS)
+            ),
+          ])
+        : null;
+      const play = (id: string) =>
+        void playStraight(item, startMs, { ...opts, version: id });
+      if (quick !== null) {
+        const only = onlyVersion(quick);
+        if (only) return play(only.Id!);
+        return setRequest({ item, startMs, ...opts });
+      }
+      const listed: Request = { item, startMs, ...opts };
+      setRequest(listed);
+      const only = onlyVersion(await asked);
+      if (only && shown.current === listed) {
+        setRequest(null);
+        play(only.Id!);
+      }
+    };
     const askIfUnaired = (
       items: BaseItemDto[],
       go: () => void,
@@ -254,7 +304,8 @@ export function VersionPickerProvider({
             latest.current.straight(item, startMs) !== !!opts?.held
           )
             void playStraight(item, startMs, { version, replace, playlist });
-          else setRequest({ item, startMs, replace, playlist });
+          else if (opts?.held) setRequest({ item, startMs, replace, playlist });
+          else void listOrPlay(item, startMs, { replace, playlist });
         });
       },
       download: (items, opts) => {
