@@ -65,10 +65,14 @@ HDR10. SDR streams, and anything without a tag, always play.
 - **Off** (default): every device gets the same list.
 - **Push to bottom:** they stay in the list, below everything else and in their original order.
   This runs on the cached result, so all devices share one result cache.
-- **Exclude:** they are removed before deduplication, the result limit and failover, so the
-  limit counts only playable streams, a playable copy of a file is never dropped as a duplicate of
-  one the device can't play, and failover never switches to one it can't play. Each
-  device gets its own result cache.
+- **Exclude:** they are removed before deduplication, the result limit and failover. The limit
+  then skips streams the rules above mark as unplayable, a playable copy of a file is never dropped
+  as a duplicate of one of them, and failover never switches to one. Each device gets its own
+  result cache.
+
+Only what the rules can detect is filtered. A stream with missing or unrecognised tags counts as
+playable, so it stays in the list and can still be a failover target, even if the device turns
+out not to play it.
 
 Either way, devices sharing a configuration never see each other's lists. To write your own rules,
 stream expressions can read the header as
