@@ -382,7 +382,7 @@ encode(streams, 'H.265', 'HEVC')
 
 #### `mediaInfoQuality()`
 
-Filter by how a stream's media info (languages, subtitles, audio, etc.) was determined. Streams with no confirmed media info match `'unknown'`.
+Filter by where a stream's media info came from: `'probe'` (read from the file), or `'indexer'` / `'addon'` (audio or subtitle languages reported by an indexer or addon). Streams with neither match `'unknown'`.
 
 **Accepted values:** `'probe'` `'indexer'` `'addon'` `'unknown'`
 

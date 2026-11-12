@@ -65,6 +65,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       jellyfin: {
         enabled: appConfig.jellyfin.enabled === true,
         maxVersions: appConfig.jellyfin.maxVersions,
+        maxAppVersions: appConfig.jellyfin.maxAppVersions,
         resolveOnOpen: appConfig.jellyfin.resolveOnOpen,
         maxCatalogItems: appConfig.jellyfin.maxCatalogItems,
         maxLibraries: libraryLimit(),
@@ -115,12 +116,7 @@ const statusInfo = async (): Promise<StatusResponse> => {
       variants: {
         access: appConfig.userLimits.variants.access,
         max: appConfig.userLimits.variants.max,
-        maxScriptLength: appConfig.userLimits.variants.maxScriptLength,
-        maxTotalInstructions:
-          appConfig.userLimits.variants.maxTotalInstructions,
-        maxValueDepth: appConfig.userLimits.variants.maxValueDepth,
-        maxPathSegments: appConfig.userLimits.variants.maxPathSegments,
-        maxPathMatches: appConfig.userLimits.variants.maxPathMatches,
+        maxWork: appConfig.userLimits.variants.maxWork,
       },
       healthChecks: {
         access: appConfig.userLimits.healthChecks.access,

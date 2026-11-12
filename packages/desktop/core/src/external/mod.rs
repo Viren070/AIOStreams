@@ -199,6 +199,11 @@ impl External {
 
     pub fn load(&self, load: &Load, local: &dyn Fn(&str) -> bool) -> Result<(), String> {
         let file = Loadfile::new(load, local)?;
+        log::info!(
+            "external load url={} options={}",
+            file.url,
+            file.options.join(",")
+        );
         self.with(|backend| {
             for command in file.commands() {
                 backend.command(command);

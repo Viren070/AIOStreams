@@ -15,7 +15,7 @@ import {
 } from '@tanstack/react-query';
 import JellyfinWebApp from './app';
 import { persister } from './lib/cache';
-import { followReachable } from './lib/connection';
+import { followReachable } from './lib/jellyfin/connection';
 import { startI18n } from './lib/i18n';
 import { setupTv } from './lib/tv';
 

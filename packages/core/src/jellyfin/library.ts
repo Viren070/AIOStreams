@@ -37,6 +37,15 @@ export function genreOptions(c: Catalog): string[] {
   );
 }
 
+export function hasGuide(c: Catalog): boolean {
+  return supportsExtra(c, 'date');
+}
+
+/** Catalogs Live TV shows in place of a library: channels by their type, or a guide. */
+export function isLiveCatalog(c: Catalog): boolean {
+  return c.type === 'tv' || c.type === 'channel' || hasGuide(c);
+}
+
 /** Catalogs a client can open as a library: not search-only, no unsatisfiable required extra. */
 export function isBrowsable(c: Catalog): boolean {
   for (const e of c.extra ?? []) {
@@ -111,7 +120,7 @@ const catalogLimits = new Map<string, LimitFunction>();
 export const libraryLimit = () =>
   Math.min(appConfig.jellyfin.maxLibraries || MAX_LIBRARIES, MAX_LIBRARIES);
 
-function limitedCatalog<T>(
+export function limitedCatalog<T>(
   uuid: string,
   request: () => Promise<T>
 ): Promise<T> {
@@ -168,9 +177,16 @@ export interface CatalogPage {
   keys: string[];
 }
 
-function buildExtras(
+export function buildExtras(
   c: Catalog,
-  opts: { genre?: string; search?: string; similar?: string; skip?: number }
+  opts: {
+    genre?: string;
+    search?: string;
+    similar?: string;
+    skip?: number;
+    date?: string;
+    ids?: string[];
+  }
 ): string | undefined {
   const parts: string[] = [];
   if (opts.search) parts.push(`search=${encodeURIComponent(opts.search)}`);
@@ -180,6 +196,9 @@ function buildExtras(
     (opts.search || opts.similar ? undefined : requiredGenreDefault(c));
   if (genre) parts.push(`genre=${encodeURIComponent(genre)}`);
   if (opts.skip) parts.push(`skip=${opts.skip}`);
+  if (opts.ids?.length)
+    parts.push(`ids=${opts.ids.map(encodeURIComponent).join(',')}`);
+  if (opts.date) parts.push(`date=${opts.date}`);
   return parts.length ? parts.join('&') : undefined;
 }
 
@@ -609,7 +628,9 @@ export async function listViews(
   engine: AIOStreams,
   userData: UserData
 ): Promise<ViewEntry[]> {
-  const catalogs = exposedCatalogs(engine).slice(0, libraryLimit());
+  const catalogs = exposedCatalogs(engine)
+    .filter((c) => !isLiveCatalog(c))
+    .slice(0, libraryLimit());
   const sniffed = await Promise.all(
     catalogs.map(async (catalog) => {
       const key = viewTypeKey(userData, catalog);

@@ -5,9 +5,12 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.os.Build
 import android.os.Debug
+import android.os.Process
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewCompat
-import io.github.viren070.aiostreams.exoplayer.mediaCapsLine
+import io.github.viren070.aiostreams.exoplayer.video.mediaCapsLine
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -32,11 +35,16 @@ object Crashes {
     private const val RENDERER_FREE = "rendererFree"
     private const val RENDERER_LOW = "rendererLow"
     private const val RENDERER_APP_KB = "rendererAppKb"
+    private const val RENDERER_DOING = "rendererDoing"
+    private const val JAVA_DOING = "javaDoing"
+    private const val DOING = "doing"
+    private const val DOING_BEFORE = "doingBefore"
     /** The WebView ends its renderers to update, so an update this close explains an end. */
     private const val WEBVIEW_UPDATE_MS = 2 * 60_000L
     private const val WEEK_MS = 7 * 24 * 60 * 60 * 1000L
     private const val SUMMARY_FRAMES = 12
     private const val TRACE_LIMIT = 200_000
+    const val LOG_LINES = 300
 
     private fun prefs(context: Context) = context.getSharedPreferences("crashes", Context.MODE_PRIVATE)
 
@@ -48,6 +56,7 @@ object Crashes {
         val next = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching {
+                prefs(context).edit().putString(JAVA_DOING, doingOf(context, Process.myPid())).commit()
                 file.parentFile?.mkdirs()
                 file.writeText("${System.currentTimeMillis()}\n${thread.name}\n${error.stackTraceToString()}")
             }
@@ -63,7 +72,7 @@ object Crashes {
      * memory at the time is kept instead.
      */
     fun rendererGone(context: Context, crashed: Boolean, shown: Boolean) {
-        val memory = ActivityManager.MemoryInfo().also(context.getSystemService(ActivityManager::class.java)::getMemoryInfo)
+        val memory = memory(context)
         prefs(context).edit()
             .putLong(RENDERER_AT, System.currentTimeMillis())
             .putBoolean(RENDERER_CRASHED, crashed)
@@ -71,6 +80,7 @@ object Crashes {
             .putLong(RENDERER_FREE, memory.availMem)
             .putBoolean(RENDERER_LOW, memory.lowMemory)
             .putLong(RENDERER_APP_KB, Debug.getPss())
+            .putString(RENDERER_DOING, doingOf(context, Process.myPid()))
             .apply()
     }
 
@@ -100,10 +110,10 @@ object Crashes {
         if (at <= since || !(crashed || prefs.getBoolean(RENDERER_SHOWN, false))) return null
         val summary = mutableListOf(if (crashed) "The page's renderer crashed" else "Android ended the page's renderer")
         webViewUpdate(context, at)?.let { summary += it }
-        val free = String.format(Locale.ROOT, "%.1f GB free", prefs.getLong(RENDERER_FREE, 0) / 1e9)
-        val low = if (prefs.getBoolean(RENDERER_LOW, false)) ", which Android counts as low" else ""
-        summary += "Memory then: $free$low; the app used ${prefs.getLong(RENDERER_APP_KB, 0) / 1024} MB"
-        return assemble(context, at, null, 0, summary, emptyList(), emptyList(), page = true)
+        summary += "Memory then: ${free(prefs.getLong(RENDERER_FREE, 0), prefs.getBoolean(RENDERER_LOW, false))}; " +
+            "the app used ${prefs.getLong(RENDERER_APP_KB, 0) / 1024} MB"
+        val notes = listOfNotNull(prefs.getString(RENDERER_DOING, null)?.let { "Doing: $it" })
+        return assemble(context, at, null, 0, summary, emptyList(), emptyList(), page = true, notes = notes)
     }
 
     private fun webViewUpdate(context: Context, at: Long): String? {
@@ -115,11 +125,11 @@ object Crashes {
         return "WebView updated at ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(updated))}"
     }
 
-    private class JavaCrash(val at: Long, val thread: String, val stack: String)
+    private class JavaCrash(val at: Long, val thread: String, val stack: String, val doing: String?)
 
     private fun readJava(context: Context): JavaCrash? = runCatching {
         val (at, thread, stack) = javaFile(context).readText().split('\n', limit = 3)
-        JavaCrash(at.toLong(), thread, stack)
+        JavaCrash(at.toLong(), thread, stack, prefs(context).getString(JAVA_DOING, null))
     }.getOrNull()
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -183,7 +193,11 @@ object Crashes {
                 summary += "Closed by Android: $why" + described(exit)
             }
         }
-        return assemble(context, exit.timestamp, uptimeS, exit.rss, summary, details, log ?: logOf(exit.pid))
+        val notes = listOfNotNull("Importance: ${importance(exit)}", doingOf(context, exit.pid, exit.timestamp)?.let { "Doing: $it" })
+        return assemble(
+            context, exit.timestamp, uptimeS, exit.pss.takeIf { it > 0 } ?: exit.rss, summary, details,
+            logOf(exit.pid, exit.timestamp, log ?: SystemLog.lines(exit.pid)), notes = notes,
+        )
     }
 
     /** Android's note on why it ended the app, such as "oom", when it left one. */
@@ -194,7 +208,8 @@ object Crashes {
         val summary = mutableListOf<String>()
         val details = mutableListOf<String>()
         javaSummary(java, summary, details)
-        return assemble(context, java.at, null, 0, summary, details, emptyList())
+        val notes = listOfNotNull(java.doing?.let { "Doing: $it" })
+        return assemble(context, java.at, null, 0, summary, details, logOf(null, java.at, emptyList()), notes = notes)
     }
 
     private fun javaSummary(java: JavaCrash, summary: MutableList<String>, details: MutableList<String>) {
@@ -210,35 +225,84 @@ object Crashes {
         context: Context,
         at: Long,
         uptimeS: Long?,
-        rssKb: Long,
+        memoryKb: Long,
         summary: List<String>,
         details: List<String>,
         log: List<String>,
         page: Boolean = false,
+        notes: List<String> = emptyList(),
     ): CrashReport {
-        val build = if (BuildConfig.DEBUG) ", debug" else ""
-        val webView = WebViewCompat.getCurrentWebViewPackage(context)?.versionName.orEmpty()
-        val head = listOf(
-            "AIOStreams Android ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}$build), " +
-                "${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} " +
-                "(API ${Build.VERSION.SDK_INT}, ${Build.SUPPORTED_ABIS.firstOrNull().orEmpty()}), ${memoryLine(context)}",
-            "Engine: ${context.getSharedPreferences("playback", Context.MODE_PRIVATE).getString("engine", null) ?: "auto"}; " +
-                runCatching { mediaCapsLine(context) }.getOrDefault("Display: unknown"),
-            listOfNotNull(
-                DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(at)),
-                uptimeS?.let { if (it < 60) "after $it s" else "after ${it / 60} min" },
-                rssKb.takeIf { it > 0 }?.let { "using ${it / 1024} MB" },
-            ).joinToString(", "),
-        )
+        val head = head(context) + listOfNotNull(
+            date(at),
+            uptimeS?.let { if (it < 60) "after $it s" else "after ${it / 60} min" },
+            memoryKb.takeIf { it > 0 }?.let { "using ${it / 1024} MB" },
+        ).joinToString(", ") + notes
         // What happened first, as a list of reports shows the first line.
         val shown = summary.take(1) + head + summary.drop(1)
-        val whole = shown + "WebView $webView" + "" + details + "" + log
+        val whole = shown + webViewLine(context) + "" + details + "" + log
         return CrashReport(at, shown.joinToString("\n"), whole.joinToString("\n").trim(), page)
     }
 
-    private fun memoryLine(context: Context): String {
-        val memory = ActivityManager.MemoryInfo().also(context.getSystemService(ActivityManager::class.java)::getMemoryInfo)
-        return String.format(Locale.ROOT, "%.1f GB RAM", memory.totalMem / 1e9)
+    fun head(context: Context): List<String> {
+        val build = if (BuildConfig.DEBUG) ", debug" else ""
+        val memory = memory(context)
+        return listOf(
+            "AIOStreams Android ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}$build), " +
+                "${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} " +
+                "(API ${Build.VERSION.SDK_INT}, ${Build.SUPPORTED_ABIS.firstOrNull().orEmpty()}), " +
+                String.format(Locale.ROOT, "%.1f GB RAM", memory.totalMem / 1e9),
+            "Engine: ${context.getSharedPreferences("playback", Context.MODE_PRIVATE).getString("engine", null) ?: "auto"}; " +
+                runCatching { mediaCapsLine(context) }.getOrDefault("Display: unknown"),
+        )
+    }
+
+    fun webViewLine(context: Context) = "WebView ${WebViewCompat.getCurrentWebViewPackage(context)?.versionName.orEmpty()}"
+
+    private fun memory(context: Context): ActivityManager.MemoryInfo =
+        ActivityManager.MemoryInfo().also(context.getSystemService(ActivityManager::class.java)::getMemoryInfo)
+
+    private fun free(bytes: Long, low: Boolean) =
+        String.format(Locale.ROOT, "%.1f GB free", bytes / 1e9) + if (low) ", which Android counts as low" else ""
+
+    fun memoryNow(context: Context): String {
+        val memory = memory(context)
+        return "Memory now: ${free(memory.availMem, memory.lowMemory)}; the app uses ${Debug.getPss() / 1024} MB"
+    }
+
+    private fun date(at: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(at))
+
+    private class Note(val pid: Int, val since: Long, val what: String)
+
+    private fun note(value: String?): Note? {
+        val (pid, since, what) = value?.split('|', limit = 3)?.takeIf { it.size == 3 } ?: return null
+        return Note(pid.toIntOrNull() ?: return null, since.toLongOrNull() ?: return null, what)
+    }
+
+    // Android reuses pids, even for the next run.
+    private val started = System.currentTimeMillis() - SystemClock.elapsedRealtime() + Process.getStartElapsedRealtime()
+
+    fun doing(context: Context, what: String) {
+        val prefs = prefs(context)
+        val noted = prefs.getString(DOING, null)
+        val mine = note(noted)?.let { it.pid == Process.myPid() && it.since >= started } == true
+        if (mine && noted?.substringAfterLast('|') == what) return
+        val edit = prefs.edit()
+        // Kept for the report of how the last run ended.
+        if (noted != null && !mine) edit.putString(DOING_BEFORE, noted)
+        edit.putString(DOING, "${Process.myPid()}|${System.currentTimeMillis()}|$what").apply()
+    }
+
+    fun doingOf(context: Context, pid: Int, at: Long = Long.MAX_VALUE): String? = listOf(DOING, DOING_BEFORE)
+        .firstNotNullOfOrNull { key -> note(prefs(context).getString(key, null))?.takeIf { it.pid == pid && it.since <= at } }
+        ?.let { "${it.what} since ${DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(it.since))}" }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun importance(exit: ApplicationExitInfo) = when {
+        exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> "on screen"
+        exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE -> "a foreground service"
+        exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "visible, not in front"
+        exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_PERCEPTIBLE -> "noticeable, such as a backup"
+        else -> "in the background"
     }
 
     /** The main thread's first frames from an ANR's thread dump. */
@@ -250,13 +314,9 @@ object Crashes {
         .map { it.trim() }
         .toList()
 
-    /** A finished process's lines, while the system log still holds them; any app may read its own. */
-    private fun logOf(pid: Int): List<String> = runCatching {
-        ProcessBuilder("logcat", "-d", "-v", "threadtime", "-t", "400", "--pid", pid.toString())
-            .redirectErrorStream(true)
-            .start()
-            .inputStream.bufferedReader().use { it.readLines() }
-    }.getOrDefault(emptyList())
+    private fun logOf(pid: Int?, until: Long, system: List<String>): List<String> =
+        listOf("App log:") + AppLog.lines(LOG_LINES, pid, until) +
+            if (system.isEmpty()) emptyList() else listOf("", "System log:") + system
 }
 
 /** The parts of Android's tombstone protobuf (debuggerd/proto/tombstone.proto) a report shows. */

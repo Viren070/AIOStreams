@@ -4,7 +4,7 @@ import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
 import { userScopeKey } from '../utils/user-scope.js';
 import type { UserData } from '../db/schemas.js';
-import type { MemoPointer, PlaybackMemo } from './types.js';
+import type { MediaSourceRecord, MemoPointer, PlaybackMemo } from './types.js';
 import { firstWriteOf } from './write-once.js';
 
 /*
@@ -28,6 +28,18 @@ const pointers = Cache.getInstance<string, MemoPointer>(
   'jellyfin-playback-ptr',
   () => MEMO_CAP * (appConfig.jellyfin.maxVersions + POINTER_SPARE)
 );
+/*
+ * A run's versions past the version limit, kept only while a list is chosen
+ * from and without pointers; naming one moves it into the memo.
+ */
+const more = Cache.getInstance<string, MediaSourceRecord[]>(
+  'jellyfin-playback-more',
+  MEMO_CAP
+);
+/* At least long enough to choose from a list on screen. */
+const CHOOSING_SECONDS = 180;
+const moreTtl = () =>
+  Math.max(appConfig.jellyfin.streamCacheTtl, CHOOSING_SECONDS);
 
 /**
  * Identity of the configuration a memo was resolved under, so saving a
@@ -89,6 +101,29 @@ export async function writePlaybackMemo(
       pointers.set(`msid:${s.msid}`, pointer, PLAYBACK_MEMO_TTL, true)
     ),
   ]).catch(() => undefined);
+}
+
+export async function writeMoreSources(
+  psid: string,
+  sources: MediaSourceRecord[]
+): Promise<void> {
+  await more.set(psid, sources, moreTtl(), true).catch(() => undefined);
+}
+
+/** Every version of the memo's run, or null when those past the limit aren't kept. */
+export async function allSourcesOf(
+  memo: PlaybackMemo
+): Promise<MediaSourceRecord[] | null> {
+  if (!memo.more) return memo.sources;
+  const rest = await more.get(memo.psid).catch(() => undefined);
+  if (!rest) return null;
+  const seen = new Set(memo.sources.map((s) => s.msid));
+  // Notices last.
+  const at = (s: MediaSourceRecord) =>
+    (s.notice ? 1e9 : 0) + (s.extension.index ?? 1e8);
+  return [...memo.sources, ...rest.filter((s) => !seen.has(s.msid))].sort(
+    (a, b) => at(a) - at(b)
+  );
 }
 
 /**

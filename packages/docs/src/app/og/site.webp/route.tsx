@@ -9,7 +9,7 @@ export function GET() {
   return new ImageResponse(
     <DefaultImage
       title="AIOStreams"
-      description="Combine, filter, sort, and customise streams from every source."
+      description="Your addons, debrid services and Usenet in one list, in Stremio or AIOStreams' own apps."
       site="Documentation"
       icon={<img src={ogLogo} width={56} height={56} alt="" />}
       primaryColor={ogBrand.wash}

@@ -27,11 +27,9 @@ import {
   compileCelScript,
   createCelBudget,
   CelError,
-  DEFAULT_CEL_LIMITS,
   parseCelScript,
   VARIANT_ID_PATTERN,
   type CelDiagnostic,
-  type CelLimits,
   type CelProgram,
 } from './language.js';
 
@@ -49,16 +47,8 @@ export const VARIANT_PATH_PARAM = 'variantSelector';
 /** Suffix for a `:uuid/:encryptedPassword` mount path. */
 export const VARIANT_PATH_ROUTE = `/${VARIANT_PATH_SEGMENT}/:${VARIANT_PATH_PARAM}`;
 
-export function getVariantLimits(): CelLimits {
-  const limits = appConfig.userLimits.variants;
-  return {
-    maxScriptLength: limits.maxScriptLength,
-    maxTotalInstructions: limits.maxTotalInstructions,
-    maxValueDepth: limits.maxValueDepth,
-    maxPathSegments: limits.maxPathSegments,
-    maxPathMatches: limits.maxPathMatches,
-  };
-}
+const variantBudget = () =>
+  createCelBudget(appConfig.userLimits.variants.maxWork);
 
 /** Keyed by source text rather than a hash, so collisions cannot arise. */
 const AST_CACHE = new Map<string, CelProgram>();
@@ -74,7 +64,7 @@ function compileCached(script: string): CelProgram {
     AST_CACHE.set(script, hit);
     return hit;
   }
-  const program = compileCelScript(script, getVariantLimits());
+  const program = compileCelScript(script);
   AST_CACHE.set(script, program);
   astCacheChars += script.length;
 
@@ -186,8 +176,7 @@ export function applyVariants(
   const result = structuredClone(userData);
   const notes: CelDiagnostic[] = [];
   const applied: string[] = [];
-  const limits = getVariantLimits();
-  const budget = createCelBudget(limits);
+  const budget = variantBudget();
 
   for (const variant of selected) {
     let program: CelProgram;
@@ -203,7 +192,6 @@ export function applyVariants(
       resolveVariant,
       activeVariants: [variant.id.toLowerCase()],
       budget,
-      limits,
     });
     notes.push(...applyResult.notes);
     applied.push(variant.id.toLowerCase());
@@ -234,31 +222,23 @@ export function validateVariants(
   const variants = userData.variants;
   if (!variants || variants.length === 0) return;
 
-  const limits = appConfig.userLimits.variants;
+  const { max } = appConfig.userLimits.variants;
   if (!variantsEnabled(userData)) {
     throw new Error(
       'Config variants are not available on this instance. Remove them to save this configuration.'
     );
   }
-  if (variants.length > limits.max) {
+  if (variants.length > max) {
     throw new Error(
-      `Too many config variants (${variants.length}); the maximum is ${limits.max}.`
+      `Too many config variants (${variants.length}); the maximum is ${max}.`
     );
   }
 
-  const totalCharacters = variants.reduce((sum, v) => sum + v.script.length, 0);
-  if (totalCharacters > limits.maxTotalScriptCharacters) {
-    throw new Error(
-      `Config variant scripts total ${totalCharacters} characters; the maximum is ${limits.maxTotalScriptCharacters}.`
-    );
-  }
-
-  const celLimits = getVariantLimits();
   const programs = new Map<string, CelProgram>();
   const ids = new Set(variants.map((v) => v.id.toLowerCase()));
 
   for (const variant of variants) {
-    const { program, diagnostics } = parseCelScript(variant.script, celLimits);
+    const { program, diagnostics } = parseCelScript(variant.script);
     const error = diagnostics.find((d) => d.severity === 'error');
     if (error) {
       throw new Error(
@@ -282,7 +262,7 @@ export function validateVariants(
     const program = programs.get(variant.id.toLowerCase())!;
     const { userData: patched } = applyCelProgram(userData, program, {
       resolveVariant: (id) => programs.get(id.toLowerCase()),
-      limits: celLimits,
+      budget: variantBudget(),
     });
     patched.variants = undefined;
     patched.activeVariants = undefined;
@@ -678,8 +658,6 @@ export function knownHealthCheckIds(userData: UserData): string[] {
 }
 
 export type { HealthResult, VariantRequestContext };
-
-export { DEFAULT_CEL_LIMITS };
 
 /** The account's PIN is always the config's own, whatever else was merged or applied. */
 export function withOwnAccountLock(result: UserData, own: UserData): UserData {

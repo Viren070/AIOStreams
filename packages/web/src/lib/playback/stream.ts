@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import type { JellyfinClient } from '../client';
-import { currentHost } from '../hosts';
-import type { SourceInfo } from '../types';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { currentHost } from '@/lib/hosts';
+import type { SourceInfo } from '@/lib/jellyfin/types';
 
 /**
  * The server's stream route. A player cannot send the sign-in header, so the
@@ -47,7 +47,7 @@ export const needsAppPlayer = (source: SourceInfo) =>
   !!source.aiostreams?.ytId || !!requiredHeaders(source);
 
 async function youTubeStream(id: string): Promise<string | null> {
-  return (await currentHost().resolveYouTube?.(id)) ?? null;
+  return (await currentHost().resolveYouTube?.(id))?.url ?? null;
 }
 
 export async function playerUrl(

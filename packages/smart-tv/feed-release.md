@@ -1,4 +1,4 @@
-The latest AIOStreams TV apps. See the [smart TV guide](https://docs.aiostreams.viren070.me/apps/smart-tv) for how to install them.
+The latest AIOStreams TV apps. See the [smart TV guide](https://aiostreams.org/apps/smart-tv) for how to install them.
 
 ### LG (webOS)
 

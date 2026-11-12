@@ -40,6 +40,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter "@aiostreams/web..."
       - run: pnpm -F @aiostreams/web build:standalone
+        env:
+          APTABASE_APP_KEY: ${{ vars.APTABASE_APP_KEY }}
+          APTABASE_HOST: ${{ vars.APTABASE_HOST }}
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

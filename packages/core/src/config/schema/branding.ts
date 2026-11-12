@@ -56,4 +56,14 @@ export const brandingSchema = {
     requiresRestart: false,
     secret: false,
   },
+  allowSearchIndexing: {
+    schema: z.boolean(),
+    default: false,
+    label: 'Allow search engine indexing',
+    description:
+      "Let search engines list this instance's pages. While it's off, every page asks them not to, so the instance stays out of search results.",
+    env: 'ALLOW_SEARCH_INDEXING',
+    requiresRestart: false,
+    secret: false,
+  },
 } as const satisfies RuntimeConfigSection;

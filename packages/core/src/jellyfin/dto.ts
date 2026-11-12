@@ -176,7 +176,7 @@ export function userDataFromRow(
   runtimeMs?: number
 ): UserItemDataDto {
   if (!row) return defaultUserData(itemId);
-  const duration = runtimeMs || row.durationMs;
+  const duration = row.durationMs || runtimeMs || 0;
   const ud: UserItemDataDto = {
     PlaybackPositionTicks: msToTicks(row.positionMs),
     PlayCount: row.playCount,
@@ -301,7 +301,7 @@ function aspectRatioFor(shape: unknown): number {
   return shape === 'landscape' ? 1.7777 : shape === 'square' ? 1 : 0.6666;
 }
 
-function baseItem(
+export function baseItem(
   ctx: ItemBuildContext,
   id: string,
   name: string,

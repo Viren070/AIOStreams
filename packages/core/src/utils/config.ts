@@ -271,11 +271,6 @@ export async function validateConfig(
 
   // A dangling link would degrade the user to the base config at sign-in.
   const checkLinked = (who: string, linked: string[]) => {
-    if (linked.length > appConfig.userLimits.variants.max) {
-      throw new Error(
-        `${who} links ${linked.length} variants, but the maximum is ${appConfig.userLimits.variants.max}`
-      );
-    }
     for (const id of linked) {
       const variant = config.variants?.find((v) => v.id === id);
       if (!variant) throw new Error(`${who} links to unknown variant "${id}"`);
@@ -1521,7 +1516,7 @@ const PROXY_FIELDS: (keyof UserData)[] = [
 const METADATA_FIELDS: (keyof UserData)[] = [
   'tmdbApiKey', 'tmdbAccessToken', 'tvdbApiKey', 'pmdbApiKey',
   'rpdbApiKey', 'topPosterApiKey', 'aioratingsApiKey', 'aioratingsProfileId',
-  'openposterdbApiKey', 'openposterdbUrl', 'openposterdbParameters', 'posterService',
+  'openposterdbApiKey', 'openposterdbUrl', 'openposterdbParameters', 'customPosterUrl', 'posterService',
   'usePosterRedirectApi', 'usePosterServiceForMeta',
 ];
 

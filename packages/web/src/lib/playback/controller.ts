@@ -1,19 +1,27 @@
 import { t } from '@lingui/core/macro';
-import { storage } from '../storage';
-import type { JellyfinClient } from '../client';
+import { storage } from '@/lib/storage';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
 import type { Chapter } from './chapters';
-import type { SubtitleStyle } from '../settings';
-import type { SubtitleLine } from '../subtitles/cues';
-import type { SubtitleFacts } from '../subtitles/tracks';
+import type { Live } from '@/lib/live-value';
+import type { SubtitleStyle, VideoFit } from '@/lib/settings';
+import type { SubtitleLine } from '@/lib/subtitles/cues';
+import { subtitleType, type SubtitleFacts } from '@/lib/subtitles/tracks';
+import { tagName } from '@/lib/languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
-import type { PlannedSkip } from './engine';
-import type { PlaybackPrefs } from '../user-config';
-import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
+import type { PlannedSkip, StatsRow, VideoFrame } from './engine';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
+import type {
+  BaseItemDto,
+  MediaStream,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 
 export interface Track {
   id: string;
   label: string;
+  /** A smaller line under the label. */
+  detail?: string;
   lang?: string;
   /** One of the file's own, rather than one loaded beside it. */
   file?: boolean;
@@ -40,18 +48,24 @@ export interface PlayerState {
   /** Positive shows subtitles later. */
   subtitleDelayMs: number;
   error: string | null;
-  /** The video plays in a small window of its own, with nothing over it. */
-  pictureInPicture?: boolean;
+  reconnecting?: boolean;
   /** The sound goes out undecoded, which a change of speed can't stretch. */
   passthrough?: boolean;
 }
 
 /** What some players add to what a browser's video can do. */
-export type PlayerFeature = 'audio' | 'chapters' | 'stats' | 'headers';
+export type PlayerFeature =
+  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
 export const browserFeatures: readonly PlayerFeature[] =
   'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
+
+export const webGpuFeatures: readonly PlayerFeature[] = [
+  'audio',
+  'stats',
+  'upscaling',
+];
 
 /** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
 export type SyncOutcome = { asked: boolean } & (
@@ -96,19 +110,23 @@ export interface PlayerController {
     status?: SyncStatus;
   };
   /** The subtitle the page draws, for a player that draws none itself. */
-  subtitleText?: string;
+  subtitleText: Live<string | undefined>;
+  /** The share `liftSubtitles` last asked for, which the page's own subtitle slides to. */
+  subtitleLift: Live<number>;
   /** Missing where the player has no pictures for the seek bar. */
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
+  togglePictureInPicture?: () => void;
+  setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
-  /** Playback statistics over the video, as `text` the page draws for a player that draws none. */
+  /** `rows` are the shown page's, for a player that doesn't draw its own. */
   stats?: {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
-    text?: string;
+    rows: Live<StatsRow[] | undefined>;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {
@@ -127,6 +145,8 @@ export interface PlayerController {
   fit?: boolean;
   /** Plays the file again after it failed, from where it stopped or on another engine. */
   retry?: { label: string; run(): void };
+  /** Joins a live source at its edge again, after a pause left it behind. */
+  goLive?: () => void;
   /** Others watch along, so nothing acts on its own, like skipping or speeding up. */
   shared?: boolean;
 }
@@ -159,7 +179,13 @@ export interface PlayerOptions {
   onClosed?: () => void;
   /** That player moved on to what it was given with `queueNext`. */
   onAdvance?: (next: QueuedItem) => void;
+  /** Moves on from a live source that kept failing; false when there is nothing else to play. */
+  onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
+  fit?: VideoFit;
+  /** Kept from the saved volume, which it leaves alone. */
+  muted?: boolean;
+  thumbnails?: boolean;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';
@@ -194,6 +220,43 @@ export function trackLabel(stream: MediaStream, n: number): string {
   return (
     stream.DisplayTitle || stream.Title || stream.Language || t`Track ${n}`
   );
+}
+
+interface RowFacts extends SubtitleFacts {
+  lang?: string | null;
+}
+
+export function trackRow(
+  track: RowFacts,
+  kind: 'audio' | 'subtitle',
+  fallback: string
+): Pick<Track, 'label' | 'detail'> {
+  const language = track.lang ? tagName(track.lang) : undefined;
+  const title = track.title?.trim();
+  const own =
+    title &&
+    ![language, track.lang].some(
+      (name) => name?.toLowerCase() === title.toLowerCase()
+    )
+      ? title
+      : undefined;
+  const type = kind === 'subtitle' ? subtitleType(track) : undefined;
+  const typeLabel =
+    type === 'sdh'
+      ? t`SDH`
+      : type === 'forced'
+        ? t`Forced`
+        : type === 'signs'
+          ? t`Signs and songs`
+          : type === 'commentary'
+            ? t`Commentary`
+            : undefined;
+  return {
+    label: [language ?? t`Unknown language`, typeLabel]
+      .filter(Boolean)
+      .join(' · '),
+    detail: own ?? (language ? undefined : fallback),
+  };
 }
 
 /** A track as the player itself lists it. */

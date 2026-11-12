@@ -67,6 +67,11 @@ export function languageName(language: Language): string {
   }
 }
 
+export function tagName(tag: string): string | undefined {
+  const name = tagLanguage(tag);
+  return name && languageName({ code: languageCode(tag), name });
+}
+
 /** A code or tag's language by the addon's mapping, else the tag itself. */
 const languageOf = (tag: string) => tagLanguage(tag) ?? tag.toLowerCase();
 
@@ -84,6 +89,16 @@ export function sameLanguage(
   tag: string | null | undefined
 ): boolean {
   return !!code && !!tag && languageOf(code) === languageOf(tag);
+}
+
+/** Whether `tag` names another region of `code`'s language that the list names apart, such as Spanish for Latino. */
+export function otherRegion(
+  code: string | null | undefined,
+  tag: string | null | undefined
+): boolean {
+  if (!code || !tag || sameLanguage(code, tag)) return false;
+  const base = (t: string) => languageOf(t.split(/[-_]/)[0]);
+  return base(code) === base(tag);
 }
 
 /** The first of `items` in the earliest of `codes` that any is in. */

@@ -8,6 +8,7 @@ import {
   createLogger,
   DistributedLock,
   hasProgrammeVideos,
+  isChannel,
   encodeItemId,
   FULL_SUPPORT,
   requestLockType,
@@ -25,6 +26,7 @@ import {
   sourceIdentities,
   sourceRecordFrom,
   generateBingeGroup,
+  writeMoreSources,
   writePlaybackMemo,
   type ContentDescriptor,
   type MediaSourceRecord,
@@ -98,13 +100,16 @@ export async function playTargetFor(
   if (d.k === 'episode') {
     const meta = await getMeta(ctx, d.t, d.i).catch(() => null);
     const video = meta?.videos?.find((v) => v.id === d.v) as
-      | MetaVideo
-      | undefined;
+      MetaVideo | undefined;
+    // A channel's programme runs from its start to its end.
+    const aired =
+      Date.parse(String(video?.endTime)) - Date.parse(String(video?.startTime));
     return {
       type: d.t,
       videoId: d.v,
       runtimeMs:
-        parseRuntimeMs(video?.runtime) ?? parseRuntimeMs(meta?.runtime),
+        parseRuntimeMs(video?.runtime) ??
+        (aired > 0 ? aired : parseRuntimeMs(meta?.runtime)),
       streams: video?.streams ?? undefined,
     };
   }
@@ -114,8 +119,7 @@ export async function playTargetFor(
     const hinted = d.p ? undefined : meta?.behaviorHints?.defaultVideoId;
     const videoId = typeof hinted === 'string' && hinted ? hinted : d.i;
     const video = meta?.videos?.find((v) => v.id === videoId) as
-      | MetaVideo
-      | undefined;
+      MetaVideo | undefined;
     const runtimeMs =
       parseRuntimeMs(video?.runtime) ??
       (d.p
@@ -192,7 +196,8 @@ function showErrors(ctx: JellyfinRequestContext): boolean {
 export async function resolvePlayback(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
-  opts: { force?: boolean } = {}
+  /* `all` keeps the versions past the version limit too, for a while. */
+  opts: { force?: boolean; all?: boolean } = {}
 ): Promise<PlaybackMemo | null> {
   const itemId = encodeItemId(d);
   const scope = ctx.scope();
@@ -207,13 +212,14 @@ export async function resolvePlayback(
   let resolved: PlaybackMemo | null = null;
   const run = async () => {
     ran = true;
-    resolved = await resolveUncached(ctx, d, itemId, scope);
+    resolved = await resolveUncached(ctx, d, itemId, scope, !!opts.all);
     return true;
   };
   const wait = appConfig.userLimits.timeouts.maxTimeout + 10_000;
   try {
+    // Apart, so a run that keeps every version is never handed one cut short.
     const { cached } = await DistributedLock.getInstance().withLock(
-      `jellyfin-resolve:${ctx.uuid}|${scope}|${itemId}`,
+      `jellyfin-resolve:${ctx.uuid}|${scope}|${itemId}${opts.all ? '|all' : ''}`,
       run,
       { type: requestLockType(), timeout: wait, ttl: wait }
     );
@@ -221,7 +227,7 @@ export async function resolvePlayback(
   } catch (error) {
     if (ran) throw error;
     // The shared run failed or never reported back, so try it here.
-    return resolveUncached(ctx, d, itemId, scope);
+    return resolveUncached(ctx, d, itemId, scope, !!opts.all);
   }
   // The memo, not the lock, carries the result, so it is never published.
   return (await resolveByItem(ctx.uuid, scope, itemId)) ?? null;
@@ -248,27 +254,24 @@ function keepEnrichedSubtitles(
   }
 }
 
-/** Live by the content when the url says nothing: a channel, or a schedule. */
-function isLiveContent(type: string, meta: ParsedMeta | null): boolean {
-  return type === 'tv' || type === 'channel' || hasProgrammeVideos(meta);
-}
-
 async function resolveUncached(
   ctx: JellyfinRequestContext,
   d: ContentDescriptor,
   itemId: string,
-  scope: string
+  scope: string,
+  everyVersion: boolean
 ): Promise<PlaybackMemo | null> {
   const target = await playTargetFor(ctx, d);
   if (!target) return null;
 
   const engine = await ctx.engine();
-  const liveContent = isLiveContent(
-    target.type,
-    await getMeta(ctx, d.t, d.k === 'movie' ? (d.p ?? d.i) : d.i).catch(
-      () => null
-    )
-  );
+  // A channel's programme plays from its archive, which is not live.
+  const liveContent =
+    d.k === 'movie' &&
+    isChannel(
+      target.type,
+      await getMeta(ctx, d.t, d.p ?? d.i).catch(() => null)
+    );
   /* Copied, not marked in place: the pipeline result is cached and shared. */
   const asLive = (stream: ParsedStream): ParsedStream =>
     liveContent && stream.type !== 'live'
@@ -305,7 +308,13 @@ async function resolveUncached(
   const max = maxVersionsFor(ctx);
   const plain = new Set(all.filter((s) => isPlayable(s)).slice(0, max));
   const top = playable.filter((s, i) => i < max || plain.has(s));
-  const identities = sourceIdentities(itemId, top);
+  const kept = new Set(top);
+  const rest = playable
+    .slice(0, appConfig.jellyfin.maxAppVersions)
+    .filter((s) => !kept.has(s));
+  // After `top`, so its ids are the same whether or not the rest is listed.
+  const listed = everyVersion ? [...top, ...rest] : top;
+  const identities = sourceIdentities(itemId, listed);
 
   const errors = showErrors(ctx) ? (streamsRes?.errors ?? []) : [];
   const statistics = (streamsRes?.data?.statistics ?? []).filter(
@@ -319,10 +328,11 @@ async function resolveUncached(
   const placeOf = new Map(all.map((stream, i) => [stream, streamsAt + i]));
 
   const sources: MediaSourceRecord[] = [];
-  for (const [index, raw] of top.entries()) {
+  const moreSources: MediaSourceRecord[] = [];
+  for (const [index, raw] of listed.entries()) {
     const stream = asLive(raw);
     const formatted = await format(stream);
-    sources.push(
+    (index < top.length ? sources : moreSources).push(
       sourceRecordFrom(
         ctx.uuid,
         identities[index],
@@ -392,6 +402,7 @@ async function resolveUncached(
     videoId: target.videoId,
     psid: newPlaySessionId(),
     sources,
+    more: rest.length || undefined,
     addonSubtitles,
     titleMetadata: streamContext
       ? await requestTitleMetadata(streamContext).catch(() => undefined)
@@ -400,6 +411,7 @@ async function resolveUncached(
     createdAt: Date.now(),
   };
   keepEnrichedSubtitles(memo, await resolveByItem(ctx.uuid, scope, itemId));
+  if (moreSources.length) await writeMoreSources(memo.psid, moreSources);
   await writePlaybackMemo(memo, scope, ctx.persona?.id);
   if (!playableSources(sources).length) {
     const reason = (streamsRes?.errors ?? [])

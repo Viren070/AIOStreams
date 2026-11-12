@@ -7,7 +7,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 The AIOStreams app browses and plays what your configuration finds, with your catalogs as libraries and your streams as versions, sorted and named by your formatter as in Stremio. There's nothing to self-host and no Jellyfin to install: it signs in to your configuration's [media server](/apps/media-server), which runs on your AIOStreams instance. It plays streams with a link, such as debrid and Usenet ones; P2P torrents are [left out](/apps/media-server#before-you-start).
 
-![The AIOStreams app on a TV, a computer and a phone: Sintel playing with styled subtitles on the TV, the home page with Practical Magic featured on the computer, and Severance's show page on the phone](/apps/hero.webp)
+![The AIOStreams app on a TV, a computer and a phone: Sintel playing with styled subtitles on the TV, the home page with Project Hail Mary featured on the computer, and Severance's show page on the phone](/apps/hero.webp)
 
 ## Get the app
 
@@ -21,7 +21,7 @@ The AIOStreams app browses and plays what your configuration finds, with your ca
 | Samsung TVs                       | The [TV app for Samsung](/apps/smart-tv#samsung-tvs)                                                          |
 | iPhone, iPad and Apple TV         | A browser on iPhone and iPad, or a [Jellyfin app](/apps/jellyfin)                                             |
 
-It is the same app everywhere: the same home page, title pages and settings. What it plays with differs. A browser only plays what it can decode, the desktop app plays nearly anything with mpv, the Android app has ExoPlayer and mpv, and the TV apps use the TV's own player.
+It is the same app everywhere: the same home page, title pages and settings. What it plays with differs. A browser plays HEVC, Dolby Vision and surround sound with its [WebGPU engine](#in-a-browser), the desktop app plays nearly anything with mpv, the Android app has ExoPlayer and mpv, and the TV apps use the TV's own player.
 
 <Callout type="info">
   The apps draw their screens the way a browser draws a page, with the device's
@@ -40,11 +40,18 @@ The quickest way in is from the configure page: under **Save & Install → AIOSt
 
 After you sign in as the primary user, the app asks which user is watching, or opens the one used last on that device.
 
+## Jellyfin servers
+
+The installed apps sign in to Jellyfin servers as well, so a Jellyfin library can be in the same app as your configuration. Add a server, or move between your servers, with **Change server** under **Settings → Account**. Files play as they are; the app doesn't ask the server to transcode them. A few things come from AIOStreams itself, such as **Drop show** and the details on each [version](/apps/media-server#versions), so other servers don't have them.
+
+It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and Swiftfin sign in to your configuration.
+
 ## What it has
 
-- **Home** has Continue Watching, Next Up, episodes airing soon and a row for each catalog, with a featured title at the top. While the featured title rotates, a card you rest on with a mouse or a remote grows into a bigger preview with its details.
+- **Home** opens on a featured title with **Play** and **More info**, then Continue Watching, Next Up, episodes airing soon, your favourite channels and a row for each catalog. The featured title moves on every few seconds, or after as long as you set, and a swipe or a drag moves it on sooner. While it rotates, a card you rest on with a mouse or a remote grows into a bigger preview with its details.
 - **Discover** browses any catalog by type and genre, and **Search** looks through all of them, suggesting titles as you type.
-- **Title pages** show the details, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](/apps/media-server#versions) to choose from, and **Trailer** plays the title's trailers.
+- **Title pages** show the details, the ratings from each source your addons send, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](/apps/media-server#versions) to choose from. Below it, a row of actions: **Trailer**, **Favourite**, **Rate**, **Watched** and the rest, which on a phone or tablet sit under **More**. Episodes show their title first with their air date, and **Settings → Interface** can blur the ones you haven't started.
+- **[Live TV](/apps/live-tv)** lists the channels from your addons, with a programme guide, catch-up and reminders.
 - **Favourites** and **Calendar** keep what you saved and what airs next.
 - **Activity** is your watch history, where you can mark things unwatched or remove them. The primary user also sees everyone's history and what each person is playing right now.
 - **[Downloads](/apps/offline)** on the desktop and Android apps, and saved pages that browse without a connection.
@@ -56,10 +63,36 @@ After you sign in as the primary user, the app asks which user is watching, or o
 - **Next episode.** The next episode plays on its own, and the app can ask whether you are still watching after a few in a row. It can also skip filler and recap episodes where your metadata marks them, and skip by the file's chapters.
 - **Playlists.** **Add to playlist**, in a title's menu or on a film's page, puts it in one of your playlists or a new one. **Playlists** lists them: play one, reorder or remove its titles, or add what you are part way through. A title played from a playlist plays on to the playlist's next title rather than its next episode, and the player's **Playlist** button shows the rest. **Shuffle** plays a playlist in a mixed order that stays the same until you turn it off, and **Repeat** goes back to its first title after the last; each device keeps its own. Playlists are kept on the server, so [Jellyfin apps](/apps/jellyfin) see them too.
 - **Languages.** List your audio and subtitle languages in order of preference under **Settings → Audio** and **Settings → Subtitles**. A track you pick while watching a show sets the language for its other episodes. When a version has more than one subtitle in your language, **Subtitle types** picks which: full subtitles, SDH, forced or signs and songs.
-- **Subtitles.** Style them under **Settings → Subtitles**. To watch with a subtitle file of your own, drop it on the player or pick it with **Add a file** in the subtitle menu.
+- **Subtitles.** Style them under **Settings → Subtitles**. ASS subtitles, such as most anime releases, keep their own styling, signs and fonts in every app, drawn with libass. To watch with a subtitle file of your own, drop it on the player or pick it with **Add a file** in the subtitle menu.
 - **Versions.** Search a title's versions by words or a regular expression, save searches as quick filters that show as pills above the list, and label versions with badges, your own or a pack someone shares. See [version filters and badges](/reference/version-badges).
 - **On another device.** **Play on another device**, on a title's page or in its menu, sends it to another device with the app open, and the app becomes its remote: pause, seek, skip, stop, and pick the audio and subtitles. While it plays, a button at the bottom of the screen brings the remote back. See [who controls what](/apps/media-server#playing-on-another-device).
 - **Other players.** Choose another player under **Settings → Playback → Player** and **Play** opens versions in it: VLC, Infuse, Outplayer, IINA or another Android app where your device has them, or a link of your own. Each version also has **Copy stream link**.
+- **Mini player.** **Mini player** in the player keeps the video going in a corner while you look around the app; tap it to open the player again. Set **Back in the player** under **Settings → Playback → Player** to open it with **Back** too. Not on TVs, where Live TV's preview is the only small player.
+- **Sound.** In the desktop and Android apps, **Settings → Audio** sets how many channels your speakers take and mixes down what has more, passes Dolby and DTS through to a receiver format by format, and can turn other surround sound into Dolby Digital for an optical or ARC link. **Dialogue boost**, **Night mode** and a **Delay** for wireless headphones are there too.
+
+## Anime upscaling
+
+The desktop and Android apps, and the [WebGPU engine](#in-a-browser) in a browser, can upscale anime as it plays: lines come out sharper and compression cleaner, most of all in older and lower-resolution shows. Turn on **Anime upscaling** under **Settings → Playback → Video**. It applies to titles your catalogs mark as anime, and in the desktop app and a browser **U** turns it on and off for what's playing, so you can compare. The WebGPU engine also takes your own shaders as `.wgsl` files, under **Shaders** in **Settings → Playback → Player**.
+
+<CompareSlider
+  before={{
+    src: '/showcase/upscaling-before.webp',
+    alt: 'A 480p Naruto frame, scaled up the usual way',
+    label: 'Usual scaling',
+  }}
+  after={{
+    src: '/showcase/upscaling-after.webp',
+    alt: "The same frame scaled by the app's anime upscaling, with cleaner, sharper lines",
+    label: 'Anime upscaling',
+  }}
+  width={1440}
+  height={1080}
+  className="my-6"
+/>
+
+It runs on the device's graphics processor, leaves HDR video and video about as large as the screen as they are, and turns itself off for a video the device can't keep up with. See the [desktop app](/apps/desktop#playing) and the [Android app](/apps/android#playing) for what each does.
+
+Prefer your own shaders? The desktop app's mpv folder takes your `mpv.conf`, scripts and shaders (see its [settings](/apps/desktop#settings)), and on Android, **Add a shader** under **Settings → Android app** gives the built-in mpv one, along with your `mpv.conf`.
 
 ## Settings
 
@@ -128,4 +161,6 @@ Under **Settings → Theme** you can pick a preset or your own accent and backgr
 Press **Open in browser** under **Save & Install → AIOStreams app**. It opens on your [address with a sign-in picker](/apps/jellyfin#connecting-an-app), and signs you straight in if you are signed in on the configure page in the same browser. Opening the plain server address in a browser works too; type your UUID or alias as well there.
 
 - **On a phone**, add it to your home screen from the browser's menu and it opens like an app. The first time, you sign in again there.
-- **What plays.** A browser only plays what it can decode, so MKV files, HEVC video and surround audio often fail. Use another player as above, or one of the apps, which play nearly anything.
+- **What plays.** The player's **WebGPU** engine decodes the file in the page and draws it with the graphics card, so HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS play, and the audio menu switches between a file's tracks.
+- **Subtitles inside the file.** The subtitle tracks inside an MKV or MP4 file show in the subtitle menu: ASS, SRT, WebVTT, MP4's own text subtitles and PGS. Subtitles from your addons, or a file you add, line up with them by themselves, as in the apps.
+- **What it needs.** A browser with WebGPU, such as Chrome, Edge or Firefox, on a page opened over HTTPS, and a file host that lets the browser read the file: streams through AIOStreams' proxy or its usenet streaming do, and so does TorBox. Otherwise, and for live channels, the browser's own player plays what the browser can decode, and a version the engine can't play goes to it at the same point. **Engine** under **Settings → Playback → Player** switches to the browser's own player for everything. For files the browser's player can't play, use another player as above, or one of the apps, which play nearly anything.

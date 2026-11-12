@@ -1,36 +1,38 @@
 import { t } from '@lingui/core/macro';
-import { formatBytes } from '@aiostreams/ui/core/format';
-import { fullTitle } from '../../format';
+import { fullTitle } from '@/lib/format';
 import {
   base64,
   checkSubtitleFile,
   readSubtitleFile,
-} from '../../subtitles/files';
-import { settings, type SubtitleStyle } from '../../settings';
-import { subtitleLanguages } from '../../user-config';
+} from '@/lib/subtitles/files';
+import { settings, type SubtitleStyle } from '@/lib/settings';
+import { subtitleLanguages } from '@/lib/jellyfin/user-config';
 import {
   MPV_OUTLINE,
   MPV_SHADOW,
   mpvColor,
-  subtitleHeight,
   subtitleScale,
-} from '../../subtitles/style';
-import { parseChapters } from '../../playback/chapters';
-import type { Span } from '../../subtitles/align';
+} from '@/lib/subtitles/style';
+import { parseChapters } from '@/lib/playback/chapters';
+import { upscalingOn } from '@/lib/playback/upscaling';
+import type { Span } from '@/lib/subtitles/align';
 import {
   ownTrackLabel,
   type QueuedItem,
   type Track,
-} from '../../playback/controller';
+} from '@/lib/playback/controller';
 import type {
   EngineFactory,
   EngineFile,
   EngineState,
   EngineTrack,
-} from '../../playback/engine';
-import { audioCodes } from '../../playback/track-picks';
+  ServerSubtitle,
+  VideoFrame,
+} from '@/lib/playback/engine';
+import { audioCodes } from '@/lib/playback/track-picks';
 import { currentHost } from '..';
 import { appBridge, type AppTrack, type ShellMessage } from './bridge';
+import { exoStats } from './exo-stats';
 import { passthroughFormats } from './sound';
 
 const statsPages = (): Track[] => [
@@ -40,156 +42,13 @@ const statsPages = (): Track[] => [
   { id: '5', label: t`Tracks` },
 ];
 
-/** ExoPlayer draws no statistics, so the page asks for its numbers while they show. */
-const exoStats = (): Track[] => [{ id: 'exo', label: t`Playback` }];
-const STATS_MS = 1000;
-
-/* eslint-disable lingui/no-unlocalized-strings -- a technical readout, as mpv's own is */
-const CODECS: Record<string, string> = {
-  'video/avc': 'H.264',
-  'video/hevc': 'HEVC',
-  'video/av01': 'AV1',
-  'video/x-vnd.on2.vp9': 'VP9',
-  'audio/mp4a-latm': 'AAC',
-  'audio/ac3': 'AC-3',
-  'audio/eac3': 'E-AC-3',
-  'audio/eac3-joc': 'E-AC-3 Atmos',
-  'audio/true-hd': 'TrueHD',
-  'audio/vnd.dts': 'DTS',
-  'audio/vnd.dts.hd': 'DTS-HD',
-  'audio/vnd.dts.uhd;profile=p2': 'DTS:X',
-  'audio/ac4': 'AC-4',
-  'audio/opus': 'Opus',
-  'audio/flac': 'FLAC',
-  'audio/raw': 'PCM',
-};
-
-/** Media3's C.COLOR_TRANSFER_* values. */
-const TRANSFERS: Record<number, string> = { 6: 'HDR10 (PQ)', 7: 'HLG' };
-/** Media3's C.COLOR_SPACE_BT2020. */
-const BT2020 = 6;
-
-const HEVC_PROFILES: Record<string, string> = {
-  '1': 'Main',
-  '2': 'Main 10',
-  '3': 'Main Still',
-};
-const AVC_PROFILES: Record<string, string> = {
-  '42': 'Baseline',
-  '4D': 'Main',
-  '64': 'High',
-  '6E': 'High 10',
-};
-
-/** The profile a codec string names, as `hvc1.2.4.L153` or `dvhe.08.06` do. */
-function profileOf(codecs: string | undefined): string | undefined {
-  const [kind = '', a = '', b = ''] = codecs?.split('.') ?? [];
-  if (/^(dvhe|dvh1|dav1|dva1|dvav)$/.test(kind))
-    return `Dolby Vision profile ${Number(a)}, level ${Number(b)}`;
-  if (kind === 'hvc1' || kind === 'hev1')
-    return HEVC_PROFILES[a.replace(/^[A-C]/, '')];
-  if (kind === 'avc1' || kind === 'avc3')
-    return AVC_PROFILES[a.slice(0, 2).toUpperCase()];
-  return undefined;
-}
-
-/** Android's display HDR types. */
-const HDR_TYPES: Record<number, string> = {
-  1: 'Dolby Vision',
-  2: 'HDR10',
-  3: 'HLG',
-  4: 'HDR10+',
-};
-
-function exoStatsText(
-  stats: Record<string, unknown>,
-  cpu: number | undefined
-): string {
-  const num = (key: string) =>
-    typeof stats[key] === 'number' ? (stats[key] as number) : undefined;
-  const str = (key: string) =>
-    typeof stats[key] === 'string' ? (stats[key] as string) : undefined;
-  const list = (key: string) =>
-    Array.isArray(stats[key]) ? (stats[key] as number[]) : [];
-  const codec = (mime?: string) => (mime && (CODECS[mime] ?? mime)) || '?';
-  const rate = (bits?: number) =>
-    bits && bits > 0 ? ` · ${(bits / 1e6).toFixed(1)} Mbps` : '';
-  const lines = ['Engine     ExoPlayer'];
-  if (str('videoMime')) {
-    const fps = num('frameRate');
-    // A Dolby Vision track played as its base layer comes out as plain HEVC.
-    const profile = profileOf(str('dolbyVisionCodecs') ?? str('videoCodecs'));
-    const vision = profile?.startsWith('Dolby');
-    lines.push(
-      `Video      ${codec(str('videoMime'))}${profile && !vision ? ` ${profile}` : ''} ${num('width')}×${num('height')}${fps && fps > 0 ? ` ${fps.toFixed(3)} fps` : ''}${rate(num('videoBitrate'))}`,
-      `Colour     ${[vision && profile, TRANSFERS[num('colorTransfer') ?? -1] ?? (vision ? undefined : 'SDR'), num('colorSpace') === BT2020 && 'BT.2020'].filter(Boolean).join(' · ')}`,
-      `Decoder    ${str('videoDecoder') ?? 'none'}`
-    );
-    const route = str('dolbyVisionRoute');
-    if (route) lines.push(`Plays as   ${route}`);
-  }
-  const hdr = list('hdrTypes')
-    .map((type) => HDR_TYPES[type])
-    .filter(Boolean);
-  const profiles = list('dolbyVisionProfiles');
-  lines.push(
-    `Display    ${hdr.length ? hdr.join(', ') : 'SDR'}`,
-    `DV decoder ${profiles.length ? `profiles ${profiles.join(', ')}` : 'none'}`
-  );
-  if (str('audioMime')) {
-    const hz = num('sampleRate');
-    lines.push(
-      `Audio      ${codec(str('audioMime'))} ${num('channels') ?? '?'} ch${hz && hz > 0 ? ` ${hz / 1000} kHz` : ''}${rate(num('audioBitrate'))}`,
-      `Decoder    ${str('audioDecoder') ?? 'passthrough'}`
-    );
-    const output = str('outputMime');
-    const outputs = num('outputChannels') ?? 0;
-    const inputs = num('channels') ?? 0;
-    if (output === 'audio/raw')
-      lines.push(
-        `Output     PCM ${outputs} ch${inputs > outputs ? `, mixed from ${inputs}` : ''}`
-      );
-    else if (output === 'audio/ac3' && str('audioMime') !== output)
-      lines.push(`Output     AC-3 ${outputs} ch, re-encoded`);
-    else if (output)
-      lines.push(
-        `Output     ${codec(output)} passthrough (sound settings don't apply)`
-      );
-  }
-  const buffered = num('bufferedMs');
-  if (buffered !== undefined)
-    lines.push(`Buffered   ${(buffered / 1000).toFixed(1)} s`);
-  const ahead = num('cacheAhead');
-  if (ahead !== undefined) {
-    const aheadMs = num('cacheAheadMs');
-    const behindMs = num('cacheBehindMs');
-    const speed = num('linkSpeed') ?? 0;
-    const ratio = num('linkRatio');
-    lines.push(
-      `Cache      ${behindMs !== undefined ? `${Math.round(behindMs / 1000)} s behind · ` : ''}${aheadMs !== undefined ? `${Math.round(aheadMs / 1000)} s` : formatBytes(ahead)} ahead · ${formatBytes(num('cacheBytes'))} of ${formatBytes(num('cacheBudget'))}${speed > 0 ? ` · link ${formatBytes(speed)}/s${ratio ? ` (${ratio.toFixed(1)}× the file)` : ''}` : ''}`
-    );
-  }
-  const shown = num('renderedFrames');
-  if (shown !== undefined)
-    lines.push(
-      `Frames     ${shown} shown · ${num('droppedFrames') ?? 0} dropped`
-    );
-  const javaHeap = num('javaHeap');
-  const nativeHeap = num('nativeHeap');
-  if (javaHeap !== undefined && nativeHeap !== undefined)
-    lines.push(
-      `Memory     Java ${formatBytes(javaHeap)} · native ${formatBytes(nativeHeap)}`
-    );
-  if (cpu !== undefined) lines.push(`App CPU    ${Math.round(cpu)}% of a core`);
-  return lines.join('\n');
-}
-/* eslint-enable lingui/no-unlocalized-strings */
-
 /** How long a player in its own window waits for the next episode's page. */
 const LINGER_MS = 10_000;
 let linger: ReturnType<typeof setTimeout> | undefined;
 /** What a launched player moved on to by itself, which the next page takes over. */
 let advanced: { itemId: string; sourceId: string } | null = null;
+/** The engine that loaded last, which alone may stop the one player. */
+let loadedBy: object | null = null;
 
 const SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'sup'];
 /** The apps list an added file under its name, cut to this length. */
@@ -219,6 +78,28 @@ const fromPlayer = (m: ShellMessage) =>
  * the user's own player in its own window. The server's subtitles are
  * downloaded only once picked: a version can carry dozens.
  */
+
+// The apps' players draw a styled script with libass.
+const subtitleAddress = (s: ServerSubtitle) => s.assUrl ?? s.url;
+
+/**
+ * In the app's own measure: a TV lays the page out zoomed to fit its width
+ * (lib/tv.ts), which the app's pixels don't follow.
+ */
+function unzoomed(frame: VideoFrame): VideoFrame {
+  const zoom = window.visualViewport?.scale ?? 1;
+  if (zoom === 1) return frame;
+  return {
+    ...frame,
+    x: frame.x * zoom,
+    y: frame.y * zoom,
+    width: frame.width * zoom,
+    height: frame.height * zoom,
+    radius: frame.radius * zoom,
+    bottomRadius: frame.bottomRadius * zoom,
+  };
+}
+
 export const appEngine: EngineFactory = (emit, { launched }) => {
   const external = !!launched;
   const shell = appBridge()!;
@@ -238,7 +119,6 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
   let statsPage: string | null = null;
   let fullscreen = false;
   let unsubscribe = () => {};
-  let stopExoStats = () => {};
 
   const load = (played: PlayedFile, append: boolean) => {
     const prefs = file?.prefs ?? {};
@@ -246,6 +126,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       url: played.url,
       headers: played.headers,
       startMs: played.startMs,
+      live: !!played.source.IsInfiniteStream,
       append,
       audioLanguages: audioCodes(prefs, played.source),
       subtitleLanguages: subtitleLanguages(prefs),
@@ -267,40 +148,20 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       visualImpaired: t.visualImpaired,
       default: t.default,
       external: t.external,
-      server: file?.subtitles.find((s) => s.url === t.url)?.id,
+      server: file?.subtitles.find((s) => subtitleAddress(s) === t.url)?.id,
     }));
 
-  const showExoStats = (page: string | null) => {
-    stopExoStats();
-    if (!page) return emit({ type: 'stats-text', text: undefined });
-    let last: { cpuMs: number; atMs: number } | undefined;
-    const stop = shell.subscribe((m) => {
-      if (m.type !== 'player-stats') return;
-      const cpu =
-        last && m.atMs > last.atMs
-          ? ((m.cpuMs - last.cpuMs) / (m.atMs - last.atMs)) * 100
-          : undefined;
-      last = m;
-      emit({ type: 'stats-text', text: exoStatsText(m.stats, cpu) });
-    });
-    const ask = () => shell.send({ type: 'player-stats' });
-    ask();
-    const timer = setInterval(ask, STATS_MS);
-    stopExoStats = () => {
-      clearInterval(timer);
-      stop();
-      stopExoStats = () => {};
-    };
-  };
-
+  const exoPlayerStats = exoStats();
   const showOverlay = (page: string | null) => {
     statsPage = page;
     send('player-stats-overlay', { page });
   };
+  const self = {};
 
   return {
     load(next) {
       unsubscribe();
+      if (!external) loadedBy = self;
       file = next;
       tracks = [];
       added.clear();
@@ -407,8 +268,6 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
           case 'fullscreen':
             if (!external) report({ fullscreen: m.value });
             return;
-          case 'pip':
-            return report({ pictureInPicture: m.value });
           case 'error':
             return console.warn(m.message);
           case 'external-ended':
@@ -440,9 +299,12 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     close() {
       unsubscribe();
       unsubscribe = () => {};
-      stopExoStats();
       if (statsPage) showOverlay(null);
-      if (!external) return send('player-stop');
+      if (!external) {
+        if (loadedBy !== self) return;
+        loadedBy = null;
+        return send('player-stop');
+      }
       if (!moved) send('player-set', { paused: true });
       linger = setTimeout(
         () => shell.send({ type: 'external-close' }),
@@ -458,9 +320,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       const server = file?.subtitles.find((s) => s.id === id);
       if (!server) return send('player-set', { subtitle: id });
       // Fetched again on each pick: an addon may still be writing it.
-      const loaded = tracks.find((t) => t.url === server.url);
+      const url = subtitleAddress(server);
+      const loaded = tracks.find((t) => t.url === url);
       send('player-subtitle-add', {
-        url: server.url,
+        url,
         title: server.label,
         language: server.lang ?? '',
         ...(loaded && { replace: Number(loaded.id) }),
@@ -468,21 +331,37 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
-    skipAhead: external
-      ? undefined
-      : (skips) => send('player-skips', { segments: skips }),
+    skipAhead:
+      external || appBridge()?.platform !== 'android'
+        ? undefined
+        : (skips) => send('player-skips', { segments: skips }),
+    // The Android app draws the screen faster while they show.
+    showControls:
+      external || appBridge()?.platform !== 'android'
+        ? undefined
+        : (shown) => shell.send({ type: 'player-controls', shown }),
+    setFrame:
+      external || !shell.miniPlayer
+        ? undefined
+        : (frame) =>
+            shell.send({
+              type: 'player-frame',
+              frame: frame && unzoomed(frame),
+            }),
     // The user's own player keeps its own look.
-    setStyle({ subtitleStyle, fit, lift }) {
+    setStyle({ subtitleStyle, fit, height }) {
       if (external || !subtitleStyle) return;
       shell.send({
         type: 'player-style',
         fit,
-        subtitles: subtitleLook(subtitleStyle, lift),
+        subtitles: subtitleLook(subtitleStyle, height),
       });
     },
     toggleFullscreen: external
       ? () => send('player-set', { fullscreen: !fullscreen })
       : () => shell.send({ type: 'fullscreen' }),
+    togglePictureInPicture:
+      external || !shell.pip ? undefined : () => shell.send({ type: 'pip' }),
     ownText(id) {
       const track = tracks.find((t) => t.id === id && t.external);
       return (track?.title && added.get(track.title)) || null;
@@ -550,8 +429,8 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     get stats() {
       return playsWithExoPlayer()
-        ? { pages: exoStats(), show: showExoStats }
-        : { pages: statsPages(), show: showOverlay };
+        ? exoPlayerStats
+        : { pages: statsPages(), draw: showOverlay };
     },
     picksTracks: true,
     ownSubtitles: true,
@@ -624,7 +503,7 @@ function failure(
 }
 
 /** The user's subtitle style in the units mpv and libass share. */
-function subtitleLook(style: SubtitleStyle, lift: number) {
+function subtitleLook(style: SubtitleStyle, height: number) {
   return {
     scale: subtitleScale(style),
     bold: style.bold,
@@ -636,7 +515,7 @@ function subtitleLook(style: SubtitleStyle, lift: number) {
     backColor: mpvColor(style.backgroundColor, style.backgroundOpacity),
     box: style.backgroundOpacity > 0,
     override: style.overrideStyled ? 'force' : 'scale',
-    position: 100 - subtitleHeight(style, lift),
+    position: 100 - height,
   };
 }
 
@@ -654,6 +533,7 @@ export function playerSettings() {
     nightMode: audio.nightMode.read(),
     ac3Encode: audio.ac3Encode.read(),
     cacheMb: Number(settings.player.cacheSize.read()) || 0,
+    upscaling: upscalingOn(),
     ...(android
       ? {
           frameRate: video.frameRate.read(),

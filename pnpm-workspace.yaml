@@ -8,6 +8,7 @@ allowBuilds:
   core-js: true
   cpu-features: false
   esbuild: true
+  lfa-ponyfill: false
   sharp: true
   sqlite3: true
   ssh2: false
@@ -15,5 +16,6 @@ allowBuilds:
   yencode: true
 
 patchedDependencies:
+  '@radix-ui/react-select@2.4.1': patches/@radix-ui__react-select@2.4.1.patch
   stremthru: patches/stremthru.patch
   yencode@1.2.4: patches/yencode@1.2.4.patch

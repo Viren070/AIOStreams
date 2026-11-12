@@ -83,6 +83,9 @@ export interface CacheBackend<K, V> {
 export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
   private cache: Map<K, CacheItem<V>>;
   private maxSize: number;
+  /** Entries held, or their bytes when weighed by `sizeOf`. */
+  private used = 0;
+  private sizeOf?: (value: V) => number;
 
   private static instances: Set<MemoryCacheBackend<any, any>> = new Set();
   private static sweepInterval: NodeJS.Timeout | null = null;
@@ -91,9 +94,13 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
 
   private clone: <T>(value: T) => T;
 
-  constructor(maxSize: number, options: { clone?: boolean } = {}) {
+  constructor(
+    maxSize: number,
+    options: { clone?: boolean; sizeOf?: (value: V) => number } = {}
+  ) {
     this.cache = new Map<K, CacheItem<V>>();
     this.maxSize = maxSize;
+    this.sizeOf = options.sizeOf;
     this.clone = options.clone === false ? (value) => value : structuredClone;
     MemoryCacheBackend.instances.add(this);
     MemoryCacheBackend.startSweepInterval();
@@ -112,7 +119,7 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     let visited = 0;
     for (const backend of MemoryCacheBackend.instances) {
       for (const [key, item] of backend.cache) {
-        if (now - item.createdAt > item.ttl) backend.cache.delete(key);
+        if (now - item.createdAt > item.ttl) backend.remove(key, item);
         if (++visited % MemoryCacheBackend.sweepYieldEvery === 0) {
           await new Promise((resolve) => setImmediate(resolve));
         }
@@ -129,7 +136,7 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
       const now = Date.now();
       item.lastAccessed = now;
       if (now - item.createdAt > item.ttl) {
-        this.cache.delete(key);
+        this.remove(key, item);
         return undefined;
       }
       // Re-inserting keeps Map order as LRU order, so eviction is O(1).
@@ -156,28 +163,49 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     ttl: number,
     forceWrite?: boolean
   ): Promise<void> {
-    if (this.cache.size >= this.maxSize) {
-      this.evict();
-    }
+    const old = this.cache.get(key);
+    if (old) this.remove(key, old);
+    const size = this.sizeOf?.(value) ?? 1;
+    this.used += size;
     this.cache.set(
       key,
-      new CacheItem<V>(this.clone(value), Date.now(), Date.now(), ttl * 1000)
+      new CacheItem<V>(
+        this.clone(value),
+        Date.now(),
+        Date.now(),
+        ttl * 1000,
+        size
+      )
     );
+    if (this.used > this.maxSize) this.evict();
   }
 
   async update(key: K, value: V): Promise<void> {
     const item = this.cache.get(key);
     if (item) {
       item.value = value;
+      if (this.sizeOf) {
+        const size = this.sizeOf(value);
+        this.used += size - item.size;
+        item.size = size;
+      }
     }
   }
 
   async delete(key: K): Promise<boolean> {
-    return this.cache.delete(key);
+    const item = this.cache.get(key);
+    if (item) this.remove(key, item);
+    return !!item;
   }
 
   async clear(): Promise<void> {
     this.cache.clear();
+    this.used = 0;
+  }
+
+  private remove(key: K, item: CacheItem<V>): void {
+    this.cache.delete(key);
+    this.used -= item.size;
   }
 
   async getTTL(key: K): Promise<number> {
@@ -191,10 +219,19 @@ export class MemoryCacheBackend<K, V> implements CacheBackend<K, V> {
     return 0;
   }
 
-  /** Drops the least recently used entry, which `get` keeps at the front. */
+  /**
+   * Drops the least recently used entries, which `get` keeps at the front. A
+   * count cache drops a hundredth at a time, as every walk first passes the
+   * holes that earlier deletes left there.
+   */
   private evict(): void {
-    const oldest = this.cache.keys().next();
-    if (!oldest.done) this.cache.delete(oldest.value);
+    const target = this.sizeOf
+      ? this.maxSize
+      : this.maxSize - Math.floor(this.maxSize / 100);
+    for (const [key, item] of this.cache) {
+      if (this.used <= target || this.cache.size <= 1) break;
+      this.remove(key, item);
+    }
   }
 
   getSize(): number {
@@ -926,6 +963,7 @@ class CacheItem<T> {
     public value: T,
     public lastAccessed: number,
     public createdAt: number,
-    public ttl: number // Time-To-Live in milliseconds
+    public ttl: number, // Time-To-Live in milliseconds
+    public size = 1
   ) {}
 }

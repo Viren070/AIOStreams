@@ -1,10 +1,10 @@
 import React from 'react';
-import { currentHost } from '../lib/hosts';
-import { navigate } from '../lib/paths';
+import { currentHost } from '@/lib/hosts';
+import { navigate } from '@/lib/paths';
 
 /**
  * A link whose address sits in `data-href` on TVs, as the web view watches
- * every link with an intersection observer (see lib/use-in-view.ts).
+ * every link with an intersection observer (see hooks/use-in-view.ts).
  */
 export const Anchor = React.forwardRef<
   HTMLAnchorElement,

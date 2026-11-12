@@ -7,6 +7,14 @@ import {
   buildMediaSource,
   buildPerson,
   buildPlaylist,
+  airingAt,
+  buildChannelItem,
+  buildLiveTvView,
+  buildProgramItem,
+  channelNumberOf,
+  isChannel,
+  programmesFor,
+  programmesOf,
   buildPlaylistsFolder,
   JellyfinPlaylistRepository,
   type JellyfinPlaylist,
@@ -17,6 +25,7 @@ import {
   withPersonDetails,
   buildSeason,
   buildView,
+  liveCatalogs,
   Cache,
   collectionMembers,
   viewCollectionType,
@@ -53,6 +62,7 @@ import {
   msToTicks,
   ratingUserData,
   seasonAnimeIds,
+  filmAnimeIds,
   userDataFromRow,
   watchRowEpisode,
   watchRowsAndAirTimesFor,
@@ -66,7 +76,9 @@ import {
   type JellyfinItem,
   type JellyfinMediaSource,
   type MetaPreview,
+  type ProgramDescriptor,
   type ParsedMeta,
+  type MediaSourceRecord,
   type PlaybackMemo,
   type PlaySupport,
   type WatchStateRow,
@@ -145,6 +157,86 @@ export async function caughtUpOn(
   return aired.every((ref) => rows.get(itemKeyFor(ref))?.played);
 }
 
+/** A channel with its number and what airs on it now, from its own schedule or its guide page. */
+export async function channelItem(
+  ctx: JellyfinRequestContext,
+  meta: MetaPreview,
+  playstate?: WatchStateRow
+): Promise<JellyfinItem> {
+  const now = Date.now();
+  const scope = ctx.scope();
+  const airing =
+    airingAt(programmesOf(meta), now) ??
+    airingAt(
+      (
+        await programmesFor(await ctx.engine(), scope, [meta], now, now + 1)
+      ).get(`${meta.type}|${meta.id}`)?.programmes ?? [],
+      now
+    );
+  return buildChannelItem(ctx.build, meta, {
+    number: await channelNumberOf(scope, meta),
+    airing,
+    playstate,
+  });
+}
+
+/** Listed channels with what is on each now, read from their guide pages together. */
+export async function channelListItems(
+  ctx: JellyfinRequestContext,
+  channels: { meta: MetaPreview; number?: string }[],
+  current = true
+): Promise<JellyfinItem[]> {
+  const now = Date.now();
+  const guide = current
+    ? await programmesFor(
+        await ctx.engine(),
+        ctx.scope(),
+        channels.map((c) => c.meta),
+        now,
+        now + 1
+      )
+    : undefined;
+  return attachUserData(
+    ctx,
+    channels.map(({ meta, number }) =>
+      buildChannelItem(ctx.build, meta, {
+        number,
+        airing: airingAt(
+          guide?.get(`${meta.type}|${meta.id}`)?.programmes ?? [],
+          now
+        ),
+      })
+    )
+  );
+}
+
+async function programItem(
+  ctx: JellyfinRequestContext,
+  d: ProgramDescriptor
+): Promise<JellyfinItem | null> {
+  const meta = await getMeta(ctx, d.t, d.i);
+  const channelMeta = meta
+    ? { ...meta, id: d.i, type: d.t }
+    : ({ id: d.i, type: d.t, name: d.i } as MetaPreview);
+  const own = programmesOf(meta).find((p) => p.start === d.at);
+  const programme =
+    own ??
+    (
+      await programmesFor(
+        await ctx.engine(),
+        ctx.scope(),
+        [channelMeta],
+        d.at,
+        d.at + 1
+      )
+    )
+      .get(`${d.t}|${d.i}`)
+      ?.programmes.find((p) => p.start === d.at);
+  if (!programme) return null;
+  const channel = await channelItem(ctx, channelMeta);
+  return buildProgramItem(ctx.build, channelMeta, programme, channel);
+}
+
 /** Batched user data for every content item in a list. */
 export async function attachUserData(
   ctx: JellyfinRequestContext,
@@ -161,7 +253,9 @@ export async function attachUserData(
       d.k === 'genre' ||
       d.k === 'person' ||
       d.k === 'source' ||
-      d.k === 'season'
+      d.k === 'season' ||
+      d.k === 'livetv' ||
+      d.k === 'program'
     )
       continue;
     keyed.push({ item, key: itemKeyOf(d), ref: contentRefOf(d) });
@@ -269,15 +363,20 @@ export async function viewItems(
   return views.map((v) => buildView(ctx.build, v.catalog, v.collectionType));
 }
 
-/** The libraries and, as in Jellyfin once the user has a playlist, their folder. */
+/** The libraries, Live TV when there are channels, and as in Jellyfin once the user has a playlist, their folder. */
 export async function userViews(
   ctx: JellyfinRequestContext
 ): Promise<JellyfinItem[]> {
-  const [views, playlists] = await Promise.all([
+  const [views, live, playlists] = await Promise.all([
     viewItems(ctx),
+    ctx.engine().then(liveCatalogs),
     JellyfinPlaylistRepository.any(playlistOwner(ctx)),
   ]);
-  return playlists ? [...views, buildPlaylistsFolder(ctx.build)] : views;
+  return [
+    ...views,
+    ...(live.length ? [buildLiveTvView(ctx.build, live)] : []),
+    ...(playlists ? [buildPlaylistsFolder(ctx.build)] : []),
+  ];
 }
 
 export function playlistOwner(ctx: JellyfinRequestContext): PlaylistOwner {
@@ -474,6 +573,9 @@ function findVideo(
   return null;
 }
 
+const NO_META_OVERVIEW =
+  'None of the addons in your configuration has details for this title. Add a metadata addon that covers it, then refresh.';
+
 export async function itemFromDescriptor(
   ctx: JellyfinRequestContext,
   d: JellyfinDescriptor,
@@ -515,6 +617,10 @@ export async function itemFromDescriptor(
     }
     case 'source':
       return null;
+    case 'livetv':
+      return buildLiveTvView(ctx.build, liveCatalogs(await ctx.engine()));
+    case 'program':
+      return programItem(ctx, d);
     case 'boxset': {
       const meta = await getMeta(ctx, d.t, d.i);
       if (!meta || (!meta.collection && !meta.videos?.length)) return null;
@@ -539,13 +645,25 @@ export async function itemFromDescriptor(
       }
       const base = meta
         ? { ...meta, id: d.i, type: d.t }
-        : ({ id: d.i, type: d.t, name: d.i } as MetaPreview);
+        : ({
+            id: d.i,
+            type: d.t,
+            name: d.i,
+            description: NO_META_OVERVIEW,
+          } as MetaPreview);
       const asBoxset =
         !(d.k === 'movie' && d.p) &&
         (!!meta?.collection ||
           (d.k === 'movie' &&
             (meta?.videos?.length ?? 0) > 1 &&
             !hasProgrammeVideos(meta)));
+      if (d.k === 'movie' && !asBoxset && isChannel(d.t, meta)) {
+        const channel = await channelItem(ctx, base, opts.playstate);
+        if (!meta) channel.aiostreams = { noMeta: true };
+        return opts.bare
+          ? channel
+          : attachUserData(ctx, [channel]).then(([built]) => built);
+      }
       const item = buildContentItem(ctx.build, base, {
         playstate: opts.playstate,
         boxset: asBoxset,
@@ -557,6 +675,11 @@ export async function itemFromDescriptor(
             : undefined,
       });
       if (asBoxset) item.Id = encodeItemId(d);
+      if (!meta) item.aiostreams = { noMeta: true };
+      if (d.k === 'movie' && !asBoxset) {
+        const ids = item.ProviderIds as Record<string, string> | undefined;
+        item.ProviderIds = { ...ids, ...(await filmAnimeIds(base, ids)) };
+      }
       // A show is played by its episodes, which its own row does not hold.
       if (!opts.bare && (!opts.playstate || d.k === 'series'))
         await attachUserData(ctx, [item]);
@@ -627,7 +750,13 @@ export async function summaryItem(
   ctx: JellyfinRequestContext,
   row: Pick<
     WatchStateRow,
-    'itemKey' | 'mediaType' | 'baseId' | 'season' | 'episode' | 'videoId'
+    | 'itemKey'
+    | 'kind'
+    | 'mediaType'
+    | 'baseId'
+    | 'season'
+    | 'episode'
+    | 'videoId'
   > & { durationMs: number }
 ): Promise<JellyfinItem | null> {
   const key = `${ctx.userId}|${ctx.scope()}|${row.itemKey}|${row.durationMs}`;
@@ -806,7 +935,8 @@ export function mediaSourcesFrom(
     firstId: string;
     tracks: TrackPreferences;
     requestedMsid?: string;
-    onlyRequested?: boolean;
+    offered?: MediaSourceRecord[];
+    fields?: ReadonlySet<string>;
     support?: PlaySupport;
     profile?: DeviceProfile;
     hasSegments?: boolean;
@@ -821,15 +951,12 @@ export function mediaSourcesFrom(
         header: (name) => req.get(name),
         query: req.query as Record<string, unknown>,
       }).token;
-  let ordered = offeredSources(
-    memo.sources,
-    opts.support ?? {},
-    maxVersionsFor(ctx)
-  );
+  let ordered =
+    opts.offered ??
+    offeredSources(memo.sources, opts.support ?? {}, maxVersionsFor(ctx));
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
-    if (idx >= 0 && opts.onlyRequested) ordered = [ordered[idx]];
-    else if (idx > 0)
+    if (idx > 0)
       ordered = [
         ordered[idx],
         ...ordered.slice(0, idx),
@@ -850,6 +977,7 @@ export function mediaSourcesFrom(
       noticePath: nothingToPlayPath(req, ctx),
       tracks: opts.tracks,
       originalLanguage: memo.titleMetadata?.originalLanguage,
+      fields: opts.fields,
     })
   );
 }

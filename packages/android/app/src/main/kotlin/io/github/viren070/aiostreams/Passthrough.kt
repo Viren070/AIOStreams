@@ -5,6 +5,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioCapabilitiesReceiver
+import io.github.viren070.aiostreams.logs.AppLog
 
 /**
  * The Dolby and DTS formats the audio output decodes itself, in mpv's
@@ -16,6 +17,7 @@ class Passthrough(context: Context, changed: () -> Unit) {
         context,
         {
             capabilities = it
+            logOutput()
             changed()
         },
         AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
@@ -24,6 +26,7 @@ class Passthrough(context: Context, changed: () -> Unit) {
 
     init {
         capabilities = receiver.register()
+        logOutput()
     }
 
     /** In mpv's `audio-spdif` names; DTS-HD falls back to DTS's core. */
@@ -34,7 +37,11 @@ class Passthrough(context: Context, changed: () -> Unit) {
 
     fun release() = receiver.unregister()
 
+    private fun logOutput() =
+        AppLog.i(TAG, "the output decodes ${supported(SPDIF.map { it.second }).joinToString().ifEmpty { "no Dolby or DTS" }}")
+
     private companion object {
+        const val TAG = "audio"
         val SPDIF = listOf(
             listOf(C.ENCODING_AC3) to "ac3",
             listOf(C.ENCODING_E_AC3, C.ENCODING_E_AC3_JOC) to "eac3",

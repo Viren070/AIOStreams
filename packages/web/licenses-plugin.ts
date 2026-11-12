@@ -6,6 +6,8 @@ import type { RsbuildPlugin } from '@rsbuild/core';
 export const LICENSES_FILE = '__AIOSTREAMS_LICENSES_FILE__';
 
 const LICENCE_FILE = /^(licen[cs]e|copying|notice)([.-]|$)/i;
+/** Also `<project>-COPYING.LGPLv2.1` and the like, and the note on where LGPL code's source is. */
+const SERVED_LICENCE_FILE = /(^|-)(licen[cs]e|copying|notice|source)([.-]|$)/i;
 
 interface Library {
   name: string;
@@ -32,6 +34,22 @@ function packageRoot(file: string): string | null {
   return parts.slice(0, at + (parts[at + 1].startsWith('@') ? 3 : 2)).join('/');
 }
 
+/** Paths from `root`, from its folders too where `deep`, as a package the app serves whole carries others' code in them. */
+function licenceFiles(root: string, deep: boolean, folder = ''): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(`${root}/${folder}`, {
+    withFileTypes: true,
+  })) {
+    const path = folder ? `${folder}/${entry.name}` : entry.name;
+    if (!entry.isDirectory()) {
+      if ((deep ? SERVED_LICENCE_FILE : LICENCE_FILE).test(entry.name))
+        found.push(path);
+    } else if (deep && entry.name !== 'node_modules')
+      found.push(...licenceFiles(root, deep, path));
+  }
+  return found.sort();
+}
+
 function licenceOf(json: PackageJson): string | undefined {
   if (typeof json.license === 'string') return json.license;
   if (json.license?.type) return json.license.type;
@@ -54,14 +72,15 @@ function urlOf(json: PackageJson): string | undefined {
 }
 
 /**
- * Lists the npm packages the bundle holds code from, with their licence texts, as
- * `static/licenses.<hash>.json`, and points the code's `__LICENSES_FILE__` at it.
+ * Lists the npm packages the bundle holds code from, and the `served` package roots the app
+ * copies out as files, with their licence texts, as `static/licenses.<hash>.json`, and points
+ * the code's `__LICENSES_FILE__` at it.
  */
-export const pluginLicenses = (): RsbuildPlugin => ({
+export const pluginLicenses = (served: string[] = []): RsbuildPlugin => ({
   name: 'aiostreams:licenses',
   setup(api) {
     api.processAssets({ stage: 'additional' }, ({ compilation, sources }) => {
-      const roots = new Set<string>();
+      const roots = new Set<string>(served);
       for (const module of compilation.modules) {
         const resource = (module as { resource?: string }).resource;
         const root = resource && packageRoot(resource.split('?')[0]);
@@ -79,9 +98,7 @@ export const pluginLicenses = (): RsbuildPlugin => ({
         if (!json.name) continue;
         const key = `${json.name}@${json.version}`;
         if (libraries.has(key)) continue;
-        const files = readdirSync(root)
-          .filter((f) => LICENCE_FILE.test(f))
-          .sort();
+        const files = licenceFiles(root, served.includes(root));
         const ids = files.map((f) => {
           const text = readFileSync(`${root}/${f}`, 'utf8').trim();
           const known = texts.indexOf(text);

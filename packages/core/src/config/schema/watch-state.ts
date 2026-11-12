@@ -119,10 +119,10 @@ export const watchStateSchema = {
   },
   minResumePercent: {
     schema: z.number().int().min(0).max(49),
-    default: 5,
+    default: 0,
     label: 'Minimum resume percentage',
     description:
-      'Playback stopped before this much of a title has played keeps no resume point, so it stays out of Continue Watching and has no resume button. Set 0 to keep every position.',
+      'Playback stopped before this much of a title has played keeps no resume point, so it stays out of Continue Watching and has no resume button. At 0 every position is kept.',
     env: 'WATCH_STATE_MIN_RESUME_PERCENT',
     requiresRestart: false,
     secret: false,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    <string name="channel_downloads">Baixados</string>
+    <string name="channel_downloads">Downloads</string>
     <plurals name="downloading_items">
         <item quantity="one">Baixando %d item</item>
         <item quantity="many">Baixando %d itens</item>
@@ -12,7 +12,7 @@
     <string name="update_no_build">Não há uma versão compatível com o processador deste dispositivo</string>
     <string name="update_damaged">O download foi corrompido</string>
     <string name="update_install_failed">Falha na instalação: %1$s</string>
-    <string name="update_feed_answered">O feed respondeu %1$d</string>
+    <string name="update_feed_answered">Falha ao buscar a atualização (código %1$d)</string>
     <string name="download_folder_title">Escolha onde salvar os downloads</string>
     <string name="download_folder_free">%1$s · %2$s livres</string>
     <string name="file_saved">%1$s salvo em Downloads</string>

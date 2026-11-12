@@ -644,7 +644,7 @@ async function buildContext(
       userId,
       uuid,
       listVersions: wantsListVersions(req, client),
-      markUnaired: finalUserData.jellyfin?.markUnaired ?? true,
+      markUnaired: finalUserData.jellyfin?.markUnaired ?? false,
     },
     engine: getEngine,
     primaryEngine: getPrimaryEngine,

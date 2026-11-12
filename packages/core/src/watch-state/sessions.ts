@@ -53,6 +53,7 @@ export async function openWatchSession(
     positionMs?: number;
     durationMs?: number;
     paused?: boolean;
+    live?: boolean;
   } & PlayingTracks = {}
 ): Promise<WatchSessionRow | null> {
   const identity = await watchIdentityFor(ref);
@@ -76,6 +77,7 @@ export async function openWatchSession(
     positionMs: opts.positionMs ?? 0,
     durationMs: opts.durationMs ?? 0,
     paused: opts.paused ?? false,
+    live: opts.live ?? false,
   });
 }
 
@@ -154,6 +156,12 @@ export async function sweepIdleWatchSessions(): Promise<{
     const at = Date.now();
     const scope = scopeOf(session);
     try {
+      if (session.live) {
+        // A channel's stop keeps no history, so neither does its going quiet.
+        await WatchSessionRepository.close(scope, session.sessionKey, at);
+        closed++;
+        continue;
+      }
       const ref: ContentRef = {
         kind: session.kind,
         type: session.mediaType,

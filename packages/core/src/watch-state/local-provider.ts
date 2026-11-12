@@ -106,7 +106,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
           positionMs: event.positionMs ?? 0,
           durationMs: event.durationMs,
           snapshot: event.snapshot,
-          at: Date.now(),
+          at: event.at ?? Date.now(),
         });
         this.schedule();
         return null;
@@ -233,7 +233,8 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     this.pending.clear();
     for (const p of batch) {
       try {
-        await this.write(p.scope, p.identity, this.progressPatch(p));
+        // A stop or mark made since this tick arrived, on any replica, wins.
+        await this.write(p.scope, p.identity, this.progressPatch(p), p.at);
       } catch (error) {
         logger.warn(
           {
@@ -317,10 +318,13 @@ export class LocalWatchStateProvider implements WatchStateProvider {
   private async write(
     scope: WatchScope,
     identity: WatchIdentity,
-    patch: WatchStatePatch
-  ): Promise<WatchStateRow> {
-    const row = await WatchStateRepository.upsert(scope, identity, patch);
-    this.notify(scope, [row]);
+    patch: WatchStatePatch,
+    unlessPlayedAfter?: number
+  ): Promise<WatchStateRow | null> {
+    const row = await WatchStateRepository.upsert(scope, identity, patch, {
+      unlessPlayedAfter,
+    });
+    if (row) this.notify(scope, [row]);
     return row;
   }
 

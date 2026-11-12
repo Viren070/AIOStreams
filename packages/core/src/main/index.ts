@@ -152,6 +152,25 @@ export class AIOStreams {
     return catalog ? { ...catalog, id } : undefined;
   }
 
+  /** An addon's catalogs answer the `date` extra with each channel's programmes. */
+  public isEpgProvider(): boolean {
+    this.checkInitialised();
+    return Object.values(this.ctx.manifests).some(
+      (manifest) => manifest?.behaviorHints?.epgProvider === true
+    );
+  }
+
+  /** The longest catch-up an addon declares for its channels. */
+  public catchupDays(): number {
+    this.checkInitialised();
+    return Math.max(
+      0,
+      ...Object.values(this.ctx.manifests).map(
+        (manifest) => manifest?.behaviorHints?.catchupDays ?? 0
+      )
+    );
+  }
+
   public getAddonCatalogs(): Manifest['addonCatalogs'] {
     this.checkInitialised();
     return this.ctx.finalAddonCatalogs;

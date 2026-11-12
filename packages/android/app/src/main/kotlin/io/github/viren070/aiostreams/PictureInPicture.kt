@@ -30,6 +30,15 @@ class PictureInPicture(private val activity: Activity, private val video: View) 
         }
     }
 
+    fun enter() {
+        if (!supported) return
+        try {
+            activity.enterPictureInPictureMode(params())
+        } catch (_: IllegalStateException) {
+            // Refused while the activity isn't showing.
+        }
+    }
+
     /** Android 12 and later enter on their own. */
     fun onUserLeaveHint() {
         if (supported && allowed && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) activity.enterPictureInPictureMode(params())

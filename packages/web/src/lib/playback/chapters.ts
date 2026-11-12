@@ -1,4 +1,5 @@
-import type { MediaSegmentDto } from '../types';
+import type { MediaSegmentDto } from '@/lib/jellyfin/types';
+import type { ThumbnailFeed } from './thumbnails';
 
 type Kind = MediaSegmentDto['Type'];
 
@@ -7,16 +8,21 @@ export interface Chapter {
   startMs: number;
 }
 
+const CLOCK = /^\d+(?::\d{1,2})+(?:[.,]\d+)?$/;
+
 /** The app's chapters, in order. */
 export function parseChapters(
   chapters: { title?: string; startMs: number }[]
 ): Chapter[] {
   return chapters
     .filter((c) => Number.isFinite(c.startMs))
-    .map((c) => ({
-      title: c.title?.trim() ?? '',
-      startMs: Math.max(0, c.startMs),
-    }))
+    .map((c) => {
+      const title = c.title?.trim() ?? '';
+      return {
+        title: CLOCK.test(title) ? '' : title,
+        startMs: Math.max(0, c.startMs),
+      };
+    })
     .sort((a, b) => a.startMs - b.startMs);
 }
 
@@ -27,6 +33,21 @@ export function chapterAt(chapters: Chapter[], ms: number): number {
     if (c.startMs <= ms) index = i;
   });
   return index;
+}
+
+/** How far before a chapter a seek to it may land. */
+export const CHAPTER_SNAP_MS = 1000;
+
+/** Its picture's keyframe when close, which the player shows without decoding up to it, else its start. */
+export function chapterSeekMs(
+  startMs: number,
+  thumbnails: ThumbnailFeed | undefined
+): number {
+  const keyframe = thumbnails?.kept()?.get(startMs)?.positionMs;
+  return keyframe !== undefined &&
+    Math.abs(startMs - keyframe) <= CHAPTER_SNAP_MS
+    ? keyframe
+    : startMs;
 }
 
 // A whole title, or the words before its first punctuation mark, once

@@ -24,7 +24,7 @@ static struct {
 #define ENHANCEMENT_LAYER 63
 
 JNIEXPORT jboolean JNICALL
-Java_io_github_viren070_aiostreams_exoplayer_DolbyVisionNative_nativeLoadLibdovi(JNIEnv *env, jclass cls) {
+Java_io_github_viren070_aiostreams_exoplayer_video_DolbyVisionNative_nativeLoadLibdovi(JNIEnv *env, jclass cls) {
     void *lib = dlopen("libdovi.so", RTLD_NOW);
     if (!lib) return JNI_FALSE;
 #define RESOLVE(name) if (!(dovi.name = (__typeof__(dovi.name))dlsym(lib, "dovi_" #name))) return JNI_FALSE;
@@ -94,7 +94,7 @@ static int put_rpu_81(uint8_t **out, const uint8_t *unit, const uint8_t *header,
 }
 
 JNIEXPORT jlong JNICALL
-Java_io_github_viren070_aiostreams_exoplayer_DolbyVisionNative_nativeRewrite(
+Java_io_github_viren070_aiostreams_exoplayer_video_DolbyVisionNative_nativeRewrite(
     JNIEnv *env, jclass cls, jbyteArray sample, jint from, jint length, jboolean convert) {
     uint8_t *start = (*env)->GetPrimitiveArrayCritical(env, sample, NULL);
     if (!start) return length;

@@ -680,9 +680,11 @@ async function join(
     const held = seatKey
       ? [...found.seats.values()].find((s) => s.key === seatKey)
       : undefined;
+    // A resume's ticket shows it was in this party already.
+    const member =
+      m.t === 'resume' && ticketExpiry(m.party, m.ticket) === found.expiresAt;
     if (!held) {
-      // A resume's ticket shows it was in the party already.
-      const barred = await barredFrom(found, conn, m.token, m.t === 'resume');
+      const barred = await barredFrom(found, conn, m.token, member);
       if (barred) return refuse(conn, barred);
     }
     const chat = chatOf(entries);
@@ -708,7 +710,7 @@ async function join(
             { chat }
           );
         }
-        const barred = barredIn(party, conn, m.t === 'resume');
+        const barred = barredIn(party, conn, member);
         if (barred) return barred;
         if (party.seats.size >= PARTY_LIMITS.members) return 'full';
         return changing(

@@ -50,6 +50,14 @@ const PREVIEW = cn(
   STRIPES
 );
 
+function stored(text: string, allowEmpty?: boolean): string | undefined {
+  const trimmed = text.trim();
+  if (allowEmpty && !trimmed) return '';
+  const color = colord(/^[\da-f]{3,8}$/i.test(trimmed) ? `#${trimmed}` : text);
+  if (!color.isValid()) return undefined;
+  return allowEmpty ? color.toHex() : color.toHex().slice(0, 7);
+}
+
 /** A colour typed as hex, chosen from swatches, or picked; only valid colours reach `onValueChange`. */
 export const ColorInput = React.forwardRef<HTMLInputElement, ColorInputProps>(
   (
@@ -66,14 +74,18 @@ export const ColorInput = React.forwardRef<HTMLInputElement, ColorInputProps>(
     ref
   ) => {
     const [text, setText] = React.useState(value);
-    React.useEffect(() => setText(value), [value]);
+    React.useEffect(
+      () =>
+        setText((typed) =>
+          stored(typed, allowEmpty) === value ? typed : value
+        ),
+      [value, allowEmpty]
+    );
 
     const change = (next: string) => {
       setText(next);
-      if (allowEmpty && !next.trim()) return onValueChange('');
-      const color = colord(next);
-      if (color.isValid())
-        onValueChange(allowEmpty ? color.toHex() : color.toHex().slice(0, 7));
+      const color = stored(next, allowEmpty);
+      if (color !== undefined) onValueChange(color);
     };
 
     const current = value.toLowerCase();

@@ -20,6 +20,7 @@ import { JackettioPreset } from './jackettio.js';
 import { OrionPreset } from './orion.js';
 import { StreamFusionPreset } from './streamfusion.js';
 import { AnimeKitsuPreset } from './animeKitsu.js';
+import { CinemetaPreset } from './cinemeta.js';
 import { NuvioStreamsPreset } from './nuviostreams.js';
 import { RpdbCatalogsPreset } from './rpdbCatalogs.js';
 import { TmdbCollectionsPreset } from './tmdbCollections.js';
@@ -69,6 +70,7 @@ import { NZBHydraPreset } from './nzbhydra.js';
 import { KnabenPreset } from './knaben.js';
 import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
+import { XtreamPreset } from './xtream.js';
 import { TheRARBGPreset } from './therarbg.js';
 import { ThePirateBayPreset } from './thePirateBay.js';
 import { TsukihimePreset } from './tsukihime.js';
@@ -143,11 +145,13 @@ let PRESET_LIST: string[] = [
   'brazuca-torrents',
   'yastream',
   'streamasia',
+  'xtream',
   'usa-tv',
   'usa-tv-next',
   'argentina-tv',
   'debridio-tv',
   'debridio-watchtower',
+  'cinemeta',
   'tmdb-addon',
   'debridio-tmdb',
   'debridio-tvdb',
@@ -253,6 +257,8 @@ export class PresetManager {
         return PenguPlayPreset;
       case 'anime-kitsu':
         return AnimeKitsuPreset;
+      case 'cinemeta':
+        return CinemetaPreset;
       case 'nuvio-streams':
         return NuvioStreamsPreset;
       case 'webstreamr':
@@ -337,6 +343,8 @@ export class PresetManager {
         return LibraryPreset;
       case 'eztv':
         return EztvPreset;
+      case 'xtream':
+        return XtreamPreset;
       case 'therarbg':
         return TheRARBGPreset;
       case 'the-pirate-bay':

@@ -51,6 +51,19 @@ You can use a [free Oracle VPS](https://guides.viren070.me/selfhosting/oracle) o
   </Step>
 </Steps>
 
+#### Updating
+
+Pull the new image and recreate the container, then check the version on the configure page's **About** menu:
+
+```bash
+docker compose pull aiostreams
+docker compose up -d aiostreams
+```
+
+#### Keeping your instance private
+
+Anyone who finds your address can create configurations on it. To keep it to the people you choose, give them accounts with `AIOSTREAMS_AUTH` (or [SSO](/guides/sso)) and turn on **Require authentication for the config page** (`AIOSTREAMS_AUTH_REQUIRED`). See [Profiles](/guides/config-profiles) for how accounts and configuration passwords fit together.
+
 #### Traefik (HTTPS)
 
 Stremio requires HTTPS for addons hosted outside of `localhost`. Traefik is a convenient reverse proxy that can obtain Let's Encrypt certificates automatically.

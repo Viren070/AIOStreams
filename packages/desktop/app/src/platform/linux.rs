@@ -1,22 +1,25 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Cell, RefCell};
 use std::ffi::{c_char, c_int, c_void};
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
 use aiostreams_desktop_core::mpv::Mpv;
 use aiostreams_desktop_core::render::{NativeDisplay, RenderContext};
 use gtk4::prelude::*;
-use gtk4::{gio, glib};
+use gtk4::{gdk, gio, glib};
 use libloading::Library;
+
+use super::small::{Small, event};
 
 /// Custom protocols are served from `<scheme>://localhost` on Linux.
 pub const APP_URL: &str = "aiostreams://localhost/";
 pub const PLATFORM: &str = "linux";
+pub const PIP: bool = false;
 pub const WEB_DATA_DIR: &str = "WebKit";
 
 /// Held for as long as the app runs.
@@ -197,11 +200,35 @@ fn update_video() {
     }
 }
 
-/// The GLArea mpv's render API draws into, beneath the web view.
+type OnInput = Rc<RefCell<Option<Box<dyn Fn(Outbound)>>>>;
+
+fn emit(on_input: &OnInput, message: Outbound) {
+    if let Some(on_input) = on_input.borrow().as_ref() {
+        on_input(message);
+    }
+}
+
+/// The video moves under the pointer, so it is placed from the window's coordinates.
+fn pointer(gesture: &gtk4::GestureDrag) -> Option<(f64, f64)> {
+    gesture.current_event()?.position()
+}
+
+fn round(corners: &gtk4::CssProvider, (top, bottom): (f64, f64)) {
+    corners.load_from_string(&format!(
+        "#video {{ border-radius: {top}px {top}px {bottom}px {bottom}px; }}"
+    ));
+}
+
+/// The GLArea mpv's render API draws into, beneath the web view, or over it where
+/// the page's mini player leaves room.
 pub struct VideoSurface {
     overlay: gtk4::Overlay,
     area: gtk4::GLArea,
     render: Render,
+    small: Rc<RefCell<Option<Small>>>,
+    corners: gtk4::CssProvider,
+    on_input: OnInput,
+    gliding: Rc<Cell<bool>>,
 }
 
 impl VideoSurface {
@@ -209,10 +236,91 @@ impl VideoSurface {
         let overlay = gtk4::Overlay::new();
         let area = gtk4::GLArea::new();
         area.set_auto_render(false);
-        area.set_hexpand(true);
-        area.set_vexpand(true);
-        overlay.set_child(Some(&area));
+        area.set_widget_name("video");
+        area.set_overflow(gtk4::Overflow::Hidden);
+        // Not the overlay's main child, which would size the window by where it sits.
+        overlay.add_overlay(&area);
         AREA.with(|a| *a.borrow_mut() = Some(area.clone()));
+        let corners = gtk4::CssProvider::new();
+        gtk4::style_context_add_provider_for_display(
+            &WidgetExt::display(&area),
+            &corners,
+            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+
+        let small: Rc<RefCell<Option<Small>>> = Rc::default();
+        overlay.connect_get_child_position({
+            let small = small.clone();
+            move |_, widget| {
+                let small = small.borrow();
+                let s = small.as_ref().filter(|_| widget.is::<gtk4::GLArea>())?;
+                let px = |v: f64| v.round() as i32;
+                Some(gdk::Rectangle::new(
+                    px(s.at.0),
+                    px(s.at.1),
+                    px(s.size.0),
+                    px(s.size.1),
+                ))
+            }
+        });
+        let on_input: OnInput = Rc::default();
+        let drag = gtk4::GestureDrag::new();
+        drag.connect_drag_begin({
+            let small = small.clone();
+            move |gesture, _, _| {
+                let pressed = pointer(gesture)
+                    .is_some_and(|at| small.borrow_mut().as_mut().is_some_and(|s| s.press(at)));
+                if !pressed {
+                    gesture.set_state(gtk4::EventSequenceState::Denied);
+                }
+            }
+        });
+        drag.connect_drag_update({
+            let (small, overlay, corners, on_input) = (
+                small.clone(),
+                overlay.downgrade(),
+                corners.clone(),
+                on_input.clone(),
+            );
+            move |gesture, _, _| {
+                let (Some(at), Some(overlay)) = (pointer(gesture), overlay.upgrade()) else {
+                    return;
+                };
+                let room = (f64::from(overlay.width()), f64::from(overlay.height()));
+                let moved = small.borrow_mut().as_mut().and_then(|s| {
+                    let grabbed = s.drag(at, room)?;
+                    Some((grabbed, s.at, s.radii))
+                });
+                let Some((grabbed, at, radii)) = moved else {
+                    return;
+                };
+                if grabbed {
+                    round(&corners, radii);
+                    emit(&on_input, event("grabbed", None));
+                }
+                overlay.queue_allocate();
+                emit(&on_input, event("moving", Some(at)));
+            }
+        });
+        drag.connect_drag_end({
+            let (small, on_input) = (small.clone(), on_input.clone());
+            move |_, _, _| {
+                let heard = small.borrow_mut().as_mut().and_then(|s| s.release(true));
+                if let Some(heard) = heard {
+                    emit(&on_input, heard);
+                }
+            }
+        });
+        drag.connect_cancel({
+            let (small, on_input) = (small.clone(), on_input.clone());
+            move |_, _| {
+                let heard = small.borrow_mut().as_mut().and_then(|s| s.release(false));
+                if let Some(heard) = heard {
+                    emit(&on_input, heard);
+                }
+            }
+        });
+        area.add_controller(drag);
 
         let render: Render = Rc::default();
         RENDER.with(|r| *r.borrow_mut() = Some(render.clone()));
@@ -235,11 +343,65 @@ impl VideoSurface {
             overlay,
             area,
             render,
+            small,
+            corners,
+            on_input,
+            gliding: Rc::default(),
         })
     }
 
     pub fn widget(&self) -> &gtk4::Overlay {
         &self.overlay
+    }
+
+    pub fn set_page(&self, page: &impl IsA<gtk4::Widget>) {
+        self.overlay.set_child(Some(page));
+        self.area.insert_before(&self.overlay, Some(page));
+    }
+
+    /// Hears clicks and drags on the small video, for the page.
+    pub fn on_input(&self, on_input: impl Fn(Outbound) + 'static) {
+        *self.on_input.borrow_mut() = Some(Box::new(on_input));
+    }
+
+    /// Over the page in `frame`, in the page's pixels; none puts it back beneath, filling the window.
+    pub fn frame(&self, frame: Option<VideoFrame>) {
+        let next = frame.map(|frame| Small::new(&frame, self.small.borrow().as_ref()));
+        round(&self.corners, next.as_ref().map_or((0.0, 0.0), |s| s.radii));
+        let lifted = next.as_ref().is_some_and(|s| !s.hidden);
+        let gliding = next.as_ref().is_some_and(Small::gliding);
+        *self.small.borrow_mut() = next;
+        let on_top = self.area.next_sibling().is_none();
+        if let Some(page) = self.overlay.child()
+            && lifted != on_top
+        {
+            if lifted {
+                self.area.insert_after(&self.overlay, Some(&page));
+            } else {
+                self.area.insert_before(&self.overlay, Some(&page));
+            }
+        }
+        self.overlay.queue_allocate();
+        self.area.queue_render();
+        if gliding && !self.gliding.replace(true) {
+            let (small, overlay, going) = (
+                self.small.clone(),
+                self.overlay.downgrade(),
+                self.gliding.clone(),
+            );
+            self.area.add_tick_callback(move |_, _| {
+                let more = small.borrow_mut().as_mut().is_some_and(Small::step);
+                if let Some(overlay) = overlay.upgrade() {
+                    overlay.queue_allocate();
+                }
+                going.set(more);
+                if more {
+                    glib::ControlFlow::Continue
+                } else {
+                    glib::ControlFlow::Break
+                }
+            });
+        }
     }
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
@@ -313,50 +475,52 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
 }
 
-const INHIBIT_IDLE: u32 = 8;
+thread_local! {
+    static AWAKE: RefCell<Option<Awake>> = const { RefCell::new(None) };
+}
 
-/// The portal's handle for the running inhibition, which closing ends.
-static AWAKE: Mutex<Option<String>> = Mutex::new(None);
+struct Awake {
+    app: gtk4::Application,
+    window: gtk4::Window,
+    cookie: Option<u32>,
+}
 
+/// GTK holds idle off for a window of its application: through Wayland's idle
+/// inhibitor where the compositor has one, else through the desktop session.
+pub fn keep_awake_for(window: &gtk4::Window) {
+    let app = gtk4::Application::new(
+        Some("io.github.viren070.aiostreams"),
+        gio::ApplicationFlags::NON_UNIQUE,
+    );
+    if let Err(e) = app.register(None::<&gio::Cancellable>) {
+        return log::warn!("keep awake: {e}");
+    }
+    window.set_application(Some(&app));
+    AWAKE.set(Some(Awake {
+        app,
+        window: window.clone(),
+        cookie: None,
+    }));
+}
+
+/// Called on mpv's thread.
 pub fn keep_awake(on: bool) {
-    let Ok(mut held) = AWAKE.lock() else { return };
-    if on == held.is_some() {
-        return;
-    }
-    let result =
-        gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).and_then(|bus| {
-            let call = |path: &str, interface, method, args: Option<glib::Variant>| {
-                bus.call_sync(
-                    Some("org.freedesktop.portal.Desktop"),
-                    path,
-                    interface,
-                    method,
-                    args.as_ref(),
-                    None,
-                    gio::DBusCallFlags::NONE,
-                    2000,
-                    None::<&gio::Cancellable>,
-                )
-            };
-            match held.take() {
-                Some(handle) => call(&handle, "org.freedesktop.portal.Request", "Close", None),
-                None => {
-                    let args =
-                        ("", INHIBIT_IDLE, HashMap::<String, glib::Variant>::new()).to_variant();
-                    let reply = call(
-                        "/org/freedesktop/portal/desktop",
-                        "org.freedesktop.portal.Inhibit",
-                        "Inhibit",
-                        Some(args),
-                    )?;
-                    *held = reply.child_value(0).str().map(String::from);
-                    Ok(reply)
+    glib::idle_add_once(move || {
+        AWAKE.with_borrow_mut(|awake| {
+            let Some(awake) = awake else { return };
+            match awake.cookie.take() {
+                Some(cookie) if !on => awake.app.uninhibit(cookie),
+                None if on => {
+                    awake.cookie = Some(awake.app.inhibit(
+                        Some(&awake.window),
+                        gtk4::ApplicationInhibitFlags::IDLE,
+                        Some("Playing a video"),
+                    ))
                 }
+                held => awake.cookie = held,
             }
-        });
-    if let Err(e) = result {
-        log::warn!("keep awake: {e}");
-    }
+        })
+    });
 }
 
 pub fn open_external(url: &str) {
@@ -379,6 +543,52 @@ pub fn device_name() -> String {
         .filter(|s| !s.is_empty())
         .or_else(|| std::env::var("HOSTNAME").ok())
         .unwrap_or_else(|| "Linux".into())
+}
+
+/// GNOME's clock setting where its settings portal has one, else the time locale's.
+pub fn hours24() -> Option<bool> {
+    gnome_clock().or_else(locale_clock)
+}
+
+fn gnome_clock() -> Option<bool> {
+    let bus = gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).ok()?;
+    let reply = bus
+        .call_sync(
+            Some("org.freedesktop.portal.Desktop"),
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Settings",
+            "ReadOne",
+            Some(&("org.gnome.desktop.interface", "clock-format").to_variant()),
+            None,
+            gio::DBusCallFlags::NONE,
+            1000,
+            None::<&gio::Cancellable>,
+        )
+        .ok()?;
+    match reply.child_value(0).as_variant()?.str()? {
+        "24h" => Some(true),
+        "12h" => Some(false),
+        _ => None,
+    }
+}
+
+fn locale_clock() -> Option<bool> {
+    // SAFETY: the locale made here is freed once its time format is read.
+    unsafe {
+        let locale = libc::newlocale(libc::LC_TIME_MASK, c"".as_ptr(), std::ptr::null_mut());
+        if locale.is_null() {
+            return None;
+        }
+        let format = std::ffi::CStr::from_ptr(libc::nl_langinfo_l(libc::T_FMT, locale))
+            .to_string_lossy()
+            .into_owned();
+        libc::freelocale(locale);
+        Some(
+            !["%I", "%l", "%r"]
+                .iter()
+                .any(|twelve| format.contains(twelve)),
+        )
+    }
 }
 
 /// `("2026-09-24", "21:03:04.123")`.

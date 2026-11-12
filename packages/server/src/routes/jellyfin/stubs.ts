@@ -25,12 +25,9 @@ const LIST_ROUTES = [
   '/Years',
   '/Trailers',
   '/MusicGenres',
-  '/LiveTv/Programs',
   '/LiveTv/Recordings',
   '/LiveTv/Timers',
   '/LiveTv/SeriesTimers',
-  '/LiveTv/Channels',
-  '/LiveTv/Programs/Recommended',
   '/LiveTv/Recordings/Folders',
   '/System/ActivityLog/Entries',
   '/Items/Suggestions',
@@ -80,15 +77,6 @@ router.get('/Items/:itemId/ThemeMedia', (req, res) => {
   });
 });
 
-router.get('/LiveTv/Info', (_req, res) => {
-  res.json({ Services: [], IsEnabled: false, EnabledUsers: [] });
-});
-router.get('/LiveTv/GuideInfo', (_req, res) => {
-  res.json({
-    StartDate: new Date().toISOString(),
-    EndDate: new Date().toISOString(),
-  });
-});
 router.get('/Notifications/:userId/Summary', (_req, res) => {
   res.json({ UnreadCount: 0, MaxUnreadNotificationLevel: 'Normal' });
 });

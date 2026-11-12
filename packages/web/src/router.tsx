@@ -8,22 +8,26 @@ import {
   createRouter,
   Outlet,
 } from '@tanstack/react-router';
-import { PageMessage, WebLayout } from './components/layout';
+import { PageMessage } from './components/shell/page';
+import { WebLayout } from './components/shell/layout';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
-import { DiscoverIndex, DiscoverPage } from './pages/discover';
-import { FavouritesPage } from './pages/favourites';
-import { CalendarPage } from './pages/calendar';
-import { SearchPage } from './pages/search';
-import { ItemPage } from './pages/item';
-import { PersonPage } from './pages/person';
-import { HistoryPage } from './pages/history';
-import { DownloadsPage } from './pages/downloads';
-import { PlayerPage } from './pages/player';
-import { TrailerPage } from './pages/trailer';
+import { openStartPage } from './lib/start-page';
+import { DiscoverIndex, DiscoverPage } from './app/discover/page';
+import { FavouritesPage } from './app/favourites/page';
+import { CalendarPage } from './app/calendar/page';
+import { LiveTvPage } from './app/live-tv/page';
+import { SearchPage } from './app/search/page';
+import { ItemPage } from './app/item/page';
+import { PersonPage } from './app/person/page';
+import { HistoryPage } from './app/history/page';
+import { DownloadsPage } from './app/downloads/page';
+import { openPlayback } from './lib/playback/session';
+import { endNowPlaying } from './lib/playback/now-playing';
+import { TrailerPage } from './app/trailer/page';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
-import { SettingsPage } from './pages/settings';
+import { SettingsPage } from './app/settings/page';
 
 const rootRoute = createRootRoute({ component: Outlet });
 
@@ -64,6 +68,21 @@ const favouritesRoute = createRoute({
 function FavouritesRouteView(): React.ReactElement {
   const { kind } = favouritesRoute.useSearch();
   return <FavouritesPage kind={kind} />;
+}
+
+const liveRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/live',
+  validateSearch: (search: Record<string, unknown>) => ({
+    group: search.group == null ? undefined : String(search.group),
+    view: search.view == null ? undefined : String(search.view),
+  }),
+  component: LiveRouteView,
+});
+
+function LiveRouteView(): React.ReactElement {
+  const { group, view } = liveRoute.useSearch();
+  return <LiveTvPage group={group} view={view} />;
 }
 
 const calendarRoute = createRoute({
@@ -211,23 +230,21 @@ const trailerRoute = createRoute({
 function TrailerRouteView(): React.ReactElement {
   const { itemId } = trailerRoute.useParams();
   const { trailer } = trailerRoute.useSearch();
+  // Here, not in the page, which each trailer remounts.
+  React.useEffect(() => endNowPlaying, []);
   return (
     <TrailerPage key={`${itemId}|${trailer}`} itemId={itemId} index={trailer} />
   );
 }
 
-function PlayRouteView(): React.ReactElement {
+/** The layout draws the player, which plays on in the mini player after its page closes. */
+function PlayRouteView(): null {
   const { itemId } = playRoute.useParams();
   const { source, start, playlist } = playRoute.useSearch();
-  return (
-    <PlayerPage
-      key={`${itemId}|${source}`}
-      itemId={itemId}
-      sourceId={source}
-      startMs={start}
-      playlist={playlist}
-    />
-  );
+  React.useLayoutEffect(() => {
+    openPlayback({ itemId, sourceId: source, startMs: start, playlist });
+  }, [itemId, source, start, playlist]);
+  return null;
 }
 
 const routeTree = rootRoute.addChildren([
@@ -236,6 +253,7 @@ const routeTree = rootRoute.addChildren([
     historyRoute,
     downloadsRoute,
     favouritesRoute,
+    liveRoute,
     calendarRoute,
     settingsRoute,
     searchRoute,
@@ -267,6 +285,8 @@ function NotFoundPage(): React.ReactElement {
     </PageMessage>
   );
 }
+
+openStartPage();
 
 export const webRouter = createRouter({
   routeTree,

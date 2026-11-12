@@ -1,0 +1,1085 @@
+import { plural, t } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import React from 'react';
+import {
+  LuArrowLeft,
+  LuCaptions,
+  LuChevronDown,
+  LuLoaderCircle,
+  LuLock,
+  LuPause,
+  LuPlay,
+  LuRotateCcw,
+  LuRotateCw,
+  LuSkipBack,
+  LuSkipForward,
+} from 'react-icons/lu';
+import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
+import { cn } from '@aiostreams/ui/core/styling';
+import { clock, clockTime, itemSubtitle, itemTitle } from '@/lib/format';
+import { currentHost } from '@/lib/hosts';
+import { appBridge } from '@/lib/hosts/shell/bridge';
+import type { PlayerController } from '@/lib/playback/controller';
+import { settings, useSetting } from '@/lib/settings';
+import { delayNotice, syncNotice } from '@/lib/subtitles/delay';
+import { useLatest } from '@/hooks/use-latest';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
+import {
+  ControlButton,
+  ControlsShown,
+  MiddleButton,
+  PlayerAction,
+  useControlsShown,
+} from './buttons';
+import {
+  BarWindowButtons,
+  pageDrawsWindowButtons,
+} from '@/components/shell/window-controls';
+import { ChaptersSheet } from './chapters';
+import { EpisodesSheet } from './episodes';
+import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
+import { ChannelsSheet, LiveBar, useBehindLive, useLiveChannel } from './live';
+import { PlaylistSheet } from '@/features/playlists/playlists';
+import {
+  Notice,
+  ScrubReadout,
+  SpeedPill,
+  useNotice,
+  useSeekFlash,
+  useToggleFlash,
+} from './feedback';
+import { usePlayerGestures } from './gestures';
+import {
+  useBurstSeek,
+  useFileDrop,
+  useIdle,
+  usePositionClock,
+  type Rest,
+} from './hooks';
+import { usePlayerKeys } from './keys';
+import { ScreenLock } from './lock';
+import { PauseScreen } from './pause-screen';
+import { fitLabel, OptionButtons } from './options';
+import { ScrubStrip } from './scrub-strip';
+import { SeekBar } from './seek-bar';
+import { skipLabel, type Segment, type SegmentSkip } from './segments';
+import { useHeldSpeed } from './speed';
+import { SyncByEar, SyncToLine } from './subtitle-sync';
+import { Volume } from './volume';
+import { usePlayhead, type Playhead } from '@/lib/playback/playhead';
+import { createLive, useLive, type LiveWriter } from '@/lib/live-value';
+
+const IDLE_MS = 5000;
+const BRIEF_IDLE_MS = 1500;
+const NO_SEGMENTS: Segment[] = [];
+
+/** Presses closer than this are a held key's repeats. */
+const HELD_GAP_MS = 250;
+/** A held key's steps grow by one step every this many repeats, up to `MAX_STEPS`. */
+const REPEATS_PER_STEP = 10;
+const MAX_STEPS = 4;
+
+interface Transport {
+  name: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+}
+
+export function PlayerControls({
+  item,
+  player,
+  skipping,
+  onBack,
+  onMinimise,
+  onVersions,
+  onPrevious,
+  onNext,
+  onEpisode,
+  loadingEpisode = null,
+  offeringNext = false,
+  caption,
+  steps,
+  playlist,
+  onParty,
+  live = false,
+  showAtOpen = false,
+}: {
+  item: BaseItemDto;
+  player: PlayerController;
+  skipping?: SegmentSkip;
+  onBack(): void;
+  onMinimise?: () => void;
+  onVersions?: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  onEpisode?: (episode: BaseItemDto) => void;
+  loadingEpisode?: string | null;
+  offeringNext?: boolean;
+  /** Under the title, in place of an episode's own line. */
+  caption?: string;
+  /** What previous and next move between, where it isn't the show's episodes. */
+  steps?: 'episode' | 'trailer' | 'playlist';
+  playlist?: { id: string; onPlay(entry: BaseItemDto, playlist: string): void };
+  onParty?: () => void;
+  /** A channel: the programme in place of the seek bar, and zapping. */
+  live?: boolean;
+  showAtOpen?: boolean;
+}) {
+  const { state } = player;
+  const latest = useLatest(player);
+  const tv = !!currentHost().tv;
+  const root = React.useRef<HTMLDivElement>(null);
+  const bottomBar = React.useRef<HTMLDivElement>(null);
+  const rest = useIdle(IDLE_MS);
+  const { wake, hide, soon, brief } = rest;
+  const [shown] = React.useState(() => createLive(false));
+  // Some TVs' web views report a coarse pointer.
+  const [touch, setTouch] = React.useState(
+    () => !tv && matchMedia('(pointer: coarse)').matches
+  );
+  const [menus, setMenus] = React.useState(0);
+  const onMenu = (open: boolean) => setMenus((n) => n + (open ? 1 : -1));
+  const [locked, setLocked] = React.useState(false);
+  const [picking, setPicking] = React.useState<{
+    heardAtMs: number;
+    resume: boolean;
+  } | null>(null);
+  const [byEar, setByEar] = React.useState(false);
+  const [episodes, setEpisodes] = React.useState(false);
+  const [chapters, setChapters] = React.useState(false);
+  const [listing, setListing] = React.useState(false);
+  const [channels, setChannels] = React.useState(false);
+  const channel = useLiveChannel(item, live);
+  const behind = useBehindLive(player);
+  const [scrub, setScrub] = React.useState<{
+    fromMs: number;
+    toMs: number;
+    /** Set on a remote's scrub only: whether dropping it plays again. */
+    resume?: boolean;
+  } | null>(null);
+  const scrubbing = React.useRef(scrub);
+  // Until the first frame only Back works; a player in its own window is watched there.
+  const ready = state.started || !!player.external;
+  const busy =
+    menus > 0 ||
+    picking !== null ||
+    byEar ||
+    episodes ||
+    chapters ||
+    listing ||
+    channels ||
+    scrub !== null;
+  const view = (idle: boolean, hidden: boolean) => {
+    const pauseScreen =
+      ready &&
+      !player.external &&
+      !locked &&
+      state.paused &&
+      idle &&
+      !busy &&
+      !state.error &&
+      !offeringNext &&
+      steps !== 'trailer';
+    const visible =
+      !!player.external ||
+      (ready &&
+        !locked &&
+        !hidden &&
+        (!idle || busy || (state.paused && !pauseScreen)));
+    return { visible, pauseScreen };
+  };
+  // The video appears without the controls, unless it opens paused.
+  const [wakeFirst] = React.useState(showAtOpen && ready);
+  React.useEffect(() => {
+    if (!ready || latest.current.state.paused) return;
+    if (wakeFirst) wake();
+    else hide();
+  }, [ready, latest, hide, wake, wakeFirst]);
+  const wasPaused = React.useRef<boolean | null>(null);
+  React.useEffect(() => {
+    if (!ready) return;
+    if (wasPaused.current && !state.paused) soon(BRIEF_IDLE_MS);
+    wasPaused.current = state.paused;
+  }, [ready, state.paused, soon]);
+
+  const [flash, showFlash] = useToggleFlash();
+  const [seekFlash, showSeekFlash] = useSeekFlash();
+  const [notice, showNotice] = useNotice();
+  const numbers = useNumberEntry(channel?.toNumber, showNotice);
+  const syncOutcome = player.autoSync?.outcome;
+  React.useEffect(() => {
+    const text = syncOutcome && syncNotice(syncOutcome);
+    if (text) showNotice(text, 'failed' in syncOutcome ? 4000 : 2000);
+  }, [syncOutcome, showNotice]);
+  const togglePlay = () => {
+    showFlash(latest.current.state.paused);
+    latest.current.togglePlay();
+  };
+
+  const [seekStep] = useSetting(settings.controls.seekStep);
+  const [clock] = useSetting(settings.controls.clock);
+  const [burstSeek, seekingTo] = useBurstSeek(player);
+  const [seekPicture, setSeekPicture] = React.useState(true);
+  const seekBy = (deltaMs: number, picture = true) => {
+    if (live) return;
+    setSeekPicture(picture);
+    burstSeek(deltaMs);
+    showSeekFlash(deltaMs);
+  };
+  // A remote's press skips. Held, or pressed while paused, it scrubs paused
+  // through pictures until Select plays from one or Back drops it.
+  const held = React.useRef({ at: 0, repeats: 0 });
+  const skippedFrom = React.useRef(0);
+  const remoteStep = (deltaMs: number, repeat: boolean) => {
+    const { state, playhead, thumbnails, togglePlay } = latest.current;
+    const now = performance.now();
+    const h = held.current;
+    h.repeats = now - h.at < HELD_GAP_MS ? h.repeats + 1 : 0;
+    h.at = now;
+    const steps = Math.min(
+      MAX_STEPS,
+      1 + Math.floor(h.repeats / REPEATS_PER_STEP)
+    );
+    const last = scrubbing.current;
+    if (!last && !(thumbnails?.row() && (repeat || state.paused))) {
+      if (seekingTo === null) skippedFrom.current = playhead.positionMs;
+      seekBy(deltaMs * steps, false);
+      return false;
+    }
+    if (!last && !state.paused) togglePlay();
+    const fromMs =
+      last?.fromMs ??
+      (state.paused ? playhead.positionMs : skippedFrom.current);
+    const to = Math.max(
+      0,
+      (last?.toMs ?? seekingTo ?? playhead.positionMs) + deltaMs * steps
+    );
+    scrubbing.current = {
+      fromMs,
+      toMs: state.durationMs ? Math.min(state.durationMs, to) : to,
+      resume: last ? last.resume : !state.paused,
+    };
+    setScrub(scrubbing.current);
+    return true;
+  };
+  /** Plays from a remote's scrub, or drops it; false without one. */
+  const endScrub = (commit: boolean) => {
+    const s = scrubbing.current;
+    if (s?.resume === undefined) return false;
+    scrubbing.current = null;
+    setScrub(null);
+    if (commit) latest.current.seek(s.toMs);
+    // Only a hold scrubs from playing, after its first press skipped.
+    else if (s.resume) latest.current.seek(s.fromMs);
+    if ((commit || s.resume) && latest.current.state.paused)
+      latest.current.togglePlay();
+    return true;
+  };
+  const speed = useHeldSpeed(player);
+
+  const positionNow = usePositionClock(player);
+  const loadLines = React.useCallback(
+    () => latest.current.subtitleLines?.() ?? Promise.resolve(null),
+    [latest]
+  );
+  const pickLine = () => {
+    const resume = !latest.current.state.paused;
+    if (resume) latest.current.togglePlay();
+    setPicking({ heardAtMs: positionNow(), resume });
+  };
+  const closePicker = () => {
+    if (picking?.resume && latest.current.state.paused)
+      latest.current.togglePlay();
+    setPicking(null);
+  };
+  const closeByEar = React.useCallback(() => setByEar(false), []);
+  const closeChapters = React.useCallback(() => setChapters(false), []);
+
+  const fileInput = React.useRef<HTMLInputElement>(null);
+  const addSubtitleFile = (file: File) =>
+    latest.current.subtitleFiles?.add(file).then(
+      () => {
+        const { name } = file;
+        showNotice(t`Added ${name}`);
+      },
+      (e: Error) => showNotice(e.message)
+    );
+  const dragging = useFileDrop(
+    player.subtitleFiles ? addSubtitleFile : undefined
+  );
+
+  const [fit, setFit] = useSetting(settings.video.fit);
+  const gestures = usePlayerGestures({
+    player,
+    seekBy: (deltaMs) => seekBy(deltaMs, false),
+    seekStepMs: seekStep * 1000,
+    notice: showNotice,
+    onTap: () => (shown.get() ? hide() : wake()),
+    onClick: togglePlay,
+    onDoubleClick: () => latest.current.toggleFullscreen?.(),
+    hold: speed.start,
+    onScrub: (deltaMs) => {
+      const { state, playhead } = latest.current;
+      const fromMs = scrubbing.current?.fromMs ?? playhead.positionMs;
+      const { durationMs } = state;
+      const to = Math.max(0, fromMs + deltaMs);
+      scrubbing.current = {
+        fromMs,
+        toMs: durationMs ? Math.min(durationMs, to) : to,
+      };
+      setScrub(scrubbing.current);
+    },
+    onScrubEnd: (commit) => {
+      const s = scrubbing.current;
+      scrubbing.current = null;
+      setScrub(null);
+      if (commit && s && Math.abs(s.toMs - s.fromMs) >= 1000)
+        latest.current.seek(s.toMs);
+      wake();
+    },
+    onPinch: player.fit
+      ? (out) => {
+          const next = out ? 'crop' : 'fit';
+          if (next === fit) return;
+          setFit(next);
+          const label = fitLabel(next);
+          showNotice(t`Picture: ${label}`);
+        }
+      : undefined,
+  });
+
+  usePlayerKeys({
+    player,
+    root,
+    ready,
+    visible: shown.get,
+    wake,
+    glance: () => {
+      wake();
+      soon(BRIEF_IDLE_MS);
+    },
+    glancing: () => brief.current,
+    hide,
+    notice: showNotice,
+    togglePlay,
+    seekBy: (deltaMs, held) => {
+      if (tv) return remoteStep(deltaMs, held);
+      seekBy(deltaMs, false);
+      return false;
+    },
+    endScrub,
+    onBack,
+    onPrevious,
+    onNext,
+    skipSegment: skipping?.skip,
+    speedUp: speed.start,
+    zap: channel && { step: channel.step, type: numbers.type },
+  });
+
+  const fade =
+    'pointer-events-none opacity-0 group-data-[visible]/controls:pointer-events-auto group-data-[visible]/controls:opacity-100';
+  const barFade =
+    'pointer-events-none opacity-0 group-data-[visible]/controls:opacity-100 group-data-[visible]/controls:[&>*]:pointer-events-auto';
+  const isEpisode = item.Type === 'Episode';
+  const listsEpisodes = isEpisode && !!item.SeriesId && !!onEpisode;
+  const listsChapters = (player.chapters?.length ?? 0) > 1;
+  const step = channel?.step;
+  const stepping =
+    steps ?? (isEpisode ? 'episode' : step ? 'channel' : undefined);
+  const stepLabels = {
+    episode: [t`Previous episode`, t`Next episode`],
+    channel: [t`Previous channel`, t`Next channel`],
+    trailer: [t`Previous trailer`, t`Next trailer`],
+    playlist: [t`Previous`, t`Next`],
+  };
+  const stepSeconds = seekStep;
+  const subtitle =
+    caption ??
+    (channel
+      ? channel.programme?.Name
+      : isEpisode
+        ? itemSubtitle(item)
+        : undefined);
+  const spinner = <LuLoaderCircle className="animate-spin" />;
+  const buttons: Record<string, Transport | false> = {
+    previous: !!stepping && {
+      name: 'previous',
+      label: stepLabels[stepping][0],
+      icon: loadingEpisode === 'previous' ? spinner : <LuSkipBack />,
+      onClick: step ? () => step(-1) : onPrevious,
+    },
+    // A remote's arrows skip with the controls hidden, and the seek bar's with them up.
+    back: !touch &&
+      !tv &&
+      !live && {
+        name: 'back',
+        label: plural(stepSeconds, {
+          one: 'Back # second',
+          other: 'Back # seconds',
+        }),
+        icon: <LuRotateCcw />,
+        onClick: () => seekBy(-seekStep * 1000),
+      },
+    forward: !touch &&
+      !tv &&
+      !live && {
+        name: 'forward',
+        label: plural(stepSeconds, {
+          one: 'Forward # second',
+          other: 'Forward # seconds',
+        }),
+        icon: <LuRotateCw />,
+        onClick: () => seekBy(seekStep * 1000),
+      },
+    next: !!stepping && {
+      name: 'next',
+      label: stepLabels[stepping][1],
+      icon: loadingEpisode === 'next' ? spinner : <LuSkipForward />,
+      onClick: step ? () => step(1) : onNext,
+    },
+  };
+  // Where the middle buttons don't show.
+  const inBar = tv ? 'flex' : !touch && 'lg:flex';
+  const middleShown = cn(
+    !touch && 'lg:hidden',
+    scrub ? 'pointer-events-none opacity-0' : fade
+  );
+  const middleButton = (b: Transport | false) =>
+    !tv &&
+    b && (
+      <MiddleButton
+        name={b.name}
+        label={b.label}
+        disabled={!b.onClick}
+        onClick={b.onClick}
+        className={middleShown}
+      >
+        {b.icon}
+      </MiddleButton>
+    );
+  const barButton = (b: Transport | false) =>
+    b && (
+      <ControlButton
+        name={b.name}
+        label={b.label}
+        disabled={!b.onClick}
+        onClick={b.onClick}
+      >
+        {b.icon}
+      </ControlButton>
+    );
+  const shownAt = scrub?.toMs ?? seekingTo;
+  // A remote's scrub shows its pictures in a row rather than over the bar.
+  const strip = scrub?.resume !== undefined && player.thumbnails;
+  const timeProps = { playhead: player.playhead, atMs: shownAt };
+
+  if (!ready)
+    return (
+      <div
+        data-ui="player-controls"
+        data-loading
+        className="fixed inset-0 z-10 select-none"
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {!tv && (
+          // Late, so a quick start never flashes it.
+          <div className="absolute start-[max(0.75rem,env(safe-area-inset-left))] top-[calc(0.75rem+env(safe-area-inset-top))] [animation:fade-in_300ms_ease-out_1.5s_both] sm:start-[max(1.25rem,env(safe-area-inset-left))] sm:top-[calc(1.25rem+env(safe-area-inset-top))]">
+            <ControlButton name="exit" label={t`Back`} onClick={onBack}>
+              <LuArrowLeft className="rtl:-scale-x-100" />
+            </ControlButton>
+          </div>
+        )}
+      </div>
+    );
+
+  const controls = (
+    <ControlsLayer
+      rest={rest}
+      shown={shown}
+      view={view}
+      root={root}
+      bottomBar={bottomBar}
+      player={player}
+      item={item}
+      paused={state.paused}
+      waiting={state.waiting && !state.error}
+      onPointerType={(type) => setTouch(!tv && type === 'touch')}
+      under={<div className="absolute inset-0 touch-none" {...gestures} />}
+    >
+      <div
+        data-ui="player-top-bar"
+        className={cn(
+          'absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-black/80 to-transparent pb-12 ps-[max(0.75rem,env(safe-area-inset-left))] pe-[max(0.75rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 sm:ps-[max(1.25rem,env(safe-area-inset-left))] sm:pe-[max(1.25rem,env(safe-area-inset-right))] sm:pt-[calc(1.25rem+env(safe-area-inset-top))]',
+          barFade
+        )}
+      >
+        <ControlButton name="exit" label={t`Back`} onClick={onBack}>
+          <LuArrowLeft className="rtl:-scale-x-100" />
+        </ControlButton>
+        <div
+          data-ui="player-title"
+          className="min-w-0 text-[length:var(--title)]"
+        >
+          <p data-name="name" className="truncate font-semibold">
+            {itemTitle(item)}
+          </p>
+          {subtitle && (
+            <p
+              data-name="detail"
+              className="truncate text-[0.875em] text-gray-300"
+            >
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div
+          data-ui="player-top-end"
+          className="ms-auto flex items-center gap-3"
+        >
+          {clock && <PlayerClock />}
+          {onMinimise && (
+            <ControlButton
+              name="mini-player"
+              label={t`Mini player`}
+              onClick={onMinimise}
+            >
+              <LuChevronDown />
+            </ControlButton>
+          )}
+          {touch && !tv && (
+            <ControlButton
+              name="lock"
+              label={t`Lock screen`}
+              onClick={() => {
+                setLocked(true);
+                hide();
+              }}
+            >
+              <LuLock />
+            </ControlButton>
+          )}
+          {pageDrawsWindowButtons() && !state.fullscreen && (
+            <div
+              data-ui="player-window-buttons"
+              className="flex items-center gap-1"
+            >
+              <BarWindowButtons />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        data-ui="player-middle"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 sm:gap-6"
+      >
+        {middleButton(buttons.previous)}
+        {middleButton(buttons.back)}
+        {state.waiting && !state.error ? (
+          <LoadingSpinner containerClass="size-16 flex-none" iconClass="me-0" />
+        ) : (
+          !tv && (
+            <MiddleButton
+              name="play"
+              label={state.paused ? t`Play` : t`Pause`}
+              big
+              onClick={togglePlay}
+              className={middleShown}
+            >
+              {state.paused ? <LuPlay /> : <LuPause />}
+            </MiddleButton>
+          )
+        )}
+        {middleButton(buttons.forward)}
+        {middleButton(buttons.next)}
+      </div>
+
+      {!touch && <div className="contents max-lg:hidden">{flash}</div>}
+      {seekFlash}
+      {notice ||
+        skipping?.notice ||
+        (state.reconnecting && <Notice text={t`Reconnecting…`} />) ||
+        (player.autoSync?.waiting && <Notice text={t`Syncing subtitles…`} />)}
+      {scrub && !tv && (
+        <ScrubReadout
+          fromMs={scrub.fromMs}
+          toMs={scrub.toMs}
+          durationMs={state.durationMs}
+        />
+      )}
+      {speed.held && <SpeedPill rate={speed.held} />}
+      {numbers.typed && <NumberEntry typed={numbers.typed} />}
+      {dragging && (
+        <div
+          data-ui="subtitle-drop"
+          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/60 p-6"
+        >
+          <div className="rounded-2xl border-2 border-dashed border-white/40 px-10 py-8 text-center">
+            <LuCaptions className="mx-auto mb-2 text-4xl" />
+            <p className="text-lg font-semibold">
+              <Trans>Drop to add subtitles</Trans>
+            </p>
+          </div>
+        </div>
+      )}
+      {player.subtitleFiles && (
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          accept={player.subtitleFiles.types.map((t) => `.${t}`).join(',')}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) void addSubtitleFile(file);
+          }}
+        />
+      )}
+      {picking && player.setSubtitleDelay && (
+        <SyncToLine
+          heardAtMs={picking.heardAtMs}
+          delayMs={state.subtitleDelayMs}
+          load={loadLines}
+          onPick={(ms) => {
+            player.setSubtitleDelay?.(ms);
+            closePicker();
+            showNotice(delayNotice(ms));
+          }}
+          onClose={closePicker}
+        />
+      )}
+      {byEar && player.setSubtitleDelay && state.subtitle && (
+        <SyncByEar
+          delayMs={state.subtitleDelayMs}
+          now={positionNow}
+          onApply={player.setSubtitleDelay}
+          onClose={closeByEar}
+        />
+      )}
+
+      {skipping?.segment && !locked && (
+        <SkipSegment
+          segment={skipping.segment}
+          fresh={skipping.fresh}
+          onSkip={skipping.skip}
+        />
+      )}
+
+      <div
+        ref={bottomBar}
+        data-ui="player-bottom-bar"
+        className={cn(
+          'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[calc(0.5rem+env(safe-area-inset-bottom))] ps-[max(0.75rem,env(safe-area-inset-left))] pe-[max(0.75rem,env(safe-area-inset-right))] pt-16 transition-opacity duration-300 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:ps-[max(1.25rem,env(safe-area-inset-left))] sm:pe-[max(1.25rem,env(safe-area-inset-right))]',
+          barFade
+        )}
+      >
+        {scrub && strip && (
+          <ScrubStrip
+            feed={strip}
+            atMs={scrub.toMs}
+            stepMs={seekStep * 1000}
+            durationMs={state.durationMs}
+          />
+        )}
+        {channel ? (
+          <LiveBar
+            channel={channel}
+            behindMs={behind.behindMs}
+            onGoLive={behind.goLive}
+          />
+        ) : (
+          <>
+            <div
+              data-ui="player-info"
+              className="flex items-center justify-between gap-3 px-0.5 pb-1"
+            >
+              <PlayerTime {...timeProps} durationMs={state.durationMs} />
+              <EndsAt
+                {...timeProps}
+                durationMs={state.durationMs}
+                rate={state.rate}
+              />
+            </div>
+            <SeekBar
+              playhead={player.playhead}
+              durationMs={state.durationMs}
+              segments={skipping?.segments ?? NO_SEGMENTS}
+              chapters={player.chapters ?? []}
+              previewMs={shownAt}
+              previewPicture={!strip && (!!scrub || seekPicture)}
+              handle={touch}
+              thumbnails={player.thumbnails}
+              onSeek={player.seek}
+              onStep={(direction, held) =>
+                tv
+                  ? remoteStep(direction * seekStep * 1000, held)
+                  : seekBy(direction * seekStep * 1000, false)
+              }
+              onTogglePlay={() => endScrub(true) || togglePlay()}
+            />
+          </>
+        )}
+        <div className="flex items-center gap-1">
+          <div className={cn('hidden items-center gap-1', inBar)}>
+            <ControlButton
+              name="play"
+              label={state.paused ? t`Play` : t`Pause`}
+              onClick={togglePlay}
+            >
+              {state.paused ? <LuPlay /> : <LuPause />}
+            </ControlButton>
+            {barButton(buttons.back)}
+            {barButton(buttons.forward)}
+            {barButton(buttons.previous)}
+            {barButton(buttons.next)}
+          </div>
+          {!touch && !tv && <Volume player={player} />}
+          <OptionButtons
+            player={player}
+            onMenu={onMenu}
+            onVersions={onVersions}
+            onEpisodes={listsEpisodes ? () => setEpisodes(true) : undefined}
+            onChapters={listsChapters ? () => setChapters(true) : undefined}
+            onChannels={
+              channel && channel.lineup.length > 1
+                ? () => setChannels(true)
+                : undefined
+            }
+            onPlaylist={playlist ? () => setListing(true) : undefined}
+            onAddFile={() => fileInput.current?.click()}
+            onSyncByEar={() => setByEar(true)}
+            onSyncToLine={pickLine}
+            onParty={onParty}
+            notice={showNotice}
+          />
+        </div>
+      </div>
+
+      {listsEpisodes && (
+        <EpisodesSheet
+          item={item}
+          open={episodes}
+          loadingId={loadingEpisode}
+          onPlay={onEpisode}
+          onClose={() => setEpisodes(false)}
+        />
+      )}
+
+      {channel && (
+        <ChannelsSheet
+          item={item}
+          channel={channel}
+          open={channels}
+          onClose={() => setChannels(false)}
+        />
+      )}
+
+      {listsChapters && (
+        <ChaptersSheet
+          item={item}
+          player={player}
+          open={chapters}
+          onClose={closeChapters}
+        />
+      )}
+
+      {playlist && (
+        <PlaylistSheet
+          open={listing}
+          playlist={playlist.id}
+          playing={item.Id!}
+          loadingId={loadingEpisode}
+          onPlay={(entry, id) => {
+            setListing(false);
+            if (entry.Id !== item.Id || id !== playlist.id)
+              playlist.onPlay(entry, id);
+          }}
+          onClose={() => setListing(false)}
+        />
+      )}
+
+      {locked && (
+        <ScreenLock
+          onUnlock={() => {
+            setLocked(false);
+            wake();
+          }}
+        />
+      )}
+    </ControlsLayer>
+  );
+  return controls;
+}
+
+/** Its children come from the controls, so resting draws again only what follows it. */
+function ControlsLayer({
+  rest,
+  shown,
+  view,
+  root,
+  bottomBar,
+  player,
+  item,
+  paused,
+  waiting,
+  onPointerType,
+  under,
+  children,
+}: {
+  rest: Rest;
+  shown: LiveWriter<boolean>;
+  view(
+    idle: boolean,
+    hidden: boolean
+  ): { visible: boolean; pauseScreen: boolean };
+  root: React.RefObject<HTMLDivElement | null>;
+  bottomBar: React.RefObject<HTMLDivElement | null>;
+  player: PlayerController;
+  item: BaseItemDto;
+  paused: boolean;
+  waiting: boolean;
+  onPointerType(type: string): void;
+  under: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const idle = useLive(rest.idle);
+  const hidden = useLive(rest.hidden);
+  const { visible, pauseScreen } = view(idle, hidden);
+  React.useLayoutEffect(() => shown.set(visible), [shown, visible]);
+  useWindowButtons(visible);
+  useFocusInside(root, visible, rest.wake);
+  useLiftSubtitles(player, bottomBar, visible);
+  return (
+    <ControlsShown.Provider value={shown}>
+      <div
+        ref={root}
+        data-ui="player-controls"
+        data-visible={visible || undefined}
+        data-paused={paused || undefined}
+        data-waiting={waiting || undefined}
+        // The next episode card moves above the bar as its peer.
+        className={cn(
+          'group/controls peer fixed inset-0 z-10 select-none',
+          !visible && 'cursor-none'
+        )}
+        onFocus={rest.wake}
+        onPointerMove={rest.wake}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          onPointerType(e.pointerType);
+          // A tap on hidden controls must not press what appears under it.
+          if (e.pointerType !== 'touch' || visible) rest.wake();
+        }}
+      >
+        {under}
+        {paused && <PauseScreen item={item} shown={pauseScreen} />}
+        {children}
+      </div>
+    </ControlsShown.Provider>
+  );
+}
+
+/** Above the bottom bar, whose padding reaches over it. */
+function SkipSegment({
+  segment,
+  fresh,
+  onSkip,
+}: {
+  segment: Segment;
+  fresh: boolean;
+  onSkip?: () => void;
+}) {
+  const visible = useControlsShown();
+  return (
+    <div
+      data-ui="skip-segment"
+      data-type={segment.type}
+      data-visible={visible || fresh || undefined}
+      className={cn(
+        'absolute end-[max(1rem,env(safe-area-inset-right))] z-20 transition-[bottom,opacity] duration-300 sm:end-[max(2rem,env(safe-area-inset-right))]',
+        visible
+          ? 'bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(8rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(2rem+env(safe-area-inset-bottom))]',
+        !visible && !fresh && 'pointer-events-none opacity-0'
+      )}
+    >
+      <PlayerAction
+        primary
+        className="shadow-lg"
+        rightIcon={<LuSkipForward />}
+        onClick={onSkip}
+      >
+        {skipLabel(segment)}
+      </PlayerAction>
+    </div>
+  );
+}
+
+/** Hides macOS's window buttons, drawn over the video, with the controls. */
+function useWindowButtons(visible: boolean) {
+  React.useEffect(() => {
+    const shell = appBridge();
+    if (shell?.platform === 'macos')
+      shell.send({ type: 'window-buttons', visible });
+  }, [visible]);
+  React.useEffect(
+    () => () => {
+      const shell = appBridge();
+      if (shell?.platform === 'macos')
+        shell.send({ type: 'window-buttons', visible: true });
+    },
+    []
+  );
+}
+
+/** Hidden controls let go of focus, so the arrow keys seek again. */
+function useFocusInside(
+  root: React.RefObject<HTMLElement | null>,
+  visible: boolean,
+  wake: () => void
+) {
+  React.useEffect(() => {
+    const el = document.activeElement;
+    if (!visible && el instanceof HTMLElement && root.current?.contains(el))
+      el.blur();
+  }, [visible, root]);
+  // The page takes the arrows before the controls see them.
+  React.useEffect(() => {
+    const onKey = () => {
+      if (root.current?.contains(document.activeElement)) wake();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [wake, root]);
+}
+
+function useLiftSubtitles(
+  player: PlayerController,
+  bottomBar: React.RefObject<HTMLElement | null>,
+  visible: boolean
+) {
+  const latest = useLatest(player);
+  React.useEffect(() => {
+    const lift = () => {
+      const tops = Array.from(bottomBar.current?.children ?? [])
+        .map((child) => child.getBoundingClientRect())
+        .filter((r) => r.height > 0)
+        .map((r) => r.top);
+      latest.current.liftSubtitles?.(
+        visible && tops.length ? 1 - Math.min(...tops) / innerHeight : 0
+      );
+    };
+    lift();
+    if (!visible) return;
+    // The bar grows with what opens in it, such as a remote's scrub.
+    const grows = new ResizeObserver(lift);
+    if (bottomBar.current) grows.observe(bottomBar.current);
+    window.addEventListener('resize', lift);
+    return () => {
+      grows.disconnect();
+      window.removeEventListener('resize', lift);
+    };
+  }, [visible, latest, bottomBar]);
+  React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);
+}
+
+const TIME = 'text-xs tabular-nums sm:text-[length:var(--time)]';
+
+const SOFT_FOCUS =
+  '[html:not([data-pointer-focus])_&:focus-visible]:bg-white/20 [html:not([data-pointer-focus])_&:focus-visible]:text-white';
+
+interface TimeProps {
+  playhead: Playhead;
+  /** Shown in place of the playhead, as a seek is under way. */
+  atMs: number | null;
+}
+
+function usePlayedMs({ playhead, atMs }: TimeProps): number {
+  const live = useControlsShown();
+  const seconds = usePlayhead(
+    playhead,
+    (h) => Math.floor(h.positionMs / 1000),
+    live
+  );
+  return atMs ?? seconds * 1000;
+}
+
+export function PlayerTime({
+  durationMs,
+  ...props
+}: TimeProps & { durationMs: number }) {
+  const at = usePlayedMs(props);
+  const [left, setLeft] = useSetting(settings.controls.timeLeft);
+  const showLeft = left && durationMs > 0;
+  return (
+    <button
+      type="button"
+      data-ui="player-time"
+      data-focus="own"
+      dir="ltr"
+      title={showLeft ? t`Show time played` : t`Show time left`}
+      className={cn(
+        TIME,
+        // Over the space above the seek bar, which takes presses too.
+        'relative z-[1] -mx-1.5 rounded-md px-1.5 py-0.5 text-gray-200 transition-colors hover:text-white',
+        SOFT_FOCUS
+      )}
+      onClick={() => setLeft(!left)}
+    >
+      {showLeft ? `-${clock(durationMs - at)}` : clock(at)}
+      {durationMs > 0 && (
+        <span className="text-gray-400"> / {clock(durationMs)}</span>
+      )}
+    </button>
+  );
+}
+
+function PlayerClock() {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    let timer = 0;
+    const next = () => {
+      setNow(new Date());
+      timer = window.setTimeout(next, 60_000 - (Date.now() % 60_000));
+    };
+    timer = window.setTimeout(next, 60_000 - (Date.now() % 60_000));
+    return () => window.clearTimeout(timer);
+  }, []);
+  return (
+    <p
+      data-ui="player-clock"
+      className="ms-auto whitespace-nowrap text-[length:var(--title)] font-semibold tabular-nums"
+    >
+      {clockTime(now)}
+    </p>
+  );
+}
+
+function EndsAt({
+  durationMs,
+  rate,
+  ...props
+}: TimeProps & { durationMs: number; rate: number }) {
+  const at = usePlayedMs(props);
+  const live = useControlsShown();
+  // The end moves on while paused.
+  const [, tick] = React.useReducer((n: number) => n + 1, 0);
+  React.useEffect(() => {
+    if (!live) return;
+    const timer = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(timer);
+  }, [live]);
+  if (durationMs <= 0) return null;
+  const endsAt = clockTime(
+    Date.now() + Math.max(0, durationMs - at) / (rate || 1)
+  );
+  return (
+    <p
+      data-ui="player-ends"
+      className={cn(TIME, 'whitespace-nowrap text-gray-400')}
+    >
+      {t`Ends at ${endsAt}`}
+    </p>
+  );
+}

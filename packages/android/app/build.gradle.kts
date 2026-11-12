@@ -79,7 +79,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
     }
@@ -98,6 +98,7 @@ androidComponents {
 
 dependencies {
     implementation(project(":bridge"))
+    implementation(project(":logs"))
     implementation(project(":playback"))
     implementation(project(":mpv"))
     implementation(project(":exoplayer"))

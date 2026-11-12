@@ -1,16 +1,22 @@
 import { i18n, type MessageDescriptor } from '@lingui/core';
 import { msg, t } from '@lingui/core/macro';
-import type { Host } from '../hosts';
-import { browserFeatures, type PlayerFeature } from '../playback/controller';
-import { settings, useSetting } from '../settings';
+import type { Host } from '@/lib/hosts';
+import {
+  browserFeatures,
+  webGpuFeatures,
+  type PlayerFeature,
+} from '@/lib/playback/controller';
+import { playsWithWebGpu } from '@/lib/playback/player-choice';
+import { settings, useSetting } from '@/lib/settings';
 
-export type ActionGroup = 'general' | 'navigation' | 'player' | 'sync';
+export type ActionGroup = 'general' | 'navigation' | 'player' | 'live' | 'sync';
 
 export const groupLabel = (group: ActionGroup) =>
   ({
     general: t`General`,
     navigation: t`Moving around`,
     player: t`Player`,
+    live: t`Live TV`,
     sync: t`Sync by ear`,
   })[group];
 
@@ -79,7 +85,7 @@ export const ACTIONS = {
   home: { label: msg`Home`, group: 'navigation', keys: ['H', 'BrowserHome'] },
 
   'player.controls': {
-    label: msg`Show the controls`,
+    label: msg`Play or pause, or go to the controls`,
     group: 'player',
     keys: ['Enter', 'GamepadA'],
   },
@@ -115,13 +121,13 @@ export const ACTIONS = {
     label: msg`Previous chapter`,
     group: 'player',
     needs: 'chapters',
-    keys: ['PageDown'],
+    keys: ['PageDown', 'ChannelDown'],
   },
   'player.nextChapter': {
     label: msg`Next chapter`,
     group: 'player',
     needs: 'chapters',
-    keys: ['PageUp'],
+    keys: ['PageUp', 'ChannelUp'],
   },
   'player.skipSegment': {
     label: msg`Skip the intro or credits`,
@@ -225,6 +231,24 @@ export const ACTIONS = {
     keys: ['I'],
     needs: 'stats',
   },
+  'player.upscaling': {
+    label: msg`Anime upscaling`,
+    help: msg`Turns it on or off for what is playing.`,
+    group: 'player',
+    keys: ['U'],
+    needs: 'upscaling',
+  },
+
+  'live.channelUp': {
+    label: msg`Next channel`,
+    group: 'live',
+    keys: ['PageUp', 'ChannelUp'],
+  },
+  'live.channelDown': {
+    label: msg`Previous channel`,
+    group: 'live',
+    keys: ['PageDown', 'ChannelDown'],
+  },
 
   'sync.heard': { label: msg`Heard the line`, group: 'sync', keys: ['H'] },
   'sync.saw': { label: msg`Saw its subtitle`, group: 'sync', keys: ['S'] },
@@ -280,8 +304,13 @@ export function actionsFor(input: string): readonly ActionId[] {
 /** Whether it does anything here: an app's own player takes no keys, and some lack a feature. */
 export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
-  if ((group === 'player' || group === 'sync') && host.play) return false;
-  const features = host.player ? host.playerFeatures : browserFeatures;
+  if ((group === 'player' || group === 'live' || group === 'sync') && host.play)
+    return false;
+  const features = host.player
+    ? host.playerFeatures
+    : playsWithWebGpu()
+      ? webGpuFeatures
+      : browserFeatures;
   return !needs || !!features?.includes(needs);
 }
 

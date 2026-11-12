@@ -535,6 +535,8 @@ export function readVideoEnrichment(
 const SUBTITLE_LANG_ALIASES: Record<string, string> = {
   pob: 'pt-br',
   zht: 'zh-tw',
+  zhe: 'zh',
+  ze: 'zh',
   spn: 'es-419',
 };
 

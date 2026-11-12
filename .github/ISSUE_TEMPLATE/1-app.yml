@@ -1,0 +1,191 @@
+name: 'Bug: the AIOStreams app'
+description: >-
+  Something wrong in the AIOStreams app: in a browser, on Windows, macOS or Linux, on Android, Android TV
+  and Fire TV, or on LG and Samsung TVs.
+title: 'bug(app): '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **Before you file**, check [troubleshooting](https://aiostreams.org/troubleshooting#the-aiostreams-app-and-jellyfin-apps).
+        Most questions about the app are about setup, not bugs:
+
+
+        - **Home is empty, or a title won't open:** your configuration needs a catalog and metadata addon.
+        See [step 7 of the setup guide](https://aiostreams.org/configuration/setup#step-7-add-catalogs-and-metadata).
+
+        - **What you watched elsewhere is missing from Continue Watching, or doesn't sync:** that needs a
+        [tracker](https://aiostreams.org/apps/media-server#trackers). Without one,
+        AIOStreams only knows what you played in its apps.
+
+        - **No versions, or the wrong ones:** if Stremio shows the same with your configuration, use
+        **Bug: anything else in AIOStreams**, or **Bug: the Usenet engine** for releases from the built-in
+        engine.
+
+
+        For help and questions, ask on [Discord](https://discord.viren070.me) or in
+        [Discussions](https://github.com/Viren070/AIOStreams/discussions/categories/help).
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Browser on a computer
+        - Browser on a phone or tablet
+        - Desktop app on Windows
+        - Desktop app on macOS
+        - Desktop app on Linux
+        - Android app on a phone or tablet
+        - Android app on Android TV, Google TV or Fire TV
+        - LG TV (webOS)
+        - Samsung TV (Tizen)
+        - A Jellyfin app that loads the AIOStreams app (Jellyfin Desktop, Jellyfin for Android, Jellium, ...)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: The device's model and system version, and in a browser, which browser and its version.
+      placeholder: Fire TV Stick 4K Max (Fire OS 8) / LG C3 (webOS 23) / Windows 11, Chrome 142
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: >-
+        Copy the rows from **Settings → About**: Server, Jellyfin API, Web app, and in the desktop and
+        Android apps, the app and player versions. "Latest" is not a version.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      description: What the app is signed in to.
+      options:
+        - A public AIOStreams instance
+        - My own AIOStreams instance
+        - A Jellyfin server
+    validations:
+      required: true
+  - type: input
+    id: instance
+    attributes:
+      label: Instance
+      description: >-
+        For a public instance, its address, such as aiostreams.elfhosted.com. Leave out your UUID and
+        password.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where does the problem show up? Pick the closest match.
+      options:
+        - Signing in, users or PINs
+        - Home, Discover or catalog rows
+        - Title pages, seasons or episodes
+        - Search
+        - Versions list, or picking a version
+        - 'Playback: won''t start, or stops'
+        - 'Playback: buffering or stutter'
+        - 'Picture: HDR, Dolby Vision, colours, frame rate or upscaling'
+        - 'Sound: tracks, passthrough, channels or sync'
+        - Subtitles
+        - Continue Watching, watched marks or resume points
+        - Live TV
+        - Downloads
+        - Watch together
+        - Trailers
+        - Playlists or favourites
+        - Moving around with a remote, gamepad or keyboard
+        - Look, layout or custom CSS
+        - Speed of the app
+        - Installing, updating, starting or crashing
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: player
+    attributes:
+      label: Player
+      description: >-
+        For problems while playing: what played it? It's chosen under **Settings → Playback → Player**.
+      options:
+        - Not about playback
+        - The desktop app's built-in mpv
+        - The Android app's ExoPlayer
+        - The Android app's mpv
+        - The browser's own player
+        - The WebGPU engine (browser)
+        - The TV's player (LG or Samsung)
+        - Another player (VLC, Infuse, your own mpv, a link)
+        - Not sure
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: >-
+        What you did, what happened, and what you expected instead, step by step. Avoid "doesn't work":
+        say what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: stream
+    attributes:
+      label: Title and version
+      description: >-
+        For playback problems: the title and episode, and the version's file name, as shown in the
+        versions list or in the statistics on **I**. A version that fails in every player is usually a
+        problem with the file or its source.
+      render: text
+  - type: input
+    id: report
+    attributes:
+      label: Report code
+      description: >-
+        In the desktop and Android apps, right after it happens: **Settings → Desktop app** (or **Android
+        app**) **→ Troubleshooting → Report a problem → Send report**, with **Also send to the developer**
+        on. Paste the code it shows. The report carries the device's details and the app's recent log,
+        without passwords, tokens or configuration IDs.
+      placeholder: ABC-DEFG
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        Without a code: **Copy** under **Report a problem** in the desktop and Android apps, or in a
+        browser, the errors from the console (F12). Remove any links that carry keys or passwords.
+      render: text
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or a recording
+      description: For layout and remote problems especially. On a TV, a photo of the screen is fine.
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: What I tried
+      description: Tick what applies. These checks tell a bug in the app apart from setup or a source.
+      options:
+        - label: It also happens after restarting the app.
+        - label: It also happens on another device or platform.
+        - label: It doesn't happen in Stremio with the same configuration.
+        - label: It also happens with another player or engine.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: My title describes the actual problem.
+          required: true
+        - label: I searched open and closed issues, and this isn't a duplicate.
+          required: true
+        - label: >-
+            It happens on the latest [release](https://github.com/Viren070/AIOStreams/releases) of the app
+            (or a current nightly).
+          required: true

@@ -17,13 +17,138 @@
   }
 }
 
+/* A title's backdrop and the rotating hero scroll away at half the page's speed. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :where(:root:not([data-tv]))
+      :is([data-ui='item-backdrop'], [data-ui='hero-backdrops']) {
+      animation: scroll-lag linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+    /* Home under a back swipe follows its own scroll, not the page's above it. */
+    [data-page='home'][data-peek] [data-ui='hero-backdrops'] {
+      animation: none;
+      transform: translateY(calc(min(var(--home-y), 100vh) / 2));
+    }
+    /* What's over a phone's hero or a title's art fades as it scrolls away. */
+    @media (max-width: 639px) {
+      :where(:root:not([data-tv]))
+        :is(
+          [data-ui='hero-content'],
+          [data-ui='hero-dots'],
+          [data-ui='item-heading']
+        ) {
+        /* Longhands: the minifier turns a list in the shorthand into 0s durations. */
+        animation-name: scroll-fade, scroll-gone;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: scroll(root);
+        animation-range: 10vh 50vh;
+      }
+      [data-ui='item-heading'] {
+        animation-range: 25vh 60vh;
+      }
+      [data-page='home'][data-peek]
+        :is([data-ui='hero-content'], [data-ui='hero-dots']) {
+        animation: none;
+        opacity: var(--home-fade);
+      }
+    }
+  }
+}
+/* Only while inert, so it ends in the same frame Home returns to its place. */
+[data-page='home'][inert][data-peek] {
+  visibility: visible;
+  content-visibility: visible;
+  margin-top: var(--home-top);
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-page='home'][data-peek] {
+    transform: none !important;
+  }
+}
+/* Opening a title, see page-open.ts. */
+:root[data-sliding-open]::view-transition-old(root),
+:root[data-sliding-open]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-sliding-open]::view-transition-new(root) {
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
+}
+::view-transition-group(title-logo) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+::view-transition-old(hero-details),
+::view-transition-old(hero-dots),
+::view-transition-old(home-rows) {
+  animation-duration: 100ms;
+}
+[data-sliding] {
+  will-change: transform;
+  min-height: 100dvh;
+  background-color: var(--background);
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
+}
+@keyframes scroll-lag {
+  to {
+    transform: translateY(50vh);
+  }
+}
+@keyframes scroll-fade {
+  to {
+    opacity: 0;
+  }
+}
+/* Stops a faded button being tapped; apart, as visibility would keep the fade off the compositor. */
+@keyframes scroll-gone {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Several scores on a phone take a row of their own, or a separator would end the row they wrap from. */
+@media (max-width: 639px) {
+  :is([data-ui='item-meta'], [data-ui='hero-meta']):has(
+    > [data-name='score'] [data-ui='score'] + [data-ui='score']
+  ) {
+    row-gap: 1rem;
+  }
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-name='score']:has([data-ui='score'] + [data-ui='score']) {
+    order: 1;
+    flex-basis: 100%;
+    text-align: center;
+  }
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-ui='meta-separator']:has(
+      + [data-name='score'] [data-ui='score'] + [data-ui='score']
+    ),
+  :is([data-ui='item-meta'], [data-ui='hero-meta'])
+    > [data-name='score']:first-child:has([data-ui='score'] + [data-ui='score'])
+    + [data-ui='meta-separator'] {
+    display: none;
+  }
+}
+
+[data-ui='item-quick-action']:not([data-shown], [data-name='more']) {
+  display: none;
+}
+[data-ui='mobile-nav-item']:not([data-shown], [data-name='account']),
+[data-ui='account-menu-page'][data-shown] {
+  display: none;
+}
+
 /* see index.html; the page's background is then drawn by an element */
 html.see-through,
 html.see-through body {
   background: transparent !important;
 }
 /* An on-screen keyboard pans the page up past its end, where only the root paints. */
-html.see-through[data-host='android-app']:not(.playing) {
+html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
@@ -42,6 +167,13 @@ html.playing:has([data-ui='player-controls'][data-visible])
 }
 /* The player has its own full screen button. */
 html.playing [data-ui='window-controls'][data-fullscreen] {
+  display: none;
+}
+/* So does the player's top bar, unless a dialog covers it. */
+html:has([data-ui='player-window-buttons']):not(
+    :has([role='dialog'][data-state='open'])
+  )
+  [data-ui='window-controls'] {
   display: none;
 }
 /* The top bar holds them while it shows, where nothing covers it. */
@@ -171,12 +303,41 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [data-tv] [data-focus='own']:focus-visible [data-focus-frame] {
   outline-width: 3px;
 }
+/* A card opened in its row draws its opened layer in place of its own parts.
+   While it opens, its frame moves to uncover the layer and draws nothing
+   itself; under a trailer, nothing covers the video beneath the page. */
+[data-ui='media-row-item'][data-open]
+  [data-focus-frame]
+  > :not([data-ui='open-card']) {
+  visibility: hidden;
+}
+[data-ui='media-row-item'][data-opening] [data-focus-frame],
+[data-ui='media-row-item'][data-trailer] [data-focus-frame] {
+  background: transparent;
+  box-shadow: none;
+}
+[data-ui='media-row-item'][data-opening] [data-focus-frame] {
+  outline-color: transparent !important;
+}
+
 /* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
 [data-ui='hero'] :focus-visible:not([data-focus='own']):not(input),
 [role^='menuitem']:focus-visible:not([data-focus='own']),
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
+}
+
+/* A guide programme's title moves with the day's scroll to stay beside the
+   channels, until its cell's end leaves no room. */
+[data-ui='guide-cell'] > [data-name='text'] {
+  padding-inline-start: max(
+    0.5rem,
+    min(
+      calc(var(--guide-scroll, 0px) - var(--x) + 0.5rem),
+      calc(var(--w) - 3rem)
+    )
+  );
 }
 
 [data-ui='player-controls'] {
@@ -219,13 +380,13 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   backdrop-filter: blur(24px) saturate(1.8);
 }
 .bar-surface[data-surface='liquid'] {
-  background-color: rgb(14 14 18 / 0.34);
+  background-color: rgb(14 14 18 / 0.12);
   border-color: rgb(255 255 255 / 0.14);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.42),
-    inset 0 -1px 0 rgb(255 255 255 / 0.12),
-    inset 0 12px 18px -14px rgb(255 255 255 / 0.32),
-    inset 0 -10px 16px -14px rgb(255 255 255 / 0.12),
+    inset 1px 1px 0.5px rgb(255 255 255 / 0.4),
+    inset -1px -1px 0.5px rgb(255 255 255 / 0.14),
+    inset 12px 12px 24px -16px rgb(255 255 255 / 0.16),
+    inset -12px -12px 24px -16px rgb(0 0 0 / 0.32),
     0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
 /* Over a bright picture, grey labels are lost. */
@@ -234,6 +395,80 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
     [aria-current='page']
   ) {
   color: rgb(255 255 255 / 0.8);
+}
+
+/* Episodes not started, until the pointer, focus or its menu is on one. */
+html[data-blur-spoilers]
+  :is(
+    [data-ui='episode-card'],
+    [data-ui='episode-list-item'],
+    [data-ui='player-episode'],
+    [data-row='next-up'] [data-ui='wide-card'],
+    [data-row='upcoming'] [data-ui='wide-card'],
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day']:not(:hover, :focus-within)
+      [data-ui='calendar-day-art'][data-episode]
+  ):not(
+    [data-watched],
+    [data-in-progress],
+    [data-current],
+    :hover,
+    :focus-within,
+    [data-menu-open] > *
+  )
+  [data-ui='artwork'] {
+  filter: blur(12px);
+}
+/* The text inside a title: a filter on the title itself would trap the overlay
+   that makes the whole episode its button. */
+html[data-blur-spoilers]
+  :is(
+    [data-ui='episode-card'],
+    [data-ui='episode-list-item'],
+    [data-ui='player-episode'],
+    [data-row='next-up'] [data-ui='wide-card'],
+    [data-row='upcoming'] [data-ui='wide-card'],
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode]
+  ):not(
+    [data-watched],
+    [data-in-progress],
+    [data-current],
+    :hover,
+    :focus-within,
+    [data-menu-open] > *
+  )
+  :is(
+    [data-ui='episode-title'] > span,
+    p[data-ui='episode-title'],
+    [data-ui='episode-synopsis'],
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
+  ) {
+  filter: blur(5px);
+}
+html[data-blur-spoilers]:not([data-tv])
+  :is(
+    [data-ui='episode-card'],
+    [data-ui='episode-list-item'],
+    [data-ui='player-episode'],
+    [data-row='next-up'] [data-ui='wide-card'],
+    [data-row='upcoming'] [data-ui='wide-card'],
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day-art'][data-episode]
+  )
+  :is(
+    [data-ui='artwork'],
+    [data-ui='episode-title'] > span,
+    p[data-ui='episode-title'],
+    [data-ui='episode-synopsis'],
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
+  ) {
+  transition-property: transform, opacity, filter;
+  transition-duration: 250ms, 300ms, 300ms;
 }
 
 /* Only text meant to be read or copied is selectable. */

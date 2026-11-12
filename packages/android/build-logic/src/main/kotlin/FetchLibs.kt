@@ -25,6 +25,9 @@ abstract class FetchLibs : DefaultTask() {
     @get:OutputDirectory
     abstract val assets: DirectoryProperty
 
+    @get:OutputDirectory
+    abstract val res: DirectoryProperty
+
     @get:OutputFile
     abstract val classes: RegularFileProperty
 
@@ -43,12 +46,13 @@ abstract class FetchLibs : DefaultTask() {
         val actual = digest.digest().joinToString("") { "%02x".format(it) }
         check(actual == expected) { "$url hashes to $actual, not the pinned $expected" }
 
-        for (dir in listOf(jniLibs, assets)) dir.get().asFile.run { deleteRecursively(); mkdirs() }
+        for (dir in listOf(jniLibs, assets, res)) dir.get().asFile.run { deleteRecursively(); mkdirs() }
         ZipFile(aar).use { zip ->
             for (entry in zip.entries()) {
                 val target = when {
                     entry.isDirectory -> continue
                     entry.name.startsWith("jni/") -> jniLibs.file(entry.name.removePrefix("jni/"))
+                    entry.name == "assets/subfont.ttf" -> res.file("raw/subfont.ttf")
                     entry.name.startsWith("assets/") -> assets.file(entry.name.removePrefix("assets/"))
                     entry.name == "classes.jar" -> classes
                     else -> continue

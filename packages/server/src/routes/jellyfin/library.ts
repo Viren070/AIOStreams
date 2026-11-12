@@ -27,6 +27,9 @@ import {
   knownCatalogKinds,
   latestSpellings,
   listResult,
+  listChannels,
+  searchChannels,
+  liveCatalogs,
   listViews,
   requiresGenre,
   searchCatalogs,
@@ -56,6 +59,7 @@ import {
 import {
   attachUserData,
   boxSetChildren,
+  channelListItems,
   caughtUpOn,
   decodeForRequest,
   decodeItemForRequest,
@@ -311,7 +315,7 @@ function browseLimit(req: Request): number {
   return Math.min(Math.max(1, qi(req, 'Limit', 100)), cap);
 }
 
-function send(
+export function send(
   req: Request,
   res: Response,
   items: JellyfinItem[],
@@ -473,6 +477,16 @@ async function handleItems(
 
   const parent = parentId ? await decodeForRequest(ctx, parentId) : null;
   const pd = parent?.kind === 'descriptor' ? parent.descriptor : null;
+
+  if (pd?.k === 'livetv') {
+    const { channels, total } = await listChannels(engine, ctx.scope(), {
+      startIndex,
+      limit,
+      genre,
+    });
+    send(req, res, await channelListItems(ctx, channels), total, startIndex);
+    return;
+  }
 
   // A collection meta is a BoxSet whatever type it is served as.
   const collectionParent =
@@ -716,7 +730,7 @@ async function handleItems(
   }
 
   if (searchTerm) {
-    const [previews, people] = await Promise.all([
+    const [previews, people, channels] = await Promise.all([
       searchCatalogs(
         engine,
         searchTerm,
@@ -727,10 +741,14 @@ async function handleItems(
       types?.has('person')
         ? personResults(ctx, searchTerm, startIndex + limit)
         : [],
+      types?.has('tvchannel')
+        ? searchChannels(engine, ctx.scope(), searchTerm, startIndex + limit)
+        : [],
     ]);
     const items = [
       ...filterByType(await itemsFromPreviews(ctx, previews), types),
       ...people,
+      ...(await channelListItems(ctx, channels)),
     ];
     send(
       req,
@@ -1420,33 +1438,27 @@ router.get(
   })
 );
 
-async function genreEntries(
-  ctx: JellyfinRequestContext,
-  parentId: string | undefined
-) {
+/** Genres of the libraries, or of the live catalogs for Live TV or its channels, which are its groups. */
+async function genreEntries(ctx: JellyfinRequestContext, req: Request) {
   const engine = await ctx.engine();
-  let views = await ctx.views();
-  if (parentId) {
-    const d = await decodeForRequest(ctx, parentId);
-    if (d?.kind === 'descriptor' && d.descriptor.k === 'view') {
-      const pd = d.descriptor;
-      views = views.filter(
-        (v) => v.catalog.type === pd.t && v.catalog.id === pd.c
-      );
-    }
-  }
+  const parentId = qs(req, 'ParentId');
+  const d = parentId ? await decodeForRequest(ctx, parentId) : null;
+  const pd = d?.kind === 'descriptor' ? d.descriptor : null;
+  const live = pd?.k === 'livetv' || !!typeFilter(req)?.has('tvchannel');
+  const catalogs = live
+    ? liveCatalogs(engine)
+    : (await ctx.views())
+        .map((v) => v.catalog)
+        .filter((c) => pd?.k !== 'view' || (c.type === pd.t && c.id === pd.c));
   const out: { type: string; catalogId: string; genre: string }[] = [];
   const seen = new Set<string>();
-  for (const view of views) {
-    for (const g of genreOptions(view.catalog)) {
-      const key = `${view.catalog.type}|${g}`;
+  for (const catalog of catalogs) {
+    for (const g of genreOptions(catalog)) {
+      // Live TV's groups are shared across its addons by name.
+      const key = live ? g : `${catalog.type}|${g}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({
-        type: view.catalog.type,
-        catalogId: view.catalog.id,
-        genre: g,
-      });
+      out.push({ type: catalog.type, catalogId: catalog.id, genre: g });
     }
   }
   return out;
@@ -1455,7 +1467,7 @@ async function genreEntries(
 router.get(
   '/Genres',
   jf(async (req, res, ctx) => {
-    const entries = await genreEntries(ctx, qs(req, 'ParentId'));
+    const entries = await genreEntries(ctx, req);
     const items = entries.map((e) =>
       buildGenre(ctx.build, e.type, e.catalogId, e.genre)
     );
@@ -1466,7 +1478,7 @@ router.get(
   '/Genres/:name',
   jf(async (req, res, ctx) => {
     const name = decodeURIComponent(param(req, 'name'));
-    const entry = (await genreEntries(ctx, undefined)).find(
+    const entry = (await genreEntries(ctx, req)).find(
       (e) => e.genre.toLowerCase() === name.toLowerCase()
     );
     res.json(
@@ -1485,7 +1497,7 @@ router.get(
 router.get(
   ['/Items/Filters', '/Items/Filters2'],
   jf(async (req, res, ctx) => {
-    const entries = await genreEntries(ctx, qs(req, 'ParentId'));
+    const entries = await genreEntries(ctx, req);
     const seen = new Set<string>();
     const genres = entries.filter((e) =>
       seen.has(e.genre) ? false : (seen.add(e.genre), true)

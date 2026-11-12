@@ -61,7 +61,7 @@ export const getFieldsFromSchema = (schema: z.ZodTypeAny): FieldValues[] => {
 };
 
 export const getNestedSchema = (schema: z.ZodTypeAny, path: string) => {
-  return get((schema as z.ZodObject<z.ZodRawShape>).shape, path);
+  return get((schema as z.ZodObject<z.ZodRawShape>).shape, path) as z.ZodType;
 };
 
 export const zodFieldResolver = <T extends z.ZodTypeAny>(schema: T) => {

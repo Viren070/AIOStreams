@@ -91,7 +91,7 @@ export class TheRARBGPreset extends TorznabPreset {
       USER_AGENT: appConfig.http.defaultUserAgent,
       SUPPORTED_SERVICES: StremThruPreset.supportedServices,
       DESCRIPTION:
-        'A general-purpose public torrent indexer (movies, TV and anime), inspired by the original RARBG. Searches by title and, when available, by IMDB ID.',
+        'A general-purpose public torrent indexer (movies, TV and anime), inspired by the original RARBG. Searches by title and, when available, by IMDB ID. Serves the same results as TorrentGalaxy, so there is no need to enable both.',
       OPTIONS: options,
       SUPPORTED_STREAM_TYPES: [constants.DEBRID_STREAM_TYPE],
       SUPPORTED_RESOURCES: supportedResources,

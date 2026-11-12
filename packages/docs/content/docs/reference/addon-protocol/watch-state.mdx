@@ -3,10 +3,8 @@ title: Watch State
 description: The watch_state resource, which pushes playback events to a tracker addon and pulls its watch history back.
 ---
 
-Stremio reports playback to the Stremio API, never to addons, so a tracker addon cannot tell a title
-that was finished from one abandoned a minute in. Jellyfin clients report their position every 5 to
-10 seconds, plus pause, stop and mark-played, and the `watch_state` resource exchanges that with any
-addon that declares it:
+Jellyfin clients report their position every 5 to 10 seconds, plus pause, stop and mark-played, and
+the `watch_state` resource exchanges that with any addon that declares it:
 
 | Half   | Direction          | Carries                                                                                                  |
 | ------ | ------------------ | -------------------------------------------------------------------------------------------------------- |
@@ -14,7 +12,8 @@ addon that declares it:
 | `pull` | addon → AIOStreams | What the tracker already knows: Continue Watching, watched history, drops, the watchlist and the ratings |
 
 An addon may implement either half on its own. Only playback through a Jellyfin client produces
-push events; a stream played in Stremio reports nothing.
+push events. Stremio reports its own playback through its `player` resource instead; see
+[Playback and history](/guides/addon-development#playback-and-history).
 
 ## Declaring it
 

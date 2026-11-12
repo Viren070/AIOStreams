@@ -19,6 +19,7 @@ import usersRouter from './users.js';
 import quickConnectRouter from './quickconnect.js';
 import segmentsRouter from './segments.js';
 import stubsRouter from './stubs.js';
+import liveTvRouter from './livetv.js';
 import syncPlayRouter from './syncplay.js';
 import remoteRouter from './remote.js';
 import libraryRouter from './library.js';
@@ -218,6 +219,7 @@ export function createJellyfinRouter(): Router {
   router.use(playlistsRouter);
   router.use(libraryRouter);
   router.use(segmentsRouter);
+  router.use(liveTvRouter);
   router.use(stubsRouter);
   router.use((req, res) => {
     res.status(404).json({

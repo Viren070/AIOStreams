@@ -5,7 +5,12 @@ package holds the web app's standalone build, which picks its own server, plus t
 manifest and icons, and `boot.js`, which runs first. The TV loads the files from the package. LG
 TVs play through the page's `<video>` element, Samsung TVs through Samsung's own player (AVPlay),
 drawn beneath the page. The web app finds out which TV it's on from what the TV injects
-(`window.webOSSystem` or `window.tizen`); see `src/lib/hosts/webos.ts` and `tizen/` there.
+(`window.webOSSystem` or `window.tizen`); see `src/lib/hosts/webos/` and `tizen/` there.
+
+The webOS package also carries a small JS service (`webos-service/`). It fetches for the page what
+CORS keeps from it: a video's own subtitle tracks and fonts from hosts that send no CORS headers,
+and trailers from YouTube's player API. It only moves bytes; the page decides what they mean
+(`web/src/lib/hosts/webos/service.ts`). Samsung's packaged app may read any host itself.
 
 Expect 2023 or newer TVs (webOS 23, Tizen 7). Older engines lack CSS the app uses, but the packages
 install on them anyway: `boot.js` says the TV is too old and offers to try. It also shows what

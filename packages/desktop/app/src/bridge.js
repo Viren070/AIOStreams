@@ -22,6 +22,9 @@
     protocol: __PROTOCOL__,
     version: __VERSION__,
     platform: __PLATFORM__,
+    miniPlayer: true,
+    pip: __PIP__,
+    hours24: __HOURS24__,
     device: __DEVICE__,
     send,
     subscribe(listener) {

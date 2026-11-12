@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(project(":natives"))
+    api(project(":logs"))
     api(libs.androidx.media3.common)
     api(libs.kotlinx.serialization.json)
 }

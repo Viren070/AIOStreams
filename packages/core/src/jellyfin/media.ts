@@ -1,9 +1,11 @@
 import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
-import { constants, hasTrackLists } from '../utils/index.js';
+import { constants, getSimpleTextHash, hasTrackLists } from '../utils/index.js';
 import type { TitleMetadata } from '../debrid/base.js';
 import { withPlayPath } from '../debrid/utils.js';
 import { applyMediaInfo } from '../media-info/apply.js';
 import { mediaInfoIdentity, storedMediaInfoFor } from '../media-info/lookup.js';
+import { nzbUrlKey } from '../media-info/identity.js';
+import { streamReleaseKey } from '../release-blocklist/stream-keys.js';
 import { probeBeforePlay } from '../media-info/play.js';
 import type { ContributionIds } from '../media-info/contribute.js';
 import { languageToIso6392 } from '../utils/languages.js';
@@ -179,6 +181,7 @@ export function extensionFor(
     description: formatted.description,
     addon: stream.addon?.name ?? '',
     service: stream.service?.id,
+    release: releaseOf(stream),
     cached: stream.service?.cached,
     proxied: stream.proxied,
     ...fileExtension(stream.parsedFile),
@@ -292,6 +295,13 @@ function fileKey(stream: ParsedStream): string {
   if (stream.externalUrl) return `external:${stream.externalUrl}`;
   if (stream.filename) return `file:${stream.filename}|${stream.size ?? ''}`;
   return `url:${stream.url ?? ''}`;
+}
+
+/** Its release key, else its file, hashed as URLs can carry credentials. */
+function releaseOf(stream: ParsedStream): string {
+  const key =
+    streamReleaseKey(stream) ?? nzbUrlKey(stream.nzbUrl) ?? fileKey(stream);
+  return getSimpleTextHash(key).slice(0, 32);
 }
 
 /**
@@ -652,6 +662,18 @@ export interface MediaSourceBuildOptions {
   /** The user's choices, which pick the tracks a version starts with. */
   tracks?: TrackPreferences;
   originalLanguage?: string;
+  /** Only these top-level fields, lowercased; every field when absent. */
+  fields?: ReadonlySet<string>;
+}
+
+function onlyFields<T extends object>(
+  source: T,
+  fields?: ReadonlySet<string>
+): T {
+  if (!fields) return source;
+  return Object.fromEntries(
+    Object.entries(source).filter(([key]) => fields.has(key.toLowerCase()))
+  ) as T;
 }
 
 /**
@@ -749,9 +771,15 @@ export function buildMediaSource(
       opts.noticePath ?? ''
     );
     if (opts.includeExtension) notice.aiostreams = record.extension;
-    return notice;
+    return onlyFields(notice, opts.fields);
   }
-  const mediaStreams = buildMediaStreams(record, opts);
+  const wants = (field: string) => !opts.fields || opts.fields.has(field);
+  const mediaStreams =
+    wants('mediastreams') ||
+    wants('defaultaudiostreamindex') ||
+    wants('defaultsubtitlestreamindex')
+      ? buildMediaStreams(record, opts)
+      : [];
   const audioIndex = mediaStreams.findIndex((s) => s.Type === 'Audio');
   const defaults = opts.tracks
     ? defaultTrackIndexes(mediaStreams, opts.tracks, opts.originalLanguage)
@@ -781,7 +809,7 @@ export function buildMediaSource(
   };
   if (opts.includeExtension)
     source.aiostreams = { ...record.extension, id: record.msid };
-  return source;
+  return onlyFields(source, opts.fields);
 }
 
 /** A list row carrying one source offers no version picker; detail replaces these with the resolved list. */

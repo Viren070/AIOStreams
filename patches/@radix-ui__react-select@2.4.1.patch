@@ -1,0 +1,42 @@
+diff --git a/dist/index.js b/dist/index.js
+index cbf979150635ccf619d7e74f7681d92b7564eb8b..f2f4ad61ce3a0de22c5faed20776fa2bc732b6e4 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -418,6 +418,7 @@ var SelectContentImpl = /* @__PURE__ */ React.forwardRef(
+     );
+     const getItems = useCollection(__scopeSelect);
+     const [isPositioned, setIsPositioned] = React.useState(false);
++    const handlePlaced = React.useCallback(() => setIsPositioned(true), []);
+     const firstValidItemFoundRef = React.useRef(false);
+     const firstItemFoundRef = React.useRef(false);
+     const firstItemTextFoundRef = React.useRef(false);
+@@ -589,7 +590,7 @@ var SelectContentImpl = /* @__PURE__ */ React.forwardRef(
+                     onContextMenu: (event) => event.preventDefault(),
+                     ...contentProps,
+                     ...popperContentProps,
+-                    onPlaced: () => setIsPositioned(true),
++                    onPlaced: handlePlaced,
+                     ref: composedRefs,
+                     style: {
+                       // flex layout so we can place the scroll buttons properly
+diff --git a/dist/index.mjs b/dist/index.mjs
+index c36cf353eb4fd8b223a19d1ad340341add6ab453..b86ebeccec0ea31f281dfc99fa0bc9df748c4094 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -348,6 +348,7 @@ var SelectContentImpl = /* @__PURE__ */ React.forwardRef(
+     );
+     const getItems = useCollection(__scopeSelect);
+     const [isPositioned, setIsPositioned] = React.useState(false);
++    const handlePlaced = React.useCallback(() => setIsPositioned(true), []);
+     const firstValidItemFoundRef = React.useRef(false);
+     const firstItemFoundRef = React.useRef(false);
+     const firstItemTextFoundRef = React.useRef(false);
+@@ -519,7 +520,7 @@ var SelectContentImpl = /* @__PURE__ */ React.forwardRef(
+                     onContextMenu: (event) => event.preventDefault(),
+                     ...contentProps,
+                     ...popperContentProps,
+-                    onPlaced: () => setIsPositioned(true),
++                    onPlaced: handlePlaced,
+                     ref: composedRefs,
+                     style: {
+                       // flex layout so we can place the scroll buttons properly

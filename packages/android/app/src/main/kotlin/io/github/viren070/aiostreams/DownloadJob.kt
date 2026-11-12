@@ -9,9 +9,9 @@ import android.content.Context
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.SystemClock
-import android.util.Log
 import androidx.annotation.RequiresApi
 import io.github.viren070.aiostreams.downloads.Workload
+import io.github.viren070.aiostreams.logs.AppLog
 
 /**
  * Keeps downloads going out of sight on Android 14 and later, as a user-initiated
@@ -66,7 +66,7 @@ class DownloadJob : JobService() {
             return try {
                 scheduler.schedule(info(context, work.wifiOnly)) == JobScheduler.RESULT_SUCCESS
             } catch (e: RuntimeException) {
-                Log.w("downloads", "could not schedule the download job", e)
+                AppLog.w("downloads", "could not schedule the download job", e)
                 false
             }
         }

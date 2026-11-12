@@ -99,7 +99,8 @@ const httpProxyMap = z.union([
 const debridStore = z.enum(['redis', 'sql', 'memory']);
 const boolOrDebridStore = z.union([z.boolean(), debridStore]);
 
-const Day = 86400;
+const Hour = 3600;
+const Day = 24 * Hour;
 const Week = 7 * Day;
 
 // Byte-size units (base-10, matching the `byteSize` helper + frontend SizeField).
@@ -1001,7 +1002,7 @@ export const builtinsSchema = {
   torrentGalaxy: {
     url: {
       schema: urlString,
-      default: 'https://torrentgalaxy.one',
+      default: 'https://torrentgalaxy.online',
       label: 'Torrent Galaxy URL',
       env: 'BUILTIN_TORRENT_GALAXY_URL',
       description: 'Base URL for the Torrent Galaxy built-in addon.',
@@ -1231,6 +1232,88 @@ export const builtinsSchema = {
       env: 'BUILTIN_TSUKIHIME_PAGE_LIMIT',
       description: 'Maximum pages fetched when paginating TsukiHime results.',
       requiresRestart: false,
+      secret: false,
+    },
+  },
+  xtream: {
+    timeout: {
+      schema: positiveInt,
+      default: 20000,
+      label: 'Xtream request timeout (ms)',
+      env: 'BUILTIN_XTREAM_TIMEOUT',
+      description:
+        'How long a request to an Xtream server may take. Channel lists of large providers run to several megabytes.',
+      requiresRestart: false,
+      secret: false,
+    },
+    userAgent: {
+      schema: nullableString,
+      default: null,
+      label: 'Xtream user agent',
+      env: 'BUILTIN_XTREAM_USER_AGENT',
+      description:
+        'User-Agent sent to Xtream servers, for providers that only answer known players.',
+      requiresRestart: false,
+      secret: false,
+    },
+    hostConcurrency: {
+      schema: positiveInt,
+      default: 6,
+      label: 'Xtream requests per server',
+      env: 'BUILTIN_XTREAM_HOST_CONCURRENCY',
+      description:
+        'Requests sent to one Xtream server at once, across every user of this instance. The rest wait their turn.',
+      requiresRestart: true,
+      secret: false,
+    },
+    pageWait: {
+      schema: positiveInt,
+      default: 4000,
+      label: 'Xtream guide page wait (ms)',
+      env: 'BUILTIN_XTREAM_PAGE_WAIT',
+      description:
+        "How long a guide page waits for its channels' programmes. Programmes that arrive later appear on the next request. Keep it under the addon's timeout.",
+      requiresRestart: false,
+      secret: false,
+    },
+    lineupTtl: {
+      schema: seconds,
+      default: 6 * Hour,
+      label: 'Xtream channel list refresh (s)',
+      env: 'BUILTIN_XTREAM_LINEUP_TTL',
+      description:
+        "How old an account's channel list gets before it is fetched again. The old list keeps answering while the new one loads.",
+      requiresRestart: false,
+      secret: false,
+    },
+    guideTtl: {
+      schema: seconds,
+      default: 6 * Hour,
+      label: 'Xtream guide refresh (s)',
+      env: 'BUILTIN_XTREAM_GUIDE_TTL',
+      description:
+        "How old a channel's programmes get before they are fetched again. The old ones keep answering while the new ones load.",
+      requiresRestart: false,
+      secret: false,
+    },
+    lineupMemory: {
+      schema: byteSize,
+      default: 256 * MB,
+      label: 'Xtream channel list memory',
+      env: 'BUILTIN_XTREAM_LINEUP_MEMORY',
+      description:
+        "Memory for accounts' channel lists, the least recently used leaving first. A provider with 50,000 channels takes about 5 MB. Lists that leave are read back from Redis, or the database without it.",
+      requiresRestart: true,
+      secret: false,
+    },
+    guideMemory: {
+      schema: byteSize,
+      default: 128 * MB,
+      label: 'Xtream guide memory',
+      env: 'BUILTIN_XTREAM_GUIDE_MEMORY',
+      description:
+        "Memory for channels' programmes, shared by every account on the same server. A channel's week takes around 100 KB. Guides that leave are read back from Redis, or the database without it.",
+      requiresRestart: true,
       secret: false,
     },
   },

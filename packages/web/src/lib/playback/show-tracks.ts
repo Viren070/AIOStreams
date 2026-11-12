@@ -1,16 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSession } from '../session';
-import { firstInLanguages, languageCode, sameLanguage } from '../languages';
+import { useSession } from '@/lib/jellyfin/session';
+import { firstInLanguages, languageCode, sameLanguage } from '@/lib/languages';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
   subtitleLanguages,
   usePlaybackPrefs,
-} from '../user-config';
-import type { PlaybackPrefs } from '../user-config';
-import { bestOfTypes, subtitleType, subtitleTypes } from '../subtitles/tracks';
+} from '@/lib/jellyfin/user-config';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
+import {
+  bestOfTypes,
+  subtitleType,
+  subtitleTypes,
+} from '@/lib/subtitles/tracks';
 import type { PlayerController, Track } from './controller';
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 /** The user's display preferences under this id hold a pick per show. */
 const PREFS_ID = 'aiostreams-web-tracks';
@@ -26,8 +30,18 @@ interface ShowPick {
   subtitle?: string;
 }
 
-const showOf = (item: BaseItemDto) =>
-  item.Type === 'Episode' ? (item.SeriesId ?? undefined) : undefined;
+/** A channel's programmes share the channel's pick, as episodes share their show's. */
+function showOf(item: BaseItemDto): string | undefined {
+  if (item.Type === 'Episode') return item.SeriesId ?? undefined;
+  if (item.Type === 'TvChannel') return item.Id ?? undefined;
+  if (item.Type === 'Program') return item.ChannelId ?? undefined;
+}
+
+/** Live TV starts without subtitles, whatever the user's languages. */
+const settingsFor = (prefs: PlaybackPrefs, item: BaseItemDto): PlaybackPrefs =>
+  item.Type === 'TvChannel' || item.Type === 'Program'
+    ? { ...prefs, SubtitleMode: 'None' }
+    : prefs;
 
 function pickOf(picks: Picks | undefined, showId: string): ShowPick {
   const [audio, subtitle] = (picks?.[showId] ?? '').split('|');
@@ -71,10 +85,11 @@ export function useShowPicks() {
 
 /** The user's languages, with the ones they picked for this show first. */
 export function withShowPick(
-  prefs: PlaybackPrefs,
+  settings: PlaybackPrefs,
   picks: Picks | undefined,
   item: BaseItemDto
 ): PlaybackPrefs {
+  const prefs = settingsFor(settings, item);
   const showId = showOf(item);
   if (!showId) return prefs;
   const { audio, subtitle } = pickOf(picks, showId);
@@ -159,7 +174,7 @@ export function useShowTrackPicks(
   item: BaseItemDto,
   source: SourceInfo
 ): PlayerController {
-  const { prefs } = usePlaybackPrefs();
+  const prefs = settingsFor(usePlaybackPrefs().prefs, item);
   const save = useSavePick();
   const showId = showOf(item);
   if (!showId) return player;

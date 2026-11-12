@@ -6,6 +6,7 @@ import React, { forwardRef, useMemo } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import {
   Controller,
+  FieldError,
   FormState,
   get,
   useController,
@@ -13,6 +14,7 @@ import {
 } from 'react-hook-form';
 import { BiPlus, BiTrash } from 'react-icons/bi';
 import { useUpdateEffect } from 'react-use';
+import type { ZodType } from 'zod';
 import { Autocomplete, AutocompleteProps } from '../autocomplete';
 import { BasicFieldOptions } from '../basic-field';
 import {
@@ -80,10 +82,11 @@ export function withControlledInput<T extends FieldBaseProps>(
 
     /* Get the `required` status from the Schema */
     const required = useMemo(() => {
+      const field = get(shape, inputProps.name) as ZodType | undefined;
       return (
-        !!get(shape, inputProps.name) &&
-        !get(shape, inputProps.name)?.isOptional() &&
-        !get(shape, inputProps.name)?.isNullable()
+        !!field &&
+        !field.safeParse(undefined).success &&
+        !field.safeParse(null).success
       );
     }, [shape]);
 
@@ -220,7 +223,8 @@ const ColorPickerField = React.memo(
         const validColorRef = React.useRef('#000');
 
         const [value, setValue] = React.useState(
-          get(context.formState.defaultValues, props.name) || '#000'
+          (get(context.formState.defaultValues, props.name) as
+            string | undefined) || '#000'
         );
         const deferredValue = useDebounce(value, 200);
 
@@ -631,7 +635,7 @@ export const getFormError = (
   name: string,
   formState: FormState<{ [x: string]: any }>
 ) => {
-  return get(formState.errors, name);
+  return get(formState.errors, name) as FieldError | undefined;
 };
 
 export type ReactRef<T> = React.RefCallback<T> | React.MutableRefObject<T>;

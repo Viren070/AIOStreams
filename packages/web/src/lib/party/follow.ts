@@ -2,14 +2,25 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { toast } from 'sonner';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import type { JellyfinClient } from '../client';
-import { currentHost } from '../hosts';
-import { goBack, navigate, to } from '../paths';
-import { playableSources } from '../playback/play';
-import { chosenPlayer } from '../playback/player-choice';
-import { requestItem, usePlaybackInfoOptions } from '../queries';
-import { useSession } from '../session';
-import type { BaseItemDto, BaseItemDtoQueryResult, SourceInfo } from '../types';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { currentHost } from '@/lib/hosts';
+import { navigate, to } from '@/lib/paths';
+import {
+  closePlayback,
+  playbackNow,
+  playOn,
+  stopPlayback,
+} from '@/lib/playback/session';
+import { playableSources } from '@/lib/playback/sources';
+import { chosenPlayer } from '@/lib/playback/player-choice';
+import { requestItem } from '@/lib/jellyfin/queries';
+import { usePlaybackInfoOptions } from '@/lib/jellyfin/playback-info';
+import { useSession } from '@/lib/jellyfin/session';
+import type {
+  BaseItemDto,
+  BaseItemDtoQueryResult,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 import { matchingVersion, partyItemTitle, type PartyItem } from './items';
 import {
   party,
@@ -18,6 +29,7 @@ import {
   useParty,
   type PartyEntry,
 } from './party';
+import { createLive, useLive } from '@/lib/live-value';
 
 /*
  * Each member's own server finds the party's title and plays the member's own
@@ -36,16 +48,8 @@ const followed = {
   /** Items the member left the player for. */
   away: new Set<string>(),
 };
-const listeners = new Set<() => void>();
-let version = 0;
-const changed = () => {
-  version++;
-  for (const listener of listeners) listener();
-};
-const subscribe = (listener: () => void) => {
-  listeners.add(listener);
-  return () => void listeners.delete(listener);
-};
+const version = createLive(0);
+const changed = () => version.set(version.get() + 1);
 
 /** Whether this device's player can follow a party; another app's can't. */
 export function canFollow(): boolean {
@@ -106,14 +110,10 @@ function sitOut(entry: PartyEntry, message: string): void {
 
 const onPlayer = () => /^#\/play\//.test(window.location.hash);
 
-/** The player page open now, if it plays this version. */
+/** The player, on its page or in the mini player, if it plays this version. */
 function playingNow(itemId: string, sourceId: string): boolean {
-  const match = /^#\/play\/([^/?]+)\?(.*)$/.exec(window.location.hash);
-  return (
-    !!match &&
-    match[1] === itemId &&
-    new URLSearchParams(match[2]).get('source') === sourceId
-  );
+  const now = playbackNow();
+  return now?.itemId === itemId && now.sourceId === sourceId;
 }
 
 /**
@@ -128,7 +128,7 @@ export function usePartyFollow(onOpen: () => void): void {
   const opening = React.useRef<string | null>(null);
   const entry = state?.status === 'live' ? playingEntry(state) : null;
   const entryId = entry?.playlistItemId ?? null;
-  const awayVersion = React.useSyncExternalStore(subscribe, () => version);
+  const awayVersion = useLive(version);
 
   React.useEffect(() => {
     const binding = followed.binding;
@@ -136,7 +136,10 @@ export function usePartyFollow(onOpen: () => void): void {
       if (binding && state?.status !== 'reconnecting') {
         followed.binding = null;
         changed();
-        if (onPlayer()) goBack(to.item(binding.itemId));
+        if (playingNow(binding.itemId, binding.source.Id!)) {
+          if (onPlayer()) stopPlayback(to.item(binding.itemId));
+          else closePlayback();
+        }
       }
       return;
     }
@@ -192,9 +195,12 @@ export function usePartyFollow(onOpen: () => void): void {
         changed();
         // A party started from the player takes over what it already plays.
         if (!playingNow(local.Id!, source.Id)) {
-          navigate(to.play(local.Id!, source.Id, startMs), {
-            replace: onPlayer(),
-          });
+          const next = { itemId: local.Id!, sourceId: source.Id, startMs };
+          if (playbackNow()?.mini) playOn(next);
+          else
+            navigate(to.play(local.Id!, source.Id, startMs), {
+              replace: onPlayer(),
+            });
           onOpen();
         }
       } catch {
@@ -218,7 +224,7 @@ export function usePartyFollow(onOpen: () => void): void {
 /** The party item this player page plays, while the party plays it. */
 export function usePartyBinding(itemId: string): string | null {
   const state = useParty();
-  React.useSyncExternalStore(subscribe, () => version);
+  useLive(version);
   const binding = followed.binding;
   if (!state || !binding || binding.itemId !== itemId) return null;
   const entry = state.queue[state.playingIndex];
@@ -240,7 +246,7 @@ export function leavePartyPlayback(): void {
 /** Whether the member sat out what the party plays now. */
 export function usePartyAway(): boolean {
   const state = useParty();
-  React.useSyncExternalStore(subscribe, () => version);
+  useLive(version);
   const entry = playingEntry(state);
   return !!entry && followed.away.has(entry.playlistItemId);
 }

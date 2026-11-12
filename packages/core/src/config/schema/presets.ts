@@ -398,6 +398,13 @@ export const presetsSchema = {
     timeoutEnv: 'DEFAULT_STAR_WARS_UNIVERSE_TIMEOUT',
     userAgentEnv: 'DEFAULT_STAR_WARS_UNIVERSE_USER_AGENT',
   }),
+  cinemeta: basicPreset({
+    label: 'Cinemeta',
+    default: ['https://v3-cinemeta.strem.io'],
+    envBase: 'CINEMETA_URL',
+    timeoutEnv: 'DEFAULT_CINEMETA_TIMEOUT',
+    userAgentEnv: 'DEFAULT_CINEMETA_USER_AGENT',
+  }),
   animeKitsu: basicPreset({
     label: 'Anime Kitsu',
     default: ['https://anime-kitsu.strem.fun'],
@@ -451,7 +458,7 @@ export const presetsSchema = {
   }),
   doctorWhoUniverse: basicPreset({
     label: 'Doctor Who Universe',
-    default: ['https://new-who.onrender.com'],
+    default: ['https://whoniverse.nubblyn.com'],
     envBase: 'DOCTOR_WHO_UNIVERSE_URL',
     timeoutEnv: 'DEFAULT_DOCTOR_WHO_UNIVERSE_TIMEOUT',
     userAgentEnv: 'DEFAULT_DOCTOR_WHO_UNIVERSE_USER_AGENT',

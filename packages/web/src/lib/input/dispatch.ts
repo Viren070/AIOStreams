@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLatest } from '../use-latest';
+import { useLatest } from '@/hooks/use-latest';
 import { action, actionsFor, type ActionId } from './actions';
 import {
   activate,
@@ -17,7 +17,10 @@ import { keyInput } from './keys';
 import { setRepeating } from './glide';
 
 /** False passes the input on; a function a `Hold+` handler returns runs when the key is let go. */
-export type ActionHandler = (input: string) => boolean | void | (() => void);
+export type ActionHandler = (
+  input: string,
+  repeat: boolean
+) => boolean | void | (() => void);
 
 type Outcome = boolean | (() => void);
 
@@ -50,11 +53,15 @@ export function useAction(
   const latest = useLatest(run);
   React.useEffect(() => {
     if (!enabled) return;
-    return onAction(id, (input) => latest.current(input));
+    return onAction(id, (input, repeat) => latest.current(input, repeat));
   }, [id, enabled, latest]);
 }
 
-function runHandlers(ids: readonly ActionId[], input: string): Outcome {
+function runHandlers(
+  ids: readonly ActionId[],
+  input: string,
+  repeat = false
+): Outcome {
   // Back closes an open dialog or menu first, as Esc does.
   if (ids.includes('back') && overlayOpen()) {
     sendKey('Escape', { quiet: true });
@@ -66,7 +73,7 @@ function runHandlers(ids: readonly ActionId[], input: string): Outcome {
       (a, b) => Number(a.fallback) - Number(b.fallback) || b.order - a.order
     );
   for (const e of ordered) {
-    const result = e.run(input);
+    const result = e.run(input, repeat);
     if (result !== false) return typeof result === 'function' ? result : true;
   }
   return false;
@@ -74,6 +81,10 @@ function runHandlers(ids: readonly ActionId[], input: string): Outcome {
 
 export const runAction = (id: ActionId, input = ''): boolean =>
   !!runHandlers([id], input);
+
+/** Whether Back would reach its fallback, with no overlay or handler taking it first. */
+export const backIsFree = (): boolean =>
+  !overlayOpen() && ![...entries].some((e) => e.id === 'back' && !e.fallback);
 
 let keys = false;
 
@@ -128,7 +139,8 @@ export function dispatch(input: string, repeat = false): Outcome {
         (id) =>
           (!repeat || action(id).repeat) && (!inDialog || worksInDialogs(id))
       ),
-      input
+      input,
+      repeat
     );
   } finally {
     setRepeating(false);
@@ -233,6 +245,8 @@ export const mediaKeyJustTaken = () => performance.now() - mediaKeyAt < 500;
 /** When each key last went down, since Android's web view sends a held key's repeats without `repeat`. */
 const down = new Map<string, number>();
 const repeats = new WeakSet<KeyboardEvent>();
+
+export const isRepeat = (e: KeyboardEvent) => repeats.has(e);
 
 /**
  * Held keys repeat at most this often, and only once the last press reached

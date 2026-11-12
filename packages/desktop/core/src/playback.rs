@@ -70,6 +70,8 @@ pub struct Load {
     #[serde(default)]
     pub append: bool,
     #[serde(default)]
+    pub live: bool,
+    #[serde(default)]
     pub audio_languages: Vec<String>,
     #[serde(default)]
     pub subtitle_languages: Vec<String>,
@@ -188,6 +190,8 @@ pub struct Settings {
     pub audio_device: Option<String>,
     #[serde(default = "yes")]
     pub dolby_vision: bool,
+    #[serde(default)]
+    pub upscaling: bool,
     /// Zero sizes the cache from the computer's memory.
     #[serde(default)]
     pub cache_mb: u64,
@@ -344,6 +348,10 @@ impl Loadfile {
         let mut options = Vec::new();
         if load.start_ms > 0.0 {
             options.push(format!("start={}", seconds(load.start_ms)));
+        }
+        // FFmpeg reconnects at the clean end of every chunked playlist a live stream fetches.
+        if load.live {
+            options.push("stream-lavf-o=[reconnect=0,reconnect_on_network_error=1]".into());
         }
         let list = |name: &str, values: &[String]| -> Result<Vec<String>, String> {
             values
@@ -563,7 +571,7 @@ pub fn style(style: &Style, own_font: &str) -> Result<Vec<(&'static str, String)
             }
             .into(),
         ),
-        ("sub-pos", s.position.round().to_string()),
+        ("sub-pos", s.position.to_string()),
     ])
 }
 

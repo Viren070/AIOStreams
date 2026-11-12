@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useUserData, removeInvalidPresetReferences } from '@/context/userData';
 import { useStatus } from '@/context/status';
-import { Option } from '@aiostreams/core';
+import { Option, UserData } from '@aiostreams/core';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Checkbox } from '@aiostreams/ui/checkbox';
@@ -32,6 +32,14 @@ import {
 } from 'react-icons/lu';
 import { IoExtensionPuzzle } from 'react-icons/io5';
 import { ReorderModal } from './reorder-modal';
+import { presetOf } from './catalog-order';
+import {
+  AudienceButton,
+  AudienceModal,
+  type AudienceTarget,
+} from '../../../shared/audience-modal';
+import { useAudiences } from '@/hooks/variants';
+import { forgetEntries, type EntryRef, type Toggle } from '@/lib/audiences';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -181,6 +189,30 @@ function getCategoryColor(
 
 export { manifestCache };
 
+const addonLabel = (preset: any, presetMetadata: any): string =>
+  preset.options?.name?.trim() || presetMetadata?.NAME || preset.type;
+
+const presetToggle = (instanceId: string, label: string): Toggle => ({
+  label,
+  entries: [{ root: 'presets', match: { instanceId } }],
+});
+
+/** These addons and their catalogs. */
+function presetEntries(userData: UserData, ids: Set<string>): EntryRef[] {
+  return [
+    ...[...ids].map((instanceId): EntryRef => ({
+      root: 'presets',
+      match: { instanceId },
+    })),
+    ...(userData.catalogModifications ?? [])
+      .filter((c) => ids.has(presetOf(c.id)))
+      .map((c): EntryRef => ({
+        root: 'catalogModifications',
+        match: { id: c.id, type: c.type },
+      })),
+  ];
+}
+
 function hostOf(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -207,6 +239,10 @@ export function MyAddons({
   const reorderModal = useDisclosure(false);
   const batchEditModal = useDisclosure(false);
   const categoryModal = useDisclosure(false);
+  const who = useAudiences();
+  const [audienceTarget, setAudienceTarget] = useState<AudienceTarget | null>(
+    null
+  );
 
   // Batch edit state
   const [batchEditStep, setBatchEditStep] = useState<'pick' | 'edit'>('pick');
@@ -314,12 +350,12 @@ export function MyAddons({
     });
   };
 
-  const removePreset = (instanceId: string) => {
+  const removePresets = (ids: Set<string>) => {
     setUserData((prev) => {
-      const cloned = structuredClone(prev);
-      cloned.presets = cloned.presets.filter(
-        (a) => a.instanceId !== instanceId
+      const cloned = structuredClone(
+        forgetEntries(prev, presetEntries(prev, ids))
       );
+      cloned.presets = cloned.presets.filter((p) => !ids.has(p.instanceId));
       return removeInvalidPresetReferences(cloned);
     });
   };
@@ -380,13 +416,7 @@ export function MyAddons({
     actionText: 'Delete',
     actionIntent: 'alert',
     onConfirm: () => {
-      setUserData((prev) => {
-        const cloned = structuredClone(prev);
-        cloned.presets = cloned.presets.filter(
-          (p) => !selectedIds.has(p.instanceId)
-        );
-        return removeInvalidPresetReferences(cloned);
-      });
+      removePresets(selectedIds);
       setSelectedIds(new Set());
     },
   });
@@ -456,18 +486,37 @@ export function MyAddons({
 
   const getCategoryLabel = (cat: string) => DEFAULT_CATEGORY_LABELS[cat] || cat;
 
-  const renderAddon = (preset: any) => (
-    <AddonListItem
-      key={preset.instanceId}
-      preset={preset}
-      presetMetadata={presetMetadataMap.get(preset.type)}
-      isSelected={selectedIds.has(preset.instanceId)}
-      onToggleSelect={() => toggleSelect(preset.instanceId)}
-      onEdit={() => onEdit(preset, presetMetadataMap.get(preset.type))}
-      onRemove={() => removePreset(preset.instanceId)}
-      onToggleEnabled={(v) => setPresetEnabled(preset.instanceId, v)}
-    />
-  );
+  const toggleOf = (preset: any) =>
+    presetToggle(
+      preset.instanceId,
+      addonLabel(preset, presetMetadataMap.get(preset.type))
+    );
+
+  const renderAddon = (preset: any) => {
+    const toggle = toggleOf(preset);
+    return (
+      <AddonListItem
+        key={preset.instanceId}
+        preset={preset}
+        presetMetadata={presetMetadataMap.get(preset.type)}
+        isSelected={selectedIds.has(preset.instanceId)}
+        onToggleSelect={() => toggleSelect(preset.instanceId)}
+        onEdit={() => onEdit(preset, presetMetadataMap.get(preset.type))}
+        onRemove={() => removePresets(new Set([preset.instanceId]))}
+        onToggleEnabled={(v) => setPresetEnabled(preset.instanceId, v)}
+        audienceSummary={who.summary(toggle)}
+        onAudiences={
+          who.available
+            ? () =>
+                setAudienceTarget({
+                  title: `Who gets ${toggle.label}`,
+                  toggles: [toggle],
+                })
+            : undefined
+        }
+      />
+    );
+  };
   const listClass = 'grid grid-cols-1 gap-1.5 xl:grid-cols-2 3xl:grid-cols-3';
   const pillClass = (active: boolean, activeClass: string) =>
     cn(
@@ -620,6 +669,21 @@ export function MyAddons({
                   >
                     Set category…
                   </DropdownMenuItem>
+                  {who.available && (
+                    <DropdownMenuItem
+                      disabled={none}
+                      onSelect={() =>
+                        setAudienceTarget({
+                          title: `Who gets ${selectedIds.size} addon${selectedIds.size === 1 ? '' : 's'}`,
+                          toggles: userData.presets
+                            .filter((p) => selectedIds.has(p.instanceId))
+                            .map(toggleOf),
+                        })
+                      }
+                    >
+                      Choose who gets them…
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     disabled={none}
@@ -913,6 +977,11 @@ export function MyAddons({
       </Modal>
 
       <ConfirmationDialog {...confirmBatchDelete} />
+      <AudienceModal
+        who={who}
+        target={audienceTarget}
+        onClose={() => setAudienceTarget(null)}
+      />
     </>
   );
 }
@@ -926,6 +995,8 @@ function AddonListItem({
   onEdit,
   onRemove,
   onToggleEnabled,
+  audienceSummary,
+  onAudiences,
 }: {
   preset: any;
   presetMetadata: any;
@@ -934,6 +1005,8 @@ function AddonListItem({
   onEdit: () => void;
   onRemove: () => void;
   onToggleEnabled: (v: boolean) => void;
+  audienceSummary?: string;
+  onAudiences?: () => void;
 }) {
   const { setUserData } = useUserData();
   const [isConfigurable, setIsConfigurable] = useState(false);
@@ -1053,11 +1126,14 @@ function AddonListItem({
     );
   };
 
-  const name: string =
-    preset.options?.name?.trim() || presetMetadata?.NAME || preset.type;
+  const name = addonLabel(preset, presetMetadata);
   const enabled = preset.enabled ?? false;
   const host = hostOf(getManifestUrl());
-  const details = [presetMetadata?.NAME !== name && presetMetadata?.NAME, host]
+  const details = [
+    presetMetadata?.NAME !== name && presetMetadata?.NAME,
+    host,
+    audienceSummary,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -1122,6 +1198,13 @@ function AddonListItem({
             onValueChange={onToggleEnabled}
             aria-label={`Turn ${name} on or off`}
           />
+          {onAudiences && (
+            <AudienceButton
+              className="h-8 w-8 text-lg"
+              summary={audienceSummary}
+              onClick={onAudiences}
+            />
+          )}
           {isConfigurable && (
             <IconButton
               rounded

@@ -5,13 +5,13 @@ import { Button } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
 import { Switch } from '@aiostreams/ui/switch';
 import { Textarea } from '@aiostreams/ui/textarea';
-import { requestDiagnostics } from '../lib/hosts/shell';
-import { appBridge } from '../lib/hosts/shell/bridge';
-import { useRestoreFocus } from '../lib/input';
-import { lastPlayedLine } from '../lib/last-played';
-import { useServerInfo } from '../lib/server-info';
-import { settingsSnapshot } from '../lib/settings';
-import { useSession } from '../lib/session';
+import { requestDiagnostics } from '@/lib/hosts/shell';
+import { appBridge } from '@/lib/hosts/shell/bridge';
+import { useRestoreFocus } from '@/lib/input';
+import { lastPlayedLine } from '@/lib/last-played';
+import { useServerInfo } from '@/lib/jellyfin/server-info';
+import { settingsSnapshot } from '@/lib/settings';
+import { useSession } from '@/lib/jellyfin/session';
 
 /** What a report carries besides the sender's note. */
 export interface ReportContent {

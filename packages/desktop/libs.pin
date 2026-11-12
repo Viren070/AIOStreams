@@ -1,8 +1,8 @@
 # The libmpv the desktop app ships, with FFmpeg's DLLs: a github.com/AIOStreams/libs
 # release and the SHA-256 of each architecture's libs-windows zip.
-libs=20261028-07bb2bc
-libs_x86_64=393ae33140e620143717cc0d4da2ec19349fe578bedf99ff91de71343bf9b5ab
-libs_aarch64=78c34fe2c91ebf321104600917fb10f57f8c3cc8eb9494487718bbca3570a256
+libs=20261106-7552cab
+libs_x86_64=4eae5d105d06591652d3812d45055259d3135fd621d52e0025aeaacf552f9063
+libs_aarch64=db05edc8c6716bbaefec3a178a1009422ce3cf6cbd4dfbcbccd861f1eb329325
 # The LunarG Vulkan Runtime whose vulkan-1.dll the app loads when Windows has none, and
 # the SHA-256 of each architecture's components archive.
 vulkan=1.4.363.0

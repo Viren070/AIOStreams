@@ -15,7 +15,7 @@ import type { RuntimeConfigSection } from '../types.js';
  * - `timeouts`: min/max bounds for user-configurable HTTP timeouts.
  * - `regex`: regex-filter access policy + whitelisted patterns.
  * - `sel`: SEL sync access + whitelisted URLs + stream-expression limits.
- * - `variants`: config-variant access policy + script/instruction limits.
+ * - `variants`: config-variant access policy, count and per-request work.
  * - `healthChecks`: health-check access policy + fetch limits.
  * - `sync`: shared refresh/caching policy and address guard for regex/SEL syncs.
  * - `disabled`: hard-disabled addons/services/hosts/stream-types.
@@ -256,70 +256,21 @@ export const userLimitsSchema = {
     },
     max: {
       schema: positiveInt,
-      default: 10,
+      default: 50,
       label: 'Max config variants',
-      description: 'Maximum number of config variants a user may define.',
+      description:
+        'Maximum number of config variants a configuration may define. Saving checks each one on its own, and every request checks the conditions of those that activate themselves, so both cost more as this grows.',
       env: 'MAX_VARIANTS',
       requiresRestart: false,
       secret: false,
     },
-    maxScriptLength: {
+    maxWork: {
       schema: positiveInt,
-      default: 4000,
-      label: 'Max variant script length',
+      default: 100_000,
+      label: 'Max variant work per request',
       description:
-        'Maximum length (characters) of a single variant script. Enforced during config validation.',
-      env: 'MAX_VARIANT_SCRIPT_LENGTH',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxTotalScriptCharacters: {
-      schema: positiveInt,
-      default: 20000,
-      label: 'Max variant script characters',
-      description:
-        'Maximum total character count across every variant script in a configuration.',
-      env: 'MAX_VARIANT_TOTAL_SCRIPT_CHARACTERS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxTotalInstructions: {
-      schema: positiveInt,
-      default: 5000,
-      label: 'Max variant instructions per request',
-      description:
-        'Maximum number of instructions all the variants on one request may run in total, including those reached through "use variant". Anything past it is skipped.',
-      env: 'MAX_VARIANT_TOTAL_INSTRUCTIONS',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxPathMatches: {
-      schema: positiveInt,
-      default: 200,
-      label: 'Max variant path matches',
-      description:
-        'Maximum number of places a single variant instruction may write to.',
-      env: 'MAX_VARIANT_PATH_MATCHES',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxValueDepth: {
-      schema: positiveInt,
-      default: 10,
-      label: 'Max variant value depth',
-      description:
-        'Maximum nesting depth of an object or array literal in a variant script.',
-      env: 'MAX_VARIANT_VALUE_DEPTH',
-      requiresRestart: false,
-      secret: false,
-    },
-    maxPathSegments: {
-      schema: positiveInt,
-      default: 12,
-      label: 'Max variant path segments',
-      description:
-        'Maximum number of segments in a single variant instruction path.',
-      env: 'MAX_VARIANT_PATH_SEGMENTS',
+        'How much work the variants applied to one request may do. Each instruction costs one, plus one for every config entry it looks through and every value it writes, so long scripts, large lists and "use variant" chains are all covered. Anything past it is skipped.',
+      env: 'MAX_VARIANT_WORK',
       requiresRestart: false,
       secret: false,
     },

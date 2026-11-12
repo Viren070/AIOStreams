@@ -69,12 +69,15 @@ export function readWatchStateCapability(
   const block = parsed.success ? parsed.data : undefined;
 
   const declared = block?.push?.events ?? block?.events;
+  const pullOnly = !!block?.pull && !block.push && !block.events;
 
-  const events = [
-    ...new Set<PlaybackEventKind>(
-      declared?.length ? declared.filter(isSendable) : PLAYBACK_EVENTS
-    ),
-  ];
+  const events = pullOnly
+    ? []
+    : [
+        ...new Set<PlaybackEventKind>(
+          declared?.length ? declared.filter(isSendable) : PLAYBACK_EVENTS
+        ),
+      ];
 
   const pull = block?.pull;
   const pullable =

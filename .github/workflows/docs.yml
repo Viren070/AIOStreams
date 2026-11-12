@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'packages/docs/**'
+      - '.release-please-manifest.json'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 

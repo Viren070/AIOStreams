@@ -20,6 +20,7 @@ android {
 dependencies {
     implementation(project(":playback"))
     api(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.ui)
     // libass for the subtitles, and FFmpeg for the sound the device can't decode.

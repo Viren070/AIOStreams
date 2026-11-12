@@ -1,3 +1,5 @@
+mod small;
+
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]

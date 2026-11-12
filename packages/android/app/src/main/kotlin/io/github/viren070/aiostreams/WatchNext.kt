@@ -6,11 +6,11 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.tvprovider.media.tv.TvContractCompat
 import androidx.tvprovider.media.tv.TvContractCompat.WatchNextPrograms
 import androidx.tvprovider.media.tv.WatchNextProgram
+import io.github.viren070.aiostreams.logs.AppLog
 import java.util.concurrent.Executors
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -52,7 +52,7 @@ class WatchNext(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !leanback) return
         val entries = items.mapNotNull(::entryOf)
         worker.execute {
-            runCatching { sync(entries) }.onFailure { Log.w(TAG, "updating the row", it) }
+            runCatching { sync(entries) }.onFailure { AppLog.w(TAG, "updating the row", it) }
         }
     }
 

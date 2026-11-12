@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::bridge::{self, Outbound, origin};
 use aiostreams_desktop_core::discord;
 use aiostreams_desktop_core::external::External;
 use aiostreams_desktop_core::player::Player;
@@ -150,6 +150,7 @@ impl Shell {
             }
             UserEvent::Minimize => self.window.minimize(),
             UserEvent::Close => self.close(),
+            UserEvent::Closed => {}
             UserEvent::Sync => {
                 if let Some(p) = self.player.borrow().as_ref() {
                     p.sync();
@@ -183,7 +184,8 @@ impl Shell {
             UserEvent::WindowState => self.emit(Outbound::WindowState {
                 maximized: self.window.is_maximized(),
             }),
-            UserEvent::WindowButtons(_) => {}
+            UserEvent::VideoFrame(frame) => self.video.frame(frame),
+            UserEvent::WindowButtons(_) | UserEvent::Pip(_) => {}
             UserEvent::Link(link) => {
                 self.window.present();
                 let now = self.links.borrow_mut().receive(link);
@@ -245,6 +247,7 @@ fn placement_of(window: &gtk4::Window) -> Placement {
         height: height.max(MIN_SIZE.1 as i32) as u32,
         position: None,
         maximized: window.is_maximized(),
+        pip: None,
     }
 }
 
@@ -285,11 +288,12 @@ pub fn run(app: App) {
     titlebar.set_visible(false);
     window.set_titlebar(Some(&titlebar));
     add_frame_style(&window);
+    platform::keep_awake_for(&window);
 
     let video = platform::VideoSurface::new().unwrap_or_else(|e| platform::fatal(&e));
     video.widget().set_overflow(gtk4::Overflow::Hidden);
     window.set_child(Some(video.widget()));
-    let started = start_player(&video, &paths.mpv, |message| {
+    let started = start_player(&video, &paths, |message| {
         if let Outbound::PlayerState { state, .. } = &message
             && state.idle == Some(true)
         {
@@ -298,6 +302,7 @@ pub fn run(app: App) {
         post(UserEvent::Emit(receive_script(&message)))
     });
     video.attach(started.mpv());
+    video.on_input(|message| post(UserEvent::Emit(receive_script(&message))));
     let player = Rc::new(RefCell::new(Some(started)));
     let external = Rc::new(start_external(&paths, |message| {
         post(UserEvent::Emit(receive_script(&message)))
@@ -344,7 +349,7 @@ pub fn run(app: App) {
         .settings(&settings)
         .build();
     webview.set_background_color(&gdk::RGBA::new(0.0, 0.0, 0.0, 0.0));
-    video.widget().add_overlay(&webview);
+    video.set_page(&webview);
 
     content.connect_script_message_received(Some("ipc"), {
         let (webview, player, app_origin) =
@@ -357,11 +362,10 @@ pub fn run(app: App) {
             if from != app_origin {
                 return log::warn!("ignored a message from {from}");
             }
-            match serde_json::from_str::<Inbound>(&value.to_str()) {
-                Ok(message) => handle(
+            if let Some(message) = bridge::parse(&value.to_str()) {
+                handle(
                     message, &player, &external, &post, &paths, &updater, &downloads,
-                ),
-                Err(e) => log::warn!("bad message: {e}"),
+                );
             }
         }
     });

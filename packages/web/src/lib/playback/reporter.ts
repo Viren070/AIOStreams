@@ -1,10 +1,10 @@
 import React from 'react';
-import { ConnectionError, type JellyfinClient } from '../client';
-import { useReachable } from '../connection';
-import { TICKS_PER_MS } from '../format';
-import { useRefreshWatchState } from '../queries';
-import { useSession } from '../session';
-import { storage } from '../storage';
+import { ConnectionError, type JellyfinClient } from '@/lib/jellyfin/client';
+import { useReachable } from '@/lib/jellyfin/connection';
+import { TICKS_PER_MS } from '@/lib/format';
+import { useRefreshWatchState } from '@/lib/jellyfin/watch-state';
+import { useSession } from '@/lib/jellyfin/session';
+import { storage } from '@/lib/storage';
 
 const PROGRESS_EVERY_MS = 10_000;
 const PENDING_KEY = 'aiostreams-web-pending-progress';
@@ -15,6 +15,7 @@ interface PendingStop {
   userId?: string;
   itemId: string;
   positionTicks: number;
+  runtimeTicks?: number;
   at: number;
 }
 
@@ -35,10 +36,12 @@ export class PlaybackReporter {
       mediaSourceId: string;
       playSessionId?: string | null;
       userId?: string;
+      live?: boolean;
     },
     private readonly position: () => {
       ms: number;
       paused: boolean;
+      durationMs?: number;
       /** Stream indexes in the version's list, where the player's tracks map to one. */
       audio?: number;
       subtitle?: number;
@@ -46,12 +49,17 @@ export class PlaybackReporter {
   ) {}
 
   private body(extra: Record<string, unknown> = {}) {
-    const { ms, paused, audio, subtitle } = this.position();
+    const { ms, paused, durationMs = 0, audio, subtitle } = this.position();
+    const measured =
+      !this.info.live && Number.isFinite(durationMs) && durationMs > 0;
     return {
       ItemId: this.info.itemId,
       MediaSourceId: this.info.mediaSourceId,
       PlaySessionId: this.info.playSessionId ?? undefined,
       PositionTicks: Math.round(ms) * TICKS_PER_MS,
+      RunTimeTicks: measured
+        ? Math.round(durationMs) * TICKS_PER_MS
+        : undefined,
       IsPaused: paused,
       AudioStreamIndex: audio,
       SubtitleStreamIndex: subtitle,
@@ -96,8 +104,9 @@ export class PlaybackReporter {
       .then(
         () => {},
         (error: unknown) => {
-          if (!(error instanceof ConnectionError)) return;
-          const { PositionTicks } = this.body();
+          // Sent later it would save a position, which a live stream has none of.
+          if (!(error instanceof ConnectionError) || this.info.live) return;
+          const { PositionTicks, RunTimeTicks } = this.body();
           storage.set(PENDING_KEY, [
             ...pendingStops(),
             {
@@ -105,6 +114,7 @@ export class PlaybackReporter {
               userId: this.info.userId,
               itemId: this.info.itemId,
               positionTicks: PositionTicks,
+              runtimeTicks: RunTimeTicks,
               at: Date.now(),
             },
           ]);
@@ -137,6 +147,7 @@ export function usePendingStops(): void {
             `/UserItems/${stop.itemId}/UserData`,
             {
               PlaybackPositionTicks: stop.positionTicks,
+              RunTimeTicks: stop.runtimeTicks,
               LastPlayedDate: new Date(stop.at).toISOString(),
             },
             { userId: user.Id }

@@ -1,9 +1,12 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  allSourcesOf,
   config as appConfig,
   createLogger,
+  encodeItemId,
   lookupFor,
   couldHaveSegments,
+  programmeTarget,
   isMemoFresh,
   offeredSources,
   playableSources,
@@ -13,6 +16,7 @@ import {
   resolveByPlaySession,
   resolveByClient,
   writeClientSession,
+  writePlaybackMemo,
   type ContentDescriptor,
   type DeviceProfile,
   type MediaSourceRecord,
@@ -111,7 +115,13 @@ async function locate(
     decoded = await decodeForRequest(ctx, pointer.itemId);
   }
   if (!decoded || decoded.kind !== 'descriptor') return null;
-  const d = decoded.descriptor;
+  let d = decoded.descriptor;
+  let playedId = itemId;
+  if (d.k === 'program') {
+    d = await programmeTarget(await ctx.engine(), ctx.scope(), d);
+    // Live, it shares the channel's memo, so either id finds the same session.
+    if (d.k !== 'episode') playedId = encodeItemId(d);
+  }
   if (
     d.k !== 'movie' &&
     d.k !== 'episode' &&
@@ -122,20 +132,20 @@ async function locate(
     return null;
   if (rawMsid) {
     const norm = rawMsid.replace(/-/g, '').toLowerCase();
-    if (norm !== itemId) requestedMsid = norm;
+    if (norm !== itemId && norm !== playedId) requestedMsid = norm;
   }
   // No persona check: personas on the same variants share a memo and its session.
   const scope =
     opts.bySession && session?.scope && session.uuid === ctx.uuid
       ? session.scope
       : ctx.scope();
-  const memo = await resolveByItem(ctx.uuid, scope, itemId).then(
+  const memo = await resolveByItem(ctx.uuid, scope, playedId).then(
     (m) => m ?? null
   );
   return {
     ctx,
     descriptor: d as ContentDescriptor,
-    itemId,
+    itemId: playedId,
     memo,
     requestedMsid,
   };
@@ -147,7 +157,7 @@ const EMPTY_MEMO_REUSE_MS = 30_000;
 async function ensureMemo(
   loc: Located,
   /* `current` reruns a memo past its reuse window, `force` any memo. */
-  opts: { current?: boolean; force?: boolean } = {}
+  opts: { current?: boolean; force?: boolean; all?: boolean } = {}
 ): Promise<PlaybackMemo | null> {
   const { memo, descriptor } = loc;
   const resolvable = descriptor.k === 'movie' || descriptor.k === 'episode';
@@ -158,7 +168,34 @@ async function ensureMemo(
     if (!resolvable) return null;
     if (memo && Date.now() - memo.createdAt < EMPTY_MEMO_REUSE_MS) return memo;
   }
-  return resolvePlayback(loc.ctx, descriptor, { force: true });
+  return resolvePlayback(loc.ctx, descriptor, { force: true, all: opts.all });
+}
+
+/**
+ * With `AllVersions`, the versions past the version limit too, running the
+ * pipeline again when they are no longer kept.
+ */
+async function versionsFor(
+  req: Request,
+  loc: Located
+): Promise<{
+  memo: PlaybackMemo | null;
+  sources: MediaSourceRecord[];
+  all: boolean;
+}> {
+  const all = bodyOf(req).AllVersions === true;
+  let memo = await ensureMemo(loc, { ...listingOptions(req, loc), all });
+  if (!memo || !all) return { memo, sources: memo?.sources ?? [], all };
+  // A version the memo has plays without a new search.
+  const named = loc.requestedMsid;
+  if (named && memo.sources.some((s) => s.msid === named))
+    return { memo, sources: memo.sources, all };
+  let every = await allSourcesOf(memo);
+  if (!every) {
+    memo = (await ensureMemo({ ...loc, memo }, { force: true, all })) ?? memo;
+    every = await allSourcesOf(memo);
+  }
+  return { memo, sources: every ?? memo.sources, all };
 }
 
 /**
@@ -197,6 +234,13 @@ function pickSource(
     : memo.sources.find((s) => !s.needs);
 }
 
+function fieldsOf(req: Request): ReadonlySet<string> | undefined {
+  const asked = qs(req, 'MediaSourceFields');
+  return asked
+    ? new Set(asked.split(',').map((f) => f.trim().toLowerCase()))
+    : undefined;
+}
+
 function playSupportOf(req: Request): PlaySupport {
   const body = bodyOf(req);
   return {
@@ -231,9 +275,13 @@ async function playbackInfo(req: Request, res: Response) {
   }
   const profile = bodyOf(req).DeviceProfile as DeviceProfile | undefined;
   const support = playSupportOf(req);
-  const memo = await ensureMemo(loc, listingOptions(req, loc));
+  const { memo, sources: versions, all } = await versionsFor(req, loc);
   const offered = memo
-    ? offeredSources(memo.sources, support, maxVersionsFor(loc.ctx))
+    ? offeredSources(
+        versions,
+        support,
+        all ? Infinity : maxVersionsFor(loc.ctx)
+      )
     : [];
   if (!memo || !offered.length) {
     res.json({
@@ -243,6 +291,17 @@ async function playbackInfo(req: Request, res: Response) {
     });
     return;
   }
+  // A named version past the limit joins the memo, which later routes read.
+  // One no longer listed lends its id to none.
+  const named = loc.requestedMsid
+    ? offeredSources(versions, support, Infinity).find(
+        (s) => s.msid === loc.requestedMsid
+      )
+    : undefined;
+  if (named && !memo.sources.includes(named)) {
+    memo.sources.push(named);
+    await writePlaybackMemo(memo, loc.ctx.scope(), loc.ctx.persona?.id);
+  }
   if (req.jf)
     await writeClientSession(
       req.jf.token,
@@ -251,22 +310,19 @@ async function playbackInfo(req: Request, res: Response) {
       loc.ctx.persona?.id
     );
   const target = loc.requestedMsid ?? offered[0].msid;
-  await enrichSourceSubtitles(loc.ctx, memo, target);
+  if (bodyOf(req).SkipSubtitles !== true)
+    await enrichSourceSubtitles(loc.ctx, memo, target);
   await applyProbedMediaInfo(loc.ctx, memo, target, {
     playing: isPlaying(req, loc),
   });
-  // A version no longer listed must not lend its id to another.
-  const requested = offered.some((s) => s.msid === loc.requestedMsid)
-    ? loc.requestedMsid
-    : undefined;
   const sources = mediaSourcesFrom(req, loc.ctx, memo, {
-    firstId: requested ?? loc.itemId,
+    firstId: named?.msid ?? loc.itemId,
     tracks: await trackPreferences(loc.ctx),
-    requestedMsid: requested,
-    onlyRequested: true,
+    offered: named ? [named] : offered,
     support,
     profile,
     hasSegments: hasSegments(loc.ctx, memo),
+    fields: fieldsOf(req),
   });
   res.json({ MediaSources: sources, PlaySessionId: memo.psid });
 }

@@ -12,6 +12,7 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioFocusRequestCompat
 import androidx.media3.common.audio.AudioManagerCompat
 import androidx.media3.common.util.UnstableApi
+import io.github.viren070.aiostreams.logs.AppLog
 
 /** Holds audio focus while playing; calls, other players and unplugged headphones pause. */
 @OptIn(UnstableApi::class)
@@ -19,6 +20,7 @@ class AudioFocus(
     private val context: Context,
     private val pause: () -> Unit,
     private val resume: () -> Unit,
+    private val expectedDrop: () -> Boolean,
 ) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private val request = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
@@ -31,7 +33,11 @@ class AudioFocus(
         .setOnAudioFocusChangeListener(::onChange)
         .build()
     private val noisy = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = pause()
+        override fun onReceive(context: Context, intent: Intent) {
+            if (expectedDrop()) return AppLog.i(TAG, "the audio output dropped after a display mode switch; playing on")
+            AppLog.i(TAG, "the audio output went away; pausing")
+            pause()
+        }
     }
     private var playing = false
     private var resumeOnGain = false
@@ -61,17 +67,24 @@ class AudioFocus(
     private fun onChange(change: Int) {
         when (change) {
             AudioManager.AUDIOFOCUS_LOSS -> {
+                AppLog.i(TAG, "another app took the audio; pausing")
                 resumeOnGain = false
                 pause()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                AppLog.i(TAG, "another app took the audio for a while; pausing")
                 resumeOnGain = playing
                 pause()
             }
             AudioManager.AUDIOFOCUS_GAIN -> if (resumeOnGain) {
+                AppLog.i(TAG, "the audio is back; playing on")
                 resumeOnGain = false
                 resume()
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "audio"
     }
 }

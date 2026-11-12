@@ -29,6 +29,10 @@ function onContextMenu(e: MouseEvent) {
 
 let windowFullscreen = false;
 
+export function leaveWindowFullscreen(): void {
+  if (windowFullscreen) appBridge()?.send({ type: 'fullscreen', value: false });
+}
+
 /** Follows the window's full screen, and keeps the browser's menu off the page. */
 export function setupDesktop(): () => void {
   const unsubscribe = appBridge()?.subscribe((m) => {
@@ -87,7 +91,7 @@ export const desktopHost: Host = {
   name: 'desktop',
   device: () => ({ name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
+  playerFeatures: ['audio', 'chapters', 'stats', 'headers', 'upscaling'],
   resolveYouTube,
   downloads: {
     ...shellDownloads,

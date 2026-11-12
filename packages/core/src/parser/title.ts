@@ -1,4 +1,4 @@
-import { parseTorrentTitle, ParsedResult } from '@viren070/parse-torrent-title';
+import { parseTorrentTitle, ParsedResult } from '@aiostreams/release-parser';
 import { DEFAULT_REPOST_SUFFIXES } from '../utils/constants.js';
 
 // Sized to cover the working set of a busy request without retaining much:

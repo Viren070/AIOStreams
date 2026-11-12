@@ -1,4 +1,5 @@
 import { usingKeys } from './dispatch';
+import { isRepeating } from './glide';
 
 /** Long enough for a held arrow to pass a tab without picking it. */
 const REST_MS = 250;
@@ -11,18 +12,24 @@ export const tabList = {
   'data-nav-enter': '[role=tab][aria-selected=true]',
 } as const;
 
-/** A remote or keyboard moving onto it picks it once focus rests there; a click picks it as before. */
+/** A press moving onto it picks; a held key passes it, picking where it stops. */
+export function pickOnFocus(pick: (() => void) | undefined, restMs = REST_MS) {
+  return {
+    onFocus: () => {
+      window.clearTimeout(resting);
+      if (!pick || !usingKeys()) return;
+      if (restMs && isRepeating()) resting = window.setTimeout(pick, restMs);
+      else pick();
+    },
+    onBlur: () => window.clearTimeout(resting),
+  };
+}
+
 export function tab(selected: boolean, pick: () => void, restMs = REST_MS) {
   return {
     role: 'tab',
     'aria-selected': selected,
     tabIndex: selected ? 0 : -1,
-    onFocus: () => {
-      window.clearTimeout(resting);
-      if (selected || !usingKeys()) return;
-      if (restMs) resting = window.setTimeout(pick, restMs);
-      else pick();
-    },
-    onBlur: () => window.clearTimeout(resting),
+    ...pickOnFocus(selected ? undefined : pick, restMs),
   } as const;
 }

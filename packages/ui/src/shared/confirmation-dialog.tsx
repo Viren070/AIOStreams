@@ -10,6 +10,9 @@ type ConfirmationDialogHookProps = {
   actionText?: string;
   actionIntent?: ButtonProps['intent'];
   onConfirm: () => void;
+  /** Its `data-name`, as a dialog's hook for custom CSS. */
+  name?: string;
+  onCloseAutoFocus?: (e: Event) => void;
 };
 
 export function useConfirmationDialog(props: ConfirmationDialogHookProps) {
@@ -31,15 +34,19 @@ export const ConfirmationDialog: React.FC<
     description = uiText.areYouSure,
     actionText = uiText.confirm,
     actionIntent = 'alert-subtle',
+    name,
+    onCloseAutoFocus,
   } = props;
 
   return (
     <>
       <Modal
+        {...(name && { 'data-ui': 'dialog', 'data-name': name })}
         title={title}
         titleClass="text-center"
         open={isOpen}
         onOpenChange={close}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <div className="space-y-4">
           <p className="text-center break-words">{description}</p>

@@ -598,7 +598,7 @@ const SERVICE_DETAILS: Record<
       {
         id: 'note',
         name: 'Configuration Help',
-        description: `**URL:** Use internal URL for local setups (e.g., http://nzbdav:3000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
+        description: `**URL:** Use internal URL for local setups (e.g., http://nzbdav:3000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://aiostreams.org/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
         type: 'alert',
         intent: 'info',
         required: false,
@@ -689,7 +689,7 @@ const SERVICE_DETAILS: Record<
       {
         id: 'note',
         name: 'Configuration Help',
-        description: `**URL:** Use internal URL for local setups (e.g., http://altmount:8000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://docs.aiostreams.viren070.me/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
+        description: `**URL:** Use internal URL for local setups (e.g., http://altmount:8000), otherwise use a public URL.\n\n**Public URL:** Only needed if URL is local but streams need to be publicly accessible. Leave blank if URL is public or using a proxy.\n\n**Security Note:** WebDAV credentials are exposed in stream URLs unless proxied. To proxy, provide the Auth Token below (built-in proxy only).\n\nFor detailed setup instructions, see the [Usenet guide](https://aiostreams.org/guides/usenet#nzbdav-altmount-and-stremthru-newz).`,
         type: 'alert',
         intent: 'info',
         required: false,
@@ -970,6 +970,7 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
   | 'openposterdbApiKey'
   | 'openposterdbUrl'
   | 'openposterdbParameters'
+  | 'customPosterUrl'
   | 'pmdbApiKey',
   {
     name: string;
@@ -1036,6 +1037,12 @@ const TOP_LEVEL_OPTION_DETAILS: Record<
     type: 'string',
     description:
       'Optional query string (without the leading `?`) appended to every poster to customise it, e.g. `ratings_limit=2&badge_size=l&position=br`.',
+  },
+  customPosterUrl: {
+    name: 'Custom Poster URL',
+    type: 'string',
+    description:
+      "Poster URL pattern with placeholders: `{id}` (the item's ID, its IMDb ID when the catalog provides one), `{type}`, `{shape}`, `{imdb_id}`, `{tmdb_id}`, `{tvdb_id}`, `{mal_id}`, `{kitsu_id}`, `{anilist_id}`, `{anidb_id}`. Add `?` (e.g. `{tmdb_id?}`) to blank a missing ID instead of skipping the poster; `{imdb_id|tmdb_id}` uses the first available.",
   },
   pmdbApiKey: {
     name: 'PublicMetaDB API Key',

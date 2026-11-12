@@ -34,6 +34,8 @@ export interface CacheDescription {
 export interface CacheOptions {
   /** Memory store only. `false` shares values that callers must not change. */
   clone?: boolean;
+  /** Memory store only: what an entry weighs, making `maxSize` a byte budget. */
+  sizeOf?: (value: any) => number;
 }
 
 export class Cache<K, V> {
@@ -47,9 +49,7 @@ export class Cache<K, V> {
    */
   private _backend: CacheBackend<K, V> | null = null;
   private explicitMaxSize:
-    | number
-    | (() => number | null | undefined)
-    | undefined;
+    number | (() => number | null | undefined) | undefined;
   private storePreference: 'redis' | 'sql' | 'memory' | undefined;
   private options: CacheOptions;
   private name: string;
@@ -92,6 +92,7 @@ export class Cache<K, V> {
     } else {
       this._backend = new MemoryCacheBackend<K, V>(maxSize, {
         clone: this.options.clone ?? true,
+        sizeOf: this.options.sizeOf,
       });
     }
     return this._backend;

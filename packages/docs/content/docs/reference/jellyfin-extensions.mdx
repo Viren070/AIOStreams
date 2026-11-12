@@ -86,6 +86,7 @@ object:
 | Field         | Shape  | What the web app does with it                                                            |
 | ------------- | ------ | ---------------------------------------------------------------------------------------- |
 | `id`          | string | The version's own id, the same in every listing; the app remembers it to resume on it    |
+| `release`     | string | Its release, the same from any addon; resuming falls back to it on the same `service`    |
 | `name`        | string | The version's title in the version list, instead of `Name`                               |
 | `description` | string | The lines under the title in the version list                                            |
 | `bingeGroup`  | string | Autoplay picks the next episode's version with the same group, as Stremio's `bingeGroup` |
@@ -94,13 +95,13 @@ object:
 
 The [version search, quick filters and badges](/reference/version-badges) also read these, all optional:
 
-| Field                                                                                                   | Shape             | What it is                                                         |
-| ------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
-| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string            | Read from the release, as the formatter has them                   |
-| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                     | string[]          | The same                                                           |
-| `seMatched`, `regexMatched`                                                                             | string            | The stream expression and regex it matched first, by name          |
-| `rseMatched`, `rankedRegexMatched`                                                                      | string[]          | The ranked stream expressions and ranked regexes it matched        |
-| `seadex`                                                                                                | `best` or `alt`   | Listed on SeaDex, as a best or an alternative release              |
+| Field                                                                                                      | Shape           | What it is                                                  |
+| ---------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------- |
+| `filename`, `folderName`, `resolution`, `quality`, `encode`, `releaseGroup`, `indexer`, `addon`, `service` | string          | Read from the release, as the formatter has them            |
+| `visualTags`, `audioTags`, `audioChannels`, `languages`, `editions`                                        | string[]        | The same                                                    |
+| `seMatched`, `regexMatched`                                                                                | string          | The stream expression and regex it matched first, by name   |
+| `rseMatched`, `rankedRegexMatched`                                                                         | string[]        | The ranked stream expressions and ranked regexes it matched |
+| `seadex`                                                                                                   | `best` or `alt` | Listed on SeaDex, as a best or an alternative release       |
 
 The first version's `Id` is the item's own id, as in standard Jellyfin, so `id` is how the app tells
 versions apart across listings. Without the feature, the next episode settings say nothing of
@@ -117,11 +118,27 @@ In the `PlaybackInfo` body:
 | `Fresh`                     | The app is listing versions: answer with a list no older than the server keeps one for   |
 | `Refresh`                   | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
 | `MediaSourceId`             | Standard. The app is playing that version: answer from the list it came from             |
+| `SkipSubtitles`             | Don't ask subtitle addons for the first version; the app asks for the version it plays   |
 | `EnableRequiredHttpHeaders` | The app's player sends a version's standard `RequiredHttpHeaders` with its requests      |
 | `EnableYouTube`             | The app's player opens a version by its `ytId`                                           |
+| `AllVersions`               | List versions past the configured limit, up to the app's own; one named joins the list   |
 
 Other clients send neither, so a version that only plays with its headers, or only as a YouTube
 video, is listed only when the body says the app can play it.
+
+In the query, `MediaSourceFields` takes a comma-separated list of the `MediaSources` fields to send,
+in any case, such as `Id,Type,Name,RunTimeTicks,aiostreams`. The app asks for those when it lists
+versions, as it reads nothing else from a list and names a version to play it, which answers with
+all of it. A list without `MediaStreams` is also quicker to build, as the server skips the tracks.
+
+## Playback reports
+
+The app adds `RunTimeTicks`, the length of the file as its player measured it, to the body of
+`POST /Sessions/Playing`, `/Sessions/Playing/Progress` and `/Sessions/Playing/Stopped`, and of the
+`POST /UserItems/{id}/UserData` that saves a position it could not report at the time. AIOStreams
+judges how much was watched against it, so a title is marked played at the right point even when
+its runtime from metadata is minutes off the file's. Without it, the server uses the runtime it
+knows for that version, or the title's.
 
 ## Libraries
 
@@ -130,6 +147,26 @@ carries `"aiostreams": { "genreRequired": true }`. Asked for without a genre, su
 nothing. Its genres come from `/Genres?ParentId={library}` as usual, and a genre named `None` stands
 for all of it. The app opens it on `None` where that is offered and on its first genre otherwise, and
 offers All only where `None` is there to send.
+
+## Live TV
+
+The app shows Live TV when the user's views include one with `CollectionType` `livetv`, and reads it
+with Jellyfin's standard Live TV API: `/LiveTv/Channels`, `POST /LiveTv/Programs` for a guide, and
+`/Items?SearchTerm=…&IncludeItemTypes=TvChannel` for search. A channel plays and reports as any title
+does.
+
+The view carries `"aiostreams": { "guide": true }` when one of its catalogs is a guide. The app offers
+its guide then, or when a channel on the first page of `/LiveTv/Channels` has a `CurrentProgram`.
+
+Its groups are the genres of the Live TV view, from `/Genres?ParentId={view}`. The app asks for a
+group's channels with `/LiveTv/Channels?GenreIds={genre}`, which Jellyfin itself doesn't filter by;
+a server without groups lists no genres there, and the app shows all its channels together.
+Favourite channels come from `/LiveTv/Channels?IsFavorite=true`.
+
+A programme its channel keeps carries `"aiostreams": { "catchup": true }`, and plays from its start
+by its own id: `PlaybackInfo` and the stream answer with its archive rather than the channel live.
+`/LiveTv/GuideInfo` starts as many days back as the addons' manifests declare
+[catch-up](/reference/addon-protocol/live-tv#catch-up).
 
 ## Titles
 
@@ -143,6 +180,10 @@ A title whose addon sends [`ratings`](/reference/addon-protocol/metadata#ratings
 source's scale, in the addon's order. The app shows a badge for each, in place of the
 `CommunityRating` star. That star, and the Rotten Tomatoes `CriticRating`, are still filled from the
 list for other clients.
+
+A title no addon in the configuration has details for still opens, named by its id, with an
+`Overview` saying so, and carries `"aiostreams": { "noMeta": true }`. The app shows a page asking for
+a metadata addon in place of the title's own, with Play kept for a movie.
 
 ## Episodes
 

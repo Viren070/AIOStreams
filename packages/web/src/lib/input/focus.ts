@@ -1,5 +1,5 @@
 import { drift, glideBy, glideTo, headedTo } from './glide';
-import { pageRtl } from '../direction';
+import { pageRtl } from '@/lib/direction';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -74,10 +74,10 @@ export function keyboardFocus(): HTMLElement | null {
 
 export const overlayOpen = () => !!document.querySelector(OPEN_OVERLAY);
 
+/** A list that pops up from a page sits outside it, unlike the page's own lists. */
 export const inOverlay = (el: Element) =>
-  !!el.closest(
-    '[role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
-  );
+  !!el.closest('[role=dialog], [role=alertdialog], [role=menu]') ||
+  (!!el.closest('[role=listbox]') && !el.closest('[data-page]'));
 
 const VERTICAL = ['ArrowUp', 'ArrowDown'];
 const HORIZONTAL = ['ArrowLeft', 'ArrowRight'];
@@ -491,17 +491,27 @@ function barGap(
   return gap >= -1 ? gap : null;
 }
 
-/** A `data-nav-wait` box, as a row still loading, lies that way before `to`. */
+/** Boxes still loading, kept here as a search of the page each move costs a TV dearly. */
+const loading = new Set<Element>();
+
+/** A ref for a box still loading, as a row, which a move that way waits for. */
+export function navWait(el: Element | null): (() => void) | undefined {
+  if (!el) return;
+  loading.add(el);
+  return () => void loading.delete(el);
+}
+
+/** A box still loading lies that way before `to`. */
 function waitsFor(
   root: Element,
   rect: DOMRect,
   to: HTMLElement | null,
   dir: Direction
 ): boolean {
-  const boxes = root.querySelectorAll('[data-nav-wait]');
-  if (!boxes.length) return false;
+  if (!loading.size) return false;
   const past = to && distance(rect, rectOf(to), dir);
-  for (const box of boxes) {
+  for (const box of loading) {
+    if (!root.contains(box)) continue;
     const way = distance(rect, settled(box, box.getBoundingClientRect()), dir);
     if (way?.inLine && (!past || way.gap < past.gap)) return true;
   }
@@ -517,8 +527,8 @@ function waitsFor(
 function entry(to: HTMLElement, from: HTMLElement): HTMLElement {
   const box = to.closest<HTMLElement>('[data-nav-enter]');
   if (box && !box.contains(from)) {
-    const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
-    if (named && canFocus(named)) return named;
+    const named = enterAt(box);
+    if (named) return named;
   }
   const group = to.closest(GROUP);
   if (!group || group.contains(from)) return to;
@@ -623,14 +633,19 @@ function first(root: Element): HTMLElement | null {
   if (start) return start;
   const area = root.querySelector('main') ?? root;
   const all = (el: Element) => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  return (
+  const el =
     all(area).find(
       (el) => onScreen(el) && canFocus(el) && !el.closest('nav')
     ) ??
     all(area).find((el) => onScreen(el) && canFocus(el)) ??
-    all(root).find((el) => canFocus(el)) ??
-    null
-  );
+    all(root).find((el) => canFocus(el));
+  const box = el?.closest<HTMLElement>('[data-nav-enter]');
+  return (box && enterAt(box)) ?? el ?? null;
+}
+
+function enterAt(box: HTMLElement): HTMLElement | null {
+  const named = box.querySelector<HTMLElement>(box.dataset.navEnter!);
+  return named && canFocus(named) ? named : null;
 }
 
 /** How far a box must scroll to show `rect` with some room around it. */
@@ -797,6 +812,22 @@ let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
  */
 const cameFrom = new WeakMap<Element, HTMLElement>();
 
+/**
+ * From a page the navigation leads to, its entry there, which Back moves onto
+ * first; `data-nav-back` marks the way it lies from the page.
+ */
+export function navigationBack(): {
+  entry: HTMLElement;
+  dir: Direction;
+} | null {
+  const nav = document.querySelector<HTMLElement>('[data-nav-back]');
+  const entry = nav?.querySelector<HTMLElement>('[aria-current=page]');
+  if (!nav || !entry || nav.contains(document.activeElement)) return null;
+  // Narrow windows hide some navigations, which can't take focus then.
+  if (!entry.getClientRects().length) return null;
+  return { entry, dir: navSide(nav.dataset.navBack)! };
+}
+
 /** A side a `data-nav-*` mark names; `start` and `end` follow the page's direction. */
 export function navSide(value: string | undefined): Direction | undefined {
   if (value === 'start') return pageRtl() ? 'right' : 'left';
@@ -840,7 +871,14 @@ export function move(dir: Direction): boolean {
   }
   // Any other way stays in such a box, as what it covers lies beside it.
   const within = exit && !out ? exit : root;
-  const near = back && canFocus(back) ? back : nearest(within, from, dir);
+  let near = back && canFocus(back) ? back : null;
+  // A box entered at its named element, as tabs at the picked one, has more of it to pass on the way back.
+  const entered = near && from.closest<HTMLElement>('[data-nav-enter]');
+  if (entered && !entered.contains(near)) {
+    const inside = nearest(within, from, dir);
+    if (inside && entered.contains(inside)) near = inside;
+  }
+  near ??= nearest(within, from, dir);
   const wait = waitsFor(within, rectOf(from), near, dir);
   bars = null;
   drifts = [];

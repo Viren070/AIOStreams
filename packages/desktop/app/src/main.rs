@@ -14,7 +14,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, origin};
+use aiostreams_desktop_core::bridge::{Inbound, Outbound, PROTOCOL_VERSION, VideoFrame, origin};
 use aiostreams_desktop_core::downloads::{self, Downloads};
 use aiostreams_desktop_core::external::{self, External};
 use aiostreams_desktop_core::playback::{self, PlayerState};
@@ -28,8 +28,12 @@ use updates::{Command, Updater};
 pub enum UserEvent {
     Emit(String),
     Fullscreen(Option<bool>),
+    Pip(Option<bool>),
+    VideoFrame(Option<VideoFrame>),
     Minimize,
     Close,
+    /// The player closed after the window did.
+    Closed,
     Sync,
     Drag,
     Resize(Edge),
@@ -219,6 +223,8 @@ pub struct Paths {
     downloads: PathBuf,
     /// Where downloads go until the user picks a folder.
     download_folder: PathBuf,
+    /// The upscaling shader, which mpv only reads from a file.
+    upscaling_hook: PathBuf,
 }
 
 pub struct App {
@@ -251,9 +257,14 @@ fn bridge_script() -> String {
             "__PLATFORM__",
             &serde_json::to_string(platform::PLATFORM).unwrap(),
         )
+        .replace("__PIP__", &platform::PIP.to_string())
         .replace(
             "__DEVICE__",
             &serde_json::to_string(&platform::device_name()).unwrap(),
+        )
+        .replace(
+            "__HOURS24__",
+            &platform::hours24().map_or("undefined".into(), |on| on.to_string()),
         )
 }
 
@@ -315,6 +326,7 @@ fn main() {
         subtitles,
         downloads: data_dir.join("downloads.json"),
         download_folder,
+        upscaling_hook: data_dir.join("upscaling.glsl"),
     });
     shell::run(App {
         args,
@@ -342,11 +354,19 @@ fn mpv_config_dir(config_dir: &Path) -> PathBuf {
 }
 
 /// `emit` is called on mpv's event thread.
+static VIDEO_ASPECT: Mutex<Option<f64>> = Mutex::new(None);
+
+#[cfg(not(target_os = "linux"))]
+pub fn video_aspect() -> Option<f64> {
+    VIDEO_ASPECT.lock().ok().and_then(|aspect| *aspect)
+}
+
 pub fn start_player(
     video: &platform::VideoSurface,
-    mpv_dir: &Path,
+    paths: &Paths,
     emit: impl Fn(Outbound) + Send + Sync + 'static,
 ) -> Player {
+    let mpv_dir = &paths.mpv;
     let mut defaults: Vec<(&str, String)> = vec![
         ("config-dir", mpv_dir.to_string_lossy().into_owned()),
         ("config", "yes".into()),
@@ -404,14 +424,27 @@ pub fn start_player(
             platform::update_hdr(gamma, primaries);
             return;
         }
+        if let Outbound::VideoAspect { aspect } = message {
+            if let Ok(mut shown) = VIDEO_ASPECT.lock() {
+                *shown = aspect;
+            }
+            return;
+        }
         now_playing::observe(&message);
         emit(message)
     };
     let sized = std::fs::read_to_string(mpv_dir.join("mpv.conf"))
         .is_ok_and(|c| c.contains("demuxer-max-bytes"));
     let auto_cache = (!sized).then(|| playback::auto_cache(platform::total_memory()));
-    Player::start(library, &defaults, &required, auto_cache, Arc::new(emit))
-        .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
+    Player::start(
+        library,
+        &defaults,
+        &required,
+        auto_cache,
+        paths.upscaling_hook.clone(),
+        Arc::new(emit),
+    )
+    .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
 }
 
 /// `emit` is called on the player's own threads.
@@ -432,6 +465,7 @@ pub fn start_downloads(paths: &Paths, emit: impl Fn(Outbound) + Send + 'static) 
 
 const SUBTITLE_TYPES: &[&str] = &["srt", "vtt", "ass", "ssa", "sub", "sup"];
 const MAX_SUBTITLE_BYTES: usize = 10 << 20;
+const MAX_PAGE_TEXT: usize = 4000;
 
 /// The page never names a path for mpv to open, so the app writes the file itself.
 fn save_subtitle(dir: &Path, name: &str, data: &str) -> Result<PathBuf, String> {
@@ -661,6 +695,16 @@ pub fn handle(
         },
         Inbound::ExternalClose => external.close(),
         Inbound::Fullscreen { value } => send(UserEvent::Fullscreen(value)),
+        Inbound::Pip { value } => send(UserEvent::Pip(value)),
+        Inbound::PlayerFrame { frame } => {
+            if let Some(p) = player.as_ref() {
+                let shown = frame.is_none_or(|frame| frame.subtitles);
+                let _ = p
+                    .mpv()
+                    .set_property_async("sub-visibility", if shown { "yes" } else { "no" });
+            }
+            send(UserEvent::VideoFrame(frame));
+        }
         Inbound::Minimize => send(UserEvent::Minimize),
         Inbound::WindowDrag => send(UserEvent::Drag),
         Inbound::WindowResize { edge } => match edge.as_str() {
@@ -756,9 +800,13 @@ pub fn handle(
         Inbound::DownloadConfig { concurrent } => {
             downloads.send(downloads::Command::SetConcurrent(concurrent))
         }
-        Inbound::WebError { message } => {
-            let message: String = message.chars().take(4000).collect();
-            log::error!(target: "web", "{message}");
+        Inbound::WebError { message } => log::error!(target: "web", "{}", page_text(&message)),
+        Inbound::Log { level, message } => {
+            log::log!(target: "web", log::Level::from(level), "{}", page_text(&message))
         }
     }
+}
+
+fn page_text(message: &str) -> String {
+    message.chars().take(MAX_PAGE_TEXT).collect()
 }

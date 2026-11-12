@@ -1,7 +1,10 @@
-import type { JellyfinClient } from '../client';
-import { firstInLanguages, sameLanguage } from '../languages';
-import type { MediaStream, SourceInfo } from '../types';
-import { subtitleLanguages, type PlaybackPrefs } from '../user-config';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { firstInLanguages, sameLanguage } from '@/lib/languages';
+import type { MediaStream, SourceInfo } from '@/lib/jellyfin/types';
+import {
+  subtitleLanguages,
+  type PlaybackPrefs,
+} from '@/lib/jellyfin/user-config';
 
 /** The kinds of subtitle track the user ranks; commentary always comes last. */
 export const SUBTITLE_TYPES = ['normal', 'sdh', 'forced', 'signs'] as const;

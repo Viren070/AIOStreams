@@ -1,10 +1,11 @@
 package io.github.viren070.aiostreams
 
-import android.util.Log
+import io.github.viren070.aiostreams.logs.AppLog
 import java.util.concurrent.Executors
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -31,40 +32,53 @@ class YouTube(private val send: (JsonObject) -> Unit) {
         val hls: Boolean,
     )
 
+    private class Stream(val url: String, val originalLanguage: String?)
+
     fun resolve(request: String, videoId: String) = worker.execute {
-        val url = if (VIDEO_ID.matches(videoId)) {
-            CLIENTS.firstNotNullOfOrNull { runCatching { ask(it, videoId) }.onFailure { e -> Log.w(TAG, "${it.name}: $e") }.getOrNull() }
+        val stream = if (VIDEO_ID.matches(videoId)) {
+            CLIENTS.firstNotNullOfOrNull { runCatching { ask(it, videoId) }.onFailure { e -> AppLog.w(TAG, it.name, e) }.getOrNull() }
         } else {
             null
         }
         send(buildJsonObject {
             put("type", "youtube-resolved")
             put("request", request)
-            put("url", url)
+            put("url", stream?.url)
+            stream?.originalLanguage?.let { put("originalLanguage", it) }
         })
     }
 
     fun release() = worker.shutdownNow()
 
-    private fun ask(client: Client, videoId: String): String? {
+    private fun ask(client: Client, videoId: String): Stream? {
         var visitor: String? = null
         repeat(2) {
             val answer = player(client, videoId, visitor)
             val ok = answer["playabilityStatus"]?.jsonObject?.get("status")?.jsonPrimitive?.contentOrNull == "OK"
             val streaming = answer["streamingData"]?.jsonObject
             if (ok && streaming != null) {
-                return if (client.hls) {
+                val url = if (client.hls) {
                     streaming["hlsManifestUrl"]?.jsonPrimitive?.contentOrNull
                 } else {
                     (streaming["formats"] as? JsonArray)?.firstNotNullOfOrNull {
                         it.jsonObject["url"]?.jsonPrimitive?.contentOrNull
                     }
                 }
+                return url?.let { Stream(it, originalLanguage(streaming)) }
             }
             visitor = answer["responseContext"]?.jsonObject?.get("visitorData")?.jsonPrimitive?.contentOrNull ?: return null
         }
         return null
     }
+
+    /** The original audio's language, which a manifest with dubs doesn't mark. */
+    private fun originalLanguage(streaming: JsonObject): String? =
+        (streaming["adaptiveFormats"] as? JsonArray)?.firstNotNullOfOrNull { format ->
+            val track = (format as? JsonObject)?.get("audioTrack") as? JsonObject
+            // Such as `en-US.4`.
+            track?.takeIf { it["audioIsDefault"]?.jsonPrimitive?.booleanOrNull == true }
+                ?.get("id")?.jsonPrimitive?.contentOrNull?.substringBefore('.')
+        }
 
     private fun player(client: Client, videoId: String, visitor: String?): JsonObject {
         val body = buildJsonObject {

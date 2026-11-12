@@ -1,5 +1,5 @@
 import { t } from '@lingui/core/macro';
-import { formatLocale } from '../i18n';
+import { formatLocale } from '@/lib/i18n';
 import { parseSubtitle, type SubtitleCue } from './cues';
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -40,6 +40,9 @@ function extension(name: string): string {
   const dot = name.lastIndexOf('.');
   return dot < 0 ? '' : name.slice(dot + 1).toLowerCase();
 }
+
+/** What `readSubtitleFile` reads. */
+export const READABLE_SUBTITLE_TYPES = ['srt', 'vtt', 'ass', 'ssa'];
 
 /** Throws why a player can't take the file. */
 export function checkSubtitleFile(file: File, types: readonly string[]): void {

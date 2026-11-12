@@ -1,6 +1,6 @@
-import { sameLanguage } from '../languages';
-import type { Track } from '../playback/controller';
-import type { MediaStream } from '../types';
+import { sameLanguage } from '@/lib/languages';
+import type { Track } from '@/lib/playback/controller';
+import type { MediaStream } from '@/lib/jellyfin/types';
 
 export type TrackKind = 'audio' | 'subtitle';
 

@@ -1,13 +1,16 @@
+mod pip;
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;
 
-use aiostreams_desktop_core::bridge::{Inbound, Outbound, origin};
+use aiostreams_desktop_core::bridge::{self, Outbound, origin};
 use aiostreams_desktop_core::discord;
 use tao::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopWindowTarget};
+use tao::monitor::MonitorHandle;
 #[cfg(target_os = "macos")]
 use tao::platform::macos::WindowBuilderExtMacOS;
 #[cfg(windows)]
@@ -18,6 +21,7 @@ use wry::WebViewBuilderExtWindows;
 use wry::http::{Request, Response};
 use wry::{NewWindowResponse, PageLoadEvent, Rect, WebContext, WebViewBuilder};
 
+use self::pip::Pip;
 use crate::links::Inbox;
 use crate::media;
 use crate::placement::{self, MIN_SIZE, Placement, SETTLE};
@@ -27,6 +31,9 @@ use crate::{
     start_downloads, start_external, start_player,
 };
 use aiostreams_desktop_core::downloads::Command as DownloadCommand;
+
+#[cfg(target_os = "macos")]
+const CLOSE_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
 
 pub fn webview_version() -> String {
     wry::webview_version().unwrap_or_else(|_| "missing".into())
@@ -60,20 +67,28 @@ fn set_fullscreen(window: &Window, value: Option<bool>, remaximize: &mut bool) {
     }
 }
 
+/// Whether the top middle of a window `width` logical pixels wide at `(x, y)` is on a screen.
+fn on_screen(
+    mut monitors: impl Iterator<Item = MonitorHandle>,
+    (x, y): (i32, i32),
+    width: u32,
+) -> bool {
+    monitors.any(|m| {
+        let (origin, size) = (m.position(), m.size());
+        let middle = x + (width as f64 * m.scale_factor() / 2.0) as i32;
+        (origin.x..origin.x + size.width as i32).contains(&middle)
+            && (origin.y..origin.y + size.height as i32).contains(&(y + 16))
+    })
+}
+
 fn start_position(
     target: &EventLoopWindowTarget<UserEvent>,
     saved: &Placement,
 ) -> Option<PhysicalPosition<i32>> {
-    if let Some((x, y)) = saved.position {
-        let on_screen = target.available_monitors().any(|m| {
-            let (origin, size) = (m.position(), m.size());
-            let middle = x + (saved.width as f64 * m.scale_factor() / 2.0) as i32;
-            (origin.x..origin.x + size.width as i32).contains(&middle)
-                && (origin.y..origin.y + size.height as i32).contains(&(y + 16))
-        });
-        if on_screen {
-            return Some(PhysicalPosition::new(x, y));
-        }
+    if let Some(at) = saved.position
+        && on_screen(target.available_monitors(), at, saved.width)
+    {
+        return Some(PhysicalPosition::new(at.0, at.1));
     }
     let m = target.primary_monitor()?;
     let (origin, size, scale) = (m.position(), m.size(), m.scale_factor());
@@ -172,13 +187,19 @@ pub fn run(app: App) {
     let size = window.inner_size();
 
     let video = platform::VideoSurface::new(&window).unwrap_or_else(|e| platform::fatal(&e));
-    let started = start_player(&video, &paths.mpv, {
+    let started = start_player(&video, &paths, {
         let proxy = proxy.clone();
         move |message: Outbound| {
             let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
         }
     });
     video.attach(started.mpv());
+    video.on_input({
+        let proxy = proxy.clone();
+        move |message: Outbound| {
+            let _ = proxy.send_event(UserEvent::Emit(receive_script(&message)));
+        }
+    });
     let player = Rc::new(RefCell::new(Some(started)));
     let external = Rc::new(start_external(&paths, {
         let proxy = proxy.clone();
@@ -241,11 +262,10 @@ pub fn run(app: App) {
                 let send = |event: UserEvent| {
                     let _ = proxy.send_event(event);
                 };
-                match serde_json::from_str::<Inbound>(req.body()) {
-                    Ok(message) => handle(
+                if let Some(message) = bridge::parse(req.body()) {
+                    handle(
                         message, &player, &external, &send, &paths, &updater, &downloads,
-                    ),
-                    Err(e) => log::warn!("bad message: {e}"),
+                    );
                 }
             }
         })
@@ -270,9 +290,11 @@ pub fn run(app: App) {
         })
         .with_on_page_load_handler({
             let (player, external, inbox) = (player.clone(), external.clone(), inbox.clone());
+            let proxy = proxy.clone();
             move |event, _| {
                 if let PageLoadEvent::Started = event {
                     inbox.borrow_mut().page_loading();
+                    let _ = proxy.send_event(UserEvent::Pip(Some(false)));
                     // A new page never owns the video the last one started.
                     if let Some(p) = player.borrow().as_ref() {
                         p.stop();
@@ -307,14 +329,28 @@ pub fn run(app: App) {
     let mut fullscreen = false;
     let mut maximized = window.is_maximized();
     let mut remaximize = false;
+    let mut pip: Option<Pip> = None;
     let mut save_at: Option<Instant> = None;
+    #[cfg(target_os = "macos")]
+    let mut exit_at: Option<Instant> = None;
     event_loop.run(move |event, _, flow| {
         if save_at.is_some_and(|at| Instant::now() >= at) {
             save_at = None;
-            record(&window, &mut placement);
+            match pip {
+                Some(_) => Pip::record(&window, &mut placement),
+                None => record(&window, &mut placement),
+            }
             placement::save(&data_dir, &placement);
         }
         *flow = save_at.map_or(ControlFlow::Wait, ControlFlow::WaitUntil);
+        #[cfg(target_os = "macos")]
+        if let Some(at) = exit_at {
+            *flow = if Instant::now() >= at {
+                ControlFlow::Exit
+            } else {
+                ControlFlow::WaitUntil(at)
+            };
+        }
         let emit = |message: Outbound| {
             let _ = webview.evaluate_script(&receive_script(&message));
         };
@@ -364,26 +400,70 @@ pub fn run(app: App) {
                 ..
             }
             | Event::UserEvent(UserEvent::Close) => {
+                #[cfg(target_os = "macos")]
+                if exit_at.is_some() {
+                    return;
+                }
                 log::info!("closing");
-                record(&window, &mut placement);
+                match pip {
+                    Some(_) => Pip::record(&window, &mut placement),
+                    None => record(&window, &mut placement),
+                }
                 placement::save(&data_dir, &placement);
                 video.shutdown();
                 let player = player.borrow_mut().take();
-                // mpv's AVFoundation output tears down on the main thread, which must not wait for it.
+                // mpv's AVFoundation output tears down on the main thread, so the loop runs until it has.
                 #[cfg(target_os = "macos")]
-                std::thread::spawn(move || drop(player));
+                {
+                    window.set_visible(false);
+                    let proxy = proxy.clone();
+                    std::thread::spawn(move || {
+                        drop(player);
+                        let _ = proxy.send_event(UserEvent::Closed);
+                    });
+                    external.close();
+                    let at = Instant::now() + CLOSE_WAIT;
+                    exit_at = Some(at);
+                    *flow = ControlFlow::WaitUntil(at);
+                }
                 #[cfg(not(target_os = "macos"))]
-                drop(player);
-                external.close();
-                *flow = ControlFlow::Exit;
+                {
+                    drop(player);
+                    external.close();
+                    *flow = ControlFlow::Exit;
+                }
             }
+            Event::UserEvent(UserEvent::Closed) => *flow = ControlFlow::Exit,
             Event::UserEvent(UserEvent::Emit(script)) => {
                 let _ = webview.evaluate_script(&script);
             }
             Event::UserEvent(UserEvent::Fullscreen(value)) => {
+                let left = pip::set(&mut pip, false, &window, &mut placement, &mut remaximize);
+                if left {
+                    placement::save(&data_dir, &placement);
+                    emit(Outbound::Pip { value: false });
+                }
+                // From the small window, a toggle means full screen.
+                let value = if left {
+                    Some(value.unwrap_or(true))
+                } else {
+                    value
+                };
                 set_fullscreen(&window, value, &mut remaximize)
             }
+            Event::UserEvent(UserEvent::Pip(value)) => {
+                let on = value.unwrap_or(pip.is_none());
+                if pip::set(&mut pip, on, &window, &mut placement, &mut remaximize) {
+                    placement::save(&data_dir, &placement);
+                }
+                emit(Outbound::Pip {
+                    value: pip.is_some(),
+                });
+            }
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
+            Event::UserEvent(UserEvent::VideoFrame(frame)) => {
+                video.frame(frame, window.scale_factor());
+            }
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = window.drag_window();
             }
@@ -391,7 +471,9 @@ pub fn run(app: App) {
                 let _ = window.drag_resize_window(direction(edge));
             }
             Event::UserEvent(UserEvent::ToggleMaximize) => {
-                window.set_maximized(!window.is_maximized());
+                if pip.is_none() {
+                    window.set_maximized(!window.is_maximized());
+                }
             }
             Event::UserEvent(UserEvent::WindowState) => emit(Outbound::WindowState {
                 maximized: window.is_maximized(),
@@ -436,6 +518,9 @@ pub fn run(app: App) {
                     p.sync();
                 }
                 emit(Outbound::Fullscreen { value: fullscreen });
+                emit(Outbound::Pip {
+                    value: pip.is_some(),
+                });
             }
             _ => {}
         }

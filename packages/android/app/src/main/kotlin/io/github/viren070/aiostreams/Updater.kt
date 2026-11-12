@@ -12,10 +12,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
+import io.github.viren070.aiostreams.logs.AppLog
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.Executors
@@ -69,7 +69,7 @@ class Updater(
                 PackageInstaller.STATUS_SUCCESS -> {}
                 else -> {
                     val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "status $status"
-                    Log.w(TAG, "install failed: $message")
+                    AppLog.w(TAG, "install failed: $message")
                     worker.execute {
                         report("error", ready?.version, activity.getString(R.string.update_install_failed, message))
                     }
@@ -140,7 +140,7 @@ class Updater(
             ready = Ready(file, version)
             report("ready", version)
         } catch (e: Exception) {
-            Log.w(TAG, "update check", e)
+            AppLog.w(TAG, "update check", e)
             report("error", error = e.message ?: e.javaClass.simpleName)
         }
     }
@@ -183,7 +183,7 @@ class Updater(
                 session.commit(done.intentSender)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "install", e)
+            AppLog.w(TAG, "install", e)
             report("error", update.version, activity.getString(R.string.update_install_failed, e.message))
         }
     }

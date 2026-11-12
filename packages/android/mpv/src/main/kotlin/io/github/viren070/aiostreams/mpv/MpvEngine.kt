@@ -9,6 +9,8 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import io.github.viren070.aiostreams.libs.FallbackFont
+import io.github.viren070.aiostreams.logs.AppLog
+import io.github.viren070.aiostreams.logs.Repeats
 import io.github.viren070.aiostreams.playback.CacheBudget
 import io.github.viren070.aiostreams.playback.Change
 import io.github.viren070.aiostreams.playback.Engine
@@ -25,6 +27,7 @@ import io.github.viren070.aiostreams.playback.SubtitleFont
 import io.github.viren070.aiostreams.playback.SubtitleLine
 import io.github.viren070.aiostreams.playback.SubtitleMode
 import io.github.viren070.aiostreams.playback.TimeRange
+import io.github.viren070.aiostreams.playback.UpscaleNetwork
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import java.io.File
@@ -71,6 +74,12 @@ class MpvEngine(private val context: Context) : Engine {
     private var hwdec: String? = null
     private var ownFont = ""
     private val styled = HashMap<String, String>()
+    private var upscaling = false
+    private var appliedShaders = emptyList<String>()
+    private var upscalingBlocked = false
+    private var dropsSeen = 0L
+    private var timeSeen = 0.0
+    private var watchingDrops: ScheduledFuture<*>? = null
     private var statsPage: String? = null
 
     // The shown subtitle and the file's picture subtitles, which keep their own size.
@@ -92,8 +101,12 @@ class MpvEngine(private val context: Context) : Engine {
 
     private val dir = File(context.filesDir, "mpv")
 
+    // Read at start: asking a stuck mpv later would hold the main thread too.
+    @Volatile
+    private var versions = emptyMap<String, String?>()
+
     override val description: String
-        get() = property("mpv-version") ?: "mpv"
+        get() = versions["mpv-version"] ?: "mpv"
 
     override fun start(listener: Engine.Listener) {
         this.listener = listener
@@ -125,20 +138,24 @@ class MpvEngine(private val context: Context) : Engine {
         // MPV leaves mpv paused, and idling only until its first file ends.
         mpv.setOptionString("idle", "yes")
         mpv.setPropertyBoolean("pause", false)
+        versions = VERSIONS.associateWith { mpv.getPropertyString(it) }
         ownFont = mpv.getPropertyString("sub-font").orEmpty()
         mpv.addObserver(observer)
         mpv.addLogObserver(logs)
         for (name in OBSERVED) mpv.observeProperty(name, formatOf(name))
         mpv.observeProperty(AUDIO_PARAMS, MPV.mpvFormat.MPV_FORMAT_NODE)
         mpv.observeProperty(REFERENCE_LINES, MPV.mpvFormat.MPV_FORMAT_STRING)
-        calls.execute { filters = SoundFilters(mpv) }
+        calls.execute {
+            filters = SoundFilters(mpv)
+            applyShaders()
+        }
     }
 
     private fun command(vararg args: String) = calls.execute { mpv.command(*args) }
 
     private fun set(name: String, value: String) = mpv.setPropertyString(name, value)
 
-    override fun property(name: String): String? = mpv.getPropertyString(name)
+    override fun property(name: String): String? = if (name in versions) versions[name] else mpv.getPropertyString(name)
 
     /** libass here finds fonts only in mpv's fonts folder. */
     private fun copyFonts() {
@@ -149,11 +166,71 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
-    fun reloadConfig() = command("load-config-file", configFile(context).path)
+    fun reloadConfig() = calls.execute {
+        mpv.command("load-config-file", configFile(context).path)
+        // The file may have set the list anew.
+        appliedShaders = emptyList()
+        applyShaders()
+    }
+
+    fun reloadShaders() = calls.execute { applyShaders() }
+
+    override fun setUpscaling(on: Boolean) = calls.execute {
+        upscaling = on
+        if (::mpv.isInitialized) applyShaders()
+    }
+
+    /** Changes the list one path at a time, so what the user's mpv.conf lists stays. */
+    private fun applyShaders() {
+        val paths = buildList {
+            if (upscaling && !upscalingBlocked) add(upscalingShader.path)
+            addAll(shaders(context).map { it.path })
+        }
+        for (path in appliedShaders) mpv.command("change-list", "glsl-shaders", "remove", path)
+        for (path in paths) mpv.command("change-list", "glsl-shaders", "append", path)
+        appliedShaders = paths
+    }
+
+    private val upscalingShader by lazy {
+        File(dir, "upscaling.glsl").apply { writeText(UpscaleNetwork.mpvShader()) }
+    }
+
+    private fun blockUpscaling(why: String) {
+        if (upscalingBlocked) return
+        AppLog.i(TAG, "no upscaling for this file: $why")
+        upscalingBlocked = true
+        applyShaders()
+    }
+
+    private fun watchDrops() {
+        watchingDrops?.cancel(false)
+        dropsSeen = 0
+        timeSeen = 0.0
+        upscalingBlocked = false
+        applyShaders()
+        watchingDrops = calls.scheduleWithFixedDelay(::checkDrops, DROP_CHECK_S, DROP_CHECK_S, TimeUnit.SECONDS)
+    }
+
+    private fun checkDrops() {
+        if (!upscaling || upscalingBlocked) return
+        val drops = property("frame-drop-count")?.toLongOrNull() ?: return
+        // Not estimated-frame-number, which trusts a container's frame rate that some overstate.
+        val time = property("time-pos")?.toDoubleOrNull() ?: return
+        val fps = property("estimated-vf-fps")?.toDoubleOrNull() ?: return
+        val dropped = drops - dropsSeen
+        val played = (time - timeSeen) * fps
+        dropsSeen = drops
+        timeSeen = time
+        if (played >= DROP_MIN_FRAMES && dropped * 100 >= played * DROP_PERCENT) {
+            blockUpscaling("$dropped of ${played.toLong()} frames dropped")
+        }
+    }
 
     override fun load(request: LoadRequest) = calls.execute {
         val options = buildList {
             if (request.startMs > 0) add("start=${seconds(request.startMs)}")
+            // FFmpeg reconnects at the clean end of every chunked playlist a live stream fetches.
+            if (request.live) add("stream-lavf-o=[reconnect=0,reconnect_on_network_error=1]")
             addAll(listOption("alang", request.audioLanguages))
             val slang = listOption("slang", request.subtitleLanguages)
             when (request.subtitleMode) {
@@ -209,7 +286,7 @@ class MpvEngine(private val context: Context) : Engine {
         put("sub-back-color", s.backColor)
         put("sub-border-style", if (s.box) "background-box" else "outline-and-shadow")
         put("sub-ass-override", if (s.forceStyle) "force" else "scale")
-        put("sub-pos", Math.round(s.position).toString())
+        put("sub-pos", s.position.toString())
         if (subtitleScale != s.scale) {
             subtitleScale = s.scale
             set("sub-scale", if (picture) "1" else s.scale.toString())
@@ -224,18 +301,28 @@ class MpvEngine(private val context: Context) : Engine {
             else -> "mediacodec,mediacodec-copy"
         }
         // Any setting sends them all, and setting it mid-file overrides the file's own choice.
-        if (hwdec != this.hwdec) {
+        if (!configSets("hwdec") && hwdec != this.hwdec) {
             this.hwdec = hwdec
             set("hwdec", hwdec)
         }
         set("audio-channels", settings.audioChannels.takeIf { it in setOf("stereo", "5.1", "7.1") } ?: "auto-safe")
         set("audio-spdif", settings.passthrough.joinToString(","))
         set("audio-delay", seconds(settings.audioDelayMs))
-        // The user's mpv.conf may size it instead.
-        if (configFile(context).takeIf { it.exists() }?.readText()?.contains("demuxer-max-bytes") != true) {
+        if (!configSets("demuxer-max-bytes")) {
             val budget = CacheBudget.bytes(context, settings.cacheMb)
             set("demuxer-max-bytes", (budget - budget / 4).toString())
             set("demuxer-max-back-bytes", (budget / 4).toString())
+        }
+    }
+
+    /** Whether the user's mpv.conf sets `name` for every file, which the app's settings then leave to it. */
+    private fun configSets(name: String): Boolean {
+        val file = configFile(context).takeIf { it.exists() } ?: return false
+        var everyFile = true
+        return file.readLines().any { raw ->
+            val line = raw.trim()
+            if (line.startsWith("[")) everyFile = line == "[default]"
+            everyFile && line.substringBefore('=').trim().removePrefix("--") == name
         }
     }
 
@@ -250,13 +337,17 @@ class MpvEngine(private val context: Context) : Engine {
             set("secondary-sid", track)
             // Once mpv has decoded the newly picked track's lines, then as it reads on.
             readingAhead = calls.scheduleWithFixedDelay(
-                { runCatching(::readAhead).onFailure { Log.w(TAG, "reading ahead failed", it) } },
+                { runCatching(::readAhead).onFailure { AppLog.w(TAG, "reading ahead failed", it) } },
                 1, READ_AHEAD_EVERY_S, TimeUnit.SECONDS,
             )
         } else {
             set("secondary-sid", "no")
             set("secondary-sub-visibility", "yes")
         }
+    }
+
+    override fun setSubtitlesShown(shown: Boolean) = calls.execute {
+        set("sub-visibility", if (shown) "yes" else "no")
     }
 
     override fun showStatsOverlay(page: String?) = calls.execute {
@@ -331,7 +422,8 @@ class MpvEngine(private val context: Context) : Engine {
         mpv.removeObserver(observer)
         mpv.removeLogObserver(logs)
         calls.shutdown()
-        mpv.close()
+        // Closing waits for mpv's core, which may never answer.
+        Thread(mpv::close, "mpv-close").start()
     }
 
     private val observer = object : MPV.EventObserver {
@@ -363,6 +455,7 @@ class MpvEngine(private val context: Context) : Engine {
                     listener.onEvent("start")
                 }
                 MPV.mpvEvent.MPV_EVENT_FILE_LOADED -> {
+                    calls.execute(::watchDrops)
                     calls.execute(::routeDolbyVision)
                     updateFilters { loaded() }
                     // mpv reports the tracks it picked only after this event, which the page re-picks on.
@@ -375,6 +468,7 @@ class MpvEngine(private val context: Context) : Engine {
                     val error = fields["file_error"]?.asString()
                     listener.onEnded(fields["reason"]?.asString() ?: "unknown", error, cause.takeIf { error != null })
                     cause = null
+                    repeats.flush()
                 }
             }
         }
@@ -398,13 +492,16 @@ class MpvEngine(private val context: Context) : Engine {
         }
     }
 
+    private val repeats = Repeats(TAG)
+
     private val logs = object : MPV.LogObserver {
         override fun logMessage(prefix: String, level: Int, text: String) {
             val line = text.trimEnd()
             // mpv's error names only the step that failed; FFmpeg's first network error says why.
             if (level <= LOG_ERROR && prefix == "ffmpeg" && cause == null) cause = line.replace(PROTOCOL, "")
             if (level <= LOG_ERROR) updateFilters { refused(prefix, line) }
-            if (level <= LOG_WARN) Log.println(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, TAG, "[$prefix] $line")
+            if (level > LOG_WARN || line.isEmpty() || HARMLESS.any(line::contains)) return
+            repeats.write(if (level <= LOG_ERROR) Log.ERROR else Log.WARN, "[$prefix] $line")
         }
     }
 
@@ -467,6 +564,7 @@ class MpvEngine(private val context: Context) : Engine {
             )
             "video-params" -> {
                 val params = value as? JsonObject ?: return
+                if ((params["gamma"] as? JsonPrimitive)?.contentOrNull in HDR_GAMMAS) calls.execute { blockUpscaling("HDR") }
                 return listener.onVideo(
                     width = (params["dw"] as? JsonPrimitive)?.intOrNull,
                     height = (params["dh"] as? JsonPrimitive)?.intOrNull,
@@ -571,6 +669,21 @@ class MpvEngine(private val context: Context) : Engine {
         /** The user's own options, which mpv reads at start and on [reloadConfig]. */
         fun configFile(context: Context) = File(File(context.filesDir, "mpv"), "mpv.conf")
 
+        private fun shaderFolder(context: Context) = File(File(context.filesDir, "mpv"), "shaders")
+
+        /** The user's own shaders, which apply in name order. */
+        fun shaders(context: Context) = shaderFolder(context).listFiles().orEmpty().filter { it.isFile }.sortedBy { it.name }
+
+        fun addShader(context: Context, name: String, text: String) {
+            val file = File(name).name.takeIf { it.isNotEmpty() } ?: return
+            val folder = shaderFolder(context).apply { mkdirs() }
+            File(folder, file).writeText(text)
+        }
+
+        fun removeShader(context: Context, name: String) {
+            File(shaderFolder(context), File(name).name).delete()
+        }
+
         /** Every certificate Android trusts, the user's own included, as PEM, for TLS outside Android's own. */
         fun trustedRoots(context: Context): String {
             val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
@@ -589,12 +702,28 @@ class MpvEngine(private val context: Context) : Engine {
         }
 
         private const val CA_BUNDLE = "cacert.pem"
+        private val VERSIONS = listOf("mpv-version", "ffmpeg-version")
 
         private val STATS = listOf("frame-drop-count", "decoder-frame-drop-count", "vo-delayed-frame-count")
         private const val TAG = "mpv"
         private const val VO = "gpu-next"
+        private const val DROP_CHECK_S = 5L
+        private const val DROP_PERCENT = 20
+
+        /** Fewer frames than this in a check is a stall, which says nothing about the graphics chip. */
+        private const val DROP_MIN_FRAMES = 30
+        private val HDR_GAMMAS = setOf("pq", "hlg")
         private const val LOG_ERROR = 20
         private const val LOG_WARN = 30
+
+        /** What FFmpeg and mpv say on every load of some files, which tells of nothing wrong. */
+        private val HARMLESS = listOf(
+            "Disabling http_persistent",
+            "Disabling http_multiple",
+            "mime type is not rfc8216 compliant",
+            "compiled without LittleCMS",
+            "Both surface and native_window are NULL",
+        )
         private val PROTOCOL = Regex("^\\w+: ")
 
         private fun formatOf(name: String): Int = when (name) {

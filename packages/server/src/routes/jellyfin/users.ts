@@ -6,6 +6,7 @@ import {
   getSimpleTextHash,
   isConfigUuid,
   JellyfinRepository,
+  liveCatalogs,
   mintToken,
   personaUserId,
   quickConnectConsume,
@@ -238,6 +239,18 @@ export function userDto(
       ? userPolicy({ admin: !persona, hidden: persona?.hidden, forKey: true })
       : userPolicy(),
   };
+}
+
+/** Clients show Live TV to a user whose addons have a live catalog. */
+async function withLiveTv<T extends { Policy: object }>(
+  ctx: JellyfinRequestContext,
+  user: T
+): Promise<T> {
+  const live = await ctx
+    .engine()
+    .then((engine) => liveCatalogs(engine).length > 0)
+    .catch(() => false);
+  return { ...user, Policy: { ...user.Policy, EnableLiveTvAccess: live } };
 }
 
 export function sessionInfo(
@@ -647,7 +660,7 @@ router.get(
       return;
     }
     res.json({
-      ...userDto(ctx.uuid, ctx.userData, ctx.persona),
+      ...(await withLiveTv(ctx, userDto(ctx.uuid, ctx.userData, ctx.persona))),
       Configuration: await storedUserConfiguration(ctx.watch),
     });
   })
@@ -672,7 +685,10 @@ router.get(
     );
     const persona = found === undefined ? ctx.persona : found;
     res.json({
-      ...userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey }),
+      ...(await withLiveTv(
+        ctx,
+        userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey })
+      )),
       Configuration: await storedUserConfiguration(
         watchScopeOf(ctx.uuid, persona)
       ),

@@ -28,8 +28,11 @@ interface Engine {
     /** Stretches the page skips or offers to, which an engine fetching ahead can leave out or fetch past early. */
     fun setSkips(skips: List<Skip>) {}
 
-    /** [PlayerSettings.passthrough] is already the formats the output takes. */
+    /** [PlayerSettings.passthrough] is already the formats the output takes, unless [checksOutput]. */
     fun setSettings(settings: PlayerSettings)
+
+    /** Passes through only what the audio output takes, following its changes itself. */
+    val checksOutput: Boolean get() = false
 
     /** Reports the lines of one of the file's own subtitles as it reads them, or stops with null. */
     fun watchSubtitleLines(track: String?) {}
@@ -50,6 +53,12 @@ interface Engine {
     fun setDolbyVision(on: Boolean)
 
     fun setSound(sound: Sound)
+
+    /** Runs the video through [UpscaleNetwork] where it suits it. */
+    fun setUpscaling(on: Boolean) {}
+
+    /** Subtitles over the video, which the mini player's bar leaves out. */
+    fun setSubtitlesShown(shown: Boolean) {}
 
     fun release()
 

@@ -8,7 +8,7 @@ import {
   type SubtitleOutline,
   type SubtitleSize,
   type SubtitleStyle,
-} from '../settings';
+} from '@/lib/settings';
 
 const SCALE: Record<SubtitleSize, number> = {
   small: 0.8,
@@ -78,15 +78,23 @@ export const MPV_SHADOW = 3;
 
 export const subtitleScale = (style: SubtitleStyle) => SCALE[style.size];
 
+/** How long subtitles take to slide above the controls, or back. */
+export const SUBTITLE_LIFT_MS = 300;
+
+/** The slide's 1 - (1 - t)³ for CSS. */
+export const SUBTITLE_LIFT_EASE = 'cubic-bezier(0.33, 1, 0.68, 1)';
+
 /** How high subtitles sit, in percent: the chosen height, or above what covers the bottom. */
 export function subtitleHeight(style?: SubtitleStyle, lift = 0): number {
   const height = style?.position ?? 0;
-  return lift ? Math.max(height, Math.round(lift * 100)) : height;
+  return lift ? Math.max(height, lift * 100) : height;
 }
 
 /** Percent from the top where an unplaced subtitle's bottom sits, as mpv places it. */
-export const subtitleLine = (style?: SubtitleStyle, lift = 0) =>
-  97 - subtitleHeight(style, lift);
+export const subtitleLine = (
+  style?: SubtitleStyle,
+  height = subtitleHeight(style)
+) => 97 - height;
 
 /* eslint-disable lingui/no-unlocalized-strings -- CSS values */
 function rgba(hex: string, opacity: number): string {
