@@ -49,7 +49,12 @@ const CLIENTS: &[Client] = &[
     },
 ];
 
-pub fn resolve(video_id: &str) -> Option<String> {
+pub struct Stream {
+    pub url: String,
+    pub original_language: Option<String>,
+}
+
+pub fn resolve(video_id: &str) -> Option<Stream> {
     let valid = video_id.len() == 11
         && video_id
             .bytes()
@@ -72,20 +77,23 @@ pub fn resolve(video_id: &str) -> Option<String> {
         })
 }
 
-fn ask(agent: &ureq::Agent, client: &Client, video_id: &str) -> Result<Option<String>, String> {
+fn ask(agent: &ureq::Agent, client: &Client, video_id: &str) -> Result<Option<Stream>, String> {
     let mut visitor: Option<String> = None;
     for _ in 0..2 {
         let answer = player(agent, client, video_id, visitor.as_deref())?;
         if answer["playabilityStatus"]["status"] == "OK" {
             let streaming = &answer["streamingData"];
-            return Ok(if client.hls {
-                streaming["hlsManifestUrl"].as_str().map(String::from)
+            let url = if client.hls {
+                streaming["hlsManifestUrl"].as_str()
             } else {
                 streaming["formats"]
                     .as_array()
                     .and_then(|formats| formats.iter().find_map(|f| f["url"].as_str()))
-                    .map(String::from)
-            });
+            };
+            return Ok(url.map(|url| Stream {
+                url: url.to_string(),
+                original_language: original_language(streaming),
+            }));
         }
         // Without a visitor id YouTube refuses, but hands one out for the next ask.
         match answer["responseContext"]["visitorData"].as_str() {
@@ -94,6 +102,17 @@ fn ask(agent: &ureq::Agent, client: &Client, video_id: &str) -> Result<Option<St
         }
     }
     Ok(None)
+}
+
+/// The original audio's language, which a manifest with dubs doesn't mark.
+fn original_language(streaming: &Value) -> Option<String> {
+    let track = streaming["adaptiveFormats"]
+        .as_array()?
+        .iter()
+        .map(|format| &format["audioTrack"])
+        .find(|track| track["audioIsDefault"] == true)?;
+    // Such as `en-US.4`.
+    track["id"].as_str()?.split('.').next().map(String::from)
 }
 
 fn player(

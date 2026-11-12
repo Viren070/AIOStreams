@@ -344,6 +344,8 @@ pub enum Outbound {
     YoutubeResolved {
         request: String,
         url: Option<String>,
+        #[serde(rename = "originalLanguage", skip_serializing_if = "Option::is_none")]
+        original_language: Option<String>,
     },
     PlayerState {
         #[serde(flatten)]

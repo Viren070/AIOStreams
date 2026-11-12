@@ -316,8 +316,12 @@ impl Player {
         let spawned = std::thread::Builder::new()
             .name("youtube".into())
             .spawn(move || {
-                let url = crate::youtube::resolve(&id);
-                emit(Outbound::YoutubeResolved { request, url })
+                let stream = crate::youtube::resolve(&id);
+                emit(Outbound::YoutubeResolved {
+                    request,
+                    url: stream.as_ref().map(|s| s.url.clone()),
+                    original_language: stream.and_then(|s| s.original_language),
+                })
             });
         if let Err(e) = spawned {
             log::warn!("youtube: {e}");
