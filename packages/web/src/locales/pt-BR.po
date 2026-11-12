@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-12 00:47+0000\n"
+"PO-Revision-Date: 2026-11-12 01:14+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -4269,7 +4269,7 @@ msgstr "Status"
 
 #: src/app/settings/interface.tsx
 msgid "Stays as it is"
-msgstr ""
+msgstr "Permanece como está"
 
 #: src/app/settings/audio.tsx
 msgid "Stereo"
@@ -4766,9 +4766,8 @@ msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "Este aplicativo decodifica o áudio Dolby e DTS por conta própria, o que elimina o Atmos."
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "This browser"
-msgstr "Este servidor"
+msgstr "Este navegador"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
@@ -4776,13 +4775,12 @@ msgid "this browser cannot play this version. Nothing is converted on the server
 msgstr "este navegador não consegue reproduzir esta versão. Nada é convertido no servidor, então tente outra versão, um player externo ou o aplicativo para desktop."
 
 #: src/lib/playback/shaders.ts
-#, fuzzy
 msgid "This browser keeps no files for this site."
-msgstr "Este servidor não tem informações sobre {id}."
+msgstr "Este navegador não salva arquivos deste site."
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
-msgstr ""
+msgstr "Usa o player nativo do navegador e reproduz apenas os formatos compatíveis."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -4798,7 +4796,7 @@ msgstr "Este dispositivo não conseguiu ler o que a sessão está reproduzindo."
 
 #: src/lib/playback/shaders.ts
 msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
-msgstr ""
+msgstr "Este shader é GLSL. Converta-o para um arquivo .wgsl compatível."
 
 #: src/app/settings/subtitles.tsx
 msgid "This is how subtitles will look."
@@ -4810,7 +4808,7 @@ msgstr "Isto é o que o dispositivo registrou sobre o problema. Enviar ou salvar
 
 #: src/lib/playback/shaders.ts
 msgid "This isn't a .wgsl pass file."
-msgstr ""
+msgstr "Este arquivo não é um shader .wgsl compatível."
 
 #: src/lib/jellyfin/queries.ts
 msgid "This item was not found"
@@ -4886,7 +4884,7 @@ msgstr "Três dias"
 
 #: src/app/settings/interface.tsx
 msgid "Time format"
-msgstr ""
+msgstr "Formato de hora"
 
 #: src/app/settings/interface.tsx
 msgid "Time on each title"
@@ -4982,7 +4980,7 @@ msgstr "Reprodução por túnel"
 
 #: src/components/shell/usage-stats.tsx
 msgid "Turn off"
-msgstr ""
+msgstr "Desativar"
 
 #: src/app/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
@@ -4994,7 +4992,7 @@ msgstr "Desativar um item também apaga seu conteúdo."
 
 #: src/lib/input/actions.ts
 msgid "Turns it on or off for what is playing."
-msgstr ""
+msgstr "Ativa ou desativa a melhoria no vídeo atual."
 
 #: src/app/settings/cache.tsx
 msgid "Two weeks"
@@ -5093,9 +5091,8 @@ msgid "Updates, picture-in-picture, mpv and troubleshooting"
 msgstr "Atualizações, picture-in-picture, mpv e solução de problemas"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
-#, fuzzy
 msgid "Usage statistics"
-msgstr "Estatísticas"
+msgstr "Estatísticas de uso"
 
 #: src/app/sign-in/page.tsx
 msgid "Use Quick Connect, or the configuration’s password."
@@ -5440,7 +5437,7 @@ msgstr "Ao sincronizar legendas de ouvido."
 
 #: src/app/settings/interface.tsx
 msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr ""
+msgstr "Esta opção vale enquanto os destaques se alternam. Com o mouse, a prévia aparece sobre o card, sem deslocar os demais."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"
@@ -5507,7 +5504,7 @@ msgstr "Você"
 
 #: src/components/shell/usage-stats.tsx
 msgid "You can change this later in Settings, under About."
-msgstr ""
+msgstr "Você pode mudar isso depois em Configurações → Sobre."
 
 #: src/lib/party/party.ts
 msgid "You left the party."
