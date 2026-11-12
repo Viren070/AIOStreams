@@ -16,7 +16,7 @@ import type {
   QueueSnapshot,
   RequestType,
 } from '@aiostreams/core';
-import { clock } from '../format';
+import { clock } from '@/lib/format';
 import { partyKeys, seal, unseal, type PartyKeys } from './crypto';
 import { newCode, type Invite } from './invite';
 import { partyItemTitle, type PartyItem } from './items';

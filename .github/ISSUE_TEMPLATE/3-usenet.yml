@@ -1,0 +1,134 @@
+name: 'Bug: the Usenet engine'
+description: >-
+  The built-in Usenet engine on your own instance: a release that fails, stalls or plays wrongly,
+  archives, health checks, the library, Sonarr and Radarr, or the dashboard's Usenet pages. Also NzbDAV
+  and AltMount through AIOStreams.
+title: 'bug(usenet): '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **Before you file**, check the [Usenet guide](https://aiostreams.org/guides/usenet).
+        A release can fail because its articles are gone from your providers, which no engine can fix.
+        Downloading the same NZB with SABnzbd or NZBGet, or streaming it with NzbDAV, tells that apart
+        from a bug in the engine.
+
+
+        For TorBox, Easynews or Stremio NNTP, use **Bug: anything else in AIOStreams**.
+  - type: input
+    id: addonVersion
+    attributes:
+      label: Version
+      description: >-
+        The exact version at the top of the configure page's **About** page, or the commit for a source
+        build. "Latest" is not a version.
+      placeholder: v2.38.0 or 2026.11.10.1234-nightly
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Instance
+      options:
+        - Self-hosted with Docker
+        - Self-hosted from source
+        - Private ElfHosted instance
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Area
+      options:
+        - A release fails to play
+        - A release stalls, buffers or stops partway
+        - A release plays the wrong file, or the wrong title
+        - Archives (RAR, 7z, multi-part, encrypted or obfuscated names)
+        - Health checks and the census
+        - The library (Usenet → Library)
+        - Sonarr, Radarr or Prowlarr (the SABnzbd API)
+        - Shares, WebDAV or FUSE
+        - The dashboard's Usenet pages (library, stats, providers)
+        - NzbDAV or AltMount through AIOStreams
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: >-
+        What you did, what happened, and what you expected instead. For a release, the error the player
+        or Stremio showed, and how far it played.
+    validations:
+      required: true
+  - type: textarea
+    id: release
+    attributes:
+      label: The release
+      description: >-
+        For a release: its exact name, the indexer it came from, and its size. Its status in **Usenet →
+        Library** (Queued, Inspecting, Available, Degraded or Failed) and the reason shown there help most.
+      render: text
+  - type: dropdown
+    id: elsewhere
+    attributes:
+      label: Does the same NZB work elsewhere?
+      options:
+        - It downloads fine with SABnzbd or NZBGet
+        - It streams fine with NzbDAV or AltMount
+        - It fails elsewhere too
+        - I haven't tried it elsewhere
+        - Not about a single release
+    validations:
+      required: true
+  - type: input
+    id: providers
+    attributes:
+      label: Providers
+      description: >-
+        Your providers, which are backups, and each one's connections. Names only: no hosts with
+        credentials.
+      placeholder: Eweka (50 connections), Newshosting as backup (20)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        The server's logs while it happens, ideally with `LOG_LEVEL=debug`. Search them for the
+        release's name. Remove provider passwords and API keys.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Changed settings
+      description: >-
+        Any Usenet settings you changed from their defaults, in the dashboard's **Settings** or as
+        `USENET_` environment variables.
+      render: text
+  - type: textarea
+    id: nzb
+    attributes:
+      label: The NZB
+      description: >-
+        If you can, attach the NZB, zipped, or offer to send it privately on Discord. It's the quickest
+        way to reproduce a failing release.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: My title describes the actual problem.
+          required: true
+        - label: I searched open and closed issues, and this isn't a duplicate.
+          required: true
+        - label: >-
+            It happens on the [latest release](https://github.com/Viren070/AIOStreams/releases/latest) (or
+            a current nightly).
+          required: true

@@ -1,11 +1,11 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { useOwnAvatar } from '../queries';
-import { useFollowing } from '../playlists';
-import { useLatest } from '../use-latest';
-import { useServerInfo } from '../server-info';
-import { useSession } from '../session';
-import type { BaseItemDto, SourceInfo } from '../types';
+import { useOwnAvatar } from '@/lib/jellyfin/history';
+import { useFollowing } from '@/lib/playlists';
+import { useLatest } from '@/hooks/use-latest';
+import { useServerInfo } from '@/lib/jellyfin/server-info';
+import { useSession } from '@/lib/jellyfin/session';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 import { relayBase, type Invite } from './invite';
 import { partyItem } from './items';
 import { party, type PartyIdentity } from './party';

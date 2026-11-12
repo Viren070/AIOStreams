@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use super::small::{Small, event};
 use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
 use aiostreams_desktop_core::mpv::Mpv;
+use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::windows::{IconExtWindows, WindowExtWindows};
 use tao::window::{Icon, Window};
 
@@ -15,8 +16,10 @@ use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, POINT, RECT,
     WPARAM,
 };
+use windows_sys::Win32::Globalization::{GetLocaleInfoEx, LOCALE_SSHORTTIME};
 use windows_sys::Win32::Graphics::Gdi::{
-    BLACK_BRUSH, CreateRoundRectRgn, GetStockObject, SetWindowRgn,
+    BLACK_BRUSH, CreateRoundRectRgn, GetMonitorInfoW, GetStockObject, MONITOR_DEFAULTTONEAREST,
+    MONITORINFO, MonitorFromWindow, SetWindowRgn,
 };
 use windows_sys::Win32::System::DataExchange::COPYDATASTRUCT;
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, LoadLibraryW};
@@ -32,14 +35,18 @@ use windows_sys::Win32::UI::Controls::Dialogs::{
     GetOpenFileNameW, OFN_FILEMUSTEXIST, OFN_NOCHANGEDIR, OFN_PATHMUSTEXIST, OPENFILENAMEW,
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
-use windows_sys::Win32::UI::Shell::{SetCurrentProcessExplicitAppUserModelID, ShellExecuteW};
+use windows_sys::Win32::UI::Shell::{
+    DefSubclassProc, RemoveWindowSubclass, SetCurrentProcessExplicitAppUserModelID,
+    SetWindowSubclass, ShellExecuteW,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, FindWindowExW, FindWindowW, GetClientRect, GetCursorPos,
-    GetParent, HWND_BOTTOM, HWND_MESSAGE, HWND_TOP, IsIconic, KillTimer, MB_ICONERROR, MB_OK,
-    MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE, SW_SHOWNORMAL, SWP_NOACTIVATE,
-    SWP_NOSIZE, SendMessageTimeoutW, SetForegroundWindow, SetTimer, SetWindowPos, ShowWindow,
-    WM_CAPTURECHANGED, WM_COPYDATA, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_TIMER,
-    WNDCLASSW, WS_CHILD, WS_VISIBLE,
+    GetParent, GetWindowRect, HWND_BOTTOM, HWND_MESSAGE, HWND_TOP, IsIconic, KillTimer,
+    MB_ICONERROR, MB_OK, MessageBoxW, RegisterClassW, SMTO_ABORTIFHUNG, SW_RESTORE, SW_SHOWNORMAL,
+    SWP_NOACTIVATE, SWP_NOSIZE, SendMessageTimeoutW, SetForegroundWindow, SetTimer, SetWindowPos,
+    ShowWindow, WM_CAPTURECHANGED, WM_COPYDATA, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
+    WM_SIZING, WM_TIMER, WMSZ_BOTTOM, WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WNDCLASSW, WS_CHILD,
+    WS_VISIBLE,
 };
 
 /// The id on the Start menu shortcut Velopack makes, which gives the system's
@@ -55,6 +62,7 @@ pub fn claim_app_id() {
 /// Custom protocols are served from `http://<scheme>.localhost` on Windows.
 pub const APP_URL: &str = "http://aiostreams.localhost/";
 pub const PLATFORM: &str = "windows";
+pub const PIP: bool = true;
 pub const WEB_DATA_DIR: &str = "WebView2";
 
 /// The main window's class, which a second launch looks the first one up by.
@@ -488,6 +496,98 @@ impl VideoSurface {
     }
 }
 
+/// The screen the window is on, less the taskbar, in physical pixels.
+pub fn work_area(window: &Window) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+    // SAFETY: MONITORINFO is plain data, which the call fills.
+    let area = unsafe {
+        let monitor = MonitorFromWindow(window.hwnd() as HWND, MONITOR_DEFAULTTONEAREST);
+        let mut info: MONITORINFO = std::mem::zeroed();
+        info.cbSize = size_of::<MONITORINFO>() as u32;
+        if GetMonitorInfoW(monitor, &mut info) == 0 {
+            return None;
+        }
+        info.rcWork
+    };
+    Some((
+        PhysicalPosition::new(area.left, area.top),
+        PhysicalSize::new(
+            (area.right - area.left) as u32,
+            (area.bottom - area.top) as u32,
+        ),
+    ))
+}
+
+thread_local! {
+    static ASPECT: Cell<Option<f64>> = const { Cell::new(None) };
+}
+
+const ASPECT_SUBCLASS: usize = 1;
+
+/// Keeps the window's content at `aspect` as the user resizes it; `None` lets it go.
+pub fn keep_aspect(window: &Window, aspect: Option<f64>) {
+    ASPECT.set(aspect);
+    let hwnd = window.hwnd() as HWND;
+    unsafe {
+        if aspect.is_some() {
+            SetWindowSubclass(hwnd, Some(sizing_proc), ASPECT_SUBCLASS, 0);
+        } else {
+            RemoveWindowSubclass(hwnd, Some(sizing_proc), ASPECT_SUBCLASS);
+        }
+    }
+}
+
+unsafe extern "system" fn sizing_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    _id: usize,
+    _data: usize,
+) -> LRESULT {
+    if msg == WM_SIZING
+        && let Some(aspect) = ASPECT.get()
+    {
+        // SAFETY: WM_SIZING's lparam is the window's proposed rectangle, which the handler may change.
+        fit_aspect(
+            hwnd,
+            unsafe { &mut *(lparam as *mut RECT) },
+            wparam as u32,
+            aspect,
+        );
+    }
+    unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
+}
+
+/// The dragged edge leads: a side or a corner sets the height, the top or bottom the width.
+fn fit_aspect(hwnd: HWND, rect: &mut RECT, edge: u32, aspect: f64) {
+    let empty = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    let (mut outer, mut inner) = (empty, empty);
+    unsafe {
+        GetWindowRect(hwnd, &mut outer);
+        GetClientRect(hwnd, &mut inner);
+    }
+    let frame = (
+        (outer.right - outer.left) - inner.right,
+        (outer.bottom - outer.top) - inner.bottom,
+    );
+    let width = f64::from(rect.right - rect.left - frame.0);
+    let height = f64::from(rect.bottom - rect.top - frame.1);
+    match edge {
+        WMSZ_TOP | WMSZ_BOTTOM => {
+            rect.right = rect.left + frame.0 + (height * aspect).round() as i32;
+        }
+        WMSZ_TOPLEFT | WMSZ_TOPRIGHT => {
+            rect.top = rect.bottom - frame.1 - (width / aspect).round() as i32;
+        }
+        _ => rect.bottom = rect.top + frame.1 + (width / aspect).round() as i32,
+    }
+}
+
 /// The exe's own icon, embedded by build.rs.
 pub fn window_icon() -> Option<Icon> {
     Icon::from_resource(1, None).ok()
@@ -586,6 +686,21 @@ pub fn fatal(message: &str) -> ! {
 /// The computer's name, which Jellyfin apps give as their device.
 pub fn device_name() -> String {
     std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Windows".into())
+}
+
+/// From the regional format, which WebView2's own formats ignore for the display language.
+pub fn hours24() -> Option<bool> {
+    let mut pattern = [0u16; 80];
+    // SAFETY: the buffer's length is passed with it; a null name is the user's own locale.
+    let len = unsafe {
+        GetLocaleInfoEx(
+            std::ptr::null(),
+            LOCALE_SSHORTTIME,
+            pattern.as_mut_ptr(),
+            pattern.len() as i32,
+        )
+    };
+    (len > 0).then(|| String::from_utf16_lossy(&pattern[..len as usize - 1]).contains('H'))
 }
 
 pub fn total_memory() -> Option<u64> {

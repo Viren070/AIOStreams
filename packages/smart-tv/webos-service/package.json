@@ -1,0 +1,7 @@
+{
+  "name": "io.github.viren070.aiostreams.service",
+  "description": "Fetches byte ranges for the AIOStreams app",
+  "version": "1.0.0",
+  "main": "service.js",
+  "private": true
+}

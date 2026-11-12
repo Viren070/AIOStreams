@@ -2,7 +2,7 @@ import { i18n, type Messages } from '@lingui/core';
 import { t } from '@lingui/core/macro';
 import { setFormatLocale } from '@aiostreams/ui/core/format';
 import { setUiText, type uiText } from '@aiostreams/ui/core/text';
-import { messages as sourceMessages } from '../locales/en-GB.po';
+import { messages as sourceMessages } from '@/locales/en-GB.po';
 import { onSettingsChange, settings, signedIn } from './settings';
 import { storage } from './storage';
 

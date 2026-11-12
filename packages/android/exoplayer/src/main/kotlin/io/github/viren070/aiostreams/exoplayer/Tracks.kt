@@ -93,7 +93,7 @@ internal class ExoTracks {
     /** The audio track mpv picks: the first language asked for, then the file's default. */
     fun chooseAudio(options: TrackOptions): Int? {
         val audio = entries.filter { it.type == "audio" }
-        return options.alang.firstNotNullOfOrNull { lang -> audio.find { it.lang == lang } }?.id
+        return options.alang.firstNotNullOfOrNull { lang -> inLanguage(audio, lang).firstOrNull() }?.id
             ?: audio.find { it.default }?.id
             ?: audio.firstOrNull()?.id
     }
@@ -102,10 +102,10 @@ internal class ExoTracks {
     fun chooseSubtitle(options: TrackOptions, audioLang: String?): Int? {
         if (options.none) return null
         val subs = entries.filter { it.type == "sub" }
-        val forcedForAudio = subs.find { it.forced && it.lang == audioLang }
+        val forcedForAudio = subs.find { it.forced && sameLanguage(it.lang, audioLang) }
         if (options.subsFallbackForced == "always" && forcedForAudio != null) return forcedForAudio.id
         val matched = options.slang.firstNotNullOfOrNull { lang ->
-            val inLang = subs.filter { it.lang == lang }
+            val inLang = inLanguage(subs, lang)
             inLang.firstOrNull { !it.forced && it.default } ?: inLang.firstOrNull { !it.forced } ?: inLang.firstOrNull()
         }
         val picked = matched ?: when (options.subsFallback) {
@@ -113,9 +113,15 @@ internal class ExoTracks {
             "default" -> subs.find { it.default }
             else -> null
         }
-        val wanted = picked?.takeUnless { !it.forced && !options.subsWithMatchingAudio && it.lang == audioLang }
+        val wanted = picked?.takeUnless {
+            !it.forced && !options.subsWithMatchingAudio && sameLanguage(it.lang, audioLang)
+        }
         return (wanted ?: forcedForAudio.takeIf { options.subsFallbackForced != "no" })?.id
     }
+
+    /** Tracks in `lang`, its exact tag first. */
+    private fun inLanguage(tracks: List<Entry>, lang: String): List<Entry> =
+        tracks.filter { it.lang == lang } + tracks.filter { it.lang != lang && sameLanguage(it.lang, lang) }
 
     fun languageOfTrack(type: String, id: Int?): String? = entries.find { it.type == type && it.id == id }?.lang
 
@@ -167,3 +173,7 @@ internal class ExoTracks {
 /** Two- and three-letter codes alike, as mpv matches them. */
 @OptIn(UnstableApi::class)
 internal fun languageOf(code: String): String = Util.normalizeLanguageCode(code.trim().lowercase()) ?: code
+
+/** Whether two of [languageOf]'s codes name one language, whatever their regions, such as `en` and `en-us`. */
+internal fun sameLanguage(a: String?, b: String?): Boolean =
+    a != null && b != null && a.substringBefore('-') == b.substringBefore('-')

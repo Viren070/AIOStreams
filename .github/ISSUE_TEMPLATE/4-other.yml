@@ -1,0 +1,175 @@
+name: 'Bug: anything else in AIOStreams'
+description: >-
+  Streams in Stremio and other clients, debrid services, the configure page, catalogs and metadata, watch
+  state, Live TV, the proxy, the dashboard, or running your own instance.
+title: 'bug: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **Before you file:** AIOStreams gathers streams from other addons and from debrid and Usenet
+        services. If the problem also happens with that addon or service on its own, without AIOStreams,
+        report it to them instead. Check [troubleshooting](https://aiostreams.org/troubleshooting)
+        first, and for help and questions, ask on [Discord](https://discord.viren070.me) or in
+        [Discussions](https://github.com/Viren070/AIOStreams/discussions/categories/help).
+
+
+        **Statistic Streams**, under **Miscellaneous → Display** on the configure page, adds a stream that
+        shows what each addon returned, how long it took, and why streams were removed. Turn it on to see
+        where results go missing.
+
+
+        **Found a security problem?** Don't open an issue: email contact@aiostreams.org.
+
+
+        Reports without the information below are likely to be closed without investigation.
+  - type: input
+    id: addonVersion
+    attributes:
+      label: Version
+      description: >-
+        The exact version at the top of the configure page's **About** page, or the commit for a source
+        build. "Latest" is not a version.
+      placeholder: v2.38.0 or 2026.11.10.1234-nightly
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Instance
+      description: >-
+        Where the configuration lives. On a public instance, some limits and behaviour are set by whoever
+        runs it, not by AIOStreams.
+      options:
+        - Public instance by ElfHosted
+        - Another public instance (name it below)
+        - Private ElfHosted instance
+        - Self-hosted with Docker
+        - Self-hosted from source
+        - Other (say below)
+    validations:
+      required: true
+  - type: input
+    id: instanceAddress
+    attributes:
+      label: Instance address
+      description: For a public instance, its address. Leave out your UUID and password.
+      placeholder: aiostreams.viren070.me
+  - type: input
+    id: client
+    attributes:
+      label: Client
+      description: Where you see the problem, with its platform and version.
+      placeholder: Stremio 5 on Android TV / Nuvio on iOS / the configure page or dashboard in Firefox
+    validations:
+      required: true
+  - type: dropdown
+    id: bugArea
+    attributes:
+      label: Area
+      description: Where does the problem show up? Pick the closest match.
+      options:
+        - Stream results (an addon or built-in scraper returns nothing, the wrong thing, or an error)
+        - Wrong content (the wrong title, season or episode)
+        - Stream selection (filters, sorting, deduplication, limits, groups, expressions)
+        - Stream details (resolution, quality, language or release group read wrongly, media info)
+        - Stream appearance (the formatter's output)
+        - Playback (a listed stream doesn't play)
+        - Services (debrid accounts, TorBox, Easynews, cached status)
+        - Configure page (saving, signing in, import and export, templates, sync, profiles, marketplace)
+        - Catalogs and metadata (catalogs, posters, meta pages, subtitles)
+        - Watch state and trackers
+        - Live TV and the Xtream addon
+        - Proxy (built-in, MediaFlow, StremThru)
+        - Dashboard
+        - Running your own instance (installing, Docker, environment variables, starting up)
+        - Other or not sure
+    validations:
+      required: true
+  - type: textarea
+    id: bugDescription
+    attributes:
+      label: What happened, and how to make it happen
+      description: >-
+        What happens, what you expected instead, and the exact steps: which title and episode you asked
+        for, and what you clicked. Avoid "doesn't work": say what you saw.
+    validations:
+      required: true
+  - type: input
+    id: upstreamSource
+    attributes:
+      label: Addon and service involved
+      description: >-
+        For stream and playback problems: the addon (Torrentio, Comet, a built-in scraper, ...) and
+        service (Real-Debrid, TorBox, ...) the stream came from. Most formatters show both.
+      placeholder: Comet + TorBox
+  - type: textarea
+    id: exactData
+    attributes:
+      label: Exact file names or stream data
+      description: >-
+        Needed for reading, filtering, sorting and formatting problems: paste the exact file names or
+        release titles as text, not a screenshot of your formatted list. A custom formatter can hide
+        fields that were read correctly, so check with a built-in one first.
+      render: text
+  - type: textarea
+    id: configExport
+    attributes:
+      label: Configuration export
+      description: >-
+        Needed for anything to do with streams or your configuration. Export it under **Save & Install**
+        with **Exclude Credentials** on, then read it through: that only removes service credentials, so
+        also remove any keys or passwords in addon URLs or option fields before posting. Problems that
+        depend on your configuration and come without a usable export are likely to be closed as
+        needs-info.
+      render: json
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        Self-hosted: the server's logs for the failing request, ideally with `LOG_LEVEL=debug`, and the
+        proxy's logs if one is involved. Public instance: the exact time with its timezone, the full text
+        of any error Stremio or an error stream shows, and the Statistic Streams output.
+      render: shell
+  - type: input
+    id: uuidPrefix
+    attributes:
+      label: First 8 characters of your UUID
+      description: >-
+        Optional. On a public instance, it lets whoever runs it find your requests in its logs. Never
+        post your password.
+      placeholder: 1a2b3c4d
+  - type: checkboxes
+    id: isolation
+    attributes:
+      label: What I ruled out
+      description: >-
+        Tick what applies. These checks tell an AIOStreams bug apart from a problem with a source or a
+        setting; reports missing the ones that apply are usually closed as external or needs-info.
+      options:
+        - label: >-
+            It doesn't happen with the addon or service on its own, without AIOStreams (or none is
+            involved).
+        - label: For playback problems, it fails on a second device or player too.
+        - label: >-
+            It still happens with my stream expressions, regex filters, groups and catalog changes
+            turned off (where they apply).
+        - label: It still happens with the proxy turned off (where one is used).
+  - type: checkboxes
+    id: issueChecklist
+    attributes:
+      label: Checklist
+      options:
+        - label: My title describes the actual problem.
+          required: true
+        - label: I searched open and closed issues, and this isn't a duplicate.
+          required: true
+        - label: >-
+            It happens on the [latest release](https://github.com/Viren070/AIOStreams/releases/latest) (or
+            a current nightly).
+          required: true
+        - label: I understand that issues missing the information above may be closed without investigation.
+          required: true

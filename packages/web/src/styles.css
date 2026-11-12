@@ -148,7 +148,7 @@ html.see-through body {
   background: transparent !important;
 }
 /* An on-screen keyboard pans the page up past its end, where only the root paints. */
-html.see-through[data-host='android-app']:not(.playing) {
+html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
@@ -303,6 +303,23 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [data-tv] [data-focus='own']:focus-visible [data-focus-frame] {
   outline-width: 3px;
 }
+/* A card opened in its row draws its opened layer in place of its own parts.
+   While it opens, its frame moves to uncover the layer and draws nothing
+   itself; under a trailer, nothing covers the video beneath the page. */
+[data-ui='media-row-item'][data-open]
+  [data-focus-frame]
+  > :not([data-ui='open-card']) {
+  visibility: hidden;
+}
+[data-ui='media-row-item'][data-opening] [data-focus-frame],
+[data-ui='media-row-item'][data-trailer] [data-focus-frame] {
+  background: transparent;
+  box-shadow: none;
+}
+[data-ui='media-row-item'][data-opening] [data-focus-frame] {
+  outline-color: transparent !important;
+}
+
 /* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
 [data-ui='hero'] :focus-visible:not([data-focus='own']):not(input),
@@ -316,7 +333,10 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [data-ui='guide-cell'] > [data-name='text'] {
   padding-inline-start: max(
     0.5rem,
-    min(calc(var(--guide-scroll, 0px) - var(--x) + 0.5rem), calc(var(--w) - 3rem))
+    min(
+      calc(var(--guide-scroll, 0px) - var(--x) + 0.5rem),
+      calc(var(--w) - 3rem)
+    )
   );
 }
 
@@ -377,7 +397,7 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   color: rgb(255 255 255 / 0.8);
 }
 
-/* Episodes not started, until the pointer or focus is on one. */
+/* Episodes not started, until the pointer, focus or its menu is on one. */
 html[data-blur-spoilers]
   :is(
     [data-ui='episode-card'],
@@ -385,13 +405,17 @@ html[data-blur-spoilers]
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day']:not(:hover, :focus-within)
+      [data-ui='calendar-day-art'][data-episode]
   ):not(
     [data-watched],
     [data-in-progress],
     [data-current],
     :hover,
-    :focus-within
+    :focus-within,
+    [data-menu-open] > *
   )
   [data-ui='artwork'] {
   filter: blur(12px);
@@ -405,19 +429,22 @@ html[data-blur-spoilers]
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode]
   ):not(
     [data-watched],
     [data-in-progress],
     [data-current],
     :hover,
-    :focus-within
+    :focus-within,
+    [data-menu-open] > *
   )
   :is(
     [data-ui='episode-title'] > span,
     p[data-ui='episode-title'],
     [data-ui='episode-synopsis'],
-    [data-ui='wide-card-subtitle']
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
   ) {
   filter: blur(5px);
 }
@@ -428,14 +455,17 @@ html[data-blur-spoilers]:not([data-tv])
     [data-ui='player-episode'],
     [data-row='next-up'] [data-ui='wide-card'],
     [data-row='upcoming'] [data-ui='wide-card'],
-    [data-row='resume'] [data-ui='wide-card']
+    [data-row='resume'] [data-ui='wide-card'],
+    [data-ui='calendar-entry'][data-episode],
+    [data-ui='calendar-day-art'][data-episode]
   )
   :is(
     [data-ui='artwork'],
     [data-ui='episode-title'] > span,
     p[data-ui='episode-title'],
     [data-ui='episode-synopsis'],
-    [data-ui='wide-card-subtitle']
+    [data-ui='wide-card-subtitle'],
+    [data-ui='calendar-entry-subtitle']
   ) {
   transition-property: transform, opacity, filter;
   transition-duration: 250ms, 300ms, 300ms;

@@ -11,4 +11,5 @@ pub mod player;
 pub mod render;
 pub mod sound;
 pub mod thumbnails;
+pub mod upscale;
 pub mod youtube;

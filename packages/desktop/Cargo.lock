@@ -20,14 +20,14 @@ dependencies = [
 [[package]]
 name = "aiostreams-container"
 version = "0.1.0"
-source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
+source = "git+https://github.com/AIOStreams/media?rev=bf653d98b829417f3e62163b3a8fca10eeb623ce#bf653d98b829417f3e62163b3a8fca10eeb623ce"
 dependencies = [
  "ureq",
 ]
 
 [[package]]
 name = "aiostreams-desktop"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "aiostreams-desktop-core",
  "base64 0.22.1",
@@ -61,10 +61,11 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop-core"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "aiostreams-container",
  "aiostreams-thumbs",
+ "aiostreams-upscale",
  "libloading",
  "log",
  "serde",
@@ -76,7 +77,7 @@ dependencies = [
 [[package]]
 name = "aiostreams-thumbs"
 version = "0.1.0"
-source = "git+https://github.com/AIOStreams/media?rev=87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7#87dee2ccd7c39aa9baf1e739292e14fa9f0d8ec7"
+source = "git+https://github.com/AIOStreams/media?rev=bf653d98b829417f3e62163b3a8fca10eeb623ce#bf653d98b829417f3e62163b3a8fca10eeb623ce"
 dependencies = [
  "aiostreams-container",
  "dolby_vision",
@@ -86,6 +87,11 @@ dependencies = [
  "log",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "aiostreams-upscale"
+version = "0.1.0"
+source = "git+https://github.com/AIOStreams/media?rev=bf653d98b829417f3e62163b3a8fca10eeb623ce#bf653d98b829417f3e62163b3a8fca10eeb623ce"
 
 [[package]]
 name = "anyhow"

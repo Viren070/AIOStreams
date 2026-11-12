@@ -564,10 +564,12 @@ function JellyfinPrimer({
   maxLibraries,
   maxCatalogItems,
   maxVersions,
+  maxAppVersions,
 }: {
   maxLibraries: number;
   maxCatalogItems: number;
   maxVersions: number;
+  maxAppVersions: number;
 }) {
   const limitNumber = (n: number) => (
     <span className="font-medium tabular-nums text-gray-300">{n}</span>
@@ -608,8 +610,9 @@ function JellyfinPrimer({
           Opening or playing a title searches your addons, as in Stremio.
         </p>
         <p className="text-xs text-gray-500">
-          Up to {limitNumber(maxVersions)} per title, in your sort order. Played
-          directly; nothing is transcoded.
+          In your sort order: up to {limitNumber(maxVersions)} per title in
+          Jellyfin apps, and up to {limitNumber(maxAppVersions)} in the
+          AIOStreams app. Played directly; nothing is transcoded.
         </p>
       </JellyfinPrimerFact>
     </div>
@@ -1124,7 +1127,7 @@ const DESKTOP_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/tag/desktop';
 const DESKTOP_ASSET_URL =
   'https://github.com/Viren070/AIOStreams/releases/download/desktop/aiostreams-desktop-';
-const DOCS_APPS_URL = 'https://docs.aiostreams.viren070.me/apps';
+const DOCS_APPS_URL = 'https://aiostreams.org/apps';
 const ANDROID_DOWNLOAD_URL =
   'https://github.com/Viren070/AIOStreams/releases/download/android/aiostreams-android-arm64-v8a.apk';
 
@@ -1885,6 +1888,7 @@ function Content() {
   const jellyfin = status?.settings?.jellyfin;
   const jellyfinEnabled = jellyfin?.enabled ?? false;
   const jellyfinVersionCap = jellyfin?.maxVersions ?? 25;
+  const jellyfinAppVersionCap = jellyfin?.maxAppVersions ?? 500;
   const jellyfinSegmentsAvailable = jellyfin?.segments.enabled ?? false;
   const jellyfinSegmentProviders = jellyfin?.segments.providers ?? [];
   const jellyfinPmdbKey =
@@ -2992,6 +2996,7 @@ function Content() {
                         userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
                         jellyfinVersionCap
                       )}
+                      maxAppVersions={jellyfinAppVersionCap}
                     />
 
                     <div className="space-y-2">
@@ -3329,7 +3334,7 @@ function Content() {
                     <NumberInput
                       label="Versions per item"
                       help={`Up to ${jellyfinVersionCap} on this instance.`}
-                      moreHelp="Version names come from your formatter."
+                      moreHelp={`For Jellyfin apps. The AIOStreams app lists up to ${jellyfinAppVersionCap} whatever this is set to; Filters → Result Limits caps those. Version names come from your formatter.`}
                       min={1}
                       max={jellyfinVersionCap}
                       value={Math.min(

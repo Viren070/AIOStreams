@@ -1,16 +1,16 @@
 import React from 'react';
-import { currentHost } from '../hosts';
-import { mediaKeyJustTaken, noteInput } from '../input';
-import type { MediaKey } from '../hosts/shell/bridge';
-import { itemSubtitle, itemTitle } from '../format';
-import { backdropUrl, landscapeUrl, posterUrl } from '../images';
-import { useItem } from '../queries';
-import { useSession } from '../session';
-import { settings, useSetting } from '../settings';
-import { useLatest } from '../use-latest';
+import { currentHost } from '@/lib/hosts';
+import { mediaKeyJustTaken, noteInput } from '@/lib/input';
+import type { MediaKey } from '@/lib/hosts/shell/bridge';
+import { itemSubtitle, itemTitle } from '@/lib/format';
+import { backdropUrl, landscapeUrl, posterUrl } from '@/lib/artwork/urls';
+import { useItem } from '@/lib/jellyfin/queries';
+import { useSession } from '@/lib/jellyfin/session';
+import { settings, useSetting } from '@/lib/settings';
+import { useLatest } from '@/hooks/use-latest';
 import type { PlayerController } from './controller';
-import type { BaseItemDto } from '../types';
-import { appBridge } from '../hosts/shell/bridge';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
+import { appBridge } from '@/lib/hosts/shell/bridge';
 
 /** How far the position may stray from where it should be before the browser is told again. */
 const DRIFT_MS = 2000;
@@ -24,6 +24,11 @@ function setHandler(
   try {
     session.setActionHandler(action, handler);
   } catch {}
+}
+
+/** The app puts the display's own mode back once nothing plays. */
+export function endNowPlaying(): void {
+  appBridge()?.send({ type: 'now-playing', item: null });
 }
 
 interface Actions {
@@ -138,7 +143,7 @@ export function useNowPlaying(
     });
     return () => {
       unsubscribe();
-      shell.send({ type: 'now-playing', item: null });
+      endNowPlaying();
     };
   }, [press]);
 

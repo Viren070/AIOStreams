@@ -91,6 +91,16 @@ export function sameLanguage(
   return !!code && !!tag && languageOf(code) === languageOf(tag);
 }
 
+/** Whether `tag` names another region of `code`'s language that the list names apart, such as Spanish for Latino. */
+export function otherRegion(
+  code: string | null | undefined,
+  tag: string | null | undefined
+): boolean {
+  if (!code || !tag || sameLanguage(code, tag)) return false;
+  const base = (t: string) => languageOf(t.split(/[-_]/)[0]);
+  return base(code) === base(tag);
+}
+
 /** The first of `items` in the earliest of `codes` that any is in. */
 export function firstInLanguages<T>(
   codes: string[],

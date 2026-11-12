@@ -1,4 +1,4 @@
-import type { SourceInfo } from './types';
+import type { SourceInfo } from './jellyfin/types';
 
 /** The parts of a version a badge or quick filter can be limited to, named as the formatter names them. */
 export const VERSION_FIELDS = [

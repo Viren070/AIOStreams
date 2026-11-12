@@ -11,6 +11,8 @@ import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ColorInfo
+import androidx.media3.common.FileTypes
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaLibraryInfo
@@ -51,6 +53,7 @@ import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleScript
 import io.github.viren070.aiostreams.exoplayer.subtitles.SubtitleSink
 import io.github.viren070.aiostreams.exoplayer.subtitles.Subtitles
 import io.github.viren070.aiostreams.exoplayer.video.DolbyVisionRoute
+import io.github.viren070.aiostreams.exoplayer.video.Upscaler
 import io.github.viren070.aiostreams.exoplayer.video.MediaCaps
 import io.github.viren070.aiostreams.exoplayer.video.VideoFrames
 import io.github.viren070.aiostreams.exoplayer.video.dolbyVisionRoute
@@ -66,6 +69,7 @@ import io.github.viren070.aiostreams.playback.PlayerState
 import io.github.viren070.aiostreams.playback.Skip
 import io.github.viren070.aiostreams.playback.Sound
 import io.github.viren070.aiostreams.playback.Style
+import io.github.viren070.aiostreams.playback.UpscaleNetwork
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -143,6 +147,11 @@ class ExoEngine(private val context: Context) : Engine {
     /** The file's own subtitle whose lines the page asked for. */
     private var reference: Int? = null
     private var tunneling = false
+    private var upscaling = false
+    private var upscaler: Upscaler? = null
+    private var upscalerFailed = false
+    private var upscaled = false
+    private var tooSlowHeight = Int.MAX_VALUE
     private var idlePolls = 0
 
     // Read on the loader's thread too.
@@ -184,6 +193,8 @@ class ExoEngine(private val context: Context) : Engine {
         this.stage = stage
         subtitles.attach(stage)
         player.setVideoSurfaceView(stage.video)
+        upscaled = false
+        routeVideo()
     }
 
     // Exo has no queue of its own, so a file to play next waits for the page to load it.
@@ -284,6 +295,81 @@ class ExoEngine(private val context: Context) : Engine {
         selector.setParameters(selector.buildUponParameters().setTunnelingEnabled(on))
         tunneling = on
         updateClock()
+        routeVideo()
+    }
+
+    override fun setUpscaling(on: Boolean) {
+        main.post {
+            if (on == upscaling) return@post
+            upscaling = on
+            if (on) startUpscaler() else stopUpscaler()
+        }
+    }
+
+    private fun startUpscaler() {
+        upscalerFailed = false
+        loader.execute {
+            Upscaler(
+                UpscaleNetwork.load(),
+                onReady = { ready ->
+                    main.post {
+                        when {
+                            ready == null -> upscalerFailed = true
+                            !upscaling -> ready.release()
+                            else -> {
+                                upscaler = ready
+                                routeVideo()
+                            }
+                        }
+                    }
+                },
+                onTooSlow = {
+                    main.post {
+                        player.videoFormat?.let { tooSlowHeight = min(tooSlowHeight, it.height) }
+                        routeVideo()
+                    }
+                },
+            )
+        }
+    }
+
+    private fun stopUpscaler() {
+        useUpscaler(false)
+        upscaler?.release()
+        upscaler = null
+    }
+
+    /** Why this video plays without upscaling, if it does. */
+    private fun upscalingBlock(format: Format): String? {
+        val metrics = context.resources.displayMetrics
+        return when {
+            tunneling -> "tunneled"
+            dolbyVision != null || ColorInfo.isTransferHdr(format.colorInfo) -> "HDR"
+            format.height >= tooSlowHeight -> "too slow here"
+            format.height * UpscaleNetwork.MIN_SCALE > min(metrics.widthPixels, metrics.heightPixels) -> "as large as the screen"
+            else -> null
+        }
+    }
+
+    private fun routeVideo() {
+        val format = player.videoFormat
+        useUpscaler(upscaler != null && format != null && upscalingBlock(format) == null)
+    }
+
+    private fun useUpscaler(on: Boolean) {
+        val stage = stage ?: return
+        val upscaler = upscaler
+        if (on == upscaled) return
+        upscaled = on
+        if (on && upscaler != null) {
+            player.videoFormat?.let { upscaler.setVideoSize(it.width, it.height) }
+            upscaler.reset()
+            player.setVideoSurface(upscaler.input)
+            upscaler.attach(stage.video.holder)
+        } else {
+            upscaler?.detach(stage.video.holder)
+            player.setVideoSurfaceView(stage.video)
+        }
     }
 
     override fun property(name: String): String? = if (name == "hwdec-current") decoders["video"] else null
@@ -313,6 +399,16 @@ class ExoEngine(private val context: Context) : Engine {
             audioTrack?.let { track ->
                 put("outputMime", AudioOutput.mimeOf(track.encoding))
                 put("outputChannels", Integer.bitCount(track.channelConfig))
+            }
+            if (upscaling) {
+                put(
+                    "upscaling",
+                    when {
+                        upscaled -> "on"
+                        upscalerFailed -> "off, not supported here"
+                        else -> player.videoFormat?.let { format -> upscalingBlock(format)?.let { "off, $it" } } ?: "starting"
+                    },
+                )
             }
             val runtime = Runtime.getRuntime()
             put("javaHeap", runtime.totalMemory() - runtime.freeMemory())
@@ -345,7 +441,10 @@ class ExoEngine(private val context: Context) : Engine {
     override fun release() {
         main.post {
             main.removeCallbacks(poll)
+            upscaling = false
+            upscaler?.let { stage?.video?.holder?.removeCallback(it) }
             player.release()
+            upscaler?.release()
             cache.release()
             subtitles.release()
             loader.shutdown()
@@ -358,9 +457,11 @@ class ExoEngine(private val context: Context) : Engine {
         http.setDefaultRequestProperties(request.headers)
         link.setDefaultRequestProperties(request.headers)
         url = request.url
-        cache.play(request.url)
+        // The cache reconnects at an offset, which a live link can't serve.
+        cache.play(request.url.takeUnless { request.live })
         options = TrackOptions(request)
         caps = MediaCaps.read(context)
+        upscaler?.reset()
         dolbyVision = null
         audioTrack = null
         decoders.clear()
@@ -383,7 +484,8 @@ class ExoEngine(private val context: Context) : Engine {
             .build()
         loadErrors.live = request.live
         val opening = ++opens
-        if (request.live && Util.inferContentType(Uri.parse(request.url)) == C.CONTENT_TYPE_OTHER) {
+        val uri = Uri.parse(request.url)
+        if (request.live && Util.inferContentType(uri) == C.CONTENT_TYPE_OTHER && FileTypes.inferFileTypeFromUri(uri) == FileTypes.UNKNOWN) {
             loader.execute {
                 val type = ManifestType.of(http.createDataSource(), request.url)
                 main.post { if (opens == opening) prepare(request, type) }
@@ -631,6 +733,7 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onVideoSizeChanged(size: VideoSize) {
             stage?.videoSize = size
             if (size.width == 0 || size.height == 0) return
+            if (upscaled) upscaler?.setVideoSize(size.width, size.height)
             subtitles.videoSized(size.width, size.height)
             listener?.onVideo(width = (size.width * size.pixelWidthHeightRatio).toInt(), height = size.height)
         }
@@ -687,6 +790,8 @@ class ExoEngine(private val context: Context) : Engine {
             decoderReuseEvaluation: DecoderReuseEvaluation?,
         ) {
             if (format.frameRate > 0) listener?.onVideo(frameRate = format.frameRate.toDouble())
+            routeVideo()
+            upscaler?.setFrameRate(format.frameRate.coerceAtLeast(0f))
         }
 
         override fun onVideoDecoderInitialized(

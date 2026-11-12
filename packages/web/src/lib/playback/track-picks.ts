@@ -1,17 +1,22 @@
-import { firstInLanguages, languageCode, sameLanguage } from '../languages';
+import {
+  firstInLanguages,
+  languageCode,
+  otherRegion,
+  sameLanguage,
+} from '@/lib/languages';
 import {
   bestOfTypes,
   forcedOnly,
   preferredSubtitle,
   type SubtitleFacts,
-} from '../subtitles/tracks';
-import type { SourceInfo } from '../types';
+} from '@/lib/subtitles/tracks';
+import type { SourceInfo } from '@/lib/jellyfin/types';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
   subtitleLanguages,
   type PlaybackPrefs,
-} from '../user-config';
+} from '@/lib/jellyfin/user-config';
 import { audioTypes, betterAudioFor } from './audio-tracks';
 import type { EngineTrack, ServerSubtitle } from './engine';
 
@@ -47,9 +52,10 @@ export interface TrackPicks {
 
 /**
  * The tracks a file plays with. An engine that picked from the settings as the
- * file opened keeps its picks; others start from the user's languages. Both
- * then take the user's track types, and a server subtitle where the mode wants
- * one and the file has none of its own in that language or an earlier one.
+ * file opened keeps its picks unless they misread the user's languages; others
+ * start from the user's languages. Both then take the user's track types, and
+ * a server subtitle where the mode wants one and the file has none of its own
+ * in that language or an earlier one.
  */
 export function chooseTracks(
   tracks: EngineTrack[],
@@ -65,29 +71,45 @@ export function chooseTracks(
   const subtitles = tracks.filter((t) => t.type === 'subtitle');
   const codes = audioCodes(prefs, source);
   let { audio: audioId, subtitle: subtitleId } = current;
+  const wantedAudio = firstInLanguages(codes, audioPool, (t) => t.lang);
+  // The file's own rank before the server's.
+  const wantedSubtitle = preferredSubtitle(
+    [
+      ...subtitles.map((t) => ({
+        id: t.id,
+        Language: t.lang,
+        IsForced: t.forced,
+        Title: t.title,
+        IsHearingImpaired: t.hearingImpaired,
+      })),
+      ...servers.map((s) => ({ ...s.stream, id: s.id })),
+    ],
+    prefs
+  );
 
   if (!picked) {
     audioId =
-      (
-        firstInLanguages(codes, audioPool, (t) => t.lang) ??
-        audioPool.find((t) => t.id === audioId) ??
-        audioPool[0]
-      )?.id ?? null;
-    // The file's own rank before the server's.
-    subtitleId =
-      preferredSubtitle(
-        [
-          ...subtitles.map((t) => ({
-            id: t.id,
-            Language: t.lang,
-            IsForced: t.forced,
-            Title: t.title,
-            IsHearingImpaired: t.hearingImpaired,
-          })),
-          ...servers.map((s) => ({ ...s.stream, id: s.id })),
-        ],
-        prefs
-      )?.id ?? null;
+      (wantedAudio ?? audioPool.find((t) => t.id === audioId) ?? audioPool[0])
+        ?.id ?? null;
+    subtitleId = wantedSubtitle?.id ?? null;
+  } else {
+    // Engines match a language's regions alike, and mpv ranks an exact tag
+    // over the user's order. A pick outside the user's languages is their mpv.conf's.
+    const rank = (lang: string | undefined) =>
+      lang ? codes.findIndex((code) => sameLanguage(code, lang)) : -1;
+    const engineAudio = audioPool.find((t) => t.id === audioId);
+    if (
+      wantedAudio &&
+      (otherRegion(wantedAudio.lang, engineAudio?.lang) ||
+        rank(engineAudio?.lang) > rank(wantedAudio.lang))
+    )
+      audioId = wantedAudio.id;
+    const engineSubtitle = subtitles.find((t) => t.id === subtitleId);
+    if (
+      wantedSubtitle &&
+      otherRegion(wantedSubtitle.Language, engineSubtitle?.lang)
+    )
+      subtitleId = wantedSubtitle.id;
   }
 
   const chosenAudio = audioPool.find((t) => t.id === audioId);

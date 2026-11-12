@@ -91,7 +91,7 @@ export const desktopHost: Host = {
   name: 'desktop',
   device: () => ({ name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
+  playerFeatures: ['audio', 'chapters', 'stats', 'headers', 'upscaling'],
   resolveYouTube,
   downloads: {
     ...shellDownloads,

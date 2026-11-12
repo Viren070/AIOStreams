@@ -1,8 +1,8 @@
 import React from 'react';
-import { currentHost } from '../hosts';
-import { appBridge } from '../hosts/shell/bridge';
-import { goBack, goBackInApp, navigate, to } from '../paths';
-import { settings } from '../settings';
+import { currentHost } from '@/lib/hosts';
+import { appBridge } from '@/lib/hosts/shell/bridge';
+import { goBack, goBackInApp, navigate, to } from '@/lib/paths';
+import { settings } from '@/lib/settings';
 import { chosenPlayer } from './player-choice';
 
 /** The title the player plays, which plays on in the mini player while pages open over it. */

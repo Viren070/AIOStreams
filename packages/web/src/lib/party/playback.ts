@@ -1,8 +1,8 @@
 import React from 'react';
 import type { GroupCommand } from '@aiostreams/core';
-import type { PlayerController, PlayerState } from '../playback/controller';
-import { settings } from '../settings';
-import { useLatest } from '../use-latest';
+import type { PlayerController, PlayerState } from '@/lib/playback/controller';
+import { settings } from '@/lib/settings';
+import { useLatest } from '@/hooks/use-latest';
 import { party, positionAt, useParty, type Timeline } from './party';
 
 /*

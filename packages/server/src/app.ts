@@ -109,6 +109,12 @@ export const staticRoot = path.join(__dirname, './static');
 
 app.use(ipMiddleware);
 app.use(loggerMiddleware);
+app.use((_req, res, next) => {
+  if (!appConfig.branding.allowSearchIndexing) {
+    res.setHeader('X-Robots-Tag', 'noindex');
+  }
+  next();
+});
 // Built on the first request: runtime settings are not loaded at module load.
 let jsonParser: express.RequestHandler | undefined;
 app.use((req, res, next) => {

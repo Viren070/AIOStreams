@@ -1,9 +1,9 @@
 import React from 'react';
-import { ticksToMs } from '../format';
-import type { MediaKey } from '../hosts/shell/bridge';
-import { sameServer } from '../servers';
-import { settings } from '../settings';
-import { useLatest } from '../use-latest';
+import { ticksToMs } from '@/lib/format';
+import type { MediaKey } from '@/lib/hosts/shell/bridge';
+import { sameServer } from '@/lib/jellyfin/servers';
+import { settings } from '@/lib/settings';
+import { useLatest } from '@/hooks/use-latest';
 
 export type RemoteCommand =
   | { kind: 'show'; itemId: string; seasonId?: string }

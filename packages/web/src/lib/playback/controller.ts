@@ -1,17 +1,21 @@
 import { t } from '@lingui/core/macro';
-import { storage } from '../storage';
-import type { JellyfinClient } from '../client';
+import { storage } from '@/lib/storage';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
 import type { Chapter } from './chapters';
-import type { LiveText } from './live-text';
-import type { SubtitleStyle } from '../settings';
-import type { SubtitleLine } from '../subtitles/cues';
-import { subtitleType, type SubtitleFacts } from '../subtitles/tracks';
-import { tagName } from '../languages';
+import type { Live } from '@/lib/live-value';
+import type { SubtitleStyle, VideoFit } from '@/lib/settings';
+import type { SubtitleLine } from '@/lib/subtitles/cues';
+import { subtitleType, type SubtitleFacts } from '@/lib/subtitles/tracks';
+import { tagName } from '@/lib/languages';
 import type { Playhead } from './playhead';
 import type { ThumbnailFeed } from './thumbnails';
-import type { PlannedSkip, VideoFrame } from './engine';
-import type { PlaybackPrefs } from '../user-config';
-import type { BaseItemDto, MediaStream, SourceInfo } from '../types';
+import type { PlannedSkip, StatsRow, VideoFrame } from './engine';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
+import type {
+  BaseItemDto,
+  MediaStream,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
 
 export interface Track {
   id: string;
@@ -45,18 +49,23 @@ export interface PlayerState {
   subtitleDelayMs: number;
   error: string | null;
   reconnecting?: boolean;
-  /** The video plays in a small window of its own, with nothing over it. */
-  pictureInPicture?: boolean;
   /** The sound goes out undecoded, which a change of speed can't stretch. */
   passthrough?: boolean;
 }
 
 /** What some players add to what a browser's video can do. */
-export type PlayerFeature = 'audio' | 'chapters' | 'stats' | 'headers';
+export type PlayerFeature =
+  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
 export const browserFeatures: readonly PlayerFeature[] =
   'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
+
+export const webGpuFeatures: readonly PlayerFeature[] = [
+  'audio',
+  'stats',
+  'upscaling',
+];
 
 /** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
 export type SyncOutcome = { asked: boolean } & (
@@ -101,22 +110,23 @@ export interface PlayerController {
     status?: SyncStatus;
   };
   /** The subtitle the page draws, for a player that draws none itself. */
-  subtitleText: LiveText;
+  subtitleText: Live<string | undefined>;
   /** The share `liftSubtitles` last asked for, which the page's own subtitle slides to. */
-  subtitleLift: number;
+  subtitleLift: Live<number>;
   /** Missing where the player has no pictures for the seek bar. */
   thumbnails?: ThumbnailFeed;
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
+  togglePictureInPicture?: () => void;
   setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
-  /** Playback statistics over the video, as `text` the page draws for a player that draws none. */
+  /** `rows` are the shown page's, for a player that doesn't draw its own. */
   stats?: {
     pages: Track[];
     page: string | null;
     show(page: string | null): void;
-    text: LiveText;
+    rows: Live<StatsRow[] | undefined>;
   };
   /** Loads a subtitle file from this device; `types` are the extensions it reads. */
   subtitleFiles?: {
@@ -172,6 +182,10 @@ export interface PlayerOptions {
   /** Moves on from a live source that kept failing; false when there is nothing else to play. */
   onLiveFailed?: () => Promise<boolean>;
   startPaused?: boolean;
+  fit?: VideoFit;
+  /** Kept from the saved volume, which it leaves alone. */
+  muted?: boolean;
+  thumbnails?: boolean;
 }
 
 export const VOLUME_KEY = 'aiostreams-web-volume';

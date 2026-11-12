@@ -458,7 +458,7 @@ export const presetsSchema = {
   }),
   doctorWhoUniverse: basicPreset({
     label: 'Doctor Who Universe',
-    default: ['https://new-who.onrender.com'],
+    default: ['https://whoniverse.nubblyn.com'],
     envBase: 'DOCTOR_WHO_UNIVERSE_URL',
     timeoutEnv: 'DEFAULT_DOCTOR_WHO_UNIVERSE_TIMEOUT',
     userAgentEnv: 'DEFAULT_DOCTOR_WHO_UNIVERSE_USER_AGENT',

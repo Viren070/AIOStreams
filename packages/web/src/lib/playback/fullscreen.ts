@@ -1,6 +1,6 @@
 import React from 'react';
-import { currentHost } from '../hosts';
-import { leaveWindowFullscreen } from '../hosts/shell/desktop';
+import { currentHost } from '@/lib/hosts';
+import { leaveWindowFullscreen } from '@/lib/hosts/shell/desktop';
 
 function isPhone(): boolean {
   return (

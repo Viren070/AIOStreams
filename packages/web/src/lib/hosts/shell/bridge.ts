@@ -1,9 +1,9 @@
 import { t } from '@lingui/core/macro';
-import React from 'react';
-import type { HostEvent } from '../../downloads/types';
-import type { LicenseList } from '../../licenses';
-import type { TimeRange } from '../../playback/playhead';
-import type { Span } from '../../subtitles/align';
+import type { HostEvent } from '@/lib/downloads/types';
+import type { LicenseList } from '@/lib/licenses';
+import type { TimeRange } from '@/lib/playback/playhead';
+import type { Span } from '@/lib/subtitles/align';
+import { createLive, useLive } from '@/lib/live-value';
 
 /** A track as the app's player lists it; `url` is where an added one came from. */
 export interface AppTrack {
@@ -25,7 +25,12 @@ export type VideoOutput = 'mpv' | 'system' | 'compatibility';
 
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
-  | { type: 'youtube-resolved'; request: string; url: string | null }
+  | {
+      type: 'youtube-resolved';
+      request: string;
+      url: string | null;
+      originalLanguage?: string;
+    }
   | {
       type: 'player-state';
       positionMs?: number;
@@ -99,6 +104,7 @@ export type ShellMessage =
   /** The engine the Android app plays with now. */
   | { type: 'player-engine'; name: string }
   | { type: 'mpv-config'; text: string }
+  | { type: 'mpv-shaders'; names: string[] }
   | {
       type: 'player-stats';
       stats: Record<string, unknown>;
@@ -188,12 +194,14 @@ interface ShellBridge {
   tv?: boolean;
   /** The Android app on a device with a speech recogniser. */
   voice?: boolean;
-  /** The Android app on a device with picture-in-picture. */
+  /** The app can play in picture-in-picture: the Android app where the device has it, and the Windows app. */
   pip?: boolean;
   /** The app can draw its video small over the page, with `player-frame`. */
   miniPlayer?: boolean;
   /** The app sends a controller's buttons as `gamepad` messages. */
   gamepadButtons?: boolean;
+  /** The system's 12- or 24-hour clock, where the app can tell. */
+  hours24?: boolean;
   /** The device's name. */
   device: string;
   /** The app's own id for this device, where it keeps one. */
@@ -264,19 +272,9 @@ export function ask<T extends ShellMessage['type']>(
 
 /** The last `type` message the app sent, for a page that opens after it came. */
 export function bridgeStore<T extends ShellMessage['type']>(type: T) {
-  let last: ShellAnswer<T> | null = null;
-  const listeners = new Set<() => void>();
+  const last = createLive<ShellAnswer<T> | null>(null);
   appBridge()?.subscribe((m) => {
-    if (m.type !== type) return;
-    last = m as ShellAnswer<T>;
-    for (const listener of listeners) listener();
+    if (m.type === type) last.set(m as ShellAnswer<T>);
   });
-  const subscribe = (listener: () => void) => {
-    listeners.add(listener);
-    return () => void listeners.delete(listener);
-  };
-  return {
-    get: () => last,
-    use: () => React.useSyncExternalStore(subscribe, () => last),
-  };
+  return { get: last.get, use: () => useLive(last) };
 }

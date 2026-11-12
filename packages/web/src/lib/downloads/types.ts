@@ -1,4 +1,4 @@
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 export type DownloadState =
   | 'finding'

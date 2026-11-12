@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::JoinHandle;
@@ -17,6 +17,7 @@ use crate::playback::{
 };
 use crate::sound::{self, Filters, Sound};
 use crate::thumbnails::Previews;
+use crate::upscale::Upscale;
 
 pub type Emit = Arc<dyn Fn(Outbound) + Send + Sync>;
 
@@ -39,6 +40,8 @@ const SUBTITLE_LINES: u64 = 1001;
 /// Observed for the app's HDR output.
 const VIDEO_GAMMA: u64 = 1002;
 const VIDEO_PRIMARIES: u64 = 1003;
+/// Observed for the app's picture-in-picture window.
+const VIDEO_ASPECT: u64 = 1004;
 const READ_AHEAD_EVERY: Duration = Duration::from_secs(15);
 const READ_AHEAD_STEPS: usize = 500;
 
@@ -193,6 +196,14 @@ fn read_ahead(mpv: &Mpv) -> Vec<SubtitleLine> {
     lines
 }
 
+/// The page's settings that the event thread applies.
+struct Wanted {
+    dolby_vision: AtomicBool,
+    upscaling: AtomicBool,
+    /// Until the event thread has applied it.
+    sound: Mutex<Option<Sound>>,
+}
+
 /// Makes the page's mpv calls on a thread of its own: the caller may be the render thread mpv waits on.
 pub struct Player {
     mpv: Arc<Mpv>,
@@ -203,9 +214,7 @@ pub struct Player {
     versions: (Option<String>, Option<String>),
     /// The last value of each logged setting, so re-applying one logs nothing.
     logged: Mutex<HashMap<String, String>>,
-    dolby_vision: Arc<AtomicBool>,
-    /// Settings the event thread hasn't applied yet.
-    sound: Arc<Mutex<Option<Sound>>>,
+    wanted: Arc<Wanted>,
     subtitles: Arc<Mutex<SubtitleScale>>,
     reference: Arc<Mutex<Reference>>,
     /// The stats overlay's page, while it shows.
@@ -226,6 +235,7 @@ impl Player {
         defaults: &[(&str, &str)],
         required: &[(&str, &str)],
         auto_cache: Option<u64>,
+        upscaling_hook: PathBuf,
         emit: Emit,
     ) -> Result<Self, String> {
         let mpv = Arc::new(Mpv::new(library, defaults)?);
@@ -242,6 +252,7 @@ impl Player {
         mpv.observe(REFERENCE_LINES, Kind::String, SUBTITLE_LINES)?;
         mpv.observe("video-params/gamma", Kind::String, VIDEO_GAMMA)?;
         mpv.observe("video-params/primaries", Kind::String, VIDEO_PRIMARIES)?;
+        mpv.observe("video-params/aspect", Kind::Double, VIDEO_ASPECT)?;
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -252,29 +263,23 @@ impl Player {
             aiostreams_thumbs::library_dirs(vec![dir.to_path_buf()]);
         }
         let quit = Arc::new(AtomicBool::new(false));
-        let dolby_vision = Arc::new(AtomicBool::new(true));
+        let wanted = Arc::new(Wanted {
+            dolby_vision: AtomicBool::new(true),
+            upscaling: AtomicBool::new(false),
+            sound: Mutex::new(None),
+        });
         let ac3_encoder = sound::encodes_ac3(&mpv);
         let own_font = text(&mpv, "sub-font").unwrap_or_default();
-        let sound = Arc::new(Mutex::new(None));
         let subtitles = Arc::new(Mutex::new(SubtitleScale::default()));
         let reference = Arc::new(Mutex::new(Reference::default()));
         let events = std::thread::Builder::new()
             .name("mpv-events".into())
             .spawn({
                 let (mpv, emit, quit) = (mpv.clone(), emit.clone(), quit.clone());
-                let (dolby_vision, sound) = (dolby_vision.clone(), sound.clone());
+                let wanted = wanted.clone();
                 let (subtitles, reference) = (subtitles.clone(), reference.clone());
-                move || {
-                    pump(
-                        &mpv,
-                        &emit,
-                        &quit,
-                        &dolby_vision,
-                        &sound,
-                        &subtitles,
-                        &reference,
-                    )
-                }
+                let upscale = Upscale::new(upscaling_hook);
+                move || pump(&mpv, &emit, &quit, &wanted, &subtitles, &reference, upscale)
             })
             .map_err(|e| e.to_string())?;
         let (requests, inbox) = mpsc::channel();
@@ -293,8 +298,7 @@ impl Player {
             worker: Some(worker),
             versions,
             logged: Mutex::default(),
-            dolby_vision,
-            sound,
+            wanted,
             subtitles,
             reference,
             stats: Mutex::default(),
@@ -312,8 +316,12 @@ impl Player {
         let spawned = std::thread::Builder::new()
             .name("youtube".into())
             .spawn(move || {
-                let url = crate::youtube::resolve(&id);
-                emit(Outbound::YoutubeResolved { request, url })
+                let stream = crate::youtube::resolve(&id);
+                emit(Outbound::YoutubeResolved {
+                    request,
+                    url: stream.as_ref().map(|s| s.url.clone()),
+                    original_language: stream.and_then(|s| s.original_language),
+                })
             });
         if let Err(e) = spawned {
             log::warn!("youtube: {e}");
@@ -322,8 +330,15 @@ impl Player {
 
     /// Takes effect from the next file.
     pub fn set_dolby_vision(&self, on: bool) {
-        if self.dolby_vision.swap(on, Ordering::SeqCst) != on {
+        if self.wanted.dolby_vision.swap(on, Ordering::SeqCst) != on {
             log::info!("set dolby-vision={on}");
+        }
+    }
+
+    pub fn set_upscaling(&self, on: bool) {
+        if self.wanted.upscaling.swap(on, Ordering::SeqCst) != on {
+            log::info!("set upscaling={on}");
+            self.mpv.wakeup();
         }
     }
 
@@ -332,7 +347,7 @@ impl Player {
         if self.differs_from_logged("sound", &shown) {
             log::info!("set sound={shown}");
         }
-        if let Ok(mut pending) = self.sound.lock() {
+        if let Ok(mut pending) = self.wanted.sound.lock() {
             *pending = Some(sound);
         }
         self.mpv.wakeup();
@@ -546,6 +561,7 @@ impl Player {
             }
         }
         self.set_dolby_vision(settings.dolby_vision);
+        self.set_upscaling(settings.upscaling);
         self.set_sound(settings.sound);
     }
 
@@ -830,10 +846,10 @@ fn pump(
     mpv: &Mpv,
     emit: &Emit,
     quit: &AtomicBool,
-    dolby_vision: &AtomicBool,
-    pending: &Mutex<Option<Sound>>,
+    wanted: &Wanted,
     subtitles: &Mutex<SubtitleScale>,
     reference: &Mutex<Reference>,
+    mut upscale: Upscale,
 ) {
     let report = |name: &str, data: &Value| {
         if let Some(message) = playback::report(name, data, false) {
@@ -858,10 +874,11 @@ fn pump(
     let mut colour = (None, None);
 
     while !quit.load(Ordering::SeqCst) {
-        if let Some(next) = pending.lock().ok().and_then(|mut p| p.take()) {
+        if let Some(next) = wanted.sound.lock().ok().and_then(|mut p| p.take()) {
             sound = next;
             filters.apply(mpv, sound);
         }
+        upscale.set(mpv, wanted.upscaling.load(Ordering::SeqCst));
         if let Some(event) = mpv.wait_event(throttle.wait().as_secs_f64(), json) {
             match event {
                 Event::Shutdown => break,
@@ -892,7 +909,9 @@ fn pump(
                     if stripping {
                         let _ = mpv.command(&["vf", "remove", DOLBY_VISION_FILTER]);
                     }
-                    stripping = !dolby_vision.load(Ordering::SeqCst) && strip_dolby_vision(mpv);
+                    stripping =
+                        !wanted.dolby_vision.load(Ordering::SeqCst) && strip_dolby_vision(mpv);
+                    upscale.file_loaded(mpv);
                     filters.loaded(mpv);
                     filters.apply(mpv, sound);
                     // mpv reports the tracks it picked only after this event, which the page re-picks on.
@@ -951,12 +970,20 @@ fn pump(
                         text(mpv, "video-params/gamma"),
                         text(mpv, "video-params/primaries"),
                     );
+                    upscale.video_gamma(mpv, now.0.as_deref());
                     if now != colour {
                         colour = now.clone();
                         let (gamma, primaries) = now;
                         emit(Outbound::VideoColour { gamma, primaries });
                     }
                 }
+                Event::Property {
+                    id: VIDEO_ASPECT,
+                    value,
+                    ..
+                } => emit(Outbound::VideoAspect {
+                    aspect: value.as_f64(),
+                }),
                 Event::Property { name, value, .. } => {
                     follow_subtitle(mpv, subtitles, &name, &value);
                     if name == "track-list"
@@ -973,6 +1000,7 @@ fn pump(
         for (name, data) in throttle.due() {
             report(&name, &data);
         }
+        upscale.check_drops(mpv);
         let reading = reference
             .lock()
             .is_ok_and(|r| r.read_ahead_at.is_some_and(|at| at <= Instant::now()));

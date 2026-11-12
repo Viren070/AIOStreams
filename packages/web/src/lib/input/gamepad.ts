@@ -1,4 +1,4 @@
-import { appBridge, type ShellMessage } from '../hosts/shell/bridge';
+import { appBridge, type ShellMessage } from '@/lib/hosts/shell/bridge';
 import { dispatch, holdable, pressAndHold } from './dispatch';
 import { sendKey } from './focus';
 

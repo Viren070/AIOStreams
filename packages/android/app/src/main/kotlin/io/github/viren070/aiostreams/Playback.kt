@@ -43,6 +43,12 @@ class Playback(private val context: Context, private val announce: (engine: Stri
             engine.setSound(value)
         }
 
+    var upscaling = false
+        set(value) {
+            field = value
+            engine.setUpscaling(value)
+        }
+
     var subtitlesShown = true
         set(value) {
             field = value
@@ -113,6 +119,7 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     }.also {
         it.setDolbyVision(dolbyVision)
         it.setSound(sound)
+        it.setUpscaling(upscaling)
         it.setSubtitlesShown(subtitlesShown)
     }
 

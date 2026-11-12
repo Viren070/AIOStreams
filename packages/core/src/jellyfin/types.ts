@@ -45,6 +45,8 @@ export interface AiostreamsSourceExtension {
   description: string;
   addon: string;
   service?: string;
+  /** Opaque, and the same from every addon that lists the file. */
+  release?: string;
   cached?: boolean;
   proxied?: boolean;
   resolution?: string;
@@ -121,6 +123,8 @@ export interface PlaybackMemo {
   videoId: string;
   psid: string;
   sources: MediaSourceRecord[];
+  /** How many versions past the version limit the run found. */
+  more?: number;
   addonSubtitles: SubtitleTrack[];
   /** The requested title, for its original language and a pack's probed files. */
   titleMetadata?: TitleMetadata;

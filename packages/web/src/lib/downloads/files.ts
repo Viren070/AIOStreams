@@ -1,9 +1,9 @@
 /* eslint-disable lingui/no-unlocalized-strings -- folder names media players read */
-import type { JellyfinClient } from '../client';
-import { backdropUrl, logoUrl, posterUrl } from '../images';
-import { requiredHeaders } from '../playback/stream';
-import { textSubtitles, subtitleUrl } from '../subtitles/tracks';
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { backdropUrl, logoUrl, posterUrl } from '@/lib/artwork/urls';
+import { requiredHeaders } from '@/lib/playback/stream';
+import { textSubtitles, subtitleUrl } from '@/lib/subtitles/tracks';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 import type { HostFile, HostJob } from './types';
 
 /** What the desktop app accepts; anything else is saved as Matroska, which players sniff anyway. */

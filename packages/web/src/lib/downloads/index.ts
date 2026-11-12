@@ -1,18 +1,23 @@
 import { plural, t } from '@lingui/core/macro';
 import React from 'react';
 import { toast } from 'sonner';
-import { JellyfinError, type JellyfinClient } from '../client';
-import { currentHost } from '../hosts';
-import { playableSources } from '../playback/play';
-import { closePlayback, playbackNow } from '../playback/session';
-import { requiredHeaders } from '../playback/stream';
-import { requestItem, requestPlaybackInfo } from '../queries';
-import { textSubtitles } from '../subtitles/tracks';
-import { useSession } from '../session';
-import { onSettingsChange, settings } from '../settings';
-import { pickable } from '../format';
-import type { BaseItemDto, BaseItemDtoQueryResult, SourceInfo } from '../types';
-import { useLatest } from '../use-latest';
+import { JellyfinError, type JellyfinClient } from '@/lib/jellyfin/client';
+import { currentHost } from '@/lib/hosts';
+import { playableSources } from '@/lib/playback/sources';
+import { closePlayback, playbackNow } from '@/lib/playback/session';
+import { requiredHeaders } from '@/lib/playback/stream';
+import { requestItem } from '@/lib/jellyfin/queries';
+import { requestPlaybackInfo } from '@/lib/jellyfin/playback-info';
+import { textSubtitles } from '@/lib/subtitles/tracks';
+import { useSession } from '@/lib/jellyfin/session';
+import { onSettingsChange, settings } from '@/lib/settings';
+import { pickable } from '@/lib/format';
+import type {
+  BaseItemDto,
+  BaseItemDtoQueryResult,
+  SourceInfo,
+} from '@/lib/jellyfin/types';
+import { useLatest } from '@/hooks/use-latest';
 import { hostJob, versionDetails } from './files';
 import {
   addDownloads,

@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import type { Host } from '..';
-import { onSettingsChange, settings, type PlayerEngine } from '../../settings';
+import { onSettingsChange, settings, type PlayerEngine } from '@/lib/settings';
 import { backGesture, backPressed, noteHomeScroll } from './back-slide';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
@@ -34,7 +34,8 @@ export function setupAndroid(): () => void {
   const unsubscribe = bridge?.subscribe((m) => {
     if (m.type === 'fullscreen') fullscreen = m.value;
     else if (m.type === 'back') backPressed();
-    else if (m.type === 'back-gesture') backGesture(m);
+    // Android 14 on reports a remote's Back key as a swipe starting.
+    else if (m.type === 'back-gesture' && !bridge.tv) backGesture(m);
     else if (m.type === 'player-engine') setEngine(m.name);
   });
   const stopNotingHome = bridge?.tv ? undefined : noteHomeScroll();
@@ -65,6 +66,20 @@ const mpvConfig = (message: { type: string; text?: string }) =>
   );
 
 export const readMpvConfig = () => mpvConfig({ type: 'mpv-config' });
+
+/** The app's own mpv shaders, as it answers each change to them. */
+const mpvShaders = (message: { type: string; name?: string; text?: string }) =>
+  ask(message, 'mpv-shaders', { timeoutMs: 5000, errors: true }).then(
+    (m) => m.names
+  );
+
+export const readMpvShaders = () => mpvShaders({ type: 'mpv-shaders' });
+
+export const addMpvShader = (name: string, text: string) =>
+  mpvShaders({ type: 'mpv-shader-add', name, text });
+
+export const removeMpvShader = (name: string) =>
+  mpvShaders({ type: 'mpv-shader-remove', name });
 
 const voiceErrors = () => ({
   'no-speech': t`Nothing was heard`,
@@ -107,7 +122,7 @@ export const androidHost: Host = {
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: ['audio', 'chapters', 'stats', 'headers'],
+  playerFeatures: ['audio', 'chapters', 'stats', 'headers', 'upscaling'],
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : androidDownloads;

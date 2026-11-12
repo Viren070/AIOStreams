@@ -11,8 +11,23 @@ declare const __LICENSES_FILE__: string;
 
 declare let __webpack_public_path__: string;
 
+/** WebGPU-Player's embedding module, under the public path. */
+declare const __WEBGPU_PLAYER_MODULE__: string;
+
+/** The version of the app this page ships in, where the app can't say it; null otherwise. */
+declare const __APP_VERSION__: string | null;
+
+/** Where the apps send their usage statistics, or null for a build that sends none. */
+declare const __USAGE_STATS__: { appKey: string; host: string } | null;
+
 /** Languages with a catalog too little translated to offer. */
 declare const __UNFINISHED_LOCALES__: string[];
+
+/** A WebGPU-Player pass file's text. */
+declare module '*.wgsl' {
+  const source: string;
+  export default source;
+}
 
 /** A translation catalog, compiled by `@lingui/loader`. */
 declare module '*.po' {

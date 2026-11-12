@@ -1,8 +1,8 @@
 import { t } from '@lingui/core/macro';
-import { currentHost } from '../hosts';
-import { settings } from '../settings';
-import { storage } from '../storage';
-import { appBridge } from '../hosts/shell/bridge';
+import { currentHost } from '@/lib/hosts';
+import { settings } from '@/lib/settings';
+import { storage } from '@/lib/storage';
+import { appBridge } from '@/lib/hosts/shell/bridge';
 
 type Platform = 'ios' | 'android' | 'macos';
 
@@ -160,6 +160,22 @@ export function playerSupport(): { headers: boolean; youtube: boolean } {
     youtube: page && !!host.resolveYouTube,
   };
 }
+
+/** Each version is still checked as it opens. */
+export const canPlayWithWebGpu = () =>
+  isSecureContext &&
+  'gpu' in navigator &&
+  typeof VideoDecoder === 'function' &&
+  typeof AudioWorkletNode === 'function';
+
+/** A browser's default too, wherever WebGPU can play. */
+export const playsWithWebGpu = () =>
+  !currentHost().player &&
+  ['auto', 'webgpu'].includes(settings.player.engine.read()) &&
+  canPlayWithWebGpu();
+
+export const canUpscale = () =>
+  !!currentHost().playerFeatures?.includes('upscaling') || playsWithWebGpu();
 
 /** `launched` are the players the desktop app found it can start. */
 export function playerOptions(

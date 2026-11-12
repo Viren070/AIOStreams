@@ -19,6 +19,7 @@ use super::small::{Small, event};
 /// Custom protocols are served from `<scheme>://localhost` on Linux.
 pub const APP_URL: &str = "aiostreams://localhost/";
 pub const PLATFORM: &str = "linux";
+pub const PIP: bool = false;
 pub const WEB_DATA_DIR: &str = "WebKit";
 
 /// Held for as long as the app runs.
@@ -542,6 +543,52 @@ pub fn device_name() -> String {
         .filter(|s| !s.is_empty())
         .or_else(|| std::env::var("HOSTNAME").ok())
         .unwrap_or_else(|| "Linux".into())
+}
+
+/// GNOME's clock setting where its settings portal has one, else the time locale's.
+pub fn hours24() -> Option<bool> {
+    gnome_clock().or_else(locale_clock)
+}
+
+fn gnome_clock() -> Option<bool> {
+    let bus = gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>).ok()?;
+    let reply = bus
+        .call_sync(
+            Some("org.freedesktop.portal.Desktop"),
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Settings",
+            "ReadOne",
+            Some(&("org.gnome.desktop.interface", "clock-format").to_variant()),
+            None,
+            gio::DBusCallFlags::NONE,
+            1000,
+            None::<&gio::Cancellable>,
+        )
+        .ok()?;
+    match reply.child_value(0).as_variant()?.str()? {
+        "24h" => Some(true),
+        "12h" => Some(false),
+        _ => None,
+    }
+}
+
+fn locale_clock() -> Option<bool> {
+    // SAFETY: the locale made here is freed once its time format is read.
+    unsafe {
+        let locale = libc::newlocale(libc::LC_TIME_MASK, c"".as_ptr(), std::ptr::null_mut());
+        if locale.is_null() {
+            return None;
+        }
+        let format = std::ffi::CStr::from_ptr(libc::nl_langinfo_l(libc::T_FMT, locale))
+            .to_string_lossy()
+            .into_owned();
+        libc::freelocale(locale);
+        Some(
+            !["%I", "%l", "%r"]
+                .iter()
+                .any(|twelve| format.contains(twelve)),
+        )
+    }
 }
 
 /// `("2026-09-24", "21:03:04.123")`.

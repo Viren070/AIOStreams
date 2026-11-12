@@ -102,7 +102,7 @@ It is also the fastest of these options: the public [usenet streaming benchmark]
   </Step>
   <Step>
     Log in to the dashboard (with a user that has the `admin` permission) and
-    open **Usenet → Providers** (`/dashboard/usenet`).
+    open **Usenet → Providers** (`/dashboard/usenet/providers`).
   </Step>
   <Step>
     Add your NNTP provider(s): name, host, port, SSL/TLS, username, password
@@ -111,7 +111,7 @@ It is also the fastest of these options: the public [usenet streaming benchmark]
     only consulted when the primary providers are missing articles.
   </Step>
   <Step>
-    The **Settings** section holds the engine's tuning knobs (performance
+    **Settings → Usenet** holds the engine's tuning knobs (performance
     profile, cache sizes, timeouts, …). The defaults are right for almost
     everyone — leave them alone unless you have a reason not to. Each setting
     is documented in the [Usenet environment
@@ -136,11 +136,11 @@ It is also the fastest of these options: the public [usenet streaming benchmark]
 Streams are served directly from your instance under your `BASE_URL` — there is no separate WebDAV server to expose, no credentials embedded in URLs, and no proxy configuration needed.
 
 <Callout type="info">
-  The dashboard's **Usenet** menu also gives you a **Library** of imported
-  NZBs, a live **Streams** view and transfer **Stats**. The engine additionally
-  exposes a SABnzbd-compatible API (`/api/v1/sabnzbd`), so tools like Sonarr,
-  Radarr and Prowlarr can send NZBs to it as if it were a SABnzbd download
-  client.
+  The dashboard's **Usenet** page also has a **Library** of imported NZBs and
+  transfer **Stats**, and the dashboard's **Streams** page shows what's playing
+  now. The engine additionally exposes a SABnzbd-compatible API
+  (`/api/v1/sabnzbd`), so tools like Sonarr, Radarr and Prowlarr can send NZBs
+  to it as if it were a SABnzbd download client.
 </Callout>
 
 ### Stremio NNTP

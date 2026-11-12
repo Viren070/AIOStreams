@@ -55,6 +55,20 @@ export function parseCues(body: string): SubtitleCue[] {
   return cues;
 }
 
+/** A cue's text for a page that draws it: tags stripped, ASS's line breaks kept. */
+export const plainCueText = (text: string) =>
+  text.replace(/\\N/g, '\n').replace(TAGS, '').trim();
+
+/** An ASS line's text without its styling, or nothing for a drawing. */
+export function assPlainText(raw: string): string {
+  if (/\{[^}]*\\p[1-9]/.test(raw)) return '';
+  return raw
+    .replace(TAGS, '')
+    .replace(/\\n/gi, '\n')
+    .replace(/\\h/g, ' ')
+    .trim();
+}
+
 /** The dialogue of an ASS or SSA file as plain cues, without its styling or drawings. */
 export function parseAssCues(body: string): SubtitleCue[] {
   const cues: SubtitleCue[] = [];
@@ -73,13 +87,7 @@ export function parseAssCues(body: string): SubtitleCue[] {
     if (key === 'format') fields = values.map((f) => f.trim().toLowerCase());
     if (key !== 'dialogue' || !fields.includes('text')) continue;
     const field = (name: string) => values[fields.indexOf(name)]?.trim() ?? '';
-    const raw = values.slice(fields.indexOf('text')).join(',');
-    if (/\{[^}]*\\p[1-9]/.test(raw)) continue;
-    const text = raw
-      .replace(TAGS, '')
-      .replace(/\\n/gi, '\n')
-      .replace(/\\h/g, ' ')
-      .trim();
+    const text = assPlainText(values.slice(fields.indexOf('text')).join(','));
     if (text)
       cues.push({
         startMs: toMs(field('start')),

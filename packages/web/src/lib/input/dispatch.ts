@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLatest } from '../use-latest';
+import { useLatest } from '@/hooks/use-latest';
 import { action, actionsFor, type ActionId } from './actions';
 import {
   activate,
