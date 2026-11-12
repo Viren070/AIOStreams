@@ -45,7 +45,7 @@ export function liveCatalogs(engine: AIOStreams): Catalog[] {
   return exposedCatalogs(engine).filter(isLiveCatalog);
 }
 
-/** The one view that stands for every live catalog, as Jellyfin's Live TV does. */
+/** The one view that stands for every live catalog, as Jellyfin's Live TV does. Its genres are the channels' groups. */
 export function buildLiveTvView(
   ctx: ItemBuildContext,
   catalogs: Catalog[]
@@ -54,7 +54,10 @@ export function buildLiveTvView(
     ...baseItem(ctx, LIVE_TV_VIEW_ID, 'Live TV', 'UserView', true),
     CollectionType: 'livetv',
     DisplayPreferencesId: LIVE_TV_VIEW_ID,
-    ...(catalogs.some(hasGuide) && { aiostreams: { guide: true } }),
+    aiostreams: {
+      groups: true,
+      ...(catalogs.some(hasGuide) && { guide: true }),
+    },
     _aio: { descriptor: { k: 'livetv' } },
   };
 }
