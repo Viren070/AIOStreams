@@ -375,6 +375,26 @@ export async function processStreams(
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
   sortMs = Date.now() - sortStart;
 
+  // "Exclude" removes the device's unplayable streams before the failover
+  // chain and the result limit see them, so failover never lands on one and
+  // the limit counts only playable streams. getStreams gives these requests a
+  // per-device cache entry.
+  if (
+    ctx.userData.deviceCapabilities === 'exclude' &&
+    context.deviceCapabilities
+  ) {
+    const { streams, unplayable } = applyDeviceCapabilities(
+      finalStreams,
+      context.deviceCapabilities,
+      'exclude'
+    );
+    finalStreams = streams;
+    logger.debug(
+      { unplayable, total: streams.length + unplayable },
+      'excluded streams the device cannot play'
+    );
+  }
+
   if (failoverOpts?.position === 'beforeSEL') {
     await buildPlayChain(
       finalStreams,
@@ -744,10 +764,14 @@ export async function getStreams(
   if (usePipelineCache) {
     const serialisedUserData = JSON.stringify(ctx.userData);
     pipelineCacheKey = `${getSimpleTextHash(serialisedUserData)}:${type}:${id}`;
-    // Expressions reading device.* make the pipeline output depend on the
-    // device, so each device gets its own entry. Other configs keep sharing
-    // one entry across devices.
-    if (context.deviceCapabilities && configReadsDevice(serialisedUserData)) {
+    // Expressions reading device.* and the "exclude" setting make the pipeline
+    // output depend on the device, so each device gets its own entry. Other
+    // configs keep sharing one entry across devices.
+    if (
+      context.deviceCapabilities &&
+      (ctx.userData.deviceCapabilities === 'exclude' ||
+        configReadsDevice(serialisedUserData))
+    ) {
       pipelineCacheKey += `:device=${getSimpleTextHash(
         deviceCapabilitiesFingerprint(context.deviceCapabilities)
       )}`;
@@ -1056,9 +1080,10 @@ export async function getStreams(
 }
 
 /**
- * Applies the user's "Respect device capabilities" setting to a finished
+ * Applies the "push to bottom" device capabilities setting to a finished
  * response. It runs after the pipeline cache read and write, and builds a new
- * response rather than changing the one that was cached.
+ * response rather than changing the one that was cached. ("Exclude" runs
+ * inside processStreams instead.)
  */
 function applyDeviceCapabilitiesToResponse(
   ctx: AIOStreamsContext,
@@ -1067,7 +1092,7 @@ function applyDeviceCapabilitiesToResponse(
 ): StreamsResponse {
   const caps = ctx.options?.deviceCapabilities;
   const mode = ctx.userData.deviceCapabilities;
-  if (preCaching || !caps || !mode || mode === 'off') return response;
+  if (preCaching || !caps || mode !== 'deprioritise') return response;
   const { streams, unplayable } = applyDeviceCapabilities(
     response.data.streams,
     caps,

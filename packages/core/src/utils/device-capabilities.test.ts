@@ -147,18 +147,42 @@ describe('configReadsDevice', () => {
     assert.equal(configReadsDevice('device.maxres < 2160'), true);
   });
 
+  it('spots device.* after JSON-escaped whitespace', () => {
+    for (const expression of [
+      '\ndevice.present ? streams : []',
+      'x and\tdevice.maxres < 2160',
+      'a\r\ndevice.dv',
+    ]) {
+      const serialised = JSON.stringify({
+        excludedStreamExpressions: [{ expression }],
+      });
+      assert.equal(configReadsDevice(serialised), true, serialised);
+    }
+  });
+
   it('ignores other uses of the word', () => {
     assert.equal(configReadsDevice('{"addonName":"My device addon"}'), false);
     assert.equal(configReadsDevice('mydevice.dv'), false);
+    assert.equal(configReadsDevice('my_device.dv'), false);
+    assert.equal(configReadsDevice('x.device.dv'), false);
     assert.equal(configReadsDevice('device.colour'), false);
   });
 });
 
 describe('deviceCapabilitiesFingerprint', () => {
   it('is the same for headers that mean the same thing', () => {
-    const a = parseDeviceCapabilities('video=hevc,h264; dv=none')!;
-    const b = parseDeviceCapabilities('DV=none;video=h264, hevc ; foo=1')!;
+    const a = parseDeviceCapabilities('video=h264,hevc; dv=none')!;
+    const b = parseDeviceCapabilities('DV=none;video=H264, hevc ; foo=1')!;
     assert.equal(
+      deviceCapabilitiesFingerprint(a),
+      deviceCapabilitiesFingerprint(b)
+    );
+  });
+
+  it('tells differently ordered lists apart', () => {
+    const a = parseDeviceCapabilities('video=h264,hevc')!;
+    const b = parseDeviceCapabilities('video=hevc,h264')!;
+    assert.notEqual(
       deviceCapabilitiesFingerprint(a),
       deviceCapabilitiesFingerprint(b)
     );

@@ -4053,7 +4053,7 @@ function Content() {
                     value={userData.deviceCapabilities ?? 'off'}
                     help={
                       userData.deviceCapabilities === 'exclude'
-                        ? 'Streams the device reports it cannot play are removed. Combined with a result limit, this can leave fewer results.'
+                        ? 'Streams the device reports it cannot play are removed before result limits and failover apply.'
                         : userData.deviceCapabilities === 'deprioritise'
                           ? 'Streams the device reports it cannot play are moved below the rest, keeping their order.'
                           : 'Every device gets the same list.'

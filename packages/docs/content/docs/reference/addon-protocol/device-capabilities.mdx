@@ -64,10 +64,13 @@ HDR10. SDR streams, and anything without a tag, always play.
 
 - **Off** (default): every device gets the same list.
 - **Push to bottom:** they stay in the list, below everything else and in their original order.
-- **Exclude:** they are removed. This runs after the result limit, so a device can get fewer results.
+  This runs on the cached result, so all devices share one result cache.
+- **Exclude:** they are removed right after sorting, before the result limit and failover, so the
+  limit counts only playable streams and failover never switches to one the device can't play. Each
+  device gets its own result cache.
 
-The setting applies after the result cache, so devices sharing a configuration never see each
-other's lists. To write your own rules, stream expressions can read the header as
+Either way, devices sharing a configuration never see each other's lists. To write your own rules,
+stream expressions can read the header as
 [`device.*` constants](/reference/stream-expressions#device-constants).
 
 ## Trying it

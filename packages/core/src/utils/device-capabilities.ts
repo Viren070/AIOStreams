@@ -156,22 +156,27 @@ export function deviceExpressionConstants(
   };
 }
 
-/** Whether any expression in a serialised config reads `device.*`. */
+/**
+ * Whether any expression in a JSON-serialised config reads `device.*`.
+ * Whitespace before the name arrives JSON-escaped (`\n`, `\t`, `\r`), so an
+ * escape counts as a boundary too; a word character before it doesn't.
+ */
 export function configReadsDevice(serialisedConfig: string): boolean {
-  return /\bdevice\.(?:present|version|keys|video|hdr|dv|audio|maxres)\b/.test(
+  return /(?:^|\\[nrt]|[^\w$.])device\.(?:present|version|keys|video|hdr|dv|audio|maxres)\b/.test(
     serialisedConfig
   );
 }
 
 /**
  * A stable string for a parsed header, used to keep per-device cache entries
- * apart. Two headers that mean the same thing give the same fingerprint.
+ * apart. Case, spacing and unknown keys don't change it. List order does,
+ * since expressions can read it (`device.video[0]`).
  */
 export function deviceCapabilitiesFingerprint(
   caps: DeviceCapabilities
 ): string {
   const list = (v?: readonly string[]) =>
-    v === undefined ? '?' : [...v].sort().join(',') || 'none';
+    v === undefined ? '?' : v.join(',') || 'none';
   return [
     `v${caps.version}`,
     list(caps.video),
