@@ -605,9 +605,15 @@ importers:
       '@aiostreams/core':
         specifier: workspace:*
         version: link:../core
+      '@aiostreams/jassub':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@aiostreams/ui':
         specifier: workspace:*
         version: link:../ui
+      '@aiostreams/webgpu-player':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@fontsource/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -721,11 +727,17 @@ packages:
     resolution: {integrity: sha512-bgt7dSU1HufSKO7hqE7SuyGJ7BPOXUx6/S2lH4UMkwTlHHiRlGtOWFaXLlUOYi7iLJRcEnGvdxKu5kwO+Qu8Yw==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
 
+  '@aiostreams/jassub@0.1.0':
+    resolution: {integrity: sha512-Lmcom4pKcFlfMjL2a824AXyNte9xRNvWtXiLV/jasQNqgU3Ubc3NM8r+bGdu6R7OJPJWCGS+7bi4ZchSLwz5UA==}
+
   '@aiostreams/release-parser@1.0.1':
     resolution: {integrity: sha512-gWkU+TOtOCHa28lR7pYUtEpi5XLAVzedfotrehdLjaAUnYFwRewG10DwdPWjAmY1Xn5i2+VNXxa5C/eWZhhREQ==}
 
   '@aiostreams/seanime-extensions@0.10.3':
     resolution: {integrity: sha512-1yoLXMz6DPyVRaeR8gY/mGYLQR3DdhcYOcPCI32vj8VJY0GfOdZxzMP+bCoU4EHY0lZmsa821P/ZZk95hG944Q==}
+
+  '@aiostreams/webgpu-player@0.4.1':
+    resolution: {integrity: sha512-OJhK/yaYGsmEQsIommSFttVy9wQ2MUAo/RmwzCCzJBT3D2Qfk+TakbSSJy6fiBwLOQ3LqtTrWS/BepOYXcsLog==}
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -3666,6 +3678,9 @@ packages:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
 
+  abslink@1.3.1:
+    resolution: {integrity: sha512-ukFoU6q/RBMjoC7fu0Zx2+eVH2QFMfV+aJ2cI3Ypl0Shm0ikGjZ0T2VN0xvLl0a8imhWqvfVrqu2n2Ml3eSMyQ==}
+
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
     engines: {node: '>= 0.6'}
@@ -5709,6 +5724,9 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
+  lfa-ponyfill@1.1.1:
+    resolution: {integrity: sha512-Had4tsGEHtIj58MRtf6SlubNDltxinxMSdxIn1GdwrWbye8TD+pZ+D6qKETnJ9+vQOfG9q/Ds4WUPskhyAMp5Q==}
+
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
     engines: {node: '>= 12.0.0'}
@@ -7141,6 +7159,9 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  rvfc-polyfill@1.0.8:
+    resolution: {integrity: sha512-uA+0wwTkZ4OT8v45pfDfH+7Yq8mY6MvNngiF5Sq6VBgjJsvsfgt7Q18cyZqZjfAhW9rhkgXPX0cW0R9uw7yElA==}
+
   rxjs@7.8.2:
     resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
 
@@ -7622,6 +7643,9 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
+
+  throughput@1.0.2:
+    resolution: {integrity: sha512-jvK1ZXuhsggjb3qYQjMiU/AVYYiTeqT5thWvYR2yuy2LGM84P5MSSyAinwHahGsdBYKR9m9HncVR/3f3nFKkxg==}
 
   timers-browserify@2.0.12:
     resolution: {integrity: sha512-9phl76Cqm6FhSX9Xe1ZUAMLtm1BLkKj2Qd5ApyWkXzsMRaA7dgr81kf4wJmQf/hAvg8EEyJxDo3du/0KlhPiKQ==}
@@ -8140,9 +8164,18 @@ snapshots:
 
   '@aiostreams/fsmux@0.3.1': {}
 
+  '@aiostreams/jassub@0.1.0':
+    dependencies:
+      abslink: 1.3.1
+      lfa-ponyfill: 1.1.1
+      rvfc-polyfill: 1.0.8
+      throughput: 1.0.2
+
   '@aiostreams/release-parser@1.0.1': {}
 
   '@aiostreams/seanime-extensions@0.10.3': {}
+
+  '@aiostreams/webgpu-player@0.4.1': {}
 
   '@alloc/quick-lru@5.3.0': {}
 
@@ -10992,6 +11025,8 @@ snapshots:
     dependencies:
       event-target-shim: 5.0.1
 
+  abslink@1.3.1: {}
+
   accepts@2.0.0:
     dependencies:
       mime-types: 3.0.2
@@ -13371,6 +13406,8 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
+  lfa-ponyfill@1.1.1: {}
+
   lightningcss-android-arm64@1.32.0:
     optional: true
 
@@ -15154,6 +15191,8 @@ snapshots:
     dependencies:
       queue-microtask: 1.2.3
 
+  rvfc-polyfill@1.0.8: {}
+
   rxjs@7.8.2:
     dependencies:
       tslib: 2.8.1
@@ -15748,6 +15787,8 @@ snapshots:
   throttle-debounce@3.0.1: {}
 
   through@2.3.8: {}
+
+  throughput@1.0.2: {}
 
   timers-browserify@2.0.12:
     dependencies:

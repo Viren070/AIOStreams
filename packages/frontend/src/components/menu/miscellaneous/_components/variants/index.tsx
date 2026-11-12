@@ -13,9 +13,10 @@ import { FiEye, FiPlus, FiTrash2 } from 'react-icons/fi';
 import type { UserData } from '@aiostreams/core';
 import {
   applyCelProgram,
+  createCelBudget,
   parseCelScript,
-  type CelLimits,
 } from '../../../../../../../core/src/variants/language';
+import { useVariantWork } from '@/hooks/variants';
 import { CelEditor } from './cel-editor';
 import { ConditionTester } from './condition-tester';
 
@@ -42,16 +43,7 @@ export function Variants() {
   const [previewFor, setPreviewFor] = useState<string | null>(null);
 
   const settings = status?.settings.variants;
-  const limits: CelLimits = useMemo(
-    () => ({
-      maxScriptLength: settings?.maxScriptLength ?? 4000,
-      maxTotalInstructions: settings?.maxTotalInstructions ?? 5000,
-      maxValueDepth: settings?.maxValueDepth ?? 10,
-      maxPathSegments: settings?.maxPathSegments ?? 12,
-      maxPathMatches: settings?.maxPathMatches ?? 200,
-    }),
-    [settings]
-  );
+  const work = useVariantWork();
 
   const variants = userData.variants ?? [];
   const maxVariants = settings?.max ?? 10;
@@ -107,7 +99,7 @@ export function Variants() {
           Use it for a second formatter, a different debrid account, or a
           tighter filter set without maintaining a second config.{' '}
           <a
-            href="https://docs.aiostreams.viren070.me/reference/config-expressions"
+            href="https://aiostreams.org/reference/config-expressions"
             target="_blank"
             rel="noreferrer"
             className="underline"
@@ -138,7 +130,6 @@ export function Variants() {
           variant={variant}
           variants={variants}
           userData={userData}
-          limits={limits}
           onChange={(patch) => patchVariant(index, patch)}
           onDelete={() =>
             updateVariants(variants.filter((_, i) => i !== index))
@@ -166,7 +157,7 @@ export function Variants() {
         variantId={previewFor}
         variants={variants}
         userData={userData}
-        limits={limits}
+        work={work}
         onClose={() => setPreviewFor(null)}
       />
     </div>
@@ -177,7 +168,6 @@ interface VariantCardProps {
   variant: Variant;
   variants: Variant[];
   userData: UserData;
-  limits: CelLimits;
   onChange: (patch: Partial<Variant>) => void;
   onDelete: () => void;
   onPreview: () => void;
@@ -187,14 +177,13 @@ function VariantCard({
   variant,
   variants,
   userData,
-  limits,
   onChange,
   onDelete,
   onPreview,
 }: VariantCardProps) {
   const diagnostics = useMemo(
-    () => parseCelScript(variant.script, limits).diagnostics,
-    [variant.script, limits]
+    () => parseCelScript(variant.script).diagnostics,
+    [variant.script]
   );
   const errors = diagnostics.filter((d) => d.severity === 'error');
 
@@ -257,16 +246,12 @@ function VariantCard({
       <CelEditor
         value={variant.script}
         onValueChange={(script) => onChange({ script })}
-        limits={limits}
         userData={userData}
         currentVariantId={variant.id}
         placeholder={`# Example: set formatter.id = 'prism' to switch to the built-in Prism formatter.`}
       />
 
-      <div className="flex items-center justify-between text-xs text-[--muted]">
-        <span>
-          {variant.script.length} / {limits.maxScriptLength} characters
-        </span>
+      <div className="flex items-center justify-end text-xs text-[--muted]">
         <span className={errors.length ? 'text-[--red]' : undefined}>
           {errors.length
             ? `${errors.length} error${errors.length === 1 ? '' : 's'}`
@@ -281,7 +266,7 @@ interface PreviewModalProps {
   variantId: string | null;
   variants: Variant[];
   userData: UserData;
-  limits: CelLimits;
+  work: number;
   onClose: () => void;
 }
 
@@ -290,7 +275,7 @@ function PreviewModal({
   variantId,
   variants,
   userData,
-  limits,
+  work,
   onClose,
 }: PreviewModalProps) {
   // Held past close so the content stays put while the modal animates out,
@@ -303,18 +288,18 @@ function PreviewModal({
 
   const result = useMemo(() => {
     if (!variant) return null;
-    const { program, diagnostics } = parseCelScript(variant.script, limits);
+    const { program, diagnostics } = parseCelScript(variant.script);
     const errors = diagnostics.filter((d) => d.severity === 'error');
     if (errors.length) return { errors, notes: [], patched: null };
     const programs = new Map(
-      variants.map((v) => [v.id, parseCelScript(v.script, limits).program])
+      variants.map((v) => [v.id, parseCelScript(v.script).program])
     );
     const applied = applyCelProgram(userData, program, {
       resolveVariant: (id) => programs.get(id),
-      limits,
+      budget: createCelBudget(work),
     });
     return { errors: [], notes: applied.notes, patched: applied.userData };
-  }, [variant, variants, userData, limits]);
+  }, [variant, variants, userData, work]);
 
   return (
     <Modal

@@ -8,6 +8,7 @@ allowBuilds:
   core-js: true
   cpu-features: false
   esbuild: true
+  lfa-ponyfill: false
   sharp: true
   sqlite3: true
   ssh2: false

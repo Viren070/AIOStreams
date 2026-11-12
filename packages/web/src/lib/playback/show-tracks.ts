@@ -1,16 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSession } from '../session';
-import { firstInLanguages, languageCode, sameLanguage } from '../languages';
+import { useSession } from '@/lib/jellyfin/session';
+import { firstInLanguages, languageCode, sameLanguage } from '@/lib/languages';
 import {
   audioLanguages,
   ORIGINAL_LANGUAGE,
   subtitleLanguages,
   usePlaybackPrefs,
-} from '../user-config';
-import type { PlaybackPrefs } from '../user-config';
-import { bestOfTypes, subtitleType, subtitleTypes } from '../subtitles/tracks';
+} from '@/lib/jellyfin/user-config';
+import type { PlaybackPrefs } from '@/lib/jellyfin/user-config';
+import {
+  bestOfTypes,
+  subtitleType,
+  subtitleTypes,
+} from '@/lib/subtitles/tracks';
 import type { PlayerController, Track } from './controller';
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 /** The user's display preferences under this id hold a pick per show. */
 const PREFS_ID = 'aiostreams-web-tracks';

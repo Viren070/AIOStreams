@@ -5,12 +5,12 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { JellyfinError } from './client';
-import { useSession } from './session';
+import { JellyfinError } from './jellyfin/client';
+import { useSession } from './jellyfin/session';
 import { storage, storedMap } from './storage';
-import { useAdjacentEpisodes, useEpisodesAfter } from './queries';
+import { useAdjacentEpisodes, useEpisodesAfter } from './jellyfin/queries';
 import { airsLater } from './format';
-import type { BaseItemDto, BaseItemDtoQueryResult } from './types';
+import type { BaseItemDto, BaseItemDtoQueryResult } from './jellyfin/types';
 
 /** Jellyfin cannot play a virtual item, such as an episode not yet aired. */
 export const playable = (item: BaseItemDto) =>

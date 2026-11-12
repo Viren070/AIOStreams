@@ -1,4 +1,5 @@
 import type { Host } from '..';
+import { youTubeResolver } from '@/lib/hosts/youtube';
 import { avPlayEngine } from './player';
 
 export interface AvPlayTrack {
@@ -25,6 +26,7 @@ export interface AvPlay {
   setListener(listener: object): void;
   setDisplayRect(x: number, y: number, width: number, height: number): void;
   setDisplayMethod(method: string): void;
+  setStreamingProperty(type: string, value: string): void;
   getTotalTrackInfo(): AvPlayTrack[];
   getCurrentStreamInfo(): AvPlayTrack[];
   setSelectTrack(type: 'AUDIO' | 'TEXT', index: number): void;
@@ -35,6 +37,7 @@ export interface AvPlay {
 
 interface Tizen {
   application: { getCurrentApplication(): { exit(): void } };
+  systeminfo?: { getCapability(key: string): unknown };
   tvinputdevice?: {
     getSupportedKeys(): { name: string }[];
     registerKey(name: string): void;
@@ -86,6 +89,15 @@ function registerMediaKeys(): () => void {
   }
 }
 
+function capability(key: string): string {
+  try {
+    const value = window.tizen?.systeminfo?.getCapability(key);
+    return typeof value === 'string' ? value : '';
+  } catch {
+    return '';
+  }
+}
+
 let host: Host | undefined;
 
 /** Samsung's TVs, running the packaged app. */
@@ -96,8 +108,16 @@ export function tizenHost(): Host | null {
     tv: true,
     // eslint-disable-next-line lingui/no-unlocalized-strings -- how the server lists the device
     device: () => ({ name: 'Samsung TV' }),
+    system: () => ({
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- never shown
+      name: 'Tizen',
+      version: /Tizen (\d+(?:\.\d+)?)/.exec(navigator.userAgent)?.[1] ?? '',
+      model: capability('http://tizen.org/system/model_name'),
+    }),
     exit: () => window.tizen?.application.getCurrentApplication().exit(),
     start: registerMediaKeys,
+    // The packaged app may ask any host (`<access origin="*">` in config.xml).
+    resolveYouTube: youTubeResolver((url, init) => fetch(url, init)),
     ...(window.webapis?.avplay && {
       player: avPlayEngine,
       playerFeatures: ['audio'],

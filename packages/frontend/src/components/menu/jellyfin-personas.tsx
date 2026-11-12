@@ -13,6 +13,8 @@ import { watchStateTrackersQuery } from '@/lib/queries';
 import type { WatchStateTrackerOption } from '@/lib/api';
 import { cn } from '@aiostreams/ui/core/styling';
 import { pill, VariantPills } from '../shared/variant-pills';
+import { UserAvatar } from '../shared/user-avatar';
+import { releaseOwnVariant } from '@/lib/audiences';
 import { useSortableRows } from '../shared/sortable-rows';
 import {
   ConfirmationDialog,
@@ -128,23 +130,6 @@ function trackersLabel(ids: string[]): string {
   return ids.length === 1 ? '1 tracker' : `${ids.length} trackers`;
 }
 
-function Avatar({ name, avatar }: { name: string; avatar?: string }) {
-  if (avatar) {
-    return (
-      <img
-        src={avatar}
-        alt=""
-        className="h-8 w-8 shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-  return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[--subtle] text-xs font-semibold uppercase text-[--muted]">
-      {name.trim().charAt(0) || '?'}
-    </span>
-  );
-}
-
 interface UserRowProps {
   name: string;
   avatar?: string;
@@ -174,7 +159,7 @@ function UserRow({
       ) : (
         <div className="w-6 shrink-0" />
       )}
-      <Avatar name={name} avatar={avatar} />
+      <UserAvatar name={name} avatar={avatar} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-white">{name}</p>
         <p className="truncate text-xs text-[--muted]">{summary}</p>
@@ -641,6 +626,8 @@ export function JellyfinPersonas() {
   };
 
   const remove = (index: number) => {
+    const { id } = personas[index];
+    setUserData((prev) => releaseOwnVariant(prev, id));
     if (personas.length > 1) rows.removeAt(index);
     else patch({ personas: undefined });
     toast.info('Removed. A user with the same name gets its history back.');
@@ -648,6 +635,9 @@ export function JellyfinPersonas() {
 
   const removalTarget =
     pendingRemoval !== null ? personas[pendingRemoval] : undefined;
+  const removesVariant =
+    !!removalTarget?.variants?.includes(removalTarget.id) &&
+    !!userData.variants?.some((v) => v.id === removalTarget.id);
   const removeDialog = useConfirmationDialog({
     title: 'Remove user',
     description: removalTarget
@@ -655,7 +645,7 @@ export function JellyfinPersonas() {
           removalTarget.history === 'shared'
             ? 'It shares the primary user’s history, so nothing is lost.'
             : 'Its watch history is kept, and a user added again under the same name gets it back.'
-        }`
+        }${removesVariant ? ' The variant holding its own choices is removed too, unless another user or variant uses it.' : ''}`
       : undefined,
     actionText: 'Remove',
     onConfirm: () => {

@@ -4,11 +4,11 @@ import type {
   QueryFunctionContext,
   QueryKey,
 } from '@tanstack/react-query';
-import { ConnectionError } from '../client';
-import { isReachable } from '../connection';
-import { settings } from '../settings';
-import { storage } from '../storage';
-import type { UserDto } from '../types';
+import { ConnectionError } from '@/lib/jellyfin/client';
+import { isReachable } from '@/lib/jellyfin/connection';
+import { settings } from '@/lib/settings';
+import { storage } from '@/lib/storage';
+import type { UserDto } from '@/lib/jellyfin/types';
 import {
   prune,
   readQuery,

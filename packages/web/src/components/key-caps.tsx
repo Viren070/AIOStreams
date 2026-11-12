@@ -1,5 +1,5 @@
 import { cn } from '@aiostreams/ui/core/styling';
-import { inputLabels } from '../lib/input';
+import { inputLabels } from '@/lib/input';
 
 /** An input as the keys to press: `Shift+N` is two. */
 export function KeyCaps({

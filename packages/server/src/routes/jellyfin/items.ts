@@ -62,6 +62,7 @@ import {
   msToTicks,
   ratingUserData,
   seasonAnimeIds,
+  filmAnimeIds,
   userDataFromRow,
   watchRowEpisode,
   watchRowsAndAirTimesFor,
@@ -77,6 +78,7 @@ import {
   type MetaPreview,
   type ProgramDescriptor,
   type ParsedMeta,
+  type MediaSourceRecord,
   type PlaybackMemo,
   type PlaySupport,
   type WatchStateRow,
@@ -367,12 +369,12 @@ export async function userViews(
 ): Promise<JellyfinItem[]> {
   const [views, live, playlists] = await Promise.all([
     viewItems(ctx),
-    ctx.engine().then((engine) => liveCatalogs(engine).length > 0),
+    ctx.engine().then(liveCatalogs),
     JellyfinPlaylistRepository.any(playlistOwner(ctx)),
   ]);
   return [
     ...views,
-    ...(live ? [buildLiveTvView(ctx.build)] : []),
+    ...(live.length ? [buildLiveTvView(ctx.build, live)] : []),
     ...(playlists ? [buildPlaylistsFolder(ctx.build)] : []),
   ];
 }
@@ -616,7 +618,7 @@ export async function itemFromDescriptor(
     case 'source':
       return null;
     case 'livetv':
-      return buildLiveTvView(ctx.build);
+      return buildLiveTvView(ctx.build, liveCatalogs(await ctx.engine()));
     case 'program':
       return programItem(ctx, d);
     case 'boxset': {
@@ -657,6 +659,7 @@ export async function itemFromDescriptor(
             !hasProgrammeVideos(meta)));
       if (d.k === 'movie' && !asBoxset && isChannel(d.t, meta)) {
         const channel = await channelItem(ctx, base, opts.playstate);
+        if (!meta) channel.aiostreams = { noMeta: true };
         return opts.bare
           ? channel
           : attachUserData(ctx, [channel]).then(([built]) => built);
@@ -673,6 +676,10 @@ export async function itemFromDescriptor(
       });
       if (asBoxset) item.Id = encodeItemId(d);
       if (!meta) item.aiostreams = { noMeta: true };
+      if (d.k === 'movie' && !asBoxset) {
+        const ids = item.ProviderIds as Record<string, string> | undefined;
+        item.ProviderIds = { ...ids, ...(await filmAnimeIds(base, ids)) };
+      }
       // A show is played by its episodes, which its own row does not hold.
       if (!opts.bare && (!opts.playstate || d.k === 'series'))
         await attachUserData(ctx, [item]);
@@ -928,7 +935,8 @@ export function mediaSourcesFrom(
     firstId: string;
     tracks: TrackPreferences;
     requestedMsid?: string;
-    onlyRequested?: boolean;
+    offered?: MediaSourceRecord[];
+    fields?: ReadonlySet<string>;
     support?: PlaySupport;
     profile?: DeviceProfile;
     hasSegments?: boolean;
@@ -943,15 +951,12 @@ export function mediaSourcesFrom(
         header: (name) => req.get(name),
         query: req.query as Record<string, unknown>,
       }).token;
-  let ordered = offeredSources(
-    memo.sources,
-    opts.support ?? {},
-    maxVersionsFor(ctx)
-  );
+  let ordered =
+    opts.offered ??
+    offeredSources(memo.sources, opts.support ?? {}, maxVersionsFor(ctx));
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
-    if (idx >= 0 && opts.onlyRequested) ordered = [ordered[idx]];
-    else if (idx > 0)
+    if (idx > 0)
       ordered = [
         ordered[idx],
         ...ordered.slice(0, idx),
@@ -972,6 +977,7 @@ export function mediaSourcesFrom(
       noticePath: nothingToPlayPath(req, ctx),
       tracks: opts.tracks,
       originalLanguage: memo.titleMetadata?.originalLanguage,
+      fields: opts.fields,
     })
   );
 }

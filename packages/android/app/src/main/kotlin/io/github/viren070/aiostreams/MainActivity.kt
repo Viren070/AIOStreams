@@ -18,9 +18,11 @@ import android.os.Environment
 import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.text.format.DateFormat
 import android.text.format.Formatter
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.ValueCallback
@@ -54,6 +56,7 @@ import java.io.File
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
@@ -110,9 +113,13 @@ class MainActivity : ComponentActivity() {
     private val started get() = ::bridge.isInitialized
     /** The page's renderer ended, leaving a web view that can't be used. */
     private var pageGone = false
+    private var splash: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The starting theme's logo would show wherever the page is see-through.
+        setTheme(R.style.Theme_AIOStreams)
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) splashScreen.setOnExitAnimationListener { it.remove() }
         if (!webViewUsable(this)) return setContentView(outdatedWebView(this))
         // The page is dark whatever the system's theme, so the bars keep light icons.
         val dark = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { true }
@@ -127,9 +134,12 @@ class MainActivity : ComponentActivity() {
         }
         // Edge to edge: the page keeps clear of the system bars with its own safe-area insets.
         web = AppWebView(this, onTv())
+        val splash = View(this).apply { setBackgroundResource(R.drawable.splash) }
+        this.splash = splash
         setContentView(FrameLayout(this).apply {
             addView(playback.stage, MATCH_PARENT, MATCH_PARENT)
             addView(web, MATCH_PARENT, MATCH_PARENT)
+            addView(splash, MATCH_PARENT, MATCH_PARENT)
         })
         mini = MiniPlayer(playback.stage, web, send = { bridge.send(it) }) { playback.subtitlesShown = it }
 
@@ -171,6 +181,7 @@ class MainActivity : ComponentActivity() {
             PictureInPicture.supported(this),
             miniPlayer = true,
             gamepadButtons = true,
+            hours24 = DateFormat.is24HourFormat(this),
         )
         bridge = AppBridge(web, app.origins, identity, ::onMessage)
         updater = Updater(this, ::askForNotifications) { bridge.send(it) }
@@ -245,6 +256,7 @@ class MainActivity : ComponentActivity() {
                 put("ac3Encoder", AudioEncoder.has("ac3"))
             })
             "fullscreen" -> setFullscreen(message["value"]?.jsonPrimitive?.booleanOrNull ?: !screen.fullscreen)
+            "pip" -> pip.enter()
             "levels" -> bridge.send(buildJsonObject {
                 put("type", "levels")
                 put("volume", levels.volume)
@@ -264,7 +276,10 @@ class MainActivity : ComponentActivity() {
                 AppLog.i("page", pageText(message))
             }
             "exit" -> moveTaskToBack(true)
+            "splash-shown" -> removeSplash()
             "links-ready" -> {
+                // For a page without a splash of its own.
+                removeSplash()
                 linksReady = true
                 sendLinks()
             }
@@ -280,6 +295,7 @@ class MainActivity : ComponentActivity() {
                 message["frameRate"]?.jsonPrimitive?.booleanOrNull?.let { frameRates.enabled = it }
                 message["tunneling"]?.jsonPrimitive?.booleanOrNull?.let { playback.tunneling = it }
                 message["dolbyVision"]?.jsonPrimitive?.booleanOrNull?.let { playback.dolbyVision = it }
+                message["upscaling"]?.jsonPrimitive?.booleanOrNull?.let { playback.upscaling = it }
                 playback.sound = Sound(
                     dialogueBoost = message["dialogueBoost"]?.jsonPrimitive?.intOrNull ?: 0,
                     nightMode = message["nightMode"]?.jsonPrimitive?.booleanOrNull == true,
@@ -307,6 +323,21 @@ class MainActivity : ComponentActivity() {
                 MpvEngine.configFile(this).writeText(message["text"]?.jsonPrimitive?.content.orEmpty())
                 (playback.engine as? MpvEngine)?.reloadConfig()
                 sendMpvConfig()
+            }
+            "mpv-shaders" -> sendMpvShaders()
+            "mpv-shader-add" -> {
+                MpvEngine.addShader(
+                    this,
+                    message["name"]?.jsonPrimitive?.content.orEmpty(),
+                    message["text"]?.jsonPrimitive?.content.orEmpty(),
+                )
+                (playback.engine as? MpvEngine)?.reloadShaders()
+                sendMpvShaders()
+            }
+            "mpv-shader-remove" -> {
+                MpvEngine.removeShader(this, message["name"]?.jsonPrimitive?.content.orEmpty())
+                (playback.engine as? MpvEngine)?.reloadShaders()
+                sendMpvShaders()
             }
             "diagnostics" -> {
                 val web = message["web"]?.jsonPrimitive?.contentOrNull
@@ -342,6 +373,11 @@ class MainActivity : ComponentActivity() {
             }.start()
             "crash-seen" -> message["at"]?.jsonPrimitive?.longOrNull?.let { Crashes.seen(this, it) }
         }
+    }
+
+    private fun removeSplash() = runOnUiThread {
+        splash?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        splash = null
     }
 
     /** Into the shared Downloads folder, which needs storage access before Android 10. */
@@ -461,6 +497,11 @@ class MainActivity : ComponentActivity() {
     private fun sendMpvConfig() = bridge.send(buildJsonObject {
         put("type", "mpv-config")
         put("text", MpvEngine.configFile(this@MainActivity).takeIf { it.exists() }?.readText().orEmpty())
+    })
+
+    private fun sendMpvShaders() = bridge.send(buildJsonObject {
+        put("type", "mpv-shaders")
+        put("names", JsonArray(MpvEngine.shaders(this@MainActivity).map { JsonPrimitive(it.name) }))
     })
 
     private fun setFullscreen(on: Boolean) {

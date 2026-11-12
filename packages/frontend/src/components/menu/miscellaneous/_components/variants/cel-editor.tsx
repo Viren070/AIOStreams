@@ -7,12 +7,10 @@ import { formatterTheme } from '../../../formatter/editor/formatter-theme.js';
 import { celHighlight, celTheme } from './cel-highlight.js';
 import { celLinter } from './cel-lint.js';
 import { celCompletion } from './cel-complete.js';
-import type { CelLimits } from '../../../../../../../core/src/variants/language';
 
 export interface CelEditorProps {
   value: string;
   onValueChange: (value: string) => void;
-  limits: CelLimits;
   userData: UserData;
   currentVariantId: string;
   placeholder?: string;
@@ -28,7 +26,6 @@ export interface CelEditorProps {
 export function CelEditor({
   value,
   onValueChange,
-  limits,
   userData,
   currentVariantId,
   placeholder,
@@ -40,12 +37,12 @@ export function CelEditor({
     () => [
       celHighlight,
       celTheme,
-      celLinter(limits),
+      celLinter(),
       celCompletion({ userData, currentVariantId }),
       EditorView.lineWrapping,
       placeholderExtension(placeholder ?? ''),
     ],
-    [limits, userData, currentVariantId, placeholder]
+    [userData, currentVariantId, placeholder]
   );
 
   return (

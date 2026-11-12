@@ -1,0 +1,9 @@
+{
+  "id": "io.github.viren070.aiostreams.service",
+  "description": "Fetches byte ranges for the AIOStreams app",
+  "services": [
+    {
+      "name": "io.github.viren070.aiostreams.service"
+    }
+  ]
+}

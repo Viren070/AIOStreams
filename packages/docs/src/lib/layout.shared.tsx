@@ -63,8 +63,14 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       {
         type: 'main',
-        text: 'Apps',
-        url: '/apps',
+        text: 'Download',
+        url: '/download',
+      },
+      {
+        type: 'main',
+        text: 'Docs',
+        url: '/getting-started',
+        active: 'none',
       },
       {
         type: 'main',

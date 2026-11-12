@@ -36,9 +36,7 @@ export function IndexPage() {
         </Button>
         <Button
           intent="gray-outline"
-          onClick={() =>
-            window.open('https://docs.aiostreams.viren070.me', '_blank')
-          }
+          onClick={() => window.open('https://aiostreams.org', '_blank')}
         >
           Documentation
         </Button>

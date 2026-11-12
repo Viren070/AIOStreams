@@ -3,7 +3,7 @@ import {
   AUDIO_DELAY_LIMIT_MS,
   AUDIO_DELAY_STEP_MS,
   settings,
-} from '../settings';
+} from '@/lib/settings';
 
 export const dialogueLabel = (db: number) => (db ? t`+${db} dB` : t`Off`);
 

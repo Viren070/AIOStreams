@@ -1,14 +1,15 @@
-import type { JellyfinClient } from '../client';
-import type { DownloadsHost } from '../downloads/types';
-import type { PlayerFeature } from '../playback/controller';
-import type { EngineFactory } from '../playback/engine';
-import type { BaseItemDto, SourceInfo } from '../types';
+import type { JellyfinClient } from '@/lib/jellyfin/client';
+import type { DownloadsHost } from '@/lib/downloads/types';
+import type { PlayerFeature } from '@/lib/playback/controller';
+import type { EngineFactory } from '@/lib/playback/engine';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 import { androidHost } from './jellyfin-android';
 import { jellyfinDesktopHost } from './jellyfin-desktop';
 import { nativeShellHost } from './native-shell';
 import { shellHost } from './shell';
 import type { MediaKey } from './shell/bridge';
 import { tizenHost } from './tizen';
+import { keepScreenOn } from './wake-lock';
 import { webosHost } from './webos';
 
 export interface NowPlaying {
@@ -45,10 +46,21 @@ export interface Hearing {
   text: string | null;
 }
 
+export interface YouTubeStream {
+  url: string;
+  originalLanguage?: string;
+}
+
 /**
  * The app the page runs in, from the bridge it injects. Anything left out
  * falls back to what a browser does.
  */
+/** `fetch` past CORS, for what the page's own fetch can't read. */
+export type FetchPastCors = (
+  url: string,
+  init: { method?: string; headers: Record<string, string>; body?: string }
+) => Promise<Response>;
+
 export interface Host {
   /** `data-host` on the page's root, which custom CSS matches, so it can't change. */
   name: string;
@@ -56,6 +68,8 @@ export interface Host {
   tv?: boolean;
   /** The app's own name for this device, and its id where its player reports as it. */
   device?(): { id?: string; name?: string } | null;
+  /** The system and the device's model, for a host the user agent doesn't name them in. */
+  system?(): { name: string; version: string; model: string };
   /** A player drawn beneath the page, in place of the page's own video. */
   player?: EngineFactory;
   playerFeatures?: readonly PlayerFeature[];
@@ -94,8 +108,9 @@ export interface Host {
   signedIn?(client: JellyfinClient): void;
   /** Saves what the page asks for to the device. */
   downloads?: DownloadsHost;
+  fetchFile?: FetchPastCors;
   /** A YouTube video's stream, which only plays from the address that asked. */
-  resolveYouTube?(id: string): Promise<string | null>;
+  resolveYouTube?(id: string): Promise<YouTubeStream | null>;
   /** Shows these above the on-screen keyboard's keys, for the field it types into. */
   keyboardCompletions?(names: string[]): void;
   /** What the device's speech recogniser heard, or null for nothing. */
@@ -109,7 +124,7 @@ export interface Host {
   watchNext?(items: WatchNextItem[]): void;
 }
 
-const browserHost: Host = { name: 'browser' };
+const browserHost: Host = { name: 'browser', keepAwake: keepScreenOn };
 
 /**
  * Checked on every call, since some apps inject their bridge late or switch

@@ -1,6 +1,6 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
-import { useItem } from './queries';
+import { useItem } from './jellyfin/queries';
 import { itemTitle } from './format';
 import { settings, useSetting, type DiscordEvent } from './settings';
 import { appBridge } from './hosts/shell/bridge';

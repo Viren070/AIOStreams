@@ -54,6 +54,9 @@ interface Engine {
 
     fun setSound(sound: Sound)
 
+    /** Runs the video through [UpscaleNetwork] where it suits it. */
+    fun setUpscaling(on: Boolean) {}
+
     /** Subtitles over the video, which the mini player's bar leaves out. */
     fun setSubtitlesShown(shown: Boolean) {}
 

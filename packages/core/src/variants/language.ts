@@ -18,17 +18,19 @@ export type CelLiteral =
 
 export type CelFilterOperator = '=' | '!=' | '*=' | '!*=';
 
+export interface CelFilterCondition {
+  /** Empty for a primitive list, where the element itself is compared. */
+  key: string;
+  operator: CelFilterOperator;
+  value: CelLiteral;
+}
+
 export type CelPathSegment =
   | { kind: 'key'; name: string }
   | { kind: 'index'; index: number }
   | { kind: 'all' }
-  | {
-      kind: 'filter';
-      /** Empty for a primitive list, where the element itself is compared. */
-      key: string;
-      operator: CelFilterOperator;
-      value: CelLiteral;
-    };
+  /** Selectors written back to back, `[a=1][b=2]`, must all match. */
+  | { kind: 'filter'; conditions: CelFilterCondition[] };
 
 export interface CelPath {
   root: string;
@@ -89,22 +91,10 @@ export interface CelDiagnostic {
   suggestion?: string;
 }
 
-export interface CelLimits {
-  maxScriptLength: number;
-  /** Across every variant one request applies, `use variant` included. */
-  maxTotalInstructions: number;
-  maxValueDepth: number;
-  maxPathSegments: number;
-  maxPathMatches: number;
-}
+export const DEFAULT_CEL_WORK = 100_000;
 
-export const DEFAULT_CEL_LIMITS: CelLimits = {
-  maxScriptLength: 4000,
-  maxTotalInstructions: 5000,
-  maxValueDepth: 10,
-  maxPathSegments: 12,
-  maxPathMatches: 200,
-};
+/** Guards the parser's stack; no configuration nests this deep. */
+const MAX_VALUE_DEPTH = 32;
 
 const MAX_NOTES = 100;
 
@@ -321,10 +311,10 @@ const NUMERIC = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/;
  * Value inside a selector. Bare words win over numbers unless the whole run
  * is numeric, so hex instance ids like `8ae` are not read as an index.
  */
-function readSelectorValue(s: Scanner, limits: CelLimits): CelLiteral {
+function readSelectorValue(s: Scanner): CelLiteral {
   const quote = s.peek();
   if (quote === '"' || quote === "'" || quote === '[' || quote === '{') {
-    return parseValue(s, limits);
+    return parseValue(s);
   }
   let run = '';
   let i = 0;
@@ -428,12 +418,11 @@ function atValueStart(s: Scanner): boolean {
   return ident !== undefined && LITERAL_KEYWORDS.has(ident);
 }
 
-function parseValue(s: Scanner, limits: CelLimits, depth = 1): CelLiteral {
-  if (depth > limits.maxValueDepth) {
-    s.fail(
-      `value nesting exceeds the maximum depth of ${limits.maxValueDepth}`,
-      { category: 'limit' }
-    );
+function parseValue(s: Scanner, depth = 1): CelLiteral {
+  if (depth > MAX_VALUE_DEPTH) {
+    s.fail(`value nesting exceeds the maximum depth of ${MAX_VALUE_DEPTH}`, {
+      category: 'limit',
+    });
   }
   s.skipTrivia();
   const ch = s.peek();
@@ -450,7 +439,7 @@ function parseValue(s: Scanner, limits: CelLimits, depth = 1): CelLiteral {
       return items;
     }
     while (true) {
-      items.push(parseValue(s, limits, depth + 1));
+      items.push(parseValue(s, depth + 1));
       s.skipTrivia();
       if (s.peek() === ',') {
         s.advance();
@@ -494,7 +483,7 @@ function parseValue(s: Scanner, limits: CelLimits, depth = 1): CelLiteral {
       s.skipTrivia();
       if (s.peek() !== ':') s.fail('expected ":" after object key');
       s.advance();
-      obj[key] = parseValue(s, limits, depth + 1);
+      obj[key] = parseValue(s, depth + 1);
       s.skipTrivia();
       if (s.peek() === ',') {
         s.advance();
@@ -524,7 +513,7 @@ function parseValue(s: Scanner, limits: CelLimits, depth = 1): CelLiteral {
   s.fail('expected a value (string, number, boolean, null, array or object)');
 }
 
-function parsePath(s: Scanner, limits: CelLimits): CelPath {
+function parsePath(s: Scanner): CelPath {
   const start = s.pos;
   const root = readIdent(s);
   if (DENIED_ROOT_KEYS.has(root)) {
@@ -601,8 +590,14 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
           s.fail('expected "=", "!=", "*=" or "!*=" in selector');
         }
         s.skipTrivia();
-        const value = readSelectorValue(s, limits);
-        segments.push({ kind: 'filter', key, operator, value });
+        const condition = {
+          key,
+          operator,
+          value: readSelectorValue(s),
+        };
+        const previous = segments[segments.length - 1];
+        if (previous?.kind === 'filter') previous.conditions.push(condition);
+        else segments.push({ kind: 'filter', conditions: [condition] });
       }
       s.skipTrivia();
       if (s.peek() !== ']') s.fail('expected "]"');
@@ -610,27 +605,21 @@ function parsePath(s: Scanner, limits: CelLimits): CelPath {
     } else {
       break;
     }
-    if (segments.length > limits.maxPathSegments) {
-      s.fail(`path exceeds the maximum of ${limits.maxPathSegments} segments`, {
-        index: start,
-        category: 'limit',
-      });
-    }
   }
 
   return { root, segments, raw: s.src.slice(start, s.pos), index: start };
 }
 
-function parseValueList(s: Scanner, limits: CelLimits): CelLiteral[] {
+function parseValueList(s: Scanner): CelLiteral[] {
   const values: CelLiteral[] = [];
   s.skipTrivia();
   if (!atValueStart(s)) return values;
-  values.push(parseValue(s, limits));
+  values.push(parseValue(s));
   while (true) {
     s.skipTrivia();
     if (s.peek() !== ',') return values;
     s.advance();
-    values.push(parseValue(s, limits));
+    values.push(parseValue(s));
   }
 }
 
@@ -638,7 +627,7 @@ function parseName(s: Scanner): string {
   return s.peek() === '"' || s.peek() === "'" ? readString(s) : readBareWord(s);
 }
 
-function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
+function parseStatement(s: Scanner): CelStatement {
   const index = s.pos;
   const line = s.line;
   const keyword = readIdent(s);
@@ -655,11 +644,11 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
   switch (keyword) {
     case 'set':
     case 'merge': {
-      const path = parsePath(s, limits);
+      const path = parsePath(s);
       s.skipTrivia();
       if (s.peek() !== '=') s.fail(`expected "=" after the path in ${keyword}`);
       s.advance();
-      const value = parseValue(s, limits);
+      const value = parseValue(s);
       if (
         keyword === 'merge' &&
         (value === null || typeof value !== 'object')
@@ -672,12 +661,12 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
     case 'clear':
     case 'enable':
     case 'disable':
-      return { op: keyword, path: parsePath(s, limits), index, line };
+      return { op: keyword, path: parsePath(s), index, line };
     case 'add':
     case 'prepend':
     case 'remove': {
-      const path = parsePath(s, limits);
-      const values = parseValueList(s, limits);
+      const path = parsePath(s);
+      const values = parseValueList(s);
       if (values.length === 0 && keyword !== 'remove') {
         s.fail(`${keyword} requires at least one value`, { index });
       }
@@ -709,7 +698,7 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
           source: s.src.slice(countStart, s.pos),
         });
       }
-      const path = parsePath(s, limits);
+      const path = parsePath(s);
       if (path.segments[path.segments.length - 1]?.kind === 'all') {
         s.fail('insert needs a single position, not "[*]"', {
           index: path.index,
@@ -719,7 +708,7 @@ function parseStatement(s: Scanner, limits: CelLimits): CelStatement {
       s.skipTrivia();
       if (s.peek() !== '=') s.fail('expected "=" after the path in insert');
       s.advance();
-      const values = parseValueList(s, limits);
+      const values = parseValueList(s);
       if (values.length === 0) {
         s.fail('insert requires at least one value', { index });
       }
@@ -755,25 +744,10 @@ export interface CelParseResult {
 }
 
 /** Parses a script, never throwing. Errors are returned as diagnostics. */
-export function parseCelScript(
-  script: string,
-  limits: CelLimits = DEFAULT_CEL_LIMITS
-): CelParseResult {
+export function parseCelScript(script: string): CelParseResult {
   const statements: CelStatement[] = [];
   const referencedVariants: string[] = [];
   const diagnostics: CelDiagnostic[] = [];
-
-  if (script.length > limits.maxScriptLength) {
-    diagnostics.push({
-      index: limits.maxScriptLength,
-      source: script.slice(limits.maxScriptLength, limits.maxScriptLength + 20),
-      line: 1,
-      message: `script exceeds the maximum length of ${limits.maxScriptLength} characters`,
-      category: 'limit',
-      severity: 'error',
-    });
-    return { program: { statements, referencedVariants }, diagnostics };
-  }
 
   const s = new Scanner(script);
   while (true) {
@@ -782,7 +756,7 @@ export function parseCelScript(
     const index = s.pos;
     const line = s.line;
     try {
-      const statement = parseStatement(s, limits);
+      const statement = parseStatement(s);
       statements.push(statement);
       if (statement.op === 'useVariant') {
         referencedVariants.push(statement.id);
@@ -818,11 +792,8 @@ export class CelError extends Error {
 }
 
 /** Parses a script, throwing `CelError` on the first error. */
-export function compileCelScript(
-  script: string,
-  limits: CelLimits = DEFAULT_CEL_LIMITS
-): CelProgram {
-  const { program, diagnostics } = parseCelScript(script, limits);
+export function compileCelScript(script: string): CelProgram {
+  const { program, diagnostics } = parseCelScript(script);
   const error = diagnostics.find((d) => d.severity === 'error');
   if (error) {
     throw new CelError(`line ${error.line}: ${error.message}`, error);
@@ -959,23 +930,21 @@ export interface CelApplyOptions {
   activeVariants?: Iterable<string>;
   /** Shared with the other programs of a request; omit for a fresh one. */
   budget?: CelBudget;
-  limits?: CelLimits;
 }
 
 /**
- * Bounds `use variant`, which expands as includes per script to the power of
- * the nesting depth.
+ * Work one request's variants may do: one per instruction, plus one per entry
+ * its path visits and per value it writes.
  */
 export interface CelBudget {
-  instructions: number;
+  work: number;
+  readonly limit: number;
   /** Set once the allowance runs out, so the cut is reported once. */
   exhausted: boolean;
 }
 
-export function createCelBudget(
-  limits: CelLimits = DEFAULT_CEL_LIMITS
-): CelBudget {
-  return { instructions: limits.maxTotalInstructions, exhausted: false };
+export function createCelBudget(limit = DEFAULT_CEL_WORK): CelBudget {
+  return { work: limit, limit, exhausted: false };
 }
 
 export interface CelApplyResult {
@@ -1054,37 +1023,108 @@ function matchesFilter(
   element: unknown,
   segment: Extract<CelPathSegment, { kind: 'filter' }>
 ): boolean {
-  if (segment.key && !isPlainObject(element)) return false;
+  return segment.conditions.every((condition) =>
+    matchesCondition(element, condition)
+  );
+}
+
+function matchesCondition(
+  element: unknown,
+  condition: CelFilterCondition
+): boolean {
+  if (condition.key && !isPlainObject(element)) return false;
   let actual: unknown = element;
-  for (const part of segment.key ? segment.key.split('.') : []) {
-    if (!isPlainObject(actual)) return segment.operator.startsWith('!');
+  for (const part of condition.key ? condition.key.split('.') : []) {
+    if (!isPlainObject(actual)) return condition.operator.startsWith('!');
     actual = actual[part];
   }
   const comparable =
     actual !== undefined &&
     actual !== null &&
-    (typeof segment.value !== 'object' || segment.value === null);
+    (typeof condition.value !== 'object' || condition.value === null);
 
   let hit: boolean;
-  if (segment.operator === '*=' || segment.operator === '!*=') {
+  if (condition.operator === '*=' || condition.operator === '!*=') {
     hit =
       comparable &&
       String(actual)
         .toLowerCase()
-        .includes(String(segment.value).toLowerCase());
+        .includes(String(condition.value).toLowerCase());
   } else {
     // String coercion so `[enabled=true]` and `[instanceId=abc]` both read well.
     hit =
-      deepEqual(actual, segment.value) ||
-      (comparable && String(actual) === String(segment.value));
+      deepEqual(actual, condition.value) ||
+      (comparable && String(actual) === String(condition.value));
   }
 
-  return segment.operator === '!=' || segment.operator === '!*=' ? !hit : hit;
+  return condition.operator === '!=' || condition.operator === '!*='
+    ? !hit
+    : hit;
+}
+
+type FilterSegment = Extract<CelPathSegment, { kind: 'filter' }>;
+
+/** Dropped by any write that could move an entry or change an indexed key. */
+class ListIndexes {
+  private byList = new WeakMap<unknown[], Map<string, Map<string, number[]>>>();
+  private readonly keys = new Set<string>();
+
+  lookup(list: unknown[], key: string, value: string, budget: CelBudget) {
+    let byKey = this.byList.get(list);
+    if (!byKey) this.byList.set(list, (byKey = new Map()));
+    let index = byKey.get(key);
+    if (!index) {
+      const built = new Map<string, number[]>();
+      list.forEach((entry, i) => {
+        const actual = isPlainObject(entry) ? entry[key] : undefined;
+        if (actual === undefined || actual === null) return;
+        const at = built.get(String(actual));
+        if (at) at.push(i);
+        else built.set(String(actual), [i]);
+      });
+      budget.work -= list.length;
+      byKey.set(key, (index = built));
+      this.keys.add(key);
+    }
+    return index.get(value) ?? [];
+  }
+
+  written(container: unknown, key: string | number): void {
+    if (Array.isArray(container) || this.keys.has(String(key))) this.clear();
+  }
+
+  clear(): void {
+    this.byList = new WeakMap();
+  }
+}
+
+function selectEntries(
+  list: unknown[],
+  segment: FilterSegment,
+  state: RunState
+): number[] {
+  const lookup = segment.conditions.find(
+    (c) =>
+      c.operator === '=' &&
+      c.key &&
+      !c.key.includes('.') &&
+      ['string', 'number', 'boolean'].includes(typeof c.value)
+  );
+  const candidates = lookup
+    ? state.indexes.lookup(list, lookup.key, String(lookup.value), state.budget)
+    : list.map((_, i) => i);
+  state.budget.work -= candidates.length;
+  return candidates.filter((i) => matchesFilter(list[i], segment));
 }
 
 /** Missing objects are materialised only for plain key segments: the shape of
  * an array element cannot be guessed. */
-function step(nodes: any[], segment: CelPathSegment, seed: any): any[] {
+function step(
+  nodes: any[],
+  segment: CelPathSegment,
+  seed: any,
+  state: RunState
+): any[] {
   const out: any[] = [];
   for (const node of nodes) {
     switch (segment.kind) {
@@ -1092,6 +1132,7 @@ function step(nodes: any[], segment: CelPathSegment, seed: any): any[] {
         if (!isPlainObject(node)) break;
         if (node[segment.name] === undefined && seed !== undefined) {
           assign(node, segment.name, seed);
+          state.indexes.written(node, segment.name);
         }
         if (node[segment.name] !== undefined) out.push(node[segment.name]);
         break;
@@ -1108,16 +1149,23 @@ function step(nodes: any[], segment: CelPathSegment, seed: any): any[] {
         break;
       case 'filter':
         if (Array.isArray(node)) {
-          out.push(...node.filter((el) => matchesFilter(el, segment)));
+          for (const i of selectEntries(node, segment, state))
+            out.push(node[i]);
         }
         break;
     }
   }
+  state.budget.work -= nodes.length + (segment.kind === 'all' ? out.length : 0);
   return out;
 }
 
 /** Resolves a path to the (container, key) pairs it addresses. */
-function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
+function resolveTargets(
+  config: any,
+  path: CelPath,
+  create: boolean,
+  state: RunState
+): Target[] {
   const segments: CelPathSegment[] = [
     { kind: 'key', name: path.root },
     ...path.segments,
@@ -1131,7 +1179,7 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
         ? {}
         : []
       : undefined;
-    nodes = step(nodes, segments[i], seed);
+    nodes = step(nodes, segments[i], seed, state);
     if (nodes.length === 0) return [];
   }
 
@@ -1160,15 +1208,14 @@ function resolveTargets(config: any, path: CelPath, create: boolean): Target[] {
         break;
       case 'filter':
         if (Array.isArray(node)) {
-          node.forEach((el, i) => {
-            if (matchesFilter(el, last)) {
-              targets.push({ container: node, key: i });
-            }
-          });
+          for (const i of selectEntries(node, last, state)) {
+            targets.push({ container: node, key: i });
+          }
         }
         break;
     }
   }
+  state.budget.work -= nodes.length;
   return targets;
 }
 
@@ -1209,7 +1256,8 @@ function resolveInsertion(
   config: any,
   path: CelPath,
   placement: 'before' | 'after',
-  count: number
+  count: number,
+  state: RunState
 ): InsertResolution {
   const segments: CelPathSegment[] = [
     { kind: 'key', name: path.root },
@@ -1220,7 +1268,7 @@ function resolveInsertion(
   let nodes: any[] = [config];
   for (let i = 0; i < segments.length - 1; i++) {
     const seed = segments[i + 1].kind === 'key' ? {} : [];
-    nodes = step(nodes, segments[i], seed);
+    nodes = step(nodes, segments[i], seed, state);
     if (nodes.length === 0) return { kind: 'no-match' };
   }
 
@@ -1239,6 +1287,7 @@ function resolveInsertion(
       if (list === undefined) {
         list = [];
         assign(node, last.name, list);
+        state.indexes.written(node, last.name);
       }
       if (!Array.isArray(list)) {
         notAList = true;
@@ -1253,10 +1302,7 @@ function resolveInsertion(
       array = node;
       anchor = last.index < 0 ? node.length + last.index : last.index;
     } else if (last.kind === 'filter') {
-      const indices: number[] = [];
-      node.forEach((element, i) => {
-        if (matchesFilter(element, last)) indices.push(i);
-      });
+      const indices = selectEntries(node, last, state);
       if (indices.length === 0) continue;
       array = node;
       anchor = indices[0];
@@ -1322,6 +1368,45 @@ interface RunState {
   touchedRoots: Set<string>;
   visiting: Set<string>;
   budget: CelBudget;
+  indexes: ListIndexes;
+}
+
+const literalSizes = new WeakMap<object, number>();
+
+function sizeOf(value: CelLiteral): number {
+  if (value === null || typeof value !== 'object') return 1;
+  let size = literalSizes.get(value);
+  if (size === undefined) {
+    size = 1;
+    for (const item of Array.isArray(value) ? value : Object.values(value)) {
+      size += sizeOf(item);
+    }
+    literalSizes.set(value, size);
+  }
+  return size;
+}
+
+function writeCost(statement: CelStatement, targets: Target[]): number {
+  let cost = targets.length;
+  if (statement.op === 'set' || statement.op === 'merge') {
+    cost += targets.length * sizeOf(statement.value);
+  } else if (
+    statement.op === 'add' ||
+    statement.op === 'prepend' ||
+    statement.op === 'remove'
+  ) {
+    const size = statement.values.reduce<number>(
+      (sum, v) => sum + sizeOf(v),
+      0
+    );
+    for (const { container, key } of targets) {
+      const list = container[key];
+      // Each value is compared with every entry already in the list.
+      const length = Array.isArray(list) ? list.length : 0;
+      cost += size + statement.values.length * length;
+    }
+  }
+  return cost;
 }
 
 function runProgram(
@@ -1330,28 +1415,29 @@ function runProgram(
   options: CelApplyOptions,
   state: RunState
 ): void {
-  const limits = options.limits ?? DEFAULT_CEL_LIMITS;
   const { notes, touchedRoots, visiting, budget } = state;
   const addNote = (diagnostic: CelDiagnostic) => {
     if (notes.length < MAX_NOTES) notes.push(diagnostic);
   };
+  const exhaust = (statement: CelStatement) => {
+    if (budget.exhausted) return;
+    budget.exhausted = true;
+    // Not capped: it is what explains the missing instructions.
+    notes.push(
+      note(
+        statement,
+        `the variants on this request did more work than this instance allows (${budget.limit}); this and everything after it was skipped`,
+        'limit'
+      )
+    );
+  };
 
   for (const statement of program.statements) {
-    if (budget.instructions <= 0) {
-      // Not capped: it is what explains the missing instructions.
-      if (!budget.exhausted) {
-        budget.exhausted = true;
-        notes.push(
-          note(
-            statement,
-            `this request ran past the limit of ${limits.maxTotalInstructions} variant instructions; everything after this was skipped`,
-            'limit'
-          )
-        );
-      }
+    if (budget.exhausted || budget.work <= 0) {
+      exhaust(statement);
       return;
     }
-    budget.instructions--;
+    budget.work--;
 
     if (statement.op === 'useVariant') {
       if (visiting.has(statement.id)) {
@@ -1411,7 +1497,8 @@ function runProgram(
         config,
         statement.path,
         statement.placement,
-        statement.count
+        statement.count,
+        state
       );
       if (resolution.kind === 'not-a-list') {
         addNote(
@@ -1446,10 +1533,21 @@ function runProgram(
           )
         );
       }
+      const size = statement.values.reduce<number>(
+        (sum, v) => sum + sizeOf(v),
+        0
+      );
+      const cost = resolution.positions.length * (1 + size);
+      if (cost > budget.work) {
+        exhaust(statement);
+        return;
+      }
+      budget.work -= cost;
       for (const { array, index } of resolution.positions) {
         // Cloned per list so the copies never share a reference.
         array.splice(index, 0, ...statement.values.map(cloneLiteral));
       }
+      state.indexes.clear();
       touchedRoots.add(statement.path.root);
       continue;
     }
@@ -1473,7 +1571,7 @@ function runProgram(
           }
         : statement.path;
 
-    const targets = resolveTargets(config, path, create);
+    const targets = resolveTargets(config, path, create, state);
     if (targets.length === 0) {
       addNote(
         note(
@@ -1484,16 +1582,12 @@ function runProgram(
       );
       continue;
     }
-    if (targets.length > limits.maxPathMatches) {
-      addNote(
-        note(
-          statement,
-          `"${statement.path.raw}" matched ${targets.length} places, over the limit of ${limits.maxPathMatches}`,
-          'limit'
-        )
-      );
-      continue;
+    const cost = writeCost(statement, targets);
+    if (cost > budget.work) {
+      exhaust(statement);
+      return;
     }
+    budget.work -= cost;
 
     switch (statement.op) {
       case 'set':
@@ -1593,6 +1687,13 @@ function runProgram(
         break;
     }
 
+    if (statement.op === 'add' || statement.op === 'prepend') {
+      state.indexes.clear();
+    } else {
+      for (const { container, key } of targets) {
+        state.indexes.written(container, key);
+      }
+    }
     touchedRoots.add(statement.path.root);
   }
 }
@@ -1613,7 +1714,8 @@ export function runCelProgram(
     notes,
     touchedRoots,
     visiting: new Set<string>(options.activeVariants ?? []),
-    budget: options.budget ?? createCelBudget(options.limits),
+    budget: options.budget ?? createCelBudget(),
+    indexes: new ListIndexes(),
   });
   return { notes, touchedRoots };
 }

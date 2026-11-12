@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { TICKS_PER_MS } from '../format';
-import { REMOTE_DEVICES } from '../queries';
-import { useSession } from '../session';
-import type { BaseItemDto } from '../types';
+import { TICKS_PER_MS } from '@/lib/format';
+import { REMOTE_DEVICES } from '@/lib/jellyfin/history';
+import { useSession } from '@/lib/jellyfin/session';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 import type { TrackKind } from './tracks';
 
 export type RemotePlaystate =

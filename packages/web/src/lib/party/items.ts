@@ -1,5 +1,5 @@
-import { episodeCode, ticksToMs } from '../format';
-import type { BaseItemDto, SourceInfo } from '../types';
+import { episodeCode, ticksToMs } from '@/lib/format';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 /** What a party plays, as its members read it: sealed, so the relay never does. */
 export interface PartyItem {

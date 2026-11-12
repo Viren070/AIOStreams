@@ -1,5 +1,5 @@
-import { sameLanguage } from '../languages';
-import type { EngineTrack } from '../playback/engine';
+import { sameLanguage } from '@/lib/languages';
+import type { EngineTrack } from '@/lib/playback/engine';
 import { alignSubtitles, type Alignment, type Span } from './align';
 import { subtitleType } from './tracks';
 

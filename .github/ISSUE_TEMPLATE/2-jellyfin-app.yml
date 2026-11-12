@@ -1,0 +1,131 @@
+name: 'Bug: a Jellyfin app'
+description: >-
+  Infuse, Swiftfin, Streamyfin, Findroid, Kodi or another Jellyfin app misbehaving with AIOStreams as its
+  server.
+title: 'bug(jellyfin): '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        This is for apps made for Jellyfin, signed in to AIOStreams. For the AIOStreams app itself, use
+        **Bug: the AIOStreams app**.
+
+
+        **Before you file**, check [Jellyfin apps](https://aiostreams.org/apps/jellyfin): each
+        app uses different parts of the server, and some differences are known, such as how apps show
+        collections and versions. Trying the same thing in another Jellyfin app, or in the AIOStreams app,
+        tells a problem in AIOStreams apart from one in that app.
+  - type: input
+    id: app
+    attributes:
+      label: App
+      description: The app's name and version, and the device and system it runs on.
+      placeholder: Infuse 8.2 on Apple TV (tvOS 26)
+    validations:
+      required: true
+  - type: input
+    id: addonVersion
+    attributes:
+      label: AIOStreams version
+      description: >-
+        The exact version at the top of the configure page's **About** page. "Latest" is not a version.
+      placeholder: v2.38.0 or 2026.11.10.1234-nightly
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Instance
+      options:
+        - Public instance by ElfHosted
+        - Another public instance (name it below)
+        - Private ElfHosted instance
+        - Self-hosted with Docker
+        - Self-hosted from source
+    validations:
+      required: true
+  - type: input
+    id: instanceAddress
+    attributes:
+      label: Instance address
+      description: For a public instance, its address. Leave out your UUID and password.
+  - type: dropdown
+    id: address
+    attributes:
+      label: Address the app signed in with
+      description: >-
+        Which of the addresses under **Save & Install → AIOStreams app → Sign-in addresses**, or the
+        plain server address.
+      options:
+        - The address with a sign-in picker
+        - A user's own address
+        - The plain server address
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Connecting or signing in
+        - Libraries, collections or home rows
+        - Item pages, seasons or episodes
+        - Search
+        - Playback or versions
+        - Audio or subtitle tracks
+        - Watched marks, resume points or Continue Watching
+        - Favourites, playlists or ratings
+        - Live TV
+        - Users or PINs
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: elsewhere
+    attributes:
+      label: Does it happen elsewhere?
+      options:
+        - It also happens in another Jellyfin app
+        - It also happens in the AIOStreams app
+        - It only happens in this app
+        - I haven't tried another app
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: >-
+        What you did in the app, what it showed, and what you expected instead, step by step. Name the
+        title and episode if one is involved.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        Self-hosted: the server's logs while it happens, ideally with `LOG_LEVEL=debug`; they show each
+        request the app made. Public instance: the exact time with its timezone, and any error the app
+        showed.
+      render: shell
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: My title describes the actual problem.
+          required: true
+        - label: I searched open and closed issues, and this isn't a duplicate.
+          required: true
+        - label: >-
+            It happens on the [latest release](https://github.com/Viren070/AIOStreams/releases/latest) of
+            AIOStreams (or a current nightly).
+          required: true

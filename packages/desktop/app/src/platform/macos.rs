@@ -37,6 +37,7 @@ use objc2_quartz_core::{
     CAAutoresizingMask, CACornerMask, CALayer, CAMetalLayer, CAOpenGLLayer, CATransaction,
     kCAContentsFormatRGBA16Float,
 };
+use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::macos::WindowExtMacOS;
 use tao::window::{Icon, Window};
 
@@ -48,6 +49,13 @@ use video::Output;
 /// Custom protocols are served from `<scheme>://localhost` on macOS.
 pub const APP_URL: &str = "aiostreams://localhost/";
 pub const PLATFORM: &str = "macos";
+pub const PIP: bool = false;
+
+pub fn work_area(_window: &Window) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+    None
+}
+
+pub fn keep_aspect(_window: &Window, _aspect: Option<f64>) {}
 pub const WEB_DATA_DIR: &str = "WebKit";
 
 /// Held for as long as the app runs.
@@ -1014,6 +1022,17 @@ pub fn device_name() -> String {
     command_output("scutil", &["--get", "ComputerName"])
         .or_else(|| command_output("hostname", &["-s"]))
         .unwrap_or_else(|| "Mac".into())
+}
+
+/// The locale's hours, which follow the system's 24-hour switch.
+pub fn hours24() -> Option<bool> {
+    let pattern = objc2_foundation::NSDateFormatter::dateFormatFromTemplate_options_locale(
+        &NSString::from_str("j"),
+        0,
+        Some(&objc2_foundation::NSLocale::currentLocale()),
+    )?
+    .to_string();
+    Some(pattern.contains('H') || pattern.contains('k'))
 }
 
 /// `("2026-09-24", "21:03:04.123")`.

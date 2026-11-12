@@ -1,7 +1,8 @@
 import { t } from '@lingui/core/macro';
 import { formatLocale } from './i18n';
 import { settings } from './settings';
-import type { BaseItemDto } from './types';
+import { appBridge } from './hosts/shell/bridge';
+import type { BaseItemDto } from './jellyfin/types';
 
 export const TICKS_PER_MS = 10_000;
 
@@ -220,9 +221,19 @@ export function airTime(iso: string): string | null {
   return clockTime(new Date(iso));
 }
 
-/** `7:30 PM` */
+/**
+ * The hours the user picked, or on Automatic the system's own choice where an
+ * app sends it, which a web view's formats ignore.
+ */
+export function hourCycle(): Pick<Intl.DateTimeFormatOptions, 'hourCycle'> {
+  const picked = settings.interface.timeFormat.read();
+  const hours24 = picked === 'auto' ? appBridge()?.hours24 : picked === '24';
+  return hours24 === undefined ? {} : { hourCycle: hours24 ? 'h23' : 'h12' };
+}
+
+/** `7:30 PM` or `19:30` */
 export const clockTime = (at: Date | number) =>
-  dateFormat({ hour: 'numeric', minute: '2-digit' }).format(at);
+  dateFormat({ hour: 'numeric', minute: '2-digit', ...hourCycle() }).format(at);
 
 /** `Sun, 28 Sep` */
 export function dayLabel(iso: string): string {

@@ -24,6 +24,8 @@ data class AppIdentity(
     val miniPlayer: Boolean,
     /** A controller's buttons sent as `gamepad` messages, so the page leaves the gamepad API alone. */
     val gamepadButtons: Boolean,
+    /** The system's 24-hour clock setting, which the web view's time formats ignore. */
+    val hours24: Boolean,
 )
 
 /**
@@ -98,6 +100,7 @@ class AppBridge(
             pip: ${identity.pip},
             miniPlayer: ${identity.miniPlayer},
             gamepadButtons: ${identity.gamepadButtons},
+            hours24: ${identity.hours24},
             device: ${JsonPrimitive(identity.device)},
             deviceId: ${JsonPrimitive(identity.deviceId)},
             send,

@@ -1,0 +1,630 @@
+import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { BiCheck, BiPlay } from 'react-icons/bi';
+import { cn } from '@aiostreams/ui/core/styling';
+import { onScreen, useNear } from '@/hooks/use-in-view';
+import {
+  artworkKey,
+  drawnArtwork,
+  holdArtwork,
+  onDrawn,
+} from '@/lib/artwork/drawn';
+import { canShrink, shrinkArtwork } from '@/lib/artwork/shrink';
+import { currentHost } from '@/lib/hosts';
+import { drawnRatio } from '@/lib/artwork/urls';
+import { settings, useSetting } from '@/lib/settings';
+import { CachedImage } from '@/components/cached-image';
+import { Anchor } from '@/components/anchor';
+
+type Sources = string | string[] | null;
+
+/** URLs, or a function giving them for the CSS width the image is drawn at. */
+export type ArtworkSource = Sources | ((width: number) => Sources);
+
+interface Box {
+  /** CSS pixels, only ever growing, so a smaller layout keeps what it loaded. */
+  width: number;
+  device: { width: number; height: number };
+}
+
+function deviceSize(entry: ResizeObserverEntry) {
+  // The device-pixel box leaves out a TV's fit to its screen.
+  const box = !currentHost().tv && entry.devicePixelContentBoxSize?.[0];
+  const ratio = drawnRatio();
+  return box
+    ? { width: box.inlineSize, height: box.blockSize }
+    : {
+        width: Math.round(entry.contentRect.width * ratio),
+        height: Math.round(entry.contentRect.height * ratio),
+      };
+}
+
+const near = (a: number, b: number) => Math.abs(a - b) <= a * 0.1;
+
+/** The drawn size of whichever element the returned ref is on. */
+function useBox() {
+  const [box, setBox] = React.useState<Box>();
+  const observer = React.useRef<ResizeObserver | null>(null);
+  React.useEffect(() => () => observer.current?.disconnect(), []);
+  const measure = React.useCallback((el: Element | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    const next = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      const device = deviceSize(entry);
+      if (!width || !device.width || !device.height) return;
+      setBox((prev) => {
+        if (!prev) return { width, device };
+        // Small changes are left to CSS scaling rather than redrawn.
+        const same =
+          near(prev.device.width, device.width) &&
+          near(prev.device.height, device.height);
+        if (width <= prev.width && same) return prev;
+        return {
+          width: Math.max(width, prev.width),
+          device: same ? prev.device : device,
+        };
+      });
+    });
+    try {
+      next.observe(el, { box: 'device-pixel-content-box' });
+    } catch {
+      next.observe(el);
+    }
+    observer.current = next;
+  }, []);
+  return [box, measure] as const;
+}
+
+function decoded(src: string): Promise<void> {
+  const image = new Image();
+  image.src = src;
+  return image.decode();
+}
+
+const firstOf = (sources: Sources) =>
+  (Array.isArray(sources) ? sources[0] : sources) ?? undefined;
+
+/** A list is tried in order, moving on when an image fails to load. */
+export function Artwork({
+  src,
+  alt,
+  className,
+  own,
+  standIn,
+}: {
+  src: ArtworkSource;
+  alt: string;
+  className?: string;
+  /** How many leading sources are the item's own, `standIn` covering the rest. */
+  own?: number;
+  standIn?: React.ReactNode;
+}) {
+  const [box, measure] = useBox();
+  const resolved =
+    typeof src === 'function' ? (box ? src(box.width) : undefined) : src;
+  const sources = Array.isArray(resolved)
+    ? resolved
+    : resolved
+      ? [resolved]
+      : [];
+  const key = sources.join('|');
+  // What an earlier card drew of the image, shown before this one is measured,
+  // so a page built again shows its artwork at once.
+  const [early] = React.useState(() => {
+    const first = firstOf(typeof src === 'function' ? src(1) : src);
+    const kept = first ? drawnArtwork(first) : undefined;
+    return kept && first ? { key: artworkKey(first), src: kept.src } : null;
+  });
+  // Tied to the list and the source rather than reset by an effect, which a
+  // cached image can finish loading before.
+  const [failed, setFailed] = React.useState({ key: '', count: 0 });
+  const attempt = failed.key === key ? failed.count : 0;
+  const [loadedKey, setLoadedKey] = React.useState(early?.key ?? null);
+  // Loaded out of sight, it shows at once: a fade nobody sees still costs frames.
+  const [unseen, setUnseen] = React.useState(false);
+  const [plain, setPlain] = React.useState<string | null>(null);
+  const current = sources[attempt];
+  const currentKey = current && artworkKey(current);
+  const loaded = currentKey ? loadedKey === currentKey : !!early;
+  const onLoad = (el: Element | null) => {
+    if (!currentKey) return;
+    setUnseen(!!el && !onScreen(el));
+    setLoadedKey(currentKey);
+  };
+  const imageClass = cn(
+    // A focus's scale keeps up with focus; a loaded image fades in slower.
+    'absolute inset-0 h-full w-full object-cover [transition-duration:250ms,300ms]',
+    unseen ? 'transition-[transform]' : 'transition-[transform,opacity]',
+    // Scaled at rest too: gaining or losing a transform costs a layout, changing one doesn't.
+    'scale-100',
+    loaded ? 'opacity-100' : 'opacity-0',
+    className
+  );
+  // Laid out empty first when the URL waits on the drawn width.
+  if (resolved === undefined && !early)
+    return <div ref={measure} className={imageClass} />;
+  const borrowed = attempt >= (own ?? sources.length) ? standIn : null;
+  if (resolved !== undefined && !current) {
+    if (borrowed) return borrowed;
+    return (
+      <div
+        data-ui="artwork-fallback"
+        className={cn(
+          'absolute inset-0 flex items-end bg-gray-900 p-3 text-sm text-[--muted]',
+          className
+        )}
+      >
+        <span className="line-clamp-3">{alt}</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      {canShrink && plain !== current ? (
+        <ShrunkImage
+          src={current}
+          early={early?.src}
+          alt={alt}
+          className={imageClass}
+          size={box?.device}
+          measure={measure}
+          onLoad={onLoad}
+          onPlain={() => setPlain(current ?? null)}
+        />
+      ) : (
+        <CachedImage
+          ref={measure}
+          data-ui="artwork"
+          src={current}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          onLoad={(e) => onLoad(e.currentTarget)}
+          onError={() =>
+            setFailed((f) => ({
+              key,
+              count: (f.key === key ? f.count : 0) + 1,
+            }))
+          }
+          className={imageClass}
+        />
+      )}
+      {borrowed}
+    </>
+  );
+}
+
+/**
+ * `src` read in a worker: shown as it is when near the box's device size, else
+ * drawn shrunk to it, or handed back for a plain image.
+ */
+function ShrunkImage({
+  src,
+  early,
+  alt,
+  className,
+  size,
+  measure,
+  onLoad,
+  onPlain,
+}: {
+  src: string | undefined;
+  /** An earlier card's copy, shown until this one's arrives. */
+  early?: string;
+  alt: string;
+  className: string;
+  size: { width: number; height: number } | undefined;
+  measure: (el: Element | null) => void;
+  onLoad: (el: Element | null) => void;
+  onPlain: () => void;
+}) {
+  const [view, visible, sight] = useNear<HTMLElement>('300px');
+  const canvas = React.useRef<HTMLCanvasElement | null>(null);
+  const ref = React.useCallback(
+    (el: HTMLElement | null) => {
+      view.current = el;
+      canvas.current = el instanceof HTMLCanvasElement ? el : null;
+      measure(el);
+    },
+    [view, measure]
+  );
+  const [shown, setShown] = React.useState(early);
+  const [bitmap, setBitmap] = React.useState<ImageBitmap | null>(null);
+  React.useEffect(() => (shown ? holdArtwork(shown) : undefined), [shown]);
+  const done = React.useRef({ onLoad, onPlain });
+  done.current = { onLoad, onPlain };
+
+  React.useEffect(() => {
+    const el = view.current;
+    if (!src || !visible || !size || !el) return;
+    let live = true;
+    const job = shrinkArtwork(src, size.width, size.height, el, !sight);
+    void job.promise.then((result) => {
+      if ('bitmap' in result) return setBitmap(result.bitmap);
+      if (!('src' in result)) return done.current.onPlain();
+      // Decoded first, so it shows whole, and in one render with its loading.
+      decoded(result.src).then(
+        () => {
+          if (!live) return;
+          setShown(result.src);
+          done.current.onLoad(view.current);
+        },
+        () => live && done.current.onPlain()
+      );
+    });
+    return () => {
+      live = false;
+      job.cancel();
+    };
+  }, [visible, sight, size, src, view]);
+
+  // A canvas holds its pixels for good, so it gives way to the image's small
+  // copy once the worker has made one.
+  React.useEffect(() => {
+    if (!src || !bitmap) return;
+    let live = true;
+    const stop = onDrawn(src, (copy) => {
+      void decoded(copy).then(
+        () => {
+          if (!live) return;
+          setShown(copy);
+          setBitmap(null);
+        },
+        () => undefined
+      );
+    });
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [src, bitmap]);
+
+  React.useLayoutEffect(() => {
+    const el = canvas.current;
+    if (!bitmap || !el) return;
+    el.width = bitmap.width;
+    el.height = bitmap.height;
+    // A CPU-backed canvas paints with the page instead of becoming a layer.
+    el.getContext('2d', { willReadFrequently: true })?.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    done.current.onLoad(el);
+  }, [bitmap]);
+
+  return bitmap ? (
+    <canvas
+      ref={ref}
+      data-ui="artwork"
+      role="img"
+      aria-label={alt || undefined}
+      aria-hidden={!alt || undefined}
+      className={className}
+    />
+  ) : (
+    <img
+      ref={ref}
+      data-ui="artwork"
+      src={shown}
+      alt={alt}
+      decoding="async"
+      draggable={false}
+      // Without a source an image would show its alt text while looking.
+      style={shown ? undefined : { visibility: 'hidden' }}
+      className={className}
+    />
+  );
+}
+
+export function ProgressBar({ percent }: { percent: number }) {
+  return (
+    <div
+      data-ui="progress-bar"
+      className="absolute inset-x-0 bottom-0 h-1 bg-black/60"
+    >
+      <div
+        data-ui="progress-bar-fill"
+        className="h-full bg-brand-500"
+        style={{ width: `${Math.min(100, Math.max(2, percent))}%` }}
+      />
+    </div>
+  );
+}
+
+/** Points out the item a page opened on with a ring that blinks, then fades. */
+export function OpenedPulse() {
+  return (
+    <motion.span
+      aria-hidden
+      data-ui="opened-pulse"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 0.3, 1, 0] }}
+      transition={{ duration: 2, delay: 0.3, times: [0, 0.15, 0.35, 0.55, 1] }}
+      className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] ring-2 ring-inset ring-[--ring]"
+    />
+  );
+}
+
+export function WatchedMark() {
+  return (
+    <span
+      data-ui="watched-badge"
+      className="absolute end-2 top-2 z-[2] flex size-6 items-center justify-center rounded-full bg-brand-500 text-white shadow"
+    >
+      <BiCheck className="text-lg" />
+    </span>
+  );
+}
+
+export type CardShape = 'poster' | 'landscape' | 'square';
+
+const SHAPE_CLASS: Record<CardShape, string> = {
+  poster: 'aspect-[2/3]',
+  landscape: 'aspect-video',
+  square: 'aspect-square',
+};
+
+export interface PosterCardProps {
+  href: string;
+  shape?: CardShape;
+  image: ArtworkSource;
+  title: string;
+  subtitle?: string;
+  itemType?: string;
+  watched?: boolean;
+  favourite?: boolean;
+  /** Episodes left to watch, for a show. */
+  unwatched?: number;
+  progress?: number | null;
+  className?: string;
+  /** Played over the poster while the card is hovered or focused. */
+  animated?: string;
+}
+
+function AnimatedPoster({ src }: { src: string }) {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <img
+      data-ui="poster-card-animated"
+      src={src}
+      alt=""
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onLoad={() => setLoaded(true)}
+      className={cn(
+        'absolute inset-0 h-full w-full scale-[1.04] object-cover transition-opacity duration-300',
+        loaded ? 'opacity-100' : 'opacity-0'
+      )}
+    />
+  );
+}
+
+export function PosterCard(props: PosterCardProps) {
+  const { href, image, title, subtitle, itemType, watched } = props;
+  const { favourite, unwatched, progress } = props;
+  const shape = props.shape ?? 'poster';
+  // Mounted only while active, so a row of them decodes nothing at rest.
+  const [active, setActive] = React.useState(false);
+  const still = useReducedMotion();
+  const animated = props.animated && !still ? props.animated : undefined;
+  const [lines] = useSetting(settings.interface.posterLines);
+  const showTitle = lines.includes('title');
+  const showSubtitle = !!subtitle && lines.includes('year');
+  return (
+    <Anchor
+      data-ui="poster-card"
+      data-shape={shape}
+      data-type={itemType}
+      data-watched={watched || undefined}
+      data-favourite={favourite || undefined}
+      data-in-progress={(!!progress && progress > 0) || undefined}
+      href={href}
+      title={showTitle ? undefined : title}
+      data-focus="own"
+      className={cn('group/poster block space-y-2', props.className)}
+      {...(animated && {
+        onPointerEnter: () => setActive(true),
+        onPointerLeave: () => setActive(false),
+        onFocus: (e: React.FocusEvent<HTMLAnchorElement>) =>
+          setActive(e.currentTarget.matches(':focus-visible')),
+        onBlur: () => setActive(false),
+      })}
+    >
+      <div
+        data-ui="poster-card-image"
+        data-focus-frame
+        className={cn(
+          'relative w-full overflow-hidden rounded-lg bg-gray-900 ring-1 ring-white/5',
+          SHAPE_CLASS[shape]
+        )}
+      >
+        <Artwork
+          src={image}
+          alt={title}
+          className="group-hover/poster:scale-[1.04] group-focus-visible/poster:scale-[1.04]"
+        />
+        {animated && active && <AnimatedPoster src={animated} />}
+        <div
+          data-ui="poster-card-shade"
+          className="absolute inset-0 bg-black/20 opacity-0 transition-opacity [transition-duration:250ms] group-hover/poster:opacity-100 group-focus-visible/poster:opacity-100"
+        />
+        {watched && <WatchedMark />}
+        {!watched && !!unwatched && (
+          <span
+            data-ui="unwatched-count"
+            className="absolute end-2 top-2 z-[2] rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white shadow"
+          >
+            {unwatched}
+          </span>
+        )}
+        {progress != null && progress > 0 && <ProgressBar percent={progress} />}
+      </div>
+      {(showTitle || showSubtitle) && (
+        <div data-ui="poster-card-text" className="min-w-0 px-0.5">
+          {showTitle && (
+            <p
+              data-ui="poster-card-title"
+              className="truncate text-sm font-medium"
+              title={title}
+            >
+              {title}
+            </p>
+          )}
+          {showSubtitle && (
+            <p
+              data-ui="poster-card-subtitle"
+              className="truncate text-xs text-[--muted]"
+            >
+              {subtitle}
+            </p>
+          )}
+        </div>
+      )}
+    </Anchor>
+  );
+}
+
+export interface WideCardProps {
+  href?: string;
+  onClick?: () => void;
+  image: ArtworkSource;
+  title: string;
+  subtitle?: string;
+  meta?: React.ReactNode;
+  watched?: boolean;
+  progress?: number | null;
+  /** Rings the card, for the item a page was opened on. */
+  highlighted?: boolean;
+  /** No play hint, for what cannot play yet. */
+  unavailable?: boolean;
+  /** Greyed out, to set it apart from playable neighbours. */
+  dimmed?: boolean;
+  /** Shown over the image's top left corner. */
+  badge?: React.ReactNode;
+  /** Drawn when there is no image, in place of the title. */
+  standIn?: React.ReactNode;
+  className?: string;
+}
+
+/** A landscape card for an episode, a resume point or a live playback. */
+export function WideCard(props: WideCardProps) {
+  const {
+    href,
+    onClick,
+    image,
+    title,
+    subtitle,
+    meta,
+    watched,
+    progress,
+    highlighted,
+    unavailable,
+    dimmed,
+    badge,
+    standIn,
+  } = props;
+  const body = (
+    <>
+      <div
+        data-ui="wide-card-image"
+        data-focus-frame
+        className={cn(
+          'relative aspect-video w-full overflow-hidden rounded-xl bg-gray-900 ring-1 ring-white/5',
+          highlighted && 'ring-2 ring-brand-400'
+        )}
+      >
+        <Artwork
+          src={image}
+          alt={title}
+          standIn={standIn}
+          className={cn(
+            'group-hover/wide:scale-[1.03] group-focus-visible/wide-link:scale-[1.03]',
+            dimmed && 'opacity-40 grayscale'
+          )}
+        />
+        {!unavailable && (
+          <div
+            data-ui="wide-card-play"
+            className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity [transition-duration:250ms] group-hover/wide:opacity-100 group-focus-visible/wide-link:opacity-100"
+          >
+            <BiPlay className="text-5xl text-white opacity-90 drop-shadow" />
+          </div>
+        )}
+        {badge && (
+          <div
+            data-ui="wide-card-badge"
+            className="absolute start-2 top-2 z-[2]"
+          >
+            {badge}
+          </div>
+        )}
+        {watched && <WatchedMark />}
+        {progress != null && progress > 0 && <ProgressBar percent={progress} />}
+      </div>
+      <div
+        data-ui="wide-card-text"
+        className="flex min-w-0 items-start justify-between gap-2 px-0.5"
+      >
+        <div className="min-w-0">
+          <p
+            data-ui="wide-card-title"
+            className="truncate font-semibold"
+            title={title}
+          >
+            {title}
+          </p>
+          {subtitle && (
+            <p
+              data-ui="wide-card-subtitle"
+              className="truncate text-sm text-[--muted]"
+              title={subtitle}
+            >
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {meta && (
+          <div
+            data-ui="wide-card-meta"
+            className="flex-none pt-0.5 text-xs text-[--muted]"
+          >
+            {meta}
+          </div>
+        )}
+      </div>
+    </>
+  );
+  return (
+    <div
+      data-ui="wide-card"
+      data-watched={watched || undefined}
+      data-in-progress={(!!progress && progress > 0) || undefined}
+      data-highlighted={highlighted || undefined}
+      data-dimmed={dimmed || undefined}
+      data-unavailable={unavailable || undefined}
+      className={cn('group/wide relative space-y-2', props.className)}
+    >
+      {href ? (
+        <Anchor
+          href={href}
+          data-focus="own"
+          className="group/wide-link block space-y-2"
+        >
+          {body}
+        </Anchor>
+      ) : onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          data-focus="own"
+          className="group/wide-link block w-full space-y-2 text-start"
+        >
+          {body}
+        </button>
+      ) : (
+        <div className="space-y-2">{body}</div>
+      )}
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useServerInfo } from '../lib/server-info';
+import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { CachedImage } from './cached-image';
 
 /** The configuration's logo, or the product's when it has none or it fails. */

@@ -138,6 +138,10 @@ export class TorrentioPreset extends Preset {
       label: '1337X',
     },
     {
+      value: 'ext',
+      label: 'EXT',
+    },
+    {
       value: 'thepiratebay',
       label: 'The Pirate Bay',
     },

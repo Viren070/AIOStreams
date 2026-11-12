@@ -1,8 +1,13 @@
 import { i18n, type MessageDescriptor } from '@lingui/core';
 import { msg, t } from '@lingui/core/macro';
-import type { Host } from '../hosts';
-import { browserFeatures, type PlayerFeature } from '../playback/controller';
-import { settings, useSetting } from '../settings';
+import type { Host } from '@/lib/hosts';
+import {
+  browserFeatures,
+  webGpuFeatures,
+  type PlayerFeature,
+} from '@/lib/playback/controller';
+import { playsWithWebGpu } from '@/lib/playback/player-choice';
+import { settings, useSetting } from '@/lib/settings';
 
 export type ActionGroup = 'general' | 'navigation' | 'player' | 'live' | 'sync';
 
@@ -226,6 +231,13 @@ export const ACTIONS = {
     keys: ['I'],
     needs: 'stats',
   },
+  'player.upscaling': {
+    label: msg`Anime upscaling`,
+    help: msg`Turns it on or off for what is playing.`,
+    group: 'player',
+    keys: ['U'],
+    needs: 'upscaling',
+  },
 
   'live.channelUp': {
     label: msg`Next channel`,
@@ -294,7 +306,11 @@ export function worksOn(id: ActionId, host: Host): boolean {
   const { group, needs } = action(id);
   if ((group === 'player' || group === 'live' || group === 'sync') && host.play)
     return false;
-  const features = host.player ? host.playerFeatures : browserFeatures;
+  const features = host.player
+    ? host.playerFeatures
+    : playsWithWebGpu()
+      ? webGpuFeatures
+      : browserFeatures;
   return !needs || !!features?.includes(needs);
 }
 

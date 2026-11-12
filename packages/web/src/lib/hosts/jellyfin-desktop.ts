@@ -1,13 +1,13 @@
-import type { BaseItemDto } from '../types';
+import type { BaseItemDto } from '@/lib/jellyfin/types';
 import type { Host } from '.';
 import { nativeShellParts } from './native-shell';
-import { ofType, trackLabel } from '../playback/controller';
+import { ofType, trackLabel } from '@/lib/playback/controller';
 import type {
   EngineFactory,
   EngineFile,
   EngineState,
   EngineTrack,
-} from '../playback/engine';
+} from '@/lib/playback/engine';
 
 const EMBEDDED = 'embedded:';
 

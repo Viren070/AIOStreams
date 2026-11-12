@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest something new for AIOStreams or its apps.
+title: 'feature request: '
+labels:
+  - feature request
+body:
+  - type: checkboxes
+    id: '1'
+    attributes:
+      label: Checklist
+      description: >-
+        If you can't tick a box, say why in the description.
+      options:
+        - label: I searched open issues, and this hasn't been requested before.
+          required: true
+        - label: >-
+            It isn't among the requests [closed as not planned](https://github.com/Viren070/AIOStreams/issues?q=is%3Aissue%20reason%3A%22not%20planned%22).
+          required: true
+        - label: It would help most people who use this part of AIOStreams.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - The AIOStreams app
+        - Streams (results, filters, sorting, expressions)
+        - The formatter
+        - The configure page
+        - Catalogs and metadata
+        - The media server (Jellyfin apps)
+        - Live TV
+        - Usenet engine, library, Sonarr and Radarr
+        - Self-hosting and the dashboard
+        - The docs
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platforms
+    attributes:
+      label: Platforms
+      description: For the app, which platforms it's for, if not all of them.
+      placeholder: Android TV and Fire TV
+  - type: textarea
+    id: '2'
+    attributes:
+      label: The problem or use case
+      description: What you're trying to do, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: '3'
+    attributes:
+      label: What you'd like
+      description: >-
+        How it could work. If you know how it could be built, or another app that does it well, say so.
+    validations:
+      required: true

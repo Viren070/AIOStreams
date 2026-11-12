@@ -8,7 +8,7 @@ import {
   type SubtitleOutline,
   type SubtitleSize,
   type SubtitleStyle,
-} from '../settings';
+} from '@/lib/settings';
 
 const SCALE: Record<SubtitleSize, number> = {
   small: 0.8,

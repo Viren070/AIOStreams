@@ -1,4 +1,4 @@
-import { blobAddress, type BlobAddress } from '../artwork';
+import { blobAddress, type BlobAddress } from '@/lib/artwork/shrink';
 import type { PlayerEngine, Thumbnail } from './engine';
 
 /** The seek bar's picture: the newest answer to the positions it asks for, cleared when it stops asking. */

@@ -2,13 +2,13 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { currentHost } from '../hosts';
-import { itemPath } from '../paths';
+import { currentHost } from '@/lib/hosts';
+import { itemPath } from '@/lib/paths';
 import { PlaybackReporter } from './reporter';
-import { useRefreshAll } from '../queries';
-import { useSession } from '../session';
-import { clock } from '../format';
-import type { BaseItemDto, SourceInfo } from '../types';
+import { useRefreshAll } from '@/lib/jellyfin/watch-state';
+import { useSession } from '@/lib/jellyfin/session';
+import { clock } from '@/lib/format';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 
 /**
  * The item's page, marked with what played, for a player that reports where it

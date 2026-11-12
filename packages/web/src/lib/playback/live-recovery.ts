@@ -1,6 +1,6 @@
 import React from 'react';
-import { appLog } from '../hosts/shell/bridge';
-import { useLatest } from '../use-latest';
+import { appLog } from '@/lib/hosts/shell/bridge';
+import { useLatest } from '@/hooks/use-latest';
 import type { PlayerState } from './controller';
 
 const DELAYS_MS = [0, 1_000, 3_000, 5_000];
@@ -22,13 +22,15 @@ const PROGRESS_CHECKS = 2;
 
 interface Actions {
   reopen(): void;
-  failed(retry: () => void): Promise<void>;
+  failed(error: string | null, retry?: () => void): Promise<void>;
   showNotice(shown: boolean): void;
   positionMs(): number;
 }
 
 export interface LiveRecovery {
   dropped(why: string): void;
+  /** Gives up at once on a source the engine can't read. */
+  unsupported(error: string): void;
   readonly played: boolean;
 }
 
@@ -88,7 +90,7 @@ class Outage implements LiveRecovery {
     if (this.tries >= tries || now - this.since > OUTAGE_LIMIT_MS) {
       appLog('warn', `live: ${why}; giving up after ${this.tries} reopens`);
       this.end();
-      void this.actions.current.failed(() => this.reopen());
+      void this.actions.current.failed(null, () => this.reopen());
       return;
     }
     const delay = DELAYS_MS[this.tries++];
@@ -98,6 +100,12 @@ class Outage implements LiveRecovery {
       NOTICE_MS
     );
     this.timer = setTimeout(() => this.reopen(), delay);
+  }
+
+  unsupported(error: string): void {
+    appLog('warn', `live: unsupported: ${error}`);
+    this.end();
+    void this.actions.current.failed(error);
   }
 
   playing(): void {

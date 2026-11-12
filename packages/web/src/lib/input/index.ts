@@ -36,6 +36,7 @@ export {
   moveTo,
   navSide,
   navWait,
+  navigationBack,
   openMenu,
   scrollStep,
   type Direction,

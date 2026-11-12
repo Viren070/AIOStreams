@@ -1,6 +1,6 @@
 import { itemTitle } from './format';
 import { storage } from './storage';
-import type { BaseItemDto, SourceInfo } from './types';
+import type { BaseItemDto, SourceInfo } from './jellyfin/types';
 
 const KEY = 'aiostreams-web-last-played';
 

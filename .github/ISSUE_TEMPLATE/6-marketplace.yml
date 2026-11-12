@@ -1,0 +1,82 @@
+name: Marketplace addon
+description: Ask for an addon to be added to the configure page's marketplace, or report one there that's out of date.
+title: 'marketplace: '
+labels:
+  - feature request
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Any Stremio addon already works in AIOStreams: add it with **Add by URL** under **Addons →
+        Installed**. The **Marketplace** lists addons with a form for their options, so they're quicker to
+        set up and their streams are read properly. Ask for one here if it's public, maintained, and useful
+        to others, or tell us when a listed one has changed.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request
+      options:
+        - Add a new addon
+        - Fix a listed addon (out of date, wrong name or description, missing options)
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Addon
+      placeholder: Example Addon
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Address
+      description: Its configure page or manifest URL. Leave out any keys or personal configuration.
+      placeholder: https://example-addon.com/configure
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Website or source code
+  - type: dropdown
+    id: provides
+    attributes:
+      label: What it provides
+      multiple: true
+      options:
+        - Streams from debrid services
+        - Streams from Usenet
+        - Torrent (P2P) streams
+        - Direct (HTTP) streams
+        - Live TV channels
+        - Subtitles
+        - Catalogs or metadata
+        - Other
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Setting it up
+      options:
+        - It works without configuring
+        - It's configured on its own configure page
+        - It needs an API key or account
+  - type: textarea
+    id: why
+    attributes:
+      label: Why add it, or what's wrong
+      description: >-
+        For a new addon, what it offers that the marketplace's addons don't. For a listed one, what
+        changed: its new address, name or options.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched open and closed issues, and it hasn't been requested.
+          required: true
+        - label: It's public and currently maintained.
+          required: true
+        - label: I'm its developer.

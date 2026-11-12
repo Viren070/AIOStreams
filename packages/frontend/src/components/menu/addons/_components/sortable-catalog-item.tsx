@@ -30,6 +30,7 @@ import { FaArrowLeftLong, FaArrowRightLong, FaShuffle } from 'react-icons/fa6';
 import { PiStarFill, PiStarBold } from 'react-icons/pi';
 import { toast } from 'sonner';
 import { catalogKey } from './catalog-order';
+import { AudienceButton } from '../../../shared/audience-modal';
 
 export type CatalogUpdate = (
   catalog: CatalogModification
@@ -74,6 +75,8 @@ interface CatalogItemProps {
   onMove: (id: string, type: string, to: 'top' | 'bottom') => void;
   onToggleEnabled: (id: string, type: string, enabled: boolean) => void;
   onEditMerged: (id: string) => void;
+  audienceSummary?: string;
+  onAudiences?: (catalog: CatalogModification) => void;
 }
 
 // useSortable re-renders all rows on each drag change; the body stays memoised
@@ -112,6 +115,8 @@ const CatalogRow = memo(function CatalogRow({
   onMove,
   onToggleEnabled,
   onEditMerged,
+  audienceSummary,
+  onAudiences,
   attributes,
   listeners,
 }: CatalogItemProps & {
@@ -161,6 +166,7 @@ const CatalogRow = memo(function CatalogRow({
           <p className="truncate text-xs text-[--muted]">
             {capitalise(catalog.overrideType ?? catalog.type)} ·{' '}
             {merged ? 'Merged catalog' : catalog.addonName}
+            {audienceSummary && ` · ${audienceSummary}`}
           </p>
         </div>
         <div className="hidden flex-shrink-0 items-center gap-1 md:flex">
@@ -202,6 +208,13 @@ const CatalogRow = memo(function CatalogRow({
             onToggleEnabled(catalog.id, catalog.type, value)
           }
         />
+        {onAudiences && (
+          <AudienceButton
+            className="h-8 w-8 text-lg"
+            summary={audienceSummary}
+            onClick={() => onAudiences(catalog)}
+          />
+        )}
         <IconButton
           rounded
           size="sm"

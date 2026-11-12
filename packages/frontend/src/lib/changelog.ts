@@ -1,6 +1,6 @@
 import { hasConfigSessionCookie } from './api';
 
-export const DOCS_BASE_URL = 'https://docs.aiostreams.viren070.me';
+export const DOCS_BASE_URL = 'https://aiostreams.org';
 export const DOCS_CHANGELOG_URL = `${DOCS_BASE_URL}/changelog`;
 
 export type ReleaseChannel = 'stable' | 'nightly' | 'dev';

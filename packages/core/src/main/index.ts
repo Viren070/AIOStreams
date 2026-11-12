@@ -160,6 +160,17 @@ export class AIOStreams {
     );
   }
 
+  /** The longest catch-up an addon declares for its channels. */
+  public catchupDays(): number {
+    this.checkInitialised();
+    return Math.max(
+      0,
+      ...Object.values(this.ctx.manifests).map(
+        (manifest) => manifest?.behaviorHints?.catchupDays ?? 0
+      )
+    );
+  }
+
   public getAddonCatalogs(): Manifest['addonCatalogs'] {
     this.checkInitialised();
     return this.ctx.finalAddonCatalogs;

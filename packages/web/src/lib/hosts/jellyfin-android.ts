@@ -1,15 +1,15 @@
 import { t } from '@lingui/core/macro';
-import { TICKS_PER_MS } from '../format';
-import { runAction } from '../input';
+import { TICKS_PER_MS } from '@/lib/format';
+import { runAction } from '@/lib/input';
 import {
   onSettingsChange,
   SEGMENT_TYPES,
   settings,
   type SegmentAction,
-} from '../settings';
-import type { DownloadsHost } from '../downloads/types';
-import { REMOTE_CAPABILITIES } from '../remote/capabilities';
-import type { BaseItemDto, SourceInfo } from '../types';
+} from '@/lib/settings';
+import type { DownloadsHost } from '@/lib/downloads/types';
+import { REMOTE_CAPABILITIES } from '@/lib/remote/capabilities';
+import type { BaseItemDto, SourceInfo } from '@/lib/jellyfin/types';
 import type { Host } from '.';
 import { mediaInfo } from './native-shell';
 import type { MediaKey } from './shell/bridge';
