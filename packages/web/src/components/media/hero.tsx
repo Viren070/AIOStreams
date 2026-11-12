@@ -791,23 +791,29 @@ export function Hero({
     >
       {trailer.box}
       <div
-        data-ui="hero-backdrops"
-        className={cn(
-          'absolute inset-0 isolate transition-opacity duration-700',
-          trailer.shown && 'opacity-0'
-        )}
+        // Fades out at its edge, where some GPUs draw the art's last row past
+        // the shade. Not on the art's own box, which moves as the page scrolls.
+        className="absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_2px)]"
       >
-        {slides.map(({ key, role, item }) => (
-          <div
-            key={key}
-            data-slide={role}
-            className={cn(slideClass(role), role && 'z-[1]')}
-          >
-            <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
-              <Backdrops current={backdropSrc(client, item)} fade={!role} />
-            </BackdropFrame>
-          </div>
-        ))}
+        <div
+          data-ui="hero-backdrops"
+          className={cn(
+            'absolute inset-0 isolate transition-opacity duration-700',
+            trailer.shown && 'opacity-0'
+          )}
+        >
+          {slides.map(({ key, role, item }) => (
+            <div
+              key={key}
+              data-slide={role}
+              className={cn(slideClass(role), role && 'z-[1]')}
+            >
+              <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
+                <Backdrops current={backdropSrc(client, item)} fade={!role} />
+              </BackdropFrame>
+            </div>
+          ))}
+        </div>
       </div>
       <Shade />
       {slides.map(({ key, role, item }) => (
