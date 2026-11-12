@@ -298,6 +298,51 @@ function applySort(req: Request, items: JellyfinItem[]): JellyfinItem[] {
   return out;
 }
 
+/** What a watch-state list sorts by, for Jellyfin's sorts its rows can't answer. */
+const ITEM_SORTS: Record<string, (item: JellyfinItem) => string | number> = {
+  sortname: (i) => String(i.SortName ?? i.Name).toLowerCase(),
+  name: (i) => String(i.Name).toLowerCase(),
+  premieredate: (i) => String(i.PremiereDate ?? i.ProductionYear ?? ''),
+  productionyear: (i) => Number(i.ProductionYear ?? 0),
+  communityrating: (i) => Number(i.CommunityRating ?? 0),
+  runtime: (i) => Number(i.RunTimeTicks ?? 0),
+};
+
+/**
+ * A watch-state list in the request's sort. Its own order is newest first,
+ * which a date sort keeps or turns round; a name sort reads the rows' names
+ * where all have one; other sorts build every title to read it.
+ */
+async function sortRows(
+  req: Request,
+  ctx: JellyfinRequestContext,
+  rows: WatchStateRow[],
+  types: Set<string> | null
+): Promise<{ rows: WatchStateRow[] } | { items: JellyfinItem[] }> {
+  const key = qlist(req, 'SortBy')[0]?.toLowerCase() ?? '';
+  const sign = sortDescending(req) ? -1 : 1;
+  const compare = (a: string | number, b: string | number) =>
+    (a < b ? -1 : a > b ? 1 : 0) * sign;
+  if (/^date/.test(key))
+    return { rows: sortDescending(req) === false ? [...rows].reverse() : rows };
+  const read = ITEM_SORTS[key];
+  if (!read) return { rows };
+  if (
+    (key === 'sortname' || key === 'name') &&
+    rows.every((row) => row.snapshot?.name)
+  )
+    return {
+      rows: [...rows].sort((a, b) =>
+        compare(
+          a.snapshot!.name!.toLowerCase(),
+          b.snapshot!.name!.toLowerCase()
+        )
+      ),
+    };
+  const items = filterByType(await itemsFromRows(ctx, rows), types);
+  return { items: items.sort((a, b) => compare(read(a), read(b))) };
+}
+
 /**
  * Jellyfin skips the count when a client opts out and answers with the page
  * length instead, so a client that never reads the total does not make us walk
@@ -643,10 +688,21 @@ async function handleItems(
             )
           )
         : await provider.listPlayed(ctx.watch, kinds);
+    const sorted = await sortRows(req, ctx, rows, types);
+    if ('items' in sorted) {
+      send(
+        req,
+        res,
+        sorted.items.slice(startIndex, startIndex + limit),
+        sorted.items.length,
+        startIndex
+      );
+      return;
+    }
     const items = applySort(
       req,
       filterByType(
-        await itemsFromRows(ctx, rows.slice(0, startIndex + limit)),
+        await itemsFromRows(ctx, sorted.rows.slice(0, startIndex + limit)),
         types
       )
     );
