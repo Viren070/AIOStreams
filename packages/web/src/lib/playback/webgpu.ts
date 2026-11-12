@@ -29,7 +29,12 @@ import type {
   EngineState,
   EngineTrack,
 } from './engine';
-import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
+import {
+  canFullscreen,
+  isFullscreen,
+  onFullscreenChange,
+  toggleDocumentFullscreen,
+} from './fullscreen';
 import { canPlayWithWebGpu } from './player-choice';
 import {
   drawSubtitle,
@@ -537,10 +542,7 @@ export function webGpuEngine(
         )
           return unplayable('source-unsupported');
         const onFullscreen = () => set({ fullscreen: isFullscreen() });
-        document.addEventListener('fullscreenchange', onFullscreen);
-        detach.push(() =>
-          document.removeEventListener('fullscreenchange', onFullscreen)
-        );
+        detach.push(onFullscreenChange(onFullscreen));
         onFullscreen();
         const drops = setInterval(watchDrops, 1000);
         detach.push(
@@ -622,7 +624,7 @@ export function webGpuEngine(
         if (next.fit !== fit) layer?.place();
         fit = next.fit;
       },
-      toggleFullscreen: toggleDocumentFullscreen,
+      toggleFullscreen: canFullscreen() ? toggleDocumentFullscreen : undefined,
       ...(document.pictureInPictureEnabled &&
         'captureStream' in HTMLCanvasElement.prototype && {
           async togglePictureInPicture() {

@@ -22,7 +22,12 @@ import type {
   EngineTrack,
 } from './engine';
 import { ownTrackLabel } from './controller';
-import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
+import {
+  canFullscreen,
+  isFullscreen,
+  onFullscreenChange,
+  toggleDocumentFullscreen,
+} from './fullscreen';
 import {
   drawSubtitle,
   ownLines,
@@ -409,14 +414,14 @@ export function videoEngine(
           audio?.addEventListener(event, listTracks);
         for (const e of elements) e.addEventListener('load', onTrackLoad);
         const onFullscreen = () => set({ fullscreen: isFullscreen() });
-        document.addEventListener('fullscreenchange', onFullscreen);
+        const stopFullscreen = onFullscreenChange(onFullscreen);
         detach = () => {
           for (const [event, handler] of Object.entries(handlers))
             el.removeEventListener(event, handler);
           for (const event of audioEvents)
             audio?.removeEventListener(event, listTracks);
           for (const e of elements) e.removeEventListener('load', onTrackLoad);
-          document.removeEventListener('fullscreenchange', onFullscreen);
+          stopFullscreen();
         };
         onFullscreen();
         el.autoplay = !next.paused;
@@ -486,7 +491,7 @@ export function videoEngine(
         if (nextFit !== fit) layer?.place();
         fit = nextFit;
       },
-      toggleFullscreen: toggleDocumentFullscreen,
+      toggleFullscreen: canFullscreen() ? toggleDocumentFullscreen : undefined,
       ...(document.pictureInPictureEnabled && {
         togglePictureInPicture() {
           const el = video.current;
