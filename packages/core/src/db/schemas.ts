@@ -1554,6 +1554,16 @@ export const ParsedStreamSchema = z.object({
         identity: z.string().optional(), // nzbUrl | infoHash | external host+path
         kind: z.enum(['owned', 'external']).optional(), // default 'owned'
         proxied: z.boolean().optional(), // computed at merge time
+        // What the variant's file decodes as, for per-device exclusion.
+        // Differs from the winner's only under smart-detect grouping.
+        media: z
+          .object({
+            resolution: z.string().optional(),
+            encode: z.string().optional(),
+            visualTags: z.array(z.string()).optional(),
+            audioTags: z.array(z.string()).optional(),
+          })
+          .optional(),
       })
     )
     .optional(),

@@ -54,7 +54,10 @@ import {
   type AnalyticsServiceBreakdown,
 } from '../analytics/index.js';
 import type { AddonDispositionMap } from '../streams/fetcher.js';
-import { applyDeviceCapabilities } from '../streams/device-capabilities.js';
+import {
+  applyDeviceCapabilities,
+  playChainScope,
+} from '../streams/device-capabilities.js';
 import {
   configReadsDevice,
   deviceCapabilitiesFingerprint,
@@ -394,6 +397,13 @@ export async function processStreams(
       'excluded streams the device cannot play'
     );
   }
+  // The chain record follows the same per-device split as the list.
+  const chainScope = playChainScope(
+    userScopeKey(ctx.userData),
+    context.deviceCapabilities,
+    ctx.userData.deviceCapabilities,
+    getSimpleTextHash
+  );
 
   if (failoverOpts?.position === 'beforeSEL') {
     await buildPlayChain(
@@ -412,7 +422,7 @@ export async function processStreams(
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
         onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
-      userScopeKey(ctx.userData)
+      chainScope
     ).catch((error) => {
       logger.error(
         {
@@ -448,7 +458,7 @@ export async function processStreams(
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
         onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
-      userScopeKey(ctx.userData)
+      chainScope
     ).catch((error) => {
       logger.error(
         {
@@ -482,7 +492,7 @@ export async function processStreams(
           duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
           onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
         },
-        userScopeKey(ctx.userData)
+        chainScope
       ).catch((error) => {
         logger.error(
           {

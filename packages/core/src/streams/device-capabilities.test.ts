@@ -5,6 +5,7 @@ import { parseDeviceCapabilities } from '../utils/device-capabilities.js';
 import {
   applyDeviceCapabilities,
   getUnplayableReasons,
+  playChainScope,
 } from './device-capabilities.js';
 
 function stream(
@@ -326,5 +327,64 @@ describe('applyDeviceCapabilities', () => {
       list.map((s) => s.id),
       before
     );
+  });
+});
+
+describe('failover variants and chain scope', () => {
+  const tv = caps('v=1; video=h264,hevc; hdr=hdr10; dv=none');
+  const phone = caps('v=1; video=h264,hevc,av1; hdr=hdr10; dv=5,8');
+
+  // A playable winner whose failover variant is the same title in DV-only.
+  const winner: ParsedStream = {
+    ...stream('winner', {
+      resolution: '2160p',
+      encode: 'HEVC',
+      visualTags: ['HDR10'],
+    }),
+    failoverVariants: [
+      {
+        type: 'debrid',
+        url: 'https://example.test/dv-only',
+        media: { resolution: '2160p', encode: 'HEVC', visualTags: ['DV'] },
+      },
+      {
+        type: 'debrid',
+        url: 'https://example.test/no-media',
+      },
+    ],
+  } as ParsedStream;
+
+  it('drops the variants the device cannot play, per device', () => {
+    const forTv = applyDeviceCapabilities([winner], tv, 'exclude').streams;
+    assert.deepEqual(
+      forTv[0].failoverVariants?.map((v) => v.url),
+      ['https://example.test/no-media']
+    );
+    const forPhone = applyDeviceCapabilities(
+      [winner],
+      phone,
+      'exclude'
+    ).streams;
+    assert.equal(forPhone[0].failoverVariants?.length, 2);
+  });
+
+  it('leaves the input stream and its variants untouched', () => {
+    applyDeviceCapabilities([winner], tv, 'exclude');
+    assert.equal(winner.failoverVariants?.length, 2);
+  });
+
+  it('keeps variants when pushing to the bottom', () => {
+    const result = applyDeviceCapabilities([winner], tv, 'deprioritise');
+    assert.equal(result.streams[0], winner);
+  });
+
+  it('gives each device its own chain scope only in exclude mode', () => {
+    const hash = (s: string) => `h(${s})`;
+    assert.notEqual(
+      playChainScope('user', tv, 'exclude', hash),
+      playChainScope('user', phone, 'exclude', hash)
+    );
+    assert.equal(playChainScope('user', tv, 'deprioritise', hash), 'user');
+    assert.equal(playChainScope('user', undefined, 'exclude', hash), 'user');
   });
 });
