@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-09 09:51+0000\n"
+"PO-Revision-Date: 2026-11-12 18:26+0000\n"
 "Last-Translator: Nasos Vasileiadis <nosvasedis@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Greek <https://hosted.weblate.org/projects/aiostreams/web-app/el/>\n"
 "Language: el\n"
@@ -315,11 +315,11 @@ msgstr "Το 1 μεταβαίνει στο 10% της διάρκειας, το 5
 
 #: src/app/settings/interface.tsx
 msgid "12-hour ({twelve})"
-msgstr ""
+msgstr "12ωρη ({twelve})"
 
 #: src/app/settings/interface.tsx
 msgid "24-hour ({twentyFour})"
-msgstr ""
+msgstr "24ωρη ({twentyFour})"
 
 #: src/app/settings/audio.tsx
 msgid "5.1 surround"
@@ -429,9 +429,8 @@ msgid "Add a server"
 msgstr "Προσθήκη διακομιστή"
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "Add a shader"
-msgstr "Προσθήκη ετικέτας"
+msgstr "Προσθήκη shader"
 
 #: src/app/settings/_components/common.tsx
 msgid "Add another language"
@@ -557,15 +556,15 @@ msgstr "Το πρόγραμμα αναπαραγωγής του Android κατα
 
 #: src/app/settings/playback.tsx src/lib/input/actions.ts
 msgid "Anime upscaling"
-msgstr ""
+msgstr "Αναβάθμιση εικόνας anime"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: off"
-msgstr ""
+msgstr "Αναβάθμιση εικόνας anime ανενεργή"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: on"
-msgstr ""
+msgstr "Αναβάθμιση εικόνας anime ενεργή"
 
 #: src/features/party/not-in-party.tsx
 msgid "Another relay"
@@ -821,7 +820,7 @@ msgstr "Ακύρωση"
 
 #: src/app/settings/interface.tsx
 msgid "Card you rest on"
-msgstr ""
+msgstr "Κάρτα σε εστίαση"
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1603,9 +1602,8 @@ msgid "Exit full screen"
 msgstr "Έξοδος από πλήρη οθόνη"
 
 #: src/features/player/picture-in-picture.tsx
-#, fuzzy
 msgid "Exit picture-in-picture"
-msgstr "Εικόνα μέσα σε εικόνα"
+msgstr "Έξοδος από την εικόνα μέσα σε εικόνα"
 
 #: src/app/settings/playback.tsx
 msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
@@ -1728,7 +1726,7 @@ msgstr "Για ενισχυτή με οπτική σύνδεση ή ARC, όπο�
 
 #: src/app/settings/interface.tsx
 msgid "For clocks and times of day, such as the player's clock and the TV guide."
-msgstr ""
+msgstr "Για την εμφάνιση της ώρας, π.χ. στην αναπαραγωγή και στο πρόγραμμα τηλεόρασης."
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
@@ -1778,7 +1776,7 @@ msgstr "Δώσε αυτόν τον κωδικό στο άτομο που θα τ
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
-msgstr ""
+msgstr "Αρχεία shader GLSL για το ενσωματωμένο mpv. Εφαρμόζονται στο βίντεο με αλφαβητική σειρά ονόματος. Τα απαιτητικά shader μπορεί να προκαλέσουν κολλήματα."
 
 #: src/router.tsx
 msgid "Go home"
@@ -1825,9 +1823,8 @@ msgid "Has a PIN"
 msgstr "Με PIN"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "HDR output"
-msgstr "Έξοδος βίντεο"
+msgstr "Έξοδος HDR"
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Heard"
@@ -2708,9 +2705,8 @@ msgid "Now: {shown}"
 msgstr "Τώρα: {shown}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Nowhere"
-msgstr "Δεν υπάρχει τίποτα εδώ."
+msgstr "Πουθενά"
 
 #: src/app/settings/theme.tsx
 msgid "Ocean"
@@ -2728,7 +2724,7 @@ msgstr "Είναι ανενεργό σε αυτή την επίσκεψη, επ�
 
 #: src/app/settings/interface.tsx
 msgid "Off, a trailer still plays with sound once you open it whole."
-msgstr ""
+msgstr "Αν το απενεργοποιήσεις, το τρέιλερ εξακολουθεί να παίζει με ήχο όταν το ανοίξεις ολόκληρο."
 
 #: src/features/party/in-party.tsx
 msgid "Off, the video jumps instead."
@@ -2736,7 +2732,7 @@ msgstr "Αν απενεργοποιηθεί, γίνεται άμεση μετα�
 
 #: src/components/shell/usage-stats.tsx
 msgid "OK"
-msgstr ""
+msgstr "Εντάξει"
 
 #: src/app/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
@@ -2764,7 +2760,7 @@ msgstr "Σε πλατιές οθόνες"
 
 #: src/components/shell/usage-stats.tsx
 msgid "Once a day, the app sends an anonymous count with your type of device, system, app version, language, and country and region. Nothing that identifies you or what you watch is kept."
-msgstr ""
+msgstr "Μία φορά την ημέρα, η εφαρμογή στέλνει μια ανώνυμη καταμέτρηση με τον τύπο συσκευής, το σύστημα, την έκδοση εφαρμογής, τη γλώσσα, τη χώρα και την περιοχή σου. Δεν αποθηκεύει στοιχεία που ταυτοποιούν εσένα ή δείχνουν τι παρακολουθείς."
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
@@ -2772,7 +2768,7 @@ msgstr "Μόλις επιλεγεί ένα στοιχείο ελέγχου, τα
 
 #: src/app/settings/interface.tsx
 msgid "Once you rest on a title for a moment. In the hero, only one you went to."
-msgstr ""
+msgstr "Όταν μείνεις για λίγο σε έναν τίτλο. Στο κεντρικό πλαίσιο ισχύει μόνο για τίτλο στον οποίο μετακινήθηκες εσύ."
 
 #: src/lib/subtitles/files.ts
 msgid "Only {names} files can be added"
@@ -2846,7 +2842,7 @@ msgstr "Άνοιγμα των λήψεων της εφαρμογής"
 
 #: src/app/settings/interface.tsx
 msgid "Opens out to its details"
-msgstr ""
+msgstr "Μεγαλώνει και δείχνει λεπτομέρειες"
 
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
@@ -3129,9 +3125,8 @@ msgid "Play anyway"
 msgstr "Αναπαραγωγή ούτως ή άλλως"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Play by themselves"
-msgstr "Αναπαραγωγή της πρώτης έκδοσης"
+msgstr "Αυτόματη αναπαραγωγή"
 
 #: src/app/item/_components/header.tsx
 msgid "Play from the start"
@@ -3224,9 +3219,8 @@ msgid "Playback"
 msgstr "Αναπαραγωγή"
 
 #: src/app/item/_components/trailer.tsx
-#, fuzzy
 msgid "Playback controls"
-msgstr "Αναπαραγωγή"
+msgstr "Στοιχεία ελέγχου αναπαραγωγής"
 
 #: src/features/player/mini-player.tsx
 msgid "Playback failed"
@@ -3302,9 +3296,8 @@ msgid "Plays the video."
 msgstr "Αναπαράγει το βίντεο."
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Pops out a preview"
-msgstr "Παράλειψη προεπισκόπησης"
+msgstr "Ανοίγει προεπισκόπηση"
 
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
@@ -3332,7 +3325,7 @@ msgstr "Πάτησε ξανά «Πίσω» για έξοδο"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Press Up for playback controls"
-msgstr ""
+msgstr "Πάτησε ↑ για τα στοιχεία ελέγχου"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
@@ -3455,7 +3448,7 @@ msgstr "Αντιδράσεις"
 
 #: src/app/settings/playback.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
-msgstr ""
+msgstr "Διαβάζει και αποκωδικοποιεί το αρχείο και εμφανίζει το βίντεο μέσω της κάρτας γραφικών. Έτσι υποστηρίζει και μορφές που δεν παίζει το πρόγραμμα περιήγησης, όπως HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD και DTS. Αν δεν μπορεί να παίξει μια έκδοση, τη μεταβιβάζει στο πρόγραμμα αναπαραγωγής του προγράμματος περιήγησης."
 
 #: src/lib/format.ts
 msgid "Recap"
@@ -3785,7 +3778,7 @@ msgstr "Εμφανίστηκε ο υπότιτλος"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Scroll up for playback controls"
-msgstr ""
+msgstr "Κύλησε προς τα πάνω για τα στοιχεία ελέγχου"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
@@ -3859,9 +3852,8 @@ msgid "Send report"
 msgstr "Αποστολή αναφοράς"
 
 #: src/app/settings/about.tsx
-#, fuzzy
 msgid "Send usage statistics"
-msgstr "Στατιστικά"
+msgstr "Αποστολή στατιστικών χρήσης"
 
 #: src/features/party/chat.tsx
 msgid "Sending…"
@@ -3913,12 +3905,11 @@ msgstr "Ρυθμίσεις"
 
 #: src/app/settings/playback.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
-msgstr ""
+msgstr "Αρχεία shader (.wgsl) για τη μηχανή WebGPU. Εφαρμόζονται στο βίντεο με αλφαβητική σειρά ονόματος και αποθηκεύονται σε αυτό το πρόγραμμα περιήγησης. Τα απαιτητικά shader μπορεί να προκαλέσουν κολλήματα."
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "Shaders"
-msgstr "Σκιά"
+msgstr "Shader"
 
 #: src/app/settings/subtitles.tsx
 msgid "Shadow"
@@ -3930,7 +3921,7 @@ msgstr "Κοινοποίηση πρόσκλησης"
 
 #: src/app/settings/playback.tsx
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr ""
+msgstr "Κάνει τις γραμμές πιο καθαρές και μειώνει τα τεχνουργήματα συμπίεσης κατά την αναπαραγωγή anime, κυρίως σε παλιότερες σειρές και σε χαμηλή ανάλυση. Εφαρμόζεται σε τίτλους που οι κατάλογοί σου χαρακτηρίζουν ως anime. Πάτησε U κατά την αναπαραγωγή για εναλλαγή. Καταναλώνει περισσότερη ενέργεια και απενεργοποιείται αυτόματα αν η συσκευή δεν προλαβαίνει να επεξεργαστεί το βίντεο. Δεν επηρεάζει βίντεο HDR ή με ανάλυση κοντά σε εκείνη της οθόνης."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -4017,7 +4008,7 @@ msgstr "Εμφανίζει μια εικόνα από το βίντεο στο �
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
-msgstr ""
+msgstr "Σε οθόνη HDR, εμφανίζει τα βίντεο HDR χωρίς μετατροπή σε SDR. Άφησέ το απενεργοποιημένο αν η οθόνη σου δεν υποστηρίζει HDR."
 
 #: src/app/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
@@ -4278,7 +4269,7 @@ msgstr "Κατάσταση"
 
 #: src/app/settings/interface.tsx
 msgid "Stays as it is"
-msgstr ""
+msgstr "Μένει ως έχει"
 
 #: src/app/settings/audio.tsx
 msgid "Stereo"
@@ -4775,9 +4766,8 @@ msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "Η εφαρμογή αποκωδικοποιεί μόνη της τον ήχο Dolby και DTS, με αποτέλεσμα να χάνεται το Atmos."
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "This browser"
-msgstr "Αυτός ο διακομιστής"
+msgstr "Αυτό το πρόγραμμα περιήγησης"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
@@ -4785,13 +4775,12 @@ msgid "this browser cannot play this version. Nothing is converted on the server
 msgstr "αυτό το πρόγραμμα περιήγησης δεν μπορεί να αναπαράγει αυτή την έκδοση. Δεν γίνεται μετατροπή στον διακομιστή, οπότε δοκίμασε άλλη έκδοση, εξωτερικό πρόγραμμα αναπαραγωγής ή την εφαρμογή υπολογιστή."
 
 #: src/lib/playback/shaders.ts
-#, fuzzy
 msgid "This browser keeps no files for this site."
-msgstr "Αυτός ο διακομιστής δεν διαθέτει λεπτομέρειες για το {id}."
+msgstr "Το πρόγραμμα περιήγησης δεν έχει αποθηκεύσει αρχεία για αυτόν τον ιστότοπο."
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
-msgstr ""
+msgstr "Το ενσωματωμένο πρόγραμμα αναπαραγωγής του προγράμματος περιήγησης. Παίζει τις μορφές που εκείνο υποστηρίζει."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -4807,7 +4796,7 @@ msgstr "Αυτή η συσκευή δεν μπόρεσε να διαβάσει �
 
 #: src/lib/playback/shaders.ts
 msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
-msgstr ""
+msgstr "Αυτό είναι shader GLSL. Μετέτρεψέ το πρώτα σε αρχείο σταδίου .wgsl."
 
 #: src/app/settings/subtitles.tsx
 msgid "This is how subtitles will look."
@@ -4819,7 +4808,7 @@ msgstr "Αυτά κατέγραψε η συσκευή για το συμβάν. 
 
 #: src/lib/playback/shaders.ts
 msgid "This isn't a .wgsl pass file."
-msgstr ""
+msgstr "Αυτό δεν είναι αρχείο σταδίου .wgsl."
 
 #: src/lib/jellyfin/queries.ts
 msgid "This item was not found"
@@ -4895,7 +4884,7 @@ msgstr "Τρεις ημέρες"
 
 #: src/app/settings/interface.tsx
 msgid "Time format"
-msgstr ""
+msgstr "Μορφή ώρας"
 
 #: src/app/settings/interface.tsx
 msgid "Time on each title"
@@ -4991,7 +4980,7 @@ msgstr "Αναπαραγωγή μέσω διοχέτευσης (tunneling)"
 
 #: src/components/shell/usage-stats.tsx
 msgid "Turn off"
-msgstr ""
+msgstr "Απενεργοποίηση"
 
 #: src/app/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
@@ -5003,7 +4992,7 @@ msgstr "Η απενεργοποίηση μιας επιλογής διαγράφ
 
 #: src/lib/input/actions.ts
 msgid "Turns it on or off for what is playing."
-msgstr ""
+msgstr "Ενεργοποιεί ή απενεργοποιεί τη ρύθμιση για το βίντεο που παίζει."
 
 #: src/app/settings/cache.tsx
 msgid "Two weeks"
@@ -5102,9 +5091,8 @@ msgid "Updates, picture-in-picture, mpv and troubleshooting"
 msgstr "Ενημερώσεις, εικόνα μέσα σε εικόνα, mpv και αντιμετώπιση προβλημάτων"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
-#, fuzzy
 msgid "Usage statistics"
-msgstr "Στατιστικά"
+msgstr "Στατιστικά χρήσης"
 
 #: src/app/sign-in/page.tsx
 msgid "Use Quick Connect, or the configuration’s password."
@@ -5449,7 +5437,7 @@ msgstr "Κατά τον συγχρονισμό υποτίτλων με ακρό�
 
 #: src/app/settings/interface.tsx
 msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr ""
+msgstr "Κατά την εναλλαγή του κεντρικού πλαισίου. Με το ποντίκι, η κάρτα πάντα ανοίγει πάνω από τις διπλανές, που μένουν στη θέση τους."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"
@@ -5516,7 +5504,7 @@ msgstr "Εσύ"
 
 #: src/components/shell/usage-stats.tsx
 msgid "You can change this later in Settings, under About."
-msgstr ""
+msgstr "Μπορείς να το αλλάξεις αργότερα από τις Ρυθμίσεις, στην ενότητα «Σχετικά»."
 
 #: src/lib/party/party.ts
 msgid "You left the party."
