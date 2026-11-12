@@ -4,6 +4,7 @@ import {
   APIError,
   config as appConfig,
   constants,
+  DEVICE_CAPABILITIES_VERSION,
   UserData,
   userScopeIdSuffix,
 } from '@aiostreams/core';
@@ -61,6 +62,8 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
       configurationRequired: config ? false : true,
       ...(epgProvider && { epgProvider }),
       ...(catchupDays && { catchupDays }),
+      // Clients that read this send X-Device-Capabilities on stream requests.
+      deviceCapabilities: DEVICE_CAPABILITIES_VERSION,
     },
     addonCatalogs,
     stremioAddonsConfig:

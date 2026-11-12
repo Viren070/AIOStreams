@@ -7,6 +7,8 @@ import {
   StremioTransformer,
   Cache,
   IdParser,
+  parseDeviceCapabilities,
+  DEVICE_CAPABILITIES_HEADER,
 } from '@aiostreams/core';
 import { trackResource } from '../../middlewares/analytics.js';
 
@@ -51,7 +53,15 @@ router.get(
     try {
       const { type, id } = req.params;
 
-      const aiostreams = await new AIOStreams(req.userData).initialise();
+      // The list can differ per device, so shared HTTP caches must key on it.
+      res.vary('X-Device-Capabilities');
+      const deviceCapabilities = parseDeviceCapabilities(
+        req.headers[DEVICE_CAPABILITIES_HEADER]
+      );
+
+      const aiostreams = await new AIOStreams(req.userData, {
+        deviceCapabilities,
+      }).initialise();
 
       const disableAutoplay = await aiostreams.shouldStopAutoPlay(type, id);
 

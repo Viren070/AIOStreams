@@ -7,13 +7,14 @@ These are optional extensions to the Stremio addon protocol, mostly used when AI
 your addons to Jellyfin clients. Stremio ignores all of them, so an addon using them stays a normal
 Stremio addon. To write an addon, start with [Addon Development](/guides/addon-development).
 
-| Extension                                            | What it is                                                                                           |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [Metadata](/reference/addon-protocol/metadata)       | Extra meta, video and catalog fields: ids, credits, taglines, ratings, studios, seasons, library art |
-| [Collections](/reference/addon-protocol/collections) | A `collection` block that turns a meta into a group of movies and shows                              |
-| [People](/reference/addon-protocol/people)           | Person metas with a biography and filmography, and people search                                     |
-| [Similar titles](/reference/addon-protocol/similar)  | A `similar` catalog extra for More Like This                                                         |
-| [Streams](/reference/addon-protocol/streams)         | Service and cache state, seeders, indexer, age, duration, and season pack folders                    |
-| [Live TV](/reference/addon-protocol/live-tv)         | Channel catalogs, channel numbers and programme guides                                               |
-| [Subtitles](/reference/addon-protocol/subtitles)     | Subtitle titles and forced or hearing impaired flags                                                 |
-| [Watch state](/reference/addon-protocol/watch-state) | The `watch_state` resource: playback, watch history and watchlists                                   |
+| Extension                                                            | What it is                                                                                           |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [Metadata](/reference/addon-protocol/metadata)                       | Extra meta, video and catalog fields: ids, credits, taglines, ratings, studios, seasons, library art |
+| [Collections](/reference/addon-protocol/collections)                 | A `collection` block that turns a meta into a group of movies and shows                              |
+| [People](/reference/addon-protocol/people)                           | Person metas with a biography and filmography, and people search                                     |
+| [Similar titles](/reference/addon-protocol/similar)                  | A `similar` catalog extra for More Like This                                                         |
+| [Streams](/reference/addon-protocol/streams)                         | Service and cache state, seeders, indexer, age, duration, and season pack folders                    |
+| [Device capabilities](/reference/addon-protocol/device-capabilities) | A request header with what the playing device decodes, for per-device stream lists                   |
+| [Live TV](/reference/addon-protocol/live-tv)                         | Channel catalogs, channel numbers and programme guides                                               |
+| [Subtitles](/reference/addon-protocol/subtitles)                     | Subtitle titles and forced or hearing impaired flags                                                 |
+| [Watch state](/reference/addon-protocol/watch-state)                 | The `watch_state` resource: playback, watch history and watchlists                                   |

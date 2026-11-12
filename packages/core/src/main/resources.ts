@@ -54,6 +54,11 @@ import {
   type AnalyticsServiceBreakdown,
 } from '../analytics/index.js';
 import type { AddonDispositionMap } from '../streams/fetcher.js';
+import { applyDeviceCapabilities } from '../streams/device-capabilities.js';
+import {
+  configReadsDevice,
+  deviceCapabilitiesFingerprint,
+} from '../utils/device-capabilities.js';
 
 const logger = createLogger('core');
 
@@ -728,6 +733,7 @@ export async function getStreams(
   );
 
   const context = await StreamContext.create(type, id, ctx.userData);
+  context.deviceCapabilities = ctx.options?.deviceCapabilities;
   ctx.streamContext = context;
 
   const pipelineTtl = appConfig.resources.cache.pipeline.ttl;
@@ -736,9 +742,16 @@ export async function getStreams(
   // on
   let pipelineCacheKey = '';
   if (usePipelineCache) {
-    pipelineCacheKey = `${getSimpleTextHash(
-      JSON.stringify(ctx.userData)
-    )}:${type}:${id}`;
+    const serialisedUserData = JSON.stringify(ctx.userData);
+    pipelineCacheKey = `${getSimpleTextHash(serialisedUserData)}:${type}:${id}`;
+    // Expressions reading device.* make the pipeline output depend on the
+    // device, so each device gets its own entry. Other configs keep sharing
+    // one entry across devices.
+    if (context.deviceCapabilities && configReadsDevice(serialisedUserData)) {
+      pipelineCacheKey += `:device=${getSimpleTextHash(
+        deviceCapabilitiesFingerprint(context.deviceCapabilities)
+      )}`;
+    }
     const cached = await pipelineResultCache.get(pipelineCacheKey);
     if (cached !== undefined) {
       // The fetch pipeline that normally populates the context's backing fields
@@ -750,7 +763,7 @@ export async function getStreams(
         context.getEpisodeRuntime(),
       ]);
       logger.debug({ type, id }, 'pipeline result cache hit');
-      return cached;
+      return applyDeviceCapabilitiesToResponse(ctx, cached, preCaching);
     }
   }
 
@@ -1039,7 +1052,33 @@ export async function getStreams(
   if (usePipelineCache) {
     await pipelineResultCache.set(pipelineCacheKey, response, pipelineTtl);
   }
-  return response;
+  return applyDeviceCapabilitiesToResponse(ctx, response, preCaching);
+}
+
+/**
+ * Applies the user's "Respect device capabilities" setting to a finished
+ * response. It runs after the pipeline cache read and write, and builds a new
+ * response rather than changing the one that was cached.
+ */
+function applyDeviceCapabilitiesToResponse(
+  ctx: AIOStreamsContext,
+  response: StreamsResponse,
+  preCaching: boolean
+): StreamsResponse {
+  const caps = ctx.options?.deviceCapabilities;
+  const mode = ctx.userData.deviceCapabilities;
+  if (preCaching || !caps || !mode || mode === 'off') return response;
+  const { streams, unplayable } = applyDeviceCapabilities(
+    response.data.streams,
+    caps,
+    mode
+  );
+  logger.debug(
+    { mode, unplayable, total: response.data.streams.length },
+    'applied device capabilities'
+  );
+  if (unplayable === 0) return response;
+  return { ...response, data: { ...response.data, streams } };
 }
 
 export async function getMeta(
