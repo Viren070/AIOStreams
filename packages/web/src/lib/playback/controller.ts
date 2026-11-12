@@ -51,11 +51,14 @@ export interface PlayerState {
   reconnecting?: boolean;
   /** The sound goes out undecoded, which a change of speed can't stretch. */
   passthrough?: boolean;
+  /** The server's conversion that plays in place of the file, which reports name. */
+  stream?: { playSessionId: string | null; liveStreamId?: string };
 }
 
 /** What some players add to what a browser's video can do. */
+/** `anyFormat`: opens any container and codec. */
 export type PlayerFeature =
-  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling';
+  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling' | 'anyFormat';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
 export const browserFeatures: readonly PlayerFeature[] =

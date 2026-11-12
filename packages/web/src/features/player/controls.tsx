@@ -59,7 +59,7 @@ import {
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
 import { PauseScreen } from './pause-screen';
-import { fitLabel, OptionButtons } from './options';
+import { fitLabel, OptionButtons, type Quality } from './options';
 import { ScrubStrip } from './scrub-strip';
 import { SeekBar } from './seek-bar';
 import { skipLabel, type Segment, type SegmentSkip } from './segments';
@@ -102,6 +102,7 @@ export function PlayerControls({
   steps,
   playlist,
   onParty,
+  quality,
   live = false,
   showAtOpen = false,
 }: {
@@ -122,6 +123,7 @@ export function PlayerControls({
   steps?: 'episode' | 'trailer' | 'playlist';
   playlist?: { id: string; onPlay(entry: BaseItemDto, playlist: string): void };
   onParty?: () => void;
+  quality?: Quality;
   /** A channel: the programme in place of the seek bar, and zapping. */
   live?: boolean;
   showAtOpen?: boolean;
@@ -751,6 +753,7 @@ export function PlayerControls({
             onSyncByEar={() => setByEar(true)}
             onSyncToLine={pickLine}
             onParty={onParty}
+            quality={quality}
             notice={showNotice}
           />
         </div>

@@ -97,6 +97,10 @@ msgstr "{found, plural, one {Filter # version} other {Filter # versions}}"
 msgid "{got} of {size}"
 msgstr "{got} of {size}"
 
+#: src/lib/playback/quality.ts
+msgid "{height}, {mbps} Mbps"
+msgstr "{height}, {mbps} Mbps"
+
 #: src/features/player/options.tsx
 msgid "{height}%"
 msgstr "{height}%"
@@ -3014,6 +3018,10 @@ msgstr "Options the app keeps for itself."
 msgid "Or type one"
 msgstr "Or type one"
 
+#: src/lib/playback/quality.ts
+msgid "Original"
+msgstr "Original"
+
 #: src/app/settings/audio.tsx
 msgid "Original language"
 msgstr "Original language"
@@ -3518,6 +3526,11 @@ msgstr "Puts every key back the way it came."
 #: src/features/party/in-party.tsx
 msgid "QR code"
 msgstr "QR code"
+
+#: src/app/settings/playback.tsx
+#: src/features/player/options.tsx
+msgid "Quality"
+msgstr "Quality"
 
 #: src/app/sign-in/page.tsx
 msgid "Quick Connect"
@@ -4809,6 +4822,10 @@ msgstr "the live stream stopped"
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 
+#: src/app/settings/playback.tsx
+msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
+msgstr "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
+
 #: src/app/settings/apps.tsx
 msgid "The movie or show whose page is open."
 msgstr "The movie or show whose page is open."
@@ -4872,6 +4889,16 @@ msgstr "The rest wait their turn."
 #: src/app/settings/playback.tsx
 msgid "The same for episodes marked as a recap."
 msgstr "The same for episodes marked as a recap."
+
+#. Follows "Playback failed:"
+#: src/lib/playback/transcoding.ts
+msgid "the server could not convert this version"
+msgstr "the server could not convert this version"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+msgid "the server's stream stopped loading"
+msgstr "the server's stream stopped loading"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
@@ -5152,6 +5179,7 @@ msgstr "Troubleshooting"
 #: src/components/media/random-pick.tsx
 #: src/features/party/not-in-party.tsx
 #: src/features/versions/version-list.tsx
+#: src/lib/playback/transcoding.ts
 #: src/lib/playback/use-player.ts
 msgid "Try again"
 msgstr "Try again"

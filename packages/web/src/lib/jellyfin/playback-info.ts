@@ -8,6 +8,9 @@ import {
 import type { JellyfinClient, Purpose } from './client';
 import { useSession } from './session';
 import { playerSupport } from '@/lib/playback/player-choice';
+import { deviceProfile } from '@/lib/playback/device-profile';
+import { settings, useSetting } from '@/lib/settings';
+import { mayConvert } from '@/lib/playback/quality';
 import type {
   MediaSegmentDtoQueryResult,
   PlaybackInfoResponse,
@@ -15,18 +18,12 @@ import type {
 } from './types';
 import { useKey } from './queries';
 
-/**
- * Any file plays as it is. A server gives a text subtitle an address only for
- * a client that says it takes one; a styled script keeps its own, and the
- * player asks for WebVTT otherwise.
- */
-const DEVICE_PROFILE = {
-  DirectPlayProfiles: [{ Type: 'Video' }],
-  SubtitleProfiles: [
-    { Format: 'ass', Method: 'External' },
-    { Format: 'vtt', Method: 'External' },
-  ],
-};
+/** The quality cap, where the user may have the server convert. */
+export function useMaxBitrate(): number | undefined {
+  const { user } = useSession();
+  const [quality] = useSetting(settings.player.quality);
+  return quality && mayConvert(user) ? quality : undefined;
+}
 
 /** The first version carries the item's id; the web app keys every version by its own. */
 function withOwnId(source: SourceInfo): SourceInfo {
@@ -56,6 +53,7 @@ export async function requestPlaybackInfo(
     support?: { headers: boolean; youtube: boolean };
     purpose?: Purpose;
     full?: boolean;
+    maxBitrate?: number;
   } = {}
 ): Promise<PlaybackInfoResponse> {
   const support = opts.support ?? playerSupport();
@@ -63,29 +61,44 @@ export async function requestPlaybackInfo(
     !opts.sourceId && !opts.full && opts.purpose !== 'download'
       ? { MediaSourceFields: LISTED_FIELDS.join(',') }
       : {};
-  const info = await client.post<PlaybackInfoResponse>(
-    `/Items/${itemId}/PlaybackInfo`,
-    {
-      UserId: userId,
-      DeviceProfile: opts.profile ?? DEVICE_PROFILE,
-      ...(opts.sourceId
-        ? { MediaSourceId: opts.sourceId }
-        : !opts.kept && { Fresh: true }),
-      ...(!opts.sourceId &&
-        opts.purpose !== 'download' && { SkipSubtitles: true }),
-      ...(opts.refresh && { Refresh: true }),
-      AllVersions: true,
-      ...(support.headers && { EnableRequiredHttpHeaders: true }),
-      ...(support.youtube && { EnableYouTube: true }),
-    },
-    { userId, ...listed },
-    opts.purpose
-  );
+  const ask = (extra?: object) =>
+    client.post<PlaybackInfoResponse>(
+      `/Items/${itemId}/PlaybackInfo`,
+      {
+        ...extra,
+        UserId: userId,
+        DeviceProfile: opts.profile ?? deviceProfile(opts.maxBitrate),
+        ...(opts.maxBitrate && { MaxStreamingBitrate: opts.maxBitrate }),
+        ...(opts.sourceId
+          ? { MediaSourceId: opts.sourceId }
+          : !opts.kept && { Fresh: true }),
+        ...(!opts.sourceId &&
+          opts.purpose !== 'download' && { SkipSubtitles: true }),
+        ...(opts.refresh && { Refresh: true }),
+        AllVersions: true,
+        ...(support.headers && { EnableRequiredHttpHeaders: true }),
+        ...(support.youtube && { EnableYouTube: true }),
+      },
+      { userId, ...listed },
+      opts.purpose
+    );
+  let info = await ask();
+  // A server that converts weighs a file by the sound named, else it can skip
+  // the check; subtitles are the player's own to draw.
+  const named = opts.sourceId
+    ? info.MediaSources?.find((s) => s.Id === opts.sourceId)
+    : undefined;
+  if (named?.SupportsTranscoding && named.DefaultAudioStreamIndex != null)
+    info = await ask({
+      AudioStreamIndex: named.DefaultAudioStreamIndex,
+      SubtitleStreamIndex: -1,
+    });
   return { ...info, MediaSources: info.MediaSources?.map(withOwnId) };
 }
 
 function usePlaybackInfoRequest() {
   const { client, user } = useSession();
+  const maxBitrate = useMaxBitrate();
   return React.useCallback(
     (
       itemId: string,
@@ -96,14 +109,20 @@ function usePlaybackInfoRequest() {
         purpose?: Purpose;
         full?: boolean;
       } = {}
-    ) => requestPlaybackInfo(client, user.Id!, itemId, opts),
-    [client, user.Id]
+    ) =>
+      requestPlaybackInfo(client, user.Id!, itemId, {
+        ...opts,
+        // Only playing a version takes the cap, which a list never shows.
+        maxBitrate: opts.sourceId ? maxBitrate : undefined,
+      }),
+    [client, user.Id, maxBitrate]
   );
 }
 
 export function usePlaybackInfoOptions() {
   const request = usePlaybackInfoRequest();
   const key = useKey();
+  const maxBitrate = useMaxBitrate();
   return React.useCallback(
     (
       itemId: string,
@@ -118,11 +137,12 @@ export function usePlaybackInfoOptions() {
           sourceId ?? null,
           ...(opts.purpose ? [opts.purpose] : []),
           ...(opts.full ? ['full'] : []),
+          ...(sourceId && maxBitrate ? [maxBitrate] : []),
         ],
         queryFn: () => request(itemId, { sourceId, ...opts }),
         staleTime: 10 * 60_000,
       }),
-    [key, request]
+    [key, request, maxBitrate]
   );
 }
 

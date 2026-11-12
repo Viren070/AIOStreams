@@ -97,6 +97,10 @@ msgstr ""
 msgid "{got} of {size}"
 msgstr ""
 
+#: src/lib/playback/quality.ts
+msgid "{height}, {mbps} Mbps"
+msgstr ""
+
 #: src/features/player/options.tsx
 msgid "{height}%"
 msgstr ""
@@ -3014,6 +3018,10 @@ msgstr ""
 msgid "Or type one"
 msgstr ""
 
+#: src/lib/playback/quality.ts
+msgid "Original"
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "Original language"
 msgstr ""
@@ -3517,6 +3525,11 @@ msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "QR code"
+msgstr ""
+
+#: src/app/settings/playback.tsx
+#: src/features/player/options.tsx
+msgid "Quality"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
@@ -4809,6 +4822,10 @@ msgstr ""
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
+msgstr ""
+
 #: src/app/settings/apps.tsx
 msgid "The movie or show whose page is open."
 msgstr ""
@@ -4871,6 +4888,16 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "The same for episodes marked as a recap."
+msgstr ""
+
+#. Follows "Playback failed:"
+#: src/lib/playback/transcoding.ts
+msgid "the server could not convert this version"
+msgstr ""
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+msgid "the server's stream stopped loading"
 msgstr ""
 
 #. Follows "Playback failed:"
@@ -5152,6 +5179,7 @@ msgstr ""
 #: src/components/media/random-pick.tsx
 #: src/features/party/not-in-party.tsx
 #: src/features/versions/version-list.tsx
+#: src/lib/playback/transcoding.ts
 #: src/lib/playback/use-player.ts
 msgid "Try again"
 msgstr ""

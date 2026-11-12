@@ -269,7 +269,7 @@ export function jellyfinDesktopHost(): Host | null {
     ...(window.NativeShell && nativeShellParts(window.NativeShell)),
     name: 'jellyfin-desktop',
     player: jmpEngine,
-    playerFeatures: ['audio'],
+    playerFeatures: ['audio', 'anyFormat'],
   };
   return host;
 }

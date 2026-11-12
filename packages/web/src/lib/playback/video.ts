@@ -33,6 +33,36 @@ import {
 /** A cue would show `{\an8}`-style tags as text. */
 const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
 
+/** The server's HLS for a browser that has no player for it, until the next file. */
+async function openHls(
+  el: HTMLVideoElement,
+  file: EngineFile,
+  current: () => boolean,
+  failed: (error: string) => void
+): Promise<{ destroy(): void } | null> {
+  const { default: Hls } = await import('hls.js/light');
+  if (!current()) return null;
+  if (!Hls.isSupported()) {
+    failed(browserCannot());
+    return null;
+  }
+  const hls = new Hls({
+    startPosition: file.source.IsInfiniteStream ? -1 : file.startMs / 1000,
+  });
+  hls.on(Hls.Events.ERROR, (_, data) => {
+    if (data.fatal)
+      failed(
+        t({
+          comment: 'Follows "Playback failed:"',
+          message: "the server's stream stopped loading",
+        })
+      );
+  });
+  hls.loadSource(file.url);
+  hls.attachMedia(el);
+  return hls;
+}
+
 /** Null before the video says. */
 function bufferedAhead(el: HTMLVideoElement): number | null {
   const { buffered, currentTime } = el;
@@ -41,6 +71,13 @@ function bufferedAhead(el: HTMLVideoElement): number | null {
       return (buffered.end(i) - currentTime) * 1000;
   return buffered.length ? 0 : null;
 }
+
+const browserCannot = () =>
+  t({
+    comment: 'Follows "Playback failed:"',
+    message:
+      'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
+  });
 
 const LINK_TYPES = new Map([
   ['m3u8', 'application/vnd.apple.mpegurl'],
@@ -104,6 +141,11 @@ export function videoEngine(
     let ownText: { el: HTMLVideoElement; track: TextTrack } | null = null;
     let stopOwnText = () => {};
     let detach = () => {};
+    let hls: { destroy(): void } | null = null;
+    const dropHls = () => {
+      hls?.destroy();
+      hls = null;
+    };
     // A text track's cues load late, so each one remembers the shift it has.
     const shifted = new WeakMap<TextTrack, number>();
     // Browsers disagree on where a cue the file leaves unplaced goes.
@@ -264,6 +306,7 @@ export function videoEngine(
         const el = video.current;
         if (!el) return;
         detach();
+        dropHls();
         removeElements();
         file = next;
         delayMs = next.subtitleDelayMs;
@@ -336,16 +379,23 @@ export function videoEngine(
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
           ended: () => emit({ type: 'ended' }),
-          error: () =>
+          error: () => {
+            // A file the browser can't read may still play as the server converts it.
+            if (
+              !next.source.IsInfiniteStream &&
+              el.error?.code !== MediaError.MEDIA_ERR_NETWORK
+            )
+              return emit({
+                type: 'unplayable',
+                reason: browserCannot(),
+                positionMs: el.currentTime ? el.currentTime * 1000 : undefined,
+              });
             emit({
               type: 'failed',
-              error: t({
-                comment: 'Follows "Playback failed:"',
-                message:
-                  'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
-              }),
+              error: browserCannot(),
               unsupported: declinesLink(el, next.url),
-            }),
+            });
+          },
         };
         for (const [event, handler] of Object.entries(handlers))
           el.addEventListener(event, handler);
@@ -367,13 +417,25 @@ export function videoEngine(
         onFullscreen();
         el.autoplay = !next.paused;
         if (next.paused) set({ paused: true });
-        el.src = next.url;
+        if (next.hls && !el.canPlayType('application/vnd.apple.mpegurl'))
+          void openHls(
+            el,
+            next,
+            () => file === next,
+            (error) => emit({ type: 'failed', error })
+          ).then((opened) => {
+            if (file === next) hls = opened;
+            else opened?.destroy();
+          });
+        else el.src = next.url;
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {
         detach();
         detach = () => {};
+        dropHls();
         removeElements();
+        file = null;
         const el = video.current;
         if (!el) return;
         el.pause();

@@ -42,6 +42,8 @@ import {
   type SegmentType,
 } from '@/lib/settings';
 import { useFeature } from '@/lib/jellyfin/server-info';
+import { useSession } from '@/lib/jellyfin/session';
+import { mayConvert, qualityOptions } from '@/lib/playback/quality';
 import { canMinimise } from '@/lib/playback/session';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
 import { BadgesRow, QuickFiltersRow } from './_components/version-settings';
@@ -523,6 +525,8 @@ function PlayerCard() {
   const browserEngine = engine === 'browser' ? engine : 'webgpu';
   const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
   const [back, setBack] = useSetting(settings.player.back);
+  const [quality, setQuality] = useSetting(settings.player.quality);
+  const { user } = useSession();
   const found = useExternalPlayers();
   const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
   const preset = linkPreset(player);
@@ -639,6 +643,18 @@ function PlayerCard() {
             onValueChange={(v) => setCacheSize(v as CacheSize)}
           />
         </>
+      )}
+      {mayConvert(user) && !launched && !preset && player !== CUSTOM_LINK && (
+        <Select
+          label={t`Quality`}
+          help={t`The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too.`}
+          options={qualityOptions().map(({ id, label }) => ({
+            value: id,
+            label,
+          }))}
+          value={String(quality)}
+          onValueChange={(v) => setQuality(Number(v))}
+        />
       )}
       {launched && (
         <SettingsRow

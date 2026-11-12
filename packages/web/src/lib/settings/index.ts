@@ -207,6 +207,11 @@ export const PARTY_REACTIONS = ['👍', '😂', '😮', '😢', '❤️', '🔥'
 export const CACHE_SIZES = ['auto', '128', '256', '512', '1000'] as const;
 export type CacheSize = (typeof CACHE_SIZES)[number];
 
+/** The most a stream may take in bits per second, which a server converts down to; 0 is the file as it is. */
+export const QUALITIES = [
+  0, 20_000_000, 10_000_000, 8_000_000, 4_000_000, 2_000_000, 1_000_000,
+] as const;
+
 /** `auto` asks the output what it decodes, which only the Android app can. */
 export const PASSTHROUGH = ['off', 'auto', 'always'] as const;
 export type Passthrough = (typeof PASSTHROUGH)[number];
@@ -593,6 +598,7 @@ export const settings = {
       'auto',
       CACHE_SIZES
     ),
+    quality: device<number>('aiostreams-web-player-quality', 0, QUALITIES),
     back: device<PlayerBack>(
       'aiostreams-web-player-back',
       'stop',
