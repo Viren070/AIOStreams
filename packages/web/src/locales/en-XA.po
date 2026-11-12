@@ -4145,7 +4145,7 @@ msgid "Share the invite"
 msgstr ""
 
 #: src/app/settings/playback.tsx
-msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
 #: src/lib/input/keys.ts
@@ -5181,7 +5181,7 @@ msgid "Title pages"
 msgstr ""
 
 #: src/app/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
+msgid "Titles, synopses and version names stay in the language the server sends."
 msgstr ""
 
 #: src/app/calendar/page.tsx
@@ -5345,7 +5345,7 @@ msgid "Up next: {upNext}"
 msgstr ""
 
 #: src/app/settings/interface.tsx
-msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured."
+msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 msgstr ""
 
 #: src/lib/hosts/shell/index.ts

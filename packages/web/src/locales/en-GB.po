@@ -4145,8 +4145,8 @@ msgid "Share the invite"
 msgstr "Share the invite"
 
 #: src/app/settings/playback.tsx
-msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgstr "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -5181,8 +5181,8 @@ msgid "Title pages"
 msgstr "Title pages"
 
 #: src/app/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
-msgstr "Titles, synopses and stream names stay in the language your addons send."
+msgid "Titles, synopses and version names stay in the language the server sends."
+msgstr "Titles, synopses and version names stay in the language the server sends."
 
 #: src/app/calendar/page.tsx
 #: src/app/live-tv/page.tsx
@@ -5345,8 +5345,8 @@ msgid "Up next: {upNext}"
 msgstr "Up next: {upNext}"
 
 #: src/app/settings/interface.tsx
-msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured."
-msgstr "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured."
+msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
+msgstr "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 
 #: src/lib/hosts/shell/index.ts
 msgid "Up to date."

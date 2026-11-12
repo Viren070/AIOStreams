@@ -257,7 +257,7 @@ function LanguageCard() {
     >
       <Select
         label={t`App language`}
-        help={t`Titles, synopses and stream names stay in the language your addons send.`}
+        help={t`Titles, synopses and version names stay in the language the server sends.`}
         options={[{ value: 'auto', label: t`System (${system})` }, ...listed]}
         value={LOCALES.includes(language) ? language : 'auto'}
         onValueChange={setLanguage}
@@ -356,7 +356,7 @@ export function InterfaceSection() {
         <Combobox
           multiple
           label={t`Featured on home`}
-          help={t`Up to ${MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured.`}
+          help={t`Up to ${MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured.`}
           placeholder={t`Automatic`}
           emptyMessage={t`Nothing matches.`}
           options={featuredOptions}
