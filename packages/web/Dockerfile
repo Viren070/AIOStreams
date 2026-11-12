@@ -28,7 +28,7 @@ COPY packages/frontend/public ./packages/frontend/public
 # Without .git, the build reads its commit from resources/metadata.json, if CI wrote one.
 COPY resources ./resources
 
-RUN pnpm -F @aiostreams/web build:standalone
+RUN PAGE_ICONS=true pnpm -F @aiostreams/web build:standalone
 
 
 FROM nginxinc/nginx-unprivileged:alpine-slim

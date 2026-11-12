@@ -134,6 +134,7 @@ export default defineConfig(async ({ envMode }) => {
     // Set by the TV apps' build: they have no bridge to tell the page.
     __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || null),
   };
+  const pageIcons = process.env.PAGE_ICONS === 'true';
   const source = {
     entry: { index: './src/main.tsx' },
     define,
@@ -164,7 +165,7 @@ export default defineConfig(async ({ envMode }) => {
       tools,
       html: {
         template: './index.html',
-        templateParameters: { root: './', icons: false, splash: true },
+        templateParameters: { root: './', icons: pageIcons, splash: true },
       },
       output: {
         distPath: { root: 'dist-standalone' },
