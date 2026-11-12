@@ -16,7 +16,7 @@ const SETTLE_MS = 1_000;
 function socketUrl(base: string, token: string, deviceId: string): string {
   const url = new URL(`${base}/socket`);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.searchParams.set('api_key', token);
+  url.searchParams.set('ApiKey', token);
   url.searchParams.set('deviceId', deviceId);
   return url.toString();
 }
