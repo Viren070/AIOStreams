@@ -641,6 +641,10 @@ msgstr "Artwork"
 msgid "As the host"
 msgstr "As the host"
 
+#: src/components/media/sort-picker.tsx
+msgid "Ascending"
+msgstr "Ascending"
+
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
 msgstr "Ask if you are still watching"
@@ -1325,6 +1329,10 @@ msgstr "Custom link"
 msgid "Cyan"
 msgstr "Cyan"
 
+#: src/components/media/sort-picker.tsx
+msgid "Date added"
+msgstr "Date added"
+
 #: src/app/history/page.tsx
 msgid "Date not known"
 msgstr "Date not known"
@@ -1381,6 +1389,10 @@ msgstr "Delete all"
 #: src/features/playlists/playlists.tsx
 msgid "Delete playlist"
 msgstr "Delete playlist"
+
+#: src/components/media/sort-picker.tsx
+msgid "Descending"
+msgstr "Descending"
 
 #: src/app/settings/theme.tsx
 msgid "Desert"
@@ -1723,6 +1735,7 @@ msgstr "Faster"
 msgid "Favourite"
 msgstr "Favourite"
 
+#: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
 #: src/app/settings/apps.tsx
 #: src/app/settings/interface.tsx
@@ -2054,6 +2067,10 @@ msgstr "In Discover"
 #: src/lib/discord.ts
 msgid "In Favourites"
 msgstr "In Favourites"
+
+#: src/app/discover/page.tsx
+msgid "In progress"
+msgstr "In progress"
 
 #: src/lib/playback/sound.ts
 #: src/lib/subtitles/delay.ts
@@ -2523,6 +2540,7 @@ msgid "Mute key"
 msgstr "Mute key"
 
 #: src/app/settings/_components/version-settings.tsx
+#: src/components/media/sort-picker.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Name"
 msgstr "Name"
@@ -3611,6 +3629,7 @@ msgid "Rate season"
 msgstr "Rate season"
 
 #: src/components/media/scores.tsx
+#: src/components/media/sort-picker.tsx
 msgid "Rating"
 msgstr "Rating"
 
@@ -3673,6 +3692,10 @@ msgstr "Relay"
 #: src/features/party/not-in-party.tsx
 msgid "Relay address"
 msgstr "Relay address"
+
+#: src/components/media/sort-picker.tsx
+msgid "Release date"
+msgstr "Release date"
 
 #: src/app/item/_components/details.tsx
 msgid "Released"
@@ -3883,6 +3906,10 @@ msgstr "Rows, catalogs and the calendar."
 #: src/features/player/options.tsx
 msgid "Runs at a different speed to the video"
 msgstr "Runs at a different speed to the video"
+
+#: src/components/media/sort-picker.tsx
+msgid "Runtime"
+msgstr "Runtime"
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -4406,6 +4433,10 @@ msgstr "something this device cannot read"
 #: src/features/party/in-party.tsx
 msgid "Something this device cannot read"
 msgstr "Something this device cannot read"
+
+#: src/components/media/sort-picker.tsx
+msgid "Sort by"
+msgstr "Sort by"
 
 #: src/app/settings/audio.tsx
 #: src/app/settings/interface.tsx
@@ -5540,6 +5571,7 @@ msgstr "Watch party"
 msgid "Watch together"
 msgstr "Watch together"
 
+#: src/app/discover/page.tsx
 #: src/app/history/page.tsx
 #: src/app/item/_components/actions.tsx
 msgid "Watched"

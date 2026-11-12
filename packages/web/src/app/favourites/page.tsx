@@ -22,6 +22,13 @@ import { CardGrid } from '@/components/media/media-row';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import { BATCH } from '@/features/live-tv/channel-list';
 import { openRandom } from '@/components/media/random-pick';
+import {
+  SORTS,
+  SortPicker,
+  sortFor,
+  type Sort,
+  type SortKey,
+} from '@/components/media/sort-picker';
 
 const KINDS = [
   {
@@ -47,6 +54,8 @@ const KINDS = [
 /* eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's item type */
 const CHANNELS = 'TvChannel';
 
+const FAVOURITE_SORTS: SortKey[] = ['added', 'name', 'released', 'rating'];
+
 export function FavouritesPage({ kind }: { kind?: string }) {
   const { client } = useSession();
   const live = !!useLiveTvView().data;
@@ -55,11 +64,14 @@ export function FavouritesPage({ kind }: { kind?: string }) {
     : KINDS;
   const types = kinds.find((k) => k.value === kind)?.value ?? KINDS[0].value;
   const channels = types === CHANNELS;
+  const [sort, setSort] = React.useState<Sort>(() => sortFor('added'));
   const pages = useItemPages('', {
     filter: 'favorite',
     types,
     recursive: true,
     enabled: !channels,
+    sortBy: SORTS[sort.key],
+    descending: sort.descending,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const sentinel = useInView<HTMLDivElement>(
@@ -91,6 +103,13 @@ export function FavouritesPage({ kind }: { kind?: string }) {
               )
             }
           />
+          {!channels && (
+            <SortPicker
+              keys={FAVOURITE_SORTS}
+              value={sort}
+              onChange={setSort}
+            />
+          )}
           {!!items.length && !channels && (
             <Button
               data-ui="random-pick"

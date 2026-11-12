@@ -139,12 +139,13 @@ export function mergeRows(
     .sort((a, b) => watchedAt(b) - watchedAt(a));
 }
 
-export type ItemFilter = 'unplayed' | 'played' | 'favorite';
+export type ItemFilter = 'unplayed' | 'played' | 'favorite' | 'resumable';
 
 const FILTERS: Record<ItemFilter, string> = {
   unplayed: 'IsUnplayed',
   played: 'IsPlayed',
   favorite: 'IsFavorite',
+  resumable: 'IsResumable',
 };
 
 /**

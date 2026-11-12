@@ -19,7 +19,14 @@ import { useInView } from '@/hooks/use-in-view';
 import { libraryLabel } from '@/lib/format';
 import { navigate, to } from '@/lib/paths';
 import { lastCatalog, rememberCatalog } from '@/lib/settings';
-import { useFeature } from '@/lib/jellyfin/server-info';
+import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
+import {
+  SORTS,
+  SortPicker,
+  sortFor,
+  type Sort,
+  type SortKey,
+} from '@/components/media/sort-picker';
 import { tab, tabList } from '@/lib/input';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
@@ -40,6 +47,33 @@ const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
       return t`Unwatched`;
     },
   },
+  {
+    value: 'resumable',
+    get label() {
+      return t`In progress`;
+    },
+  },
+  {
+    value: 'played',
+    get label() {
+      return t`Watched`;
+    },
+  },
+  {
+    value: 'favorite',
+    get label() {
+      return t`Favourites`;
+    },
+  },
+];
+
+/** A catalog keeps its own order; a server's own library sorts as asked. */
+const LIBRARY_SORTS: SortKey[] = [
+  'name',
+  'added',
+  'released',
+  'rating',
+  'runtime',
 ];
 
 export type Kind = 'Movie' | 'Series' | 'BoxSet';
@@ -189,6 +223,8 @@ export function DiscoverPage({
   const all = views.data?.Items ?? [];
   const view = all.find((v) => v.Id === viewId);
   const [filter, setFilter] = React.useState<ItemFilter | undefined>();
+  const { stock } = useServerInfo();
+  const [sort, setSort] = React.useState<Sort>(() => sortFor('name'));
 
   const current: Kind = (KINDS.find((k) => k.kind === kind)?.kind ??
     kindOf(view) ??
@@ -226,6 +262,7 @@ export function DiscoverPage({
     genreId: genreItem?.Id,
     recursive: true,
     enabled: !!view && !genres.isLoading,
+    ...(stock && { sortBy: SORTS[sort.key], descending: sort.descending }),
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const total = pages.data?.pages[0]?.TotalRecordCount;
@@ -341,6 +378,9 @@ export function DiscoverPage({
           value={filter}
           onChange={setFilter}
         />
+        {stock && (
+          <SortPicker keys={LIBRARY_SORTS} value={sort} onChange={setSort} />
+        )}
       </div>
 
       {pages.isError ? (

@@ -640,6 +640,10 @@ msgstr ""
 msgid "As the host"
 msgstr ""
 
+#: src/components/media/sort-picker.tsx
+msgid "Ascending"
+msgstr ""
+
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
 msgstr ""
@@ -1324,6 +1328,10 @@ msgstr ""
 msgid "Cyan"
 msgstr ""
 
+#: src/components/media/sort-picker.tsx
+msgid "Date added"
+msgstr ""
+
 #: src/app/history/page.tsx
 msgid "Date not known"
 msgstr ""
@@ -1379,6 +1387,10 @@ msgstr ""
 
 #: src/features/playlists/playlists.tsx
 msgid "Delete playlist"
+msgstr ""
+
+#: src/components/media/sort-picker.tsx
+msgid "Descending"
 msgstr ""
 
 #: src/app/settings/theme.tsx
@@ -1722,6 +1734,7 @@ msgstr ""
 msgid "Favourite"
 msgstr ""
 
+#: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
 #: src/app/settings/apps.tsx
 #: src/app/settings/interface.tsx
@@ -2052,6 +2065,10 @@ msgstr ""
 
 #: src/lib/discord.ts
 msgid "In Favourites"
+msgstr ""
+
+#: src/app/discover/page.tsx
+msgid "In progress"
 msgstr ""
 
 #: src/lib/playback/sound.ts
@@ -2522,6 +2539,7 @@ msgid "Mute key"
 msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
+#: src/components/media/sort-picker.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Name"
 msgstr ""
@@ -3610,6 +3628,7 @@ msgid "Rate season"
 msgstr ""
 
 #: src/components/media/scores.tsx
+#: src/components/media/sort-picker.tsx
 msgid "Rating"
 msgstr ""
 
@@ -3671,6 +3690,10 @@ msgstr ""
 
 #: src/features/party/not-in-party.tsx
 msgid "Relay address"
+msgstr ""
+
+#: src/components/media/sort-picker.tsx
+msgid "Release date"
 msgstr ""
 
 #: src/app/item/_components/details.tsx
@@ -3881,6 +3904,10 @@ msgstr ""
 
 #: src/features/player/options.tsx
 msgid "Runs at a different speed to the video"
+msgstr ""
+
+#: src/components/media/sort-picker.tsx
+msgid "Runtime"
 msgstr ""
 
 #. A season and episode number, as in S01E04
@@ -4404,6 +4431,10 @@ msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Something this device cannot read"
+msgstr ""
+
+#: src/components/media/sort-picker.tsx
+msgid "Sort by"
 msgstr ""
 
 #: src/app/settings/audio.tsx
@@ -5539,6 +5570,7 @@ msgstr ""
 msgid "Watch together"
 msgstr ""
 
+#: src/app/discover/page.tsx
 #: src/app/history/page.tsx
 #: src/app/item/_components/actions.tsx
 msgid "Watched"
