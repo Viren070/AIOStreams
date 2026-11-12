@@ -23,6 +23,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts \
 COPY tsconfig.*json ./
 COPY packages/ui ./packages/ui
 COPY packages/web ./packages/web
+COPY packages/core/src ./packages/core/src
 COPY packages/frontend/public ./packages/frontend/public
 # Without .git, the build reads its commit from resources/metadata.json, if CI wrote one.
 COPY resources ./resources
