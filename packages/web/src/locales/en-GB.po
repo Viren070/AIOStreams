@@ -617,6 +617,10 @@ msgstr "Apply CSS"
 msgid "Apply to styled subtitles too"
 msgstr "Apply to styled subtitles too"
 
+#: src/app/settings/account.tsx
+msgid "Approve"
+msgstr "Approve"
+
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
 msgstr "Approved. Signing in…"
@@ -990,6 +994,10 @@ msgstr "Clear selection"
 #: src/features/player/picture-in-picture.tsx
 msgid "Close"
 msgstr "Close"
+
+#: src/app/settings/account.tsx
+msgid "Code"
+msgstr "Code"
 
 #: src/features/party/in-party.tsx
 msgid "Code copied"
@@ -1592,6 +1600,10 @@ msgstr "Engine"
 msgid "Enter"
 msgstr "Enter"
 
+#: src/app/settings/account.tsx
+msgid "Enter a code"
+msgstr "Enter a code"
+
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
 msgstr "Enter an invite link, or a code and its relay"
@@ -1599,6 +1611,10 @@ msgstr "Enter an invite link, or a code and its relay"
 #: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
 msgstr "Enter the address of a relay"
+
+#: src/app/settings/account.tsx
+msgid "Enter the code the other device shows."
+msgstr "Enter the code the other device shows."
 
 #: src/app/sign-in/page.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
@@ -2625,6 +2641,10 @@ msgstr "No channels in this group."
 msgid "No details for this title"
 msgstr "No details for this title"
 
+#: src/app/settings/account.tsx
+msgid "No device is waiting with that code."
+msgstr "No device is waiting with that code."
+
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
 msgstr "No episodes to download there"
@@ -3532,6 +3552,7 @@ msgstr "QR code"
 msgid "Quality"
 msgstr "Quality"
 
+#: src/app/settings/account.tsx
 #: src/app/sign-in/page.tsx
 msgid "Quick Connect"
 msgstr "Quick Connect"
@@ -4220,6 +4241,10 @@ msgstr "Side rail runs down the side of the screen; Top tabs sit along the top o
 msgid "Sidebar"
 msgstr "Sidebar"
 
+#: src/app/settings/account.tsx
+msgid "Sign another device in as you, with the code it shows."
+msgstr "Sign another device in as you, with the code it shows."
+
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
 msgstr "Sign in"
@@ -4784,6 +4809,10 @@ msgstr "The app's player"
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "The app's player and its options, such as starting videos in landscape."
+
+#: src/app/settings/account.tsx
+msgid "The device is signed in"
+msgstr "The device is signed in"
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."

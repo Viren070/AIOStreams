@@ -616,6 +616,10 @@ msgstr ""
 msgid "Apply to styled subtitles too"
 msgstr ""
 
+#: src/app/settings/account.tsx
+msgid "Approve"
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
 msgstr ""
@@ -988,6 +992,10 @@ msgstr ""
 #: src/features/player/mini-player.tsx
 #: src/features/player/picture-in-picture.tsx
 msgid "Close"
+msgstr ""
+
+#: src/app/settings/account.tsx
+msgid "Code"
 msgstr ""
 
 #: src/features/party/in-party.tsx
@@ -1591,12 +1599,20 @@ msgstr ""
 msgid "Enter"
 msgstr ""
 
+#: src/app/settings/account.tsx
+msgid "Enter a code"
+msgstr ""
+
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
 msgstr ""
 
 #: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
+msgstr ""
+
+#: src/app/settings/account.tsx
+msgid "Enter the code the other device shows."
 msgstr ""
 
 #: src/app/sign-in/page.tsx
@@ -2624,6 +2640,10 @@ msgstr ""
 msgid "No details for this title"
 msgstr ""
 
+#: src/app/settings/account.tsx
+msgid "No device is waiting with that code."
+msgstr ""
+
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
 msgstr ""
@@ -3531,6 +3551,7 @@ msgstr ""
 msgid "Quality"
 msgstr ""
 
+#: src/app/settings/account.tsx
 #: src/app/sign-in/page.tsx
 msgid "Quick Connect"
 msgstr ""
@@ -4219,6 +4240,10 @@ msgstr ""
 msgid "Sidebar"
 msgstr ""
 
+#: src/app/settings/account.tsx
+msgid "Sign another device in as you, with the code it shows."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
 msgstr ""
@@ -4782,6 +4807,10 @@ msgstr ""
 
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
+msgstr ""
+
+#: src/app/settings/account.tsx
+msgid "The device is signed in"
 msgstr ""
 
 #: src/lib/party/party.ts

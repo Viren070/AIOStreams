@@ -1,7 +1,12 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
+import React from 'react';
+import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import { Switch } from '@aiostreams/ui/switch';
 import { Button } from '@aiostreams/ui/button';
+import { Modal } from '@aiostreams/ui/modal';
+import { TextInput } from '@aiostreams/ui/text-input';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -33,6 +38,13 @@ export function AccountSection() {
     onConfirm: signOut,
   });
   const button = 'w-full rounded-full sm:w-auto';
+  const quickConnect = useQuery({
+    queryKey: ['jf-quick-connect-enabled', client.base],
+    queryFn: () =>
+      client.get<boolean>('/QuickConnect/Enabled').catch(() => false),
+    staleTime: 5 * 60_000,
+  });
+  const [approving, setApproving] = React.useState(false);
 
   return (
     <>
@@ -83,6 +95,20 @@ export function AccountSection() {
             </Button>
           </SettingsRow>
         )}
+        {quickConnect.data && (
+          <SettingsRow
+            label={t`Quick Connect`}
+            help={t`Sign another device in as you, with the code it shows.`}
+          >
+            <Button
+              intent="gray-outline"
+              className={button}
+              onClick={() => setApproving(true)}
+            >
+              <Trans>Enter a code</Trans>
+            </Button>
+          </SettingsRow>
+        )}
         {configure && (
           <SettingsRow
             label={t`Configuration`}
@@ -114,6 +140,72 @@ export function AccountSection() {
         </SettingsCard>
       )}
       <ConfirmationDialog {...confirmSignOut} />
+      <QuickConnectDialog
+        open={approving}
+        onClose={() => setApproving(false)}
+      />
     </>
+  );
+}
+
+function QuickConnectDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose(): void;
+}) {
+  const { client } = useSession();
+  const [code, setCode] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    setCode('');
+    setError(null);
+  }, [open]);
+  const approve = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    // A code no device is waiting with is false, or not found.
+    const approved = await client
+      .post<boolean>('/QuickConnect/Authorize', undefined, { code })
+      .catch(() => false);
+    setBusy(false);
+    if (!approved) return setError(t`No device is waiting with that code.`);
+    toast.success(t`The device is signed in`);
+    onClose();
+  };
+  return (
+    <Modal
+      data-ui="dialog"
+      data-name="quick-connect"
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      title={t`Quick Connect`}
+      description={t`Enter the code the other device shows.`}
+    >
+      <form onSubmit={approve} className="space-y-4">
+        <TextInput
+          label={t`Code`}
+          inputMode="numeric"
+          autoComplete="off"
+          autoFocus
+          value={code}
+          onValueChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+          error={error ?? undefined}
+        />
+        <Button
+          type="submit"
+          intent="white"
+          className="w-full rounded-full"
+          loading={busy}
+          disabled={code.length < 6}
+        >
+          <Trans>Approve</Trans>
+        </Button>
+      </form>
+    </Modal>
   );
 }
