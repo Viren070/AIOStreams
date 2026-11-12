@@ -4958,14 +4958,14 @@ msgid "the server could not convert this version"
 msgstr "the server could not convert this version"
 
 #. Follows "Playback failed:"
-#: src/lib/playback/video.ts
-msgid "the server's stream stopped loading"
-msgstr "the server's stream stopped loading"
-
-#. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the stream ended early"
 msgstr "the stream ended early"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+msgid "the stream stopped loading"
+msgstr "the stream stopped loading"
 
 #: src/app/settings/apps.tsx
 msgid "The title, the episode and the time left."

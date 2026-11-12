@@ -216,7 +216,6 @@ export function transcodingEngine(
         engine.load({
           ...file,
           url: next.url,
-          hls: true,
           startMs: from,
           paused,
           // A conversion has no subtitles of its own to read.

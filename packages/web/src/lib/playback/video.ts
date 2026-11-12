@@ -33,7 +33,7 @@ import {
 /** A cue would show `{\an8}`-style tags as text. */
 const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
 
-/** The server's HLS for a browser that has no player for it, until the next file. */
+/** HLS through a script, for a browser with no player for it, until the next file. */
 async function openHls(
   el: HTMLVideoElement,
   file: EngineFile,
@@ -54,7 +54,7 @@ async function openHls(
       failed(
         t({
           comment: 'Follows "Playback failed:"',
-          message: "the server's stream stopped loading",
+          message: 'the stream stopped loading',
         })
       );
   });
@@ -79,18 +79,22 @@ const browserCannot = () =>
       'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
   });
 
+const HLS = 'application/vnd.apple.mpegurl';
+
 const LINK_TYPES = new Map([
-  ['m3u8', 'application/vnd.apple.mpegurl'],
-  ['m3u', 'application/vnd.apple.mpegurl'],
+  ['m3u8', HLS],
+  ['m3u', HLS],
   ['ts', 'video/mp2t'],
 ]);
 
+function linkType(url: string): string | undefined {
+  const name = url.split(/[?#]/)[0].split('/').pop() ?? '';
+  return LINK_TYPES.get(name.slice(name.lastIndexOf('.') + 1).toLowerCase());
+}
+
 /** A failed load from another site hides its cause, but a link's type can be asked about. */
 function declinesLink(el: HTMLVideoElement, url: string): boolean {
-  const name = url.split(/[?#]/)[0].split('/').pop() ?? '';
-  const type = LINK_TYPES.get(
-    name.slice(name.lastIndexOf('.') + 1).toLowerCase()
-  );
+  const type = linkType(url);
   return !!type && !el.canPlayType(type);
 }
 
@@ -417,12 +421,14 @@ export function videoEngine(
         onFullscreen();
         el.autoplay = !next.paused;
         if (next.paused) set({ paused: true });
-        if (next.hls && !el.canPlayType('application/vnd.apple.mpegurl'))
+        if (linkType(next.url) === HLS && !el.canPlayType(HLS))
           void openHls(
             el,
             next,
             () => file === next,
-            (error) => emit({ type: 'failed', error })
+            // One that never loaded, as from a site without CORS, is the link's fault.
+            (error) =>
+              emit({ type: 'failed', error, unsupported: !el.readyState })
           ).then((opened) => {
             if (file === next) hls = opened;
             else opened?.destroy();

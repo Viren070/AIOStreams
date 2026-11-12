@@ -4957,13 +4957,13 @@ msgid "the server could not convert this version"
 msgstr ""
 
 #. Follows "Playback failed:"
-#: src/lib/playback/video.ts
-msgid "the server's stream stopped loading"
+#: src/lib/playback/use-player.ts
+msgid "the stream ended early"
 msgstr ""
 
 #. Follows "Playback failed:"
-#: src/lib/playback/use-player.ts
-msgid "the stream ended early"
+#: src/lib/playback/video.ts
+msgid "the stream stopped loading"
 msgstr ""
 
 #: src/app/settings/apps.tsx

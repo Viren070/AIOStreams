@@ -35,8 +35,6 @@ export interface EngineTrack extends Track {
 
 export interface EngineFile {
   url: string;
-  /** The server's HLS, which a browser without HLS of its own plays through a script. */
-  hls?: boolean;
   headers?: Record<string, string>;
   startMs: number;
   /** Opens without playing. */
