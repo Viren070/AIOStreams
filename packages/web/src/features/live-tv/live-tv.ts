@@ -134,7 +134,11 @@ export function useChannelGroups(): {
   isLoading: boolean;
 } {
   const view = useLiveTvView();
-  const genres = useGenres(view.data?.Id ?? '');
+  // Elsewhere the view's genres are its programmes', which channels aren't listed by.
+  const grouped =
+    (view.data as { aiostreams?: { groups?: boolean } } | null | undefined)
+      ?.aiostreams?.groups === true;
+  const genres = useGenres(grouped ? (view.data?.Id ?? '') : '');
   const favourites = useChannelPages(FAVOURITES, { pageSize: 1 });
   const hasFavourites = !!favourites.data?.pages[0]?.TotalRecordCount;
   const recent = useChannelPages(RECENT);
@@ -144,7 +148,7 @@ export function useChannelGroups(): {
       ...(hasFavourites ? [{ id: FAVOURITES, name: t`Favourites` }] : []),
       ...(hasRecents ? [{ id: RECENT, name: t`Recent` }] : []),
       { id: ALL, name: t`All channels` },
-      ...(genres.data?.Items ?? []).map((g) => ({
+      ...((grouped && genres.data?.Items) || []).map((g) => ({
         id: g.Id!,
         name: g.Name ?? '',
       })),
