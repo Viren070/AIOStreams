@@ -12,6 +12,7 @@ import {
   libraryTypes,
   needsGenre,
   mergeRows,
+  NEWEST,
   useLibraryHeads,
   useNextUp,
   useResume,
@@ -38,7 +39,7 @@ import {
 } from '@/lib/format';
 import { href, itemPath, navigate, to, versionsPath } from '@/lib/paths';
 import { settings, useSetting, type FeaturedSource } from '@/lib/settings';
-import { useFeature } from '@/lib/jellyfin/server-info';
+import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
 import { useNear } from '@/hooks/use-in-view';
 import { FollowHero, Hero } from '@/components/media/hero';
 import { CardPreviewHost } from '@/components/media/card-preview';
@@ -391,12 +392,15 @@ function LiveRow() {
  */
 function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
   const { client } = useSession();
+  const { stock } = useServerInfo();
   const [ref, near] = useNear<HTMLElement>('400px', first);
   const pages = useItemPages(view.Id!, {
     types: libraryTypes(view),
     recursive: true,
     pageSize: ROW_PAGE,
     enabled: near,
+    // A catalog's order is its own; a server's own files show newest first.
+    ...(stock && { sortBy: NEWEST, descending: true }),
   });
   const items = React.useMemo(
     () => pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [],
