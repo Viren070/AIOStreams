@@ -7,7 +7,10 @@ import type { BaseItemDto } from '@/lib/jellyfin/types';
 const ANIME_IDS = ['AniList', 'Kitsu', 'MyAnimeList', 'AniDB'];
 
 const isAnime = (item: BaseItemDto | undefined) =>
-  ANIME_IDS.some((key) => !!item?.ProviderIds?.[key]);
+  ANIME_IDS.some((key) => !!item?.ProviderIds?.[key]) ||
+  [...(item?.Genres ?? []), ...(item?.Tags ?? [])].some(
+    (name) => name.toLowerCase() === 'anime'
+  );
 
 let anime = false;
 /** The shortcut's choice for what plays, over the setting. */
