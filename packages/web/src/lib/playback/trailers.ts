@@ -8,9 +8,16 @@ export interface Trailer {
   url: string;
 }
 
-export const trailerSource = (url: string): SourceInfo => ({
+/** Its default audio is where the user's Original language reads the language from. */
+export const trailerSource = (
+  url: string,
+  originalLanguage: string | undefined
+): SourceInfo => ({
   Id: `trailer:${url}`,
-  MediaStreams: [],
+  MediaStreams: originalLanguage
+    ? [{ Type: 'Audio', Index: 0, Language: originalLanguage }]
+    : [],
+  DefaultAudioStreamIndex: originalLanguage ? 0 : undefined,
 });
 
 export const trailersOf = (item: BaseItemDto): Trailer[] =>
@@ -37,7 +44,7 @@ export function youTubeId(url: string): string | null {
 }
 
 export type TrailerPlayback =
-  | { kind: 'video'; url: string }
+  | { kind: 'video'; url: string; originalLanguage?: string }
   | { kind: 'embed'; id: string }
   | { kind: 'external'; url: string };
 
@@ -47,7 +54,7 @@ async function playbackOf(url: string): Promise<TrailerPlayback> {
   const { resolveYouTube } = currentHost();
   if (resolveYouTube) {
     const stream = await resolveYouTube(id);
-    return stream ? { kind: 'video', url: stream } : { kind: 'external', url };
+    return stream ? { kind: 'video', ...stream } : { kind: 'external', url };
   }
   // YouTube's embed refuses a page without a web address.
   return location.protocol.startsWith('http')

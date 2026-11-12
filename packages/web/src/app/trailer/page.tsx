@@ -90,7 +90,14 @@ export function TrailerPage({
     );
   if (found.kind === 'embed')
     return <EmbeddedTrailer {...props} id={found.id} />;
-  return <PlayedTrailer {...props} url={found.url} prefs={prefs.prefs} />;
+  return (
+    <PlayedTrailer
+      {...props}
+      url={found.url}
+      originalLanguage={found.originalLanguage}
+      prefs={prefs.prefs}
+    />
+  );
 }
 
 function Controls({
@@ -124,15 +131,23 @@ function Controls({
 
 function PlayedTrailer({
   url,
+  originalLanguage,
   prefs,
   ...props
-}: TrailerProps & { url: string; prefs: PlaybackPrefs }) {
+}: TrailerProps & {
+  url: string;
+  originalLanguage: string | undefined;
+  prefs: PlaybackPrefs;
+}) {
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
   const [fit] = useSetting(settings.video.fit);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
-  const source = React.useMemo(() => trailerSource(url), [url]);
+  const source = React.useMemo(
+    () => trailerSource(url, originalLanguage),
+    [url, originalLanguage]
+  );
   const player = usePlayer([hostPlayer ?? videoEngine(video)], {
     client,
     item: props.item,

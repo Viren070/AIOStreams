@@ -1,5 +1,5 @@
 /* eslint-disable lingui/no-unlocalized-strings -- YouTube's API */
-import type { FetchPastCors } from '.';
+import type { FetchPastCors, YouTubeStream } from '.';
 import { appLog } from './shell/bridge';
 
 interface Client {
@@ -49,10 +49,27 @@ const CLIENTS: Client[] = [
 
 const TIMEOUT_MS = 10_000;
 
+interface StreamingData {
+  hlsManifestUrl?: string;
+  formats?: { url?: string }[];
+  adaptiveFormats?: {
+    audioTrack?: { id?: string; audioIsDefault?: boolean };
+  }[];
+}
+
 interface Answer {
   playabilityStatus?: { status?: string };
-  streamingData?: { hlsManifestUrl?: string; formats?: { url?: string }[] };
+  streamingData?: StreamingData;
   responseContext?: { visitorData?: string };
+}
+
+/** The original audio's language, which a manifest with dubs doesn't mark. */
+function originalLanguage(streaming: StreamingData): string | undefined {
+  const track = streaming.adaptiveFormats?.find(
+    (format) => format.audioTrack?.audioIsDefault
+  )?.audioTrack;
+  // Such as `en-US.4`.
+  return track?.id?.split('.')[0];
 }
 
 function player(
@@ -103,17 +120,18 @@ async function ask(
   via: FetchPastCors,
   client: Client,
   videoId: string
-): Promise<string | null> {
+): Promise<YouTubeStream | null> {
   let visitor: string | null = null;
   for (let i = 0; i < 2; i++) {
     const answer = await player(via, client, videoId, visitor);
     if (answer.playabilityStatus?.status === 'OK') {
-      const streaming = answer.streamingData;
-      return (
-        (client.hls
-          ? streaming?.hlsManifestUrl
-          : streaming?.formats?.find((f) => f.url)?.url) ?? null
-      );
+      const streaming = answer.streamingData ?? {};
+      const url = client.hls
+        ? streaming.hlsManifestUrl
+        : streaming.formats?.find((f) => f.url)?.url;
+      return url
+        ? { url, originalLanguage: originalLanguage(streaming) }
+        : null;
     }
     // Without a visitor id YouTube refuses, but hands one out for the next ask.
     visitor = answer.responseContext?.visitorData ?? null;
@@ -125,12 +143,12 @@ async function ask(
 /** Asks YouTube's player API as its apps do. The links only play from the address that asked, so the TV asks itself. */
 export const youTubeResolver =
   (via: FetchPastCors) =>
-  async (videoId: string): Promise<string | null> => {
+  async (videoId: string): Promise<YouTubeStream | null> => {
     if (!/^[\w-]{11}$/.test(videoId)) return null;
     for (const client of CLIENTS) {
       try {
-        const url = await ask(via, client, videoId);
-        if (url) return url;
+        const stream = await ask(via, client, videoId);
+        if (stream) return stream;
       } catch (error) {
         appLog('warn', `youtube ${client.name}: ${String(error)}`);
       }

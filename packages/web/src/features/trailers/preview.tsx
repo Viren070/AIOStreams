@@ -324,6 +324,7 @@ export function TrailerPreview(props: TrailerPreviewProps) {
       item={item}
       trailer={trailer}
       url={found.url}
+      originalLanguage={found.originalLanguage}
       host={currentHost().player}
       full={full}
       onExitFull={props.onExitFull}
@@ -360,6 +361,7 @@ function PlayedPreview({
   item,
   trailer,
   url,
+  originalLanguage,
   host,
   frame,
   hole,
@@ -378,6 +380,7 @@ function PlayedPreview({
   item: BaseItemDto;
   trailer: Trailer;
   url: string;
+  originalLanguage: string | undefined;
   host: EngineFactory | undefined;
   full: boolean;
   several: boolean;
@@ -388,7 +391,10 @@ function PlayedPreview({
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [engines] = React.useState(() => [host ?? videoEngine(video)]);
-  const source = React.useMemo(() => trailerSource(url), [url]);
+  const source = React.useMemo(
+    () => trailerSource(url, originalLanguage),
+    [url, originalLanguage]
+  );
   const [fit] = useSetting(settings.video.fit);
   // Without it, the app's player keeps the last style it was sent.
   const [subtitleStyle] = useSetting(settings.subtitle.style);

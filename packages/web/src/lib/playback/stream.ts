@@ -47,7 +47,7 @@ export const needsAppPlayer = (source: SourceInfo) =>
   !!source.aiostreams?.ytId || !!requiredHeaders(source);
 
 async function youTubeStream(id: string): Promise<string | null> {
-  return (await currentHost().resolveYouTube?.(id)) ?? null;
+  return (await currentHost().resolveYouTube?.(id))?.url ?? null;
 }
 
 export async function playerUrl(

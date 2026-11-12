@@ -25,7 +25,12 @@ export type VideoOutput = 'mpv' | 'system' | 'compatibility';
 
 /** `external` marks what the player in its own window sends. */
 export type ShellMessage =
-  | { type: 'youtube-resolved'; request: string; url: string | null }
+  | {
+      type: 'youtube-resolved';
+      request: string;
+      url: string | null;
+      originalLanguage?: string;
+    }
   | {
       type: 'player-state';
       positionMs?: number;

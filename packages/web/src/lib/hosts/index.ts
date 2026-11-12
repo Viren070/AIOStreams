@@ -46,6 +46,11 @@ export interface Hearing {
   text: string | null;
 }
 
+export interface YouTubeStream {
+  url: string;
+  originalLanguage?: string;
+}
+
 /**
  * The app the page runs in, from the bridge it injects. Anything left out
  * falls back to what a browser does.
@@ -105,7 +110,7 @@ export interface Host {
   downloads?: DownloadsHost;
   fetchFile?: FetchPastCors;
   /** A YouTube video's stream, which only plays from the address that asked. */
-  resolveYouTube?(id: string): Promise<string | null>;
+  resolveYouTube?(id: string): Promise<YouTubeStream | null>;
   /** Shows these above the on-screen keyboard's keys, for the field it types into. */
   keyboardCompletions?(names: string[]): void;
   /** What the device's speech recogniser heard, or null for nothing. */
