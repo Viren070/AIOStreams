@@ -90,6 +90,14 @@ const BUNDLED_ICONS = [
   'apple-icon.png',
 ].map((name) => ({ from: `../frontend/public/${name}`, to: name }));
 
+/** What a browser installs the page from; a server serves its own manifest. */
+const WEB_APP_FILES = [
+  { from: './manifest.json', to: 'manifest.json' },
+  ...['web-app-manifest-192x192.png', 'web-app-manifest-512x512.png'].map(
+    (name) => ({ from: `../frontend/public/${name}`, to: name })
+  ),
+];
+
 /** Under its version, as the server caches its static files for a year. */
 function webGpuPlayer() {
   const manifest = createRequire(import.meta.url).resolve(
@@ -174,7 +182,11 @@ export default defineConfig(async ({ envMode }) => {
         distPath: { root: 'dist-standalone' },
         // Relative, since the TV apps load it from their package's files.
         assetPrefix: 'auto',
-        copy: [...BUNDLED_ICONS, engine.copy],
+        copy: [
+          ...BUNDLED_ICONS,
+          ...(pageIcons ? WEB_APP_FILES : []),
+          engine.copy,
+        ],
       },
       server: { port: devServerPort + 1 },
     };

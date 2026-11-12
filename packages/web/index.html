@@ -18,12 +18,12 @@
     <% if (icons) { %>
     <link rel="icon" href="<%= root %>favicon.ico" sizes="any" />
     <link rel="icon" href="<%= root %>icon0.svg" type="image/svg+xml" />
+    <link rel="manifest" href="<%= root %>manifest.json" />
     <% } else { %>
     <!-- The apps' web views fetch an icon again on every navigation, and no tab shows it. -->
     <link rel="icon" href="data:," />
     <% } %>
     <link rel="apple-touch-icon" href="<%= root %>apple-icon.png" />
-    <link rel="manifest" href="<%= root %>manifest.json" />
     <script>
       // Players drawn beneath the page show through it, which the apps' web
       // views only render for a page transparent from the start.
