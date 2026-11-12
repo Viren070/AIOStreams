@@ -122,9 +122,11 @@ internal class StreamCache(
         context.unregisterComponentCallbacks(this)
     }
 
+    // The UI going out of sight, or the app to the background, says nothing of memory.
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) stream?.shrink()
+        val unseen = level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN || level == ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && !unseen) stream?.shrink()
     }
 
     override fun onLowMemory() {
