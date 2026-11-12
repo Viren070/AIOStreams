@@ -10,7 +10,8 @@ import {
  * Decides whether a stream will play on a device from its parsed tags, and
  * applies the user's "Respect device capabilities" setting to a stream list.
  * "deprioritise" runs after the pipeline cache, so devices share one entry;
- * "exclude" runs inside the pipeline under a per-device cache key.
+ * "exclude" runs inside the pipeline, before deduplication, under a
+ * per-device cache key.
  *
  * Everything here leans towards "playable": a capability the client left out,
  * or a tag we can't map to the spec, never removes a stream.
@@ -124,46 +125,9 @@ export function isPlayableOnDevice(
   return getUnplayableReasons(stream, caps).length === 0;
 }
 
-type FailoverVariant = NonNullable<ParsedStream['failoverVariants']>[number];
-
-/** A variant without media info (from before it was recorded) stays. */
-function variantPlayable(
-  variant: FailoverVariant,
-  caps: DeviceCapabilities
-): boolean {
-  const media = variant.media;
-  if (!media) return true;
-  const asStream = {
-    parsedFile: {
-      resolution: media.resolution,
-      encode: media.encode,
-      visualTags: media.visualTags ?? [],
-      audioTags: media.audioTags ?? [],
-    },
-  } as unknown as ParsedStream;
-  return isPlayableOnDevice(asStream, caps);
-}
-
-/**
- * The stream with any failover variants the device can't play removed. Returns
- * the same object when nothing changes, and a copy otherwise.
- */
-function withoutUnplayableVariants(
-  stream: ParsedStream,
-  caps: DeviceCapabilities
-): ParsedStream {
-  const variants = stream.failoverVariants;
-  if (!variants?.length) return stream;
-  const kept = variants.filter((v) => variantPlayable(v, caps));
-  if (kept.length === variants.length) return stream;
-  return { ...stream, failoverVariants: kept.length ? kept : undefined };
-}
-
 /**
  * Returns a new list with unplayable streams moved to the end (keeping their
- * order) or removed. "exclude" also drops the device's unplayable failover
- * variants from the streams it keeps. The input array and its streams are
- * left untouched.
+ * order) or removed. The input array and its streams are left untouched.
  */
 export function applyDeviceCapabilities(
   streams: ParsedStream[],
@@ -176,10 +140,7 @@ export function applyDeviceCapabilities(
   const playable: ParsedStream[] = [];
   const unplayable: ParsedStream[] = [];
   for (const stream of streams) {
-    if (!isPlayableOnDevice(stream, caps)) unplayable.push(stream);
-    else if (mode === 'exclude')
-      playable.push(withoutUnplayableVariants(stream, caps));
-    else playable.push(stream);
+    (isPlayableOnDevice(stream, caps) ? playable : unplayable).push(stream);
   }
   return {
     streams: mode === 'exclude' ? playable : [...playable, ...unplayable],
@@ -189,9 +150,8 @@ export function applyDeviceCapabilities(
 
 /**
  * The scope the failover chain record is stored under. When "exclude" shapes
- * the chain for a device, each device gets its own record, so two devices
- * keeping the same streams with different variants don't overwrite each
- * other's chain.
+ * the list for a device, each device gets its own record, so two devices
+ * keeping different streams or variants don't overwrite each other's chain.
  */
 export function playChainScope(
   userScope: string,

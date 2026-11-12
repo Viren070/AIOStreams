@@ -358,6 +358,26 @@ export async function processStreams(
     processedStreams = await ctx.filterer.filterBlocklisted(processedStreams);
   }
 
+  // "Exclude" removes the device's unplayable streams before dedup, so one
+  // can't win a group over a playable duplicate or become a failover variant,
+  // and the limit counts only playable streams. getStreams gives these
+  // requests a per-device cache entry.
+  if (
+    ctx.userData.deviceCapabilities === 'exclude' &&
+    context.deviceCapabilities
+  ) {
+    const { streams, unplayable } = applyDeviceCapabilities(
+      processedStreams,
+      context.deviceCapabilities,
+      'exclude'
+    );
+    processedStreams = streams;
+    logger.debug(
+      { unplayable, total: streams.length + unplayable },
+      'excluded streams the device cannot play'
+    );
+  }
+
   const dedupStart = Date.now();
   processedStreams = await ctx.deduplicator.deduplicate(processedStreams);
   deduplicationMs = Date.now() - dedupStart;
@@ -378,25 +398,6 @@ export async function processStreams(
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
   sortMs = Date.now() - sortStart;
 
-  // "Exclude" removes the device's unplayable streams before the failover
-  // chain and the result limit see them, so failover never lands on one and
-  // the limit counts only playable streams. getStreams gives these requests a
-  // per-device cache entry.
-  if (
-    ctx.userData.deviceCapabilities === 'exclude' &&
-    context.deviceCapabilities
-  ) {
-    const { streams, unplayable } = applyDeviceCapabilities(
-      finalStreams,
-      context.deviceCapabilities,
-      'exclude'
-    );
-    finalStreams = streams;
-    logger.debug(
-      { unplayable, total: streams.length + unplayable },
-      'excluded streams the device cannot play'
-    );
-  }
   // The chain record follows the same per-device split as the list.
   const chainScope = playChainScope(
     userScopeKey(ctx.userData),

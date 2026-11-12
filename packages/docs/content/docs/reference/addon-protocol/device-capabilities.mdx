@@ -65,8 +65,9 @@ HDR10. SDR streams, and anything without a tag, always play.
 - **Off** (default): every device gets the same list.
 - **Push to bottom:** they stay in the list, below everything else and in their original order.
   This runs on the cached result, so all devices share one result cache.
-- **Exclude:** they are removed right after sorting, before the result limit and failover, so the
-  limit counts only playable streams and failover never switches to one the device can't play. Each
+- **Exclude:** they are removed before deduplication, the result limit and failover, so the
+  limit counts only playable streams, a playable copy of a file is never dropped as a duplicate of
+  one the device can't play, and failover never switches to one it can't play. Each
   device gets its own result cache.
 
 Either way, devices sharing a configuration never see each other's lists. To write your own rules,

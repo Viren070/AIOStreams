@@ -19,18 +19,6 @@ import { stripRepostSuffixes } from '../parser/title.js';
 
 type MergeOptions = NonNullable<NonNullable<UserData['deduplicator']>['merge']>;
 type FailoverVariant = NonNullable<ParsedStream['failoverVariants']>[number];
-
-/** The parsed fields device capability checks read, kept on each variant. */
-function variantMedia(stream: ParsedStream): FailoverVariant['media'] {
-  const file = stream.parsedFile;
-  if (!file) return undefined;
-  return {
-    resolution: file.resolution,
-    encode: file.encode,
-    visualTags: [...file.visualTags],
-    audioTags: [...file.audioTags],
-  };
-}
 type Tiebreaker = NonNullable<
   NonNullable<UserData['deduplicator']>['tiebreakers']
 >[number];
@@ -550,7 +538,6 @@ class StreamDeduplicator {
             identity: other.nzbUrl ?? other.torrent?.infoHash ?? other.url,
             kind: 'owned',
             proxied: shouldProxyStream(other, this.userData.proxy),
-            media: variantMedia(other),
           };
         } else if (includeExternal && isExternalDebridFailover(other)) {
           let identity = other.url;
@@ -566,7 +553,6 @@ class StreamDeduplicator {
             identity,
             kind: 'external',
             proxied: shouldProxyStream(other, this.userData.proxy),
-            media: variantMedia(other),
           };
         }
         if (!entry) continue;
