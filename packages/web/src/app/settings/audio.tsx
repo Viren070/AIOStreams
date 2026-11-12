@@ -141,9 +141,6 @@ function OutputCard() {
   const [engine] = useSetting(settings.player.engine);
   const info = useShellInfo();
   const passing = passthrough !== 'off';
-  // DTS-HD that always passes through never reaches this app's decoder.
-  const decodesDtsHd =
-    passthrough !== 'always' || !formats.dts || !formats['dts-hd'];
   return (
     <SettingsCard name="output" title={t`Output`} description={onDevice()}>
       {!android && <AudioDeviceSelect />}
@@ -205,14 +202,14 @@ function OutputCard() {
           onValueChange={setAc3Encode}
         />
       )}
-      {android && engine !== 'mpv' && decodesDtsHd && (
+      {android && engine !== 'mpv' && (
         <Switch
           side="right"
           label={t`Decode DTS-HD as DTS`}
           help={
             engine === 'auto'
-              ? t`When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays.`
-              : t`When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter.`
+              ? t`When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays. Applies from the next video or audio track.`
+              : t`When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Applies from the next video or audio track.`
           }
           value={dtsCore}
           onValueChange={setDtsCore}

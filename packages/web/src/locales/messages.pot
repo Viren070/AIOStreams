@@ -5692,11 +5692,11 @@ msgid "When the TV or receiver decodes it"
 msgstr ""
 
 #: src/app/settings/audio.tsx
-msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter."
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Applies from the next video or audio track."
 msgstr ""
 
 #: src/app/settings/audio.tsx
-msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays."
+msgid "When this app decodes DTS-HD or DTS:X, it plays the DTS sound inside, which is lossy but far lighter. For TVs that play them slowly or stutter. Only for videos ExoPlayer plays. Applies from the next video or audio track."
 msgstr ""
 
 #: src/app/settings/playback.tsx
