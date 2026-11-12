@@ -16,6 +16,7 @@ import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { currentHost, type Hearing } from '@/lib/hosts';
 import { useAction } from '@/lib/input';
 import { useSession } from '@/lib/jellyfin/session';
+import { useServerInfo } from '@/lib/jellyfin/server-info';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import {
   useLiveTvView,
@@ -66,6 +67,16 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const people = useSearch(query, 'Person');
   const live = !!useLiveTvView().data;
   const channels = useSearch(query, 'TvChannel', live);
+  // A server's own library also finds these, where catalogs list none.
+  const { stock } = useServerInfo();
+  const collections = useSearch(query, 'BoxSet', stock);
+  const episodes = useSearch(query, 'Episode', stock);
+  const collectionItems = collections.isPlaceholderData
+    ? []
+    : (collections.data?.Items ?? []);
+  const episodeItems = episodes.isPlaceholderData
+    ? []
+    : (episodes.data?.Items ?? []);
   const suggesting = typed !== chosen;
   const suggestions = useSearchSuggestions(
     useDebounce(typed, 200),
@@ -135,7 +146,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
     (combine
       ? !!mixed.data?.Items?.length || !!named.length
       : !!movieItems.length || !!showItems.length || !!named.length) ||
-    !!channelItems.length;
+    !!channelItems.length ||
+    !!collectionItems.length ||
+    !!episodeItems.length;
 
   return (
     <PageBody>
@@ -264,6 +277,24 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
                 client={client}
               />
             </>
+          )}
+          {!!collectionItems.length && (
+            <ResultRow
+              id="search:collections"
+              title={t`Collections`}
+              items={collectionItems}
+              loading={false}
+              client={client}
+            />
+          )}
+          {!!episodeItems.length && (
+            <ResultRow
+              id="search:episodes"
+              title={t`Episodes`}
+              items={episodeItems}
+              loading={false}
+              client={client}
+            />
           )}
           {!peopleFirst && peopleRow}
           {live && (

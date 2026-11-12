@@ -1013,6 +1013,7 @@ msgstr "Code or invite link"
 
 #: src/app/discover/page.tsx
 #: src/app/item/_components/collection.tsx
+#: src/app/search/page.tsx
 #: src/lib/format.ts
 msgid "Collections"
 msgstr "Collections"
@@ -1654,6 +1655,7 @@ msgid "Episode layout"
 msgstr "Episode layout"
 
 #: src/app/item/_components/seasons.tsx
+#: src/app/search/page.tsx
 #: src/app/settings/interface.tsx
 #: src/features/player/episodes.tsx
 #: src/features/player/options.tsx
