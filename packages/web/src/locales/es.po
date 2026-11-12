@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-06 21:19+0000\n"
+"PO-Revision-Date: 2026-11-12 18:26+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -21,7 +21,7 @@ msgstr "{address} no respondió. Comprueba que esté en funcionamiento y vuelve 
 
 #: src/features/live-tv/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} en {channelName}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
@@ -315,11 +315,11 @@ msgstr "1 salta a una décima parte del recorrido, 5 a la mitad y 0 regresa al i
 
 #: src/app/settings/interface.tsx
 msgid "12-hour ({twelve})"
-msgstr ""
+msgstr "12-horas ({twelve})"
 
 #: src/app/settings/interface.tsx
 msgid "24-hour ({twentyFour})"
-msgstr ""
+msgstr "24-horas ({twentyFour})"
 
 #: src/app/settings/audio.tsx
 msgid "5.1 surround"
@@ -558,15 +558,15 @@ msgstr "El reproductor propio de Android, que consume menos batería: la pantall
 
 #: src/app/settings/playback.tsx src/lib/input/actions.ts
 msgid "Anime upscaling"
-msgstr ""
+msgstr "Escalado de anime"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: off"
-msgstr ""
+msgstr "Escalado de anime: desactivado"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: on"
-msgstr ""
+msgstr "Escalado de anime: activado"
 
 #: src/features/party/not-in-party.tsx
 msgid "Another relay"
@@ -723,11 +723,11 @@ msgstr "Azul"
 
 #: src/app/settings/interface.tsx
 msgid "Blur episodes you haven't started"
-msgstr ""
+msgstr "Desenfocar los episodios que aún no has empezado"
 
 #: src/app/settings/interface.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
-msgstr ""
+msgstr "Desenfoca las imágenes, los títulos y las descripciones hasta que el cursor, el teclado o el control remoto se sitúen sobre uno de ellos."
 
 #: src/app/settings/subtitles.tsx
 msgid "Bold"
@@ -4271,9 +4271,8 @@ msgid "Start a party"
 msgstr "Organiza un grupo"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Start on"
-msgstr "Reiniciar ahora"
+msgstr "Iniciar en"
 
 #: src/features/remote/remote-sheet.tsx
 msgid "Starting…"
