@@ -100,6 +100,10 @@ msgstr "{found, plural, one {筛选 # 个版本} other {筛选 # 个版本}}"
 msgid "{got} of {size}"
 msgstr "{got} / {size}"
 
+#: src/lib/playback/quality.ts
+msgid "{height}, {mbps} Mbps"
+msgstr ""
+
 #: src/features/player/options.tsx
 msgid "{height}%"
 msgstr "{height}%"
@@ -601,6 +605,10 @@ msgstr "应用 CSS"
 msgid "Apply to styled subtitles too"
 msgstr "同时应用于带样式的字幕"
 
+#: src/app/settings/account.tsx
+msgid "Approve"
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
 msgstr "已批准，正在登录…"
@@ -620,6 +628,11 @@ msgstr "封面图"
 #: src/features/party/in-party.tsx
 msgid "As the host"
 msgstr "作为主持人"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Ascending"
+msgstr "正在发送…"
 
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
@@ -953,6 +966,10 @@ msgstr "清除选择"
 msgid "Close"
 msgstr "关闭"
 
+#: src/app/settings/account.tsx
+msgid "Code"
+msgstr ""
+
 #: src/features/party/in-party.tsx
 msgid "Code copied"
 msgstr "已复制代码"
@@ -962,7 +979,7 @@ msgid "Code or invite link"
 msgstr "代码或邀请链接"
 
 #: src/app/discover/page.tsx src/app/item/_components/collection.tsx
-#: src/lib/format.ts
+#: src/app/search/page.tsx src/lib/format.ts
 msgid "Collections"
 msgstr "合集"
 
@@ -1270,6 +1287,10 @@ msgstr "自定义链接"
 msgid "Cyan"
 msgstr "青色"
 
+#: src/components/media/sort-picker.tsx
+msgid "Date added"
+msgstr ""
+
 #: src/app/history/page.tsx
 msgid "Date not known"
 msgstr "日期未知"
@@ -1324,6 +1345,11 @@ msgstr "全部删除"
 #: src/features/playlists/playlists.tsx
 msgid "Delete playlist"
 msgstr "删除播放列表"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Descending"
+msgstr "正在发送…"
 
 #: src/app/settings/theme.tsx
 msgid "Desert"
@@ -1534,6 +1560,11 @@ msgstr "引擎"
 msgid "Enter"
 msgstr "回车"
 
+#: src/app/settings/account.tsx
+#, fuzzy
+msgid "Enter a code"
+msgstr "界面"
+
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
 msgstr "输入邀请链接，或输入代码及其对应的中继服务器"
@@ -1541,6 +1572,10 @@ msgstr "输入邀请链接，或输入代码及其对应的中继服务器"
 #: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
 msgstr "输入中继服务器地址"
+
+#: src/app/settings/account.tsx
+msgid "Enter the code the other device shows."
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
@@ -1566,8 +1601,9 @@ msgstr "剧集详情"
 msgid "Episode layout"
 msgstr "剧集布局"
 
-#: src/app/item/_components/seasons.tsx src/app/settings/interface.tsx
-#: src/features/player/episodes.tsx src/features/player/options.tsx
+#: src/app/item/_components/seasons.tsx src/app/search/page.tsx
+#: src/app/settings/interface.tsx src/features/player/episodes.tsx
+#: src/features/player/options.tsx
 msgid "Episodes"
 msgstr "剧集"
 
@@ -1645,9 +1681,9 @@ msgstr "更快"
 msgid "Favourite"
 msgstr "收藏"
 
-#: src/app/favourites/page.tsx src/app/settings/apps.tsx
-#: src/app/settings/interface.tsx src/components/shell/layout.tsx
-#: src/features/live-tv/live-tv.ts
+#: src/app/discover/page.tsx src/app/favourites/page.tsx
+#: src/app/settings/apps.tsx src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx src/features/live-tv/live-tv.ts
 msgid "Favourites"
 msgstr "收藏"
 
@@ -1970,6 +2006,10 @@ msgstr "在「发现」中"
 #: src/lib/discord.ts
 msgid "In Favourites"
 msgstr "在收藏中"
+
+#: src/app/discover/page.tsx
+msgid "In progress"
+msgstr ""
 
 #: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
@@ -2423,7 +2463,7 @@ msgid "Mute key"
 msgstr "静音键"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/features/playlists/playlists.tsx
+#: src/components/media/sort-picker.tsx src/features/playlists/playlists.tsx
 msgid "Name"
 msgstr "名称"
 
@@ -2535,6 +2575,10 @@ msgstr ""
 #, fuzzy
 msgid "No details for this title"
 msgstr "无法加载此内容"
+
+#: src/app/settings/account.tsx
+msgid "No device is waiting with that code."
+msgstr ""
 
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
@@ -2919,6 +2963,11 @@ msgstr "应用内部使用的选项。"
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "Or type one"
 msgstr "或手动输入"
+
+#: src/lib/playback/quality.ts
+#, fuzzy
+msgid "Original"
+msgstr "原始语言"
 
 #: src/app/settings/audio.tsx
 msgid "Original language"
@@ -3411,7 +3460,11 @@ msgstr "将所有按键恢复为原始设置。"
 msgid "QR code"
 msgstr "二维码"
 
-#: src/app/sign-in/page.tsx
+#: src/app/settings/playback.tsx src/features/player/options.tsx
+msgid "Quality"
+msgstr ""
+
+#: src/app/settings/account.tsx src/app/sign-in/page.tsx
 msgid "Quick Connect"
 msgstr "快速连接"
 
@@ -3466,7 +3519,7 @@ msgstr "评分"
 msgid "Rate season"
 msgstr "为整季评分"
 
-#: src/components/media/scores.tsx
+#: src/components/media/scores.tsx src/components/media/sort-picker.tsx
 #, fuzzy
 msgid "Rating"
 msgstr "等待中"
@@ -3529,6 +3582,11 @@ msgstr "中继服务器"
 #: src/features/party/not-in-party.tsx
 msgid "Relay address"
 msgstr "中继服务器地址"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Release date"
+msgstr "上映日期"
 
 #: src/app/item/_components/details.tsx
 msgid "Released"
@@ -3732,6 +3790,10 @@ msgstr "内容行、目录和日历。"
 #: src/features/player/options.tsx
 msgid "Runs at a different speed to the video"
 msgstr "播放速度与视频不同"
+
+#: src/components/media/sort-picker.tsx
+msgid "Runtime"
+msgstr ""
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -3958,7 +4020,7 @@ msgid "Share the invite"
 msgstr "分享邀请"
 
 #: src/app/settings/playback.tsx
-msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
 #: src/lib/input/keys.ts
@@ -4043,7 +4105,8 @@ msgid "Shows"
 msgstr "剧集"
 
 #: src/app/settings/playback.tsx
-msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+#, fuzzy
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 msgstr "在进度条上显示鼠标指向、拖动到或跳转到位置的视频预览图。每张预览图都会读取少量文件数据，关闭此功能可节省流量。"
 
 #: src/app/settings/playback.tsx
@@ -4082,6 +4145,10 @@ msgstr "侧边栏沿屏幕侧边排列；顶部标签页则显示在每个页面
 #, fuzzy
 msgid "Sidebar"
 msgstr "侧边栏"
+
+#: src/app/settings/account.tsx
+msgid "Sign another device in as you, with the code it shows."
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
@@ -4238,6 +4305,10 @@ msgstr "此设备无法读取的内容"
 #: src/features/party/in-party.tsx
 msgid "Something this device cannot read"
 msgstr "此设备无法读取的内容"
+
+#: src/components/media/sort-picker.tsx
+msgid "Sort by"
+msgstr ""
 
 #: src/app/settings/audio.tsx src/app/settings/interface.tsx
 #: src/features/player/options.tsx
@@ -4636,6 +4707,10 @@ msgstr "应用自带的播放器"
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "应用自带的播放器及其选项，例如以横屏启动视频。"
 
+#: src/app/settings/account.tsx
+msgid "The device is signed in"
+msgstr ""
+
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
 msgstr "主持人已将你移出一起观看。"
@@ -4672,6 +4747,10 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
 msgstr ""
 
 #: src/app/settings/apps.tsx
@@ -4739,8 +4818,20 @@ msgid "The same for episodes marked as a recap."
 msgstr "对标记为剧情回顾的剧集也执行相同操作。"
 
 #. Follows "Playback failed:"
+#: src/lib/playback/transcoding.ts
+#, fuzzy
+msgid "the server could not convert this version"
+msgstr "播放器无法播放此版本"
+
+#. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the stream ended early"
+msgstr "串流提前结束"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+#, fuzzy
+msgid "the stream stopped loading"
 msgstr "串流提前结束"
 
 #: src/app/settings/apps.tsx
@@ -4873,6 +4964,11 @@ msgstr "此服务器"
 msgid "This server can't list what you've watched."
 msgstr "此服务器无法列出你已观看的内容。"
 
+#: src/app/settings/_components/common.tsx
+#, fuzzy
+msgid "This server doesn't let your account change these."
+msgstr "此服务器无法列出你已观看的内容。"
+
 #: src/app/item/_components/no-details.tsx
 msgid "This server has no details for {id}."
 msgstr ""
@@ -4951,7 +5047,8 @@ msgid "Title pages"
 msgstr "内容详情页"
 
 #: src/app/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
+#, fuzzy
+msgid "Titles, synopses and version names stay in the language the server sends."
 msgstr "内容标题、简介和串流名称会保留插件提供的语言。"
 
 #: src/app/calendar/page.tsx src/app/live-tv/page.tsx
@@ -5009,7 +5106,8 @@ msgstr "故障排查"
 
 #: src/app/downloads/page.tsx src/app/sign-in/page.tsx
 #: src/components/media/random-pick.tsx src/features/party/not-in-party.tsx
-#: src/features/versions/version-list.tsx src/lib/playback/use-player.ts
+#: src/features/versions/version-list.tsx src/lib/playback/transcoding.ts
+#: src/lib/playback/use-player.ts
 msgid "Try again"
 msgstr "重试"
 
@@ -5107,7 +5205,8 @@ msgid "Up next: {upNext}"
 msgstr "接下来播放：{upNext}"
 
 #: src/app/settings/interface.tsx
-msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured."
+#, fuzzy
+msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 msgstr "最多显示 {MAX_FEATURED} 项，并混合排列。留空时，会精选你的第一个电影目录和剧集目录。"
 
 #: src/lib/hosts/shell/index.ts
@@ -5329,7 +5428,8 @@ msgstr "一起看"
 msgid "Watch together"
 msgstr "一起观看"
 
-#: src/app/history/page.tsx src/app/item/_components/actions.tsx
+#: src/app/discover/page.tsx src/app/history/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Watched"
 msgstr "已观看"
 
