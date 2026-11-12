@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-12 01:20+0000\n"
+"PO-Revision-Date: 2026-11-12 18:26+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -3126,7 +3126,7 @@ msgstr "Trotzdem abspielen"
 
 #: src/app/settings/interface.tsx
 msgid "Play by themselves"
-msgstr "Automatisch abspielen"
+msgstr "Spielen von selbst ab"
 
 #: src/app/item/_components/header.tsx
 msgid "Play from the start"
@@ -3296,9 +3296,8 @@ msgid "Plays the video."
 msgstr "Spielt das Video ab."
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Pops out a preview"
-msgstr "Vorschau überspringen"
+msgstr "Öffnet eine Pop-out-Vorschau"
 
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
@@ -3326,7 +3325,7 @@ msgstr "Erneut \"Zurück\" drücken zum Beenden"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Press Up for playback controls"
-msgstr ""
+msgstr "Nach oben drücken für Wiedergabesteuerung"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
@@ -3449,7 +3448,7 @@ msgstr "Reaktionen"
 
 #: src/app/settings/playback.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
-msgstr ""
+msgstr "Liest und dekodiert die Datei selbstständig und rendert sie über die Grafikkarte, sodass auch Formate wie HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD und DTS laufen, die dieser Browser nicht abspielt. Nicht unterstützte Versionen werden an den browser-eigenen Player übergeben."
 
 #: src/lib/format.ts
 msgid "Recap"
@@ -3779,7 +3778,7 @@ msgstr "Untertitelzeile gesehen"
 
 #: src/app/item/_components/trailer.tsx
 msgid "Scroll up for playback controls"
-msgstr ""
+msgstr "Nach oben scrollen für Wiedergabesteuerung"
 
 #: src/lib/playback/controller.ts
 msgid "SDH"
@@ -3853,9 +3852,8 @@ msgid "Send report"
 msgstr "Bericht senden"
 
 #: src/app/settings/about.tsx
-#, fuzzy
 msgid "Send usage statistics"
-msgstr "Statistiken"
+msgstr "Nutzungsstatistiken senden"
 
 #: src/features/party/chat.tsx
 msgid "Sending…"
@@ -3907,12 +3905,11 @@ msgstr "Einstellungen"
 
 #: src/app/settings/playback.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
-msgstr ""
+msgstr "Shader-Dateien (.wgsl) für die WebGPU-Engine, die alphabetisch auf die Wiedergabe angewendet werden. Sie bleiben lokal in diesem Browser gespeichert. Rechenintensive Shader können zu Rucklern führen."
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "Shaders"
-msgstr "Schatten"
+msgstr "Shader"
 
 #: src/app/settings/subtitles.tsx
 msgid "Shadow"
@@ -3924,7 +3921,7 @@ msgstr "Einladung teilen"
 
 #: src/app/settings/playback.tsx
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr ""
+msgstr "Schärft Konturen und reduziert Kompressionsartefakte bei Anime während der Wiedergabe - besonders bei älteren Serien mit niedrigerer Auflösung. Aktiviert bei Titeln, die deine Kataloge als Anime kennzeichnen. Mit einer Tastatur schaltet die Taste U den Effekt im Player für die laufende Wiedergabe um. Erhöht den Energieverbrauch und deaktiviert sich automatisch, falls das Gerät nicht hinterherkommt. HDR-Videos sowie Videos, die bereits in etwa Bildschirmgröße haben, bleiben unverändert."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -4011,7 +4008,7 @@ msgstr "Zeigt ein Vorschaubild der Stelle an, auf die du auf der Zeitleiste zeig
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
-msgstr ""
+msgstr "Gibt HDR-Videos auf kompatiblen Bildschirmen in HDR wieder, statt sie in SDR umzuwandeln. Auf Bildschirmen ohne HDR-Unterstützung deaktiviert lassen."
 
 #: src/app/settings/interface.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
@@ -4272,7 +4269,7 @@ msgstr "Status"
 
 #: src/app/settings/interface.tsx
 msgid "Stays as it is"
-msgstr ""
+msgstr "Bleibt unverändert"
 
 #: src/app/settings/audio.tsx
 msgid "Stereo"
@@ -4769,9 +4766,8 @@ msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "Diese App dekodiert Dolby- und DTS-Ton selbst. Dabei geht Atmos verloren."
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "This browser"
-msgstr "Dieser Server"
+msgstr "Dieser Browser"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
@@ -4779,13 +4775,12 @@ msgid "this browser cannot play this version. Nothing is converted on the server
 msgstr "dieser Browser kann diese Version nicht abspielen. Auf dem Server wird nichts umgewandelt. Versuche eine andere Version, einen externen Player oder die Desktop-App."
 
 #: src/lib/playback/shaders.ts
-#, fuzzy
 msgid "This browser keeps no files for this site."
-msgstr "Auf diesem Server sind keine Details für \"{id}\" verfügbar."
+msgstr "Dieser Browser speichert keine Dateien für diese Website."
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
-msgstr ""
+msgstr "Der browser-eigene Player, der die vom Browser unterstützten Formate abspielt."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -4801,7 +4796,7 @@ msgstr "Dieses Gerät konnte nicht erkennen, was in der Watch-Party abgespielt w
 
 #: src/lib/playback/shaders.ts
 msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
-msgstr ""
+msgstr "Dies ist ein GLSL-Shader. Konvertiere ihn zuerst in eine .wgsl-Pass-Datei."
 
 #: src/app/settings/subtitles.tsx
 msgid "This is how subtitles will look."
@@ -4813,7 +4808,7 @@ msgstr "Das hat das Gerät dazu aufgezeichnet. Sende oder speichere den Bericht,
 
 #: src/lib/playback/shaders.ts
 msgid "This isn't a .wgsl pass file."
-msgstr ""
+msgstr "Dies ist keine .wgsl-Pass-Datei."
 
 #: src/lib/jellyfin/queries.ts
 msgid "This item was not found"
@@ -4889,7 +4884,7 @@ msgstr "Drei Tage"
 
 #: src/app/settings/interface.tsx
 msgid "Time format"
-msgstr ""
+msgstr "Zeitformat"
 
 #: src/app/settings/interface.tsx
 msgid "Time on each title"
@@ -4985,7 +4980,7 @@ msgstr "Tunnel-Wiedergabe"
 
 #: src/components/shell/usage-stats.tsx
 msgid "Turn off"
-msgstr ""
+msgstr "Ausschalten"
 
 #: src/app/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
@@ -4997,7 +4992,7 @@ msgstr "Beim Deaktivieren werden die jeweiligen Daten auch gelöscht."
 
 #: src/lib/input/actions.ts
 msgid "Turns it on or off for what is playing."
-msgstr ""
+msgstr "Schaltet die Funktion für die aktuelle Wiedergabe ein oder aus."
 
 #: src/app/settings/cache.tsx
 msgid "Two weeks"
@@ -5096,9 +5091,8 @@ msgid "Updates, picture-in-picture, mpv and troubleshooting"
 msgstr "Updates, Bild-in-Bild, mpv und Fehlerbehebung"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
-#, fuzzy
 msgid "Usage statistics"
-msgstr "Statistiken"
+msgstr "Nutzungsstatistiken"
 
 #: src/app/sign-in/page.tsx
 msgid "Use Quick Connect, or the configuration’s password."
@@ -5299,7 +5293,7 @@ msgstr "Gesehen-Markierungen und Wiedergabepositionen werden von diesem Server e
 
 #: src/app/settings/page.tsx src/features/party/in-party.tsx
 msgid "Watching"
-msgstr "Wiedergabe"
+msgstr "Wird geschaut"
 
 #: src/features/party/in-party.tsx
 msgid "Watching ({watching})"
@@ -5443,7 +5437,7 @@ msgstr "Beim Synchronisieren der Untertitel nach Gehör."
 
 #: src/app/settings/interface.tsx
 msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr ""
+msgstr "Während das Hero-Banner rotiert. Mit der Maus hebt sich eine Kachel immer hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"
@@ -5510,7 +5504,7 @@ msgstr "Du"
 
 #: src/components/shell/usage-stats.tsx
 msgid "You can change this later in Settings, under About."
-msgstr ""
+msgstr "Du kannst dies später in den Einstellungen unter \"Über\" ändern."
 
 #: src/lib/party/party.ts
 msgid "You left the party."
