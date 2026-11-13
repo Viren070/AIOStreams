@@ -1296,6 +1296,66 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    excludeGroups: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream excluded groups',
+      env: 'BUILTIN_XTREAM_EXCLUDE_GROUPS',
+      description:
+        'Comma-separated keywords. Groups whose name contains one (ignoring case) are hidden along with channels only in them, such as `PPV,ADULT`. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    includeGroups: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream included groups',
+      env: 'BUILTIN_XTREAM_INCLUDE_GROUPS',
+      description:
+        'Comma-separated keywords. When set, only groups whose name contains one (ignoring case) are kept. Excluded groups are still hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    excludeChannels: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream excluded channels',
+      env: 'BUILTIN_XTREAM_EXCLUDE_CHANNELS',
+      description:
+        'Comma-separated keywords. Channels whose name contains one (ignoring case) are hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    includeChannels: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream included channels',
+      env: 'BUILTIN_XTREAM_INCLUDE_CHANNELS',
+      description:
+        'Comma-separated keywords. When set, only channels whose name contains one (ignoring case) are kept. Excluded channels are still hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    cleanNames: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Xtream clean channel names',
+      env: 'BUILTIN_XTREAM_CLEAN_NAMES',
+      description:
+        'Strip the tag providers put before channel names, so `UK | BBC One` shows as `BBC One`. When on, it applies to every Xtream addon. Filters still match the full name.',
+      requiresRestart: false,
+      secret: false,
+    },
+    format: {
+      schema: z.enum(['hls-first', 'ts-first', 'hls', 'ts']),
+      default: 'hls-first',
+      label: 'Xtream stream format',
+      env: 'BUILTIN_XTREAM_FORMAT',
+      description:
+        "Which formats Xtream channels are offered in: `hls-first` or `ts-first` offer both with that one first, `hls` or `ts` offer only that one. A format the account does not allow is skipped, and if none is left the account's own formats are used. Used by Xtream addons that do not set their own.",
+      requiresRestart: false,
+      secret: false,
+    },
     lineupMemory: {
       schema: byteSize,
       default: 256 * MB,

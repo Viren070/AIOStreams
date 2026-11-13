@@ -32,6 +32,13 @@ class XtreamStreamParser extends StreamParser {
   }
 }
 
+const FILTER_OPTIONS = [
+  'excludeGroups',
+  'includeGroups',
+  'excludeChannels',
+  'includeChannels',
+] as const;
+
 export class XtreamPreset extends Preset {
   static override getParser(): typeof StreamParser {
     return XtreamStreamParser;
@@ -72,6 +79,68 @@ export class XtreamPreset extends Preset {
         type: 'password',
         required: true,
       },
+      {
+        id: 'cleanNames',
+        name: 'Clean Channel Names',
+        description:
+          'Strip the tag providers put before channel names, so `UK | BBC One` shows as `BBC One`. Group names are left as they are. Include and exclude keywords still match the full name.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
+        id: 'format',
+        name: 'Stream Format',
+        description:
+          'Which formats channels are offered in. HLS suits most players, MPEG-TS suits players that cannot play HLS well. A format your account does not allow is skipped.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'default',
+        options: [
+          { label: 'Instance default', value: 'default' },
+          { label: 'HLS first, then MPEG-TS', value: 'hls-first' },
+          { label: 'MPEG-TS first, then HLS', value: 'ts-first' },
+          { label: 'HLS only', value: 'hls' },
+          { label: 'MPEG-TS only', value: 'ts' },
+        ],
+      },
+      ...(
+        [
+          [
+            'excludeGroups',
+            'Exclude Groups',
+            'Hide groups whose name contains any of these keywords, and the channels only in them.',
+            'PPV, ADULT',
+          ],
+          [
+            'includeGroups',
+            'Include Groups',
+            'Only show groups whose name contains one of these keywords.',
+            'UK, US',
+          ],
+          [
+            'excludeChannels',
+            'Exclude Channels',
+            'Hide channels whose name contains any of these keywords.',
+            'RADIO, 24/7',
+          ],
+          [
+            'includeChannels',
+            'Include Channels',
+            'Only show channels whose name contains one of these keywords.',
+            'BBC, ITV',
+          ],
+        ] as const
+      ).map(([id, name, summary, example]): Option => ({
+        id,
+        name,
+        description: `${summary} Comma-separated and not case sensitive, such as \`${example}\`. Leave empty to use this instance's default, if it has one.`,
+        type: 'string',
+        required: false,
+        showInSimpleMode: false,
+        emptyIsUndefined: true,
+      })),
     ];
 
     return {
@@ -88,6 +157,15 @@ export class XtreamPreset extends Preset {
       SUPPORTED_RESOURCES: supportedResources,
       BUILTIN: true,
     };
+  }
+
+  private static splitList(value: unknown): string[] {
+    return typeof value === 'string'
+      ? value
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+      : [];
   }
 
   static async generateAddons(
@@ -110,6 +188,12 @@ export class XtreamPreset extends Preset {
         server: options.server,
         username: options.username,
         password: options.password,
+        ...(options.cleanNames === true && { cleanNames: true }),
+        ...(options.format &&
+          options.format !== 'default' && { format: options.format }),
+        ...Object.fromEntries(
+          FILTER_OPTIONS.map((id) => [id, this.splitList(options[id])])
+        ),
       },
       'urlSafe'
     );

@@ -21,8 +21,50 @@ Once your configuration has one, **Live TV** shows in the navigation. The same c
 
 <Callout type="info">
   Hiding, renaming and reordering channels is up to the addon. The Xtream
-  addon keeps your provider's order and groups.
+  addon keeps your provider's order and groups, and can hide some of them, as
+  below.
 </Callout>
+
+### Hiding groups and channels from an Xtream login
+
+The Xtream addon has four options, in its advanced settings, that take comma-separated keywords. A keyword matches anywhere in a name and ignores case.
+
+| Option               | Does                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| **Exclude Groups**   | Hides groups matching a keyword, and channels only in them. |
+| **Include Groups**   | Shows only groups matching a keyword.                       |
+| **Exclude Channels** | Hides channels matching a keyword.                          |
+| **Include Channels** | Shows only channels matching a keyword.                     |
+
+An exclude always wins over an include, and a channel in several groups stays while one of them does.
+
+Some examples:
+
+- **Hide pay-per-view and adult groups.** Exclude Groups: `PPV, ADULT` hides groups such as `US | PPV Events` and `XXX Adult`.
+- **Keep only UK and Irish channels.** Include Groups: `UK, IRE` shows groups such as `UK | News` and `IRE | Sports`, and nothing else.
+- **Drop radio and test channels.** Exclude Channels: `RADIO, TEST` hides `BBC Radio 4` and `Test Card`.
+- **Only a few broadcasters.** Include Channels: `BBC, ITV` shows channels such as `BBC One HD` and `ITV2`.
+- **Combine them.** Include Groups: `UK` with Exclude Channels: `Shopping` shows the UK groups without their shopping channels.
+
+Whoever runs the instance can set defaults for addons that leave an option empty, with the `BUILTIN_XTREAM_EXCLUDE_GROUPS`, `BUILTIN_XTREAM_INCLUDE_GROUPS`, `BUILTIN_XTREAM_EXCLUDE_CHANNELS` and `BUILTIN_XTREAM_INCLUDE_CHANNELS` [environment variables](/configuration/environment-variables). For example, `BUILTIN_XTREAM_EXCLUDE_GROUPS=PPV,ADULT` hides those groups for everyone. An addon that sets its own keywords uses them instead.
+
+Channels you hide can't be played either, as they're no longer in the list.
+
+### Cleaning up channel names
+
+Providers often put a tag before each channel's name, such as `UK | BBC One HD` or `[US] CNN`. Turn on **Clean Channel Names** on the Xtream addon to show `BBC One HD` and `CNN` instead. It removes a short tag at the start of a name (`UK | `, `|UK| `, `|| UK || ` or `[UK] `) and tidies repeated spaces, and leaves the rest. A name that is only a tag is kept as it is.
+
+Group names are left as they are, since `UK | News` and `US | News` would otherwise both become `News`. Include and exclude keywords still match the full name, so `Exclude Channels: US |` works with it on. Whoever runs the instance can turn it on for every Xtream addon with `BUILTIN_XTREAM_CLEAN_NAMES=true`.
+
+### Choosing the stream format
+
+Xtream servers offer a channel as HLS, as MPEG-TS, or both. The **Stream Format** option sets which are offered and in what order:
+
+- **HLS first, then MPEG-TS** (the default) suits most players.
+- **MPEG-TS first, then HLS** or **MPEG-TS only** is for players that handle HLS badly, which some providers' HLS is.
+- **HLS only** is for players that cannot play MPEG-TS, such as a browser.
+
+A format your account doesn't allow is skipped, and if that leaves none, the account's own formats are used, so a channel always has a stream. The instance default comes from `BUILTIN_XTREAM_FORMAT`, one of `hls-first`, `ts-first`, `hls` or `ts`.
 
 ## Finding a channel
 
