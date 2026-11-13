@@ -12,5 +12,5 @@ export const sharedOpenGraph = {
   type: 'website',
   siteName: 'AIOStreams',
   locale: 'en_GB',
-  images: '/og/site.webp',
+  images: '/og/site.webp?v=2',
 } as const;
