@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 21:32+0000\n"
+"PO-Revision-Date: 2026-11-13 22:29+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -702,9 +702,8 @@ msgid "Background"
 msgstr "Plano de fundo"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Background from artwork"
-msgstr "Plano de fundo"
+msgstr "Fundo com imagem do título"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -1817,11 +1816,11 @@ msgstr "Envie este código para quem for investigar o problema."
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
-msgstr ""
+msgstr "Painéis de vidro"
 
 #: src/app/settings/theme.tsx
 msgid "Glass surface"
-msgstr ""
+msgstr "Estilo da superfície"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2340,7 +2339,7 @@ msgstr "Tecla Menu"
 
 #: src/app/settings/theme.tsx
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
-msgstr ""
+msgstr "Menus, listas, campos e cards sobre a imagem de fundo usam o efeito de vidro em vez da cor extraída dela. Isso pode deixar o app mais lento em dispositivos menos potentes."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -5017,7 +5016,7 @@ msgstr "Formato de hora"
 
 #: src/app/settings/interface.tsx
 msgid "Time on each title"
-msgstr "Tempo de exibição de cada título"
+msgstr "Tempo de cada destaque"
 
 #: src/features/player/options.tsx
 msgid "Timing"
