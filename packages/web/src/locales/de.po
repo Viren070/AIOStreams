@@ -697,9 +697,13 @@ msgid "Back in the player"
 msgstr "\"Zurück\" im Player"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/app/settings/interface.tsx src/app/settings/subtitles.tsx
-#: src/app/settings/theme.tsx
+#: src/app/settings/subtitles.tsx src/app/settings/theme.tsx
 msgid "Background"
+msgstr "Hintergrund"
+
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "Background from artwork"
 msgstr "Hintergrund"
 
 #: src/lib/input/keys.ts
@@ -1790,7 +1794,7 @@ msgstr "Frame-Timings"
 msgid "From the start"
 msgstr "Von Anfang an"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Frosted glass"
 msgstr "Milchglas"
 
@@ -1810,6 +1814,14 @@ msgstr "Allgemein"
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Gib diesen Code an die Person weiter, die das Problem untersucht."
+
+#: src/app/settings/theme.tsx
+msgid "Glass panels"
+msgstr ""
+
+#: src/app/settings/theme.tsx
+msgid "Glass surface"
+msgstr ""
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2211,7 +2223,7 @@ msgstr "Lizenzen"
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 msgstr "Verknüpfe ein geteiltes Paket im Format dieser App oder im Format von Fusion und Nuvio. Änderungen des Autors werden automatisch übernommen."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Liquid glass"
 msgstr "Flüssigglas"
 
@@ -2325,6 +2337,10 @@ msgstr "Mittel"
 #: src/lib/input/keys.ts
 msgid "Menu key"
 msgstr "Menütaste"
+
+#: src/app/settings/theme.tsx
+msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
+msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2786,6 +2802,11 @@ msgstr "Ältere Inhalte werden stattdessen vom Server geladen. Ohne Verbindung w
 #: src/features/party/in-party.tsx
 msgid "on {relay}"
 msgstr "auf {relay}"
+
+#: src/app/settings/interface.tsx
+#, fuzzy
+msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgstr "Während das Hero-Banner rotiert. Mit der Maus hebt sich eine Kachel immer hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -4256,7 +4277,7 @@ msgstr "Kleine Kennzeichnungen der Eigenschaften einer Version aus verknüpften 
 msgid "Smaller subtitles"
 msgstr "Kleinere Untertitel"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Solid"
 msgstr "Einfarbig"
 
@@ -4668,6 +4689,10 @@ msgstr "Player der App"
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Der Player der App und seine Optionen, etwa das Starten von Videos im Querformat."
+
+#: src/app/settings/theme.tsx
+msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5433,8 +5458,9 @@ msgstr "Nachrichten anderer werden einige Sekunden über dem Video angezeigt. Im
 msgid "What the app did each day, kept for a week."
 msgstr "Tägliche Aktivitäten der App, eine Woche lang gespeichert."
 
-#: src/app/settings/interface.tsx
-msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
 msgstr "Hintergrund der Navigation über der Seite: die App-Farbe oder Glas, durch das die Seite sichtbar bleibt. Flüssigglas verzerrt zusätzlich den Inhalt hinter seinen Rändern und beansprucht langsame Geräte stärker."
 
 #: src/features/party/chat.tsx
@@ -5544,10 +5570,6 @@ msgstr "Während ein Kanal abgespielt wird. Auf einem Fernseher wechseln Hoch un
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "Beim Synchronisieren der Untertitel nach Gehör."
-
-#: src/app/settings/interface.tsx
-msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr "Während das Hero-Banner rotiert. Mit der Maus hebt sich eine Kachel immer hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"

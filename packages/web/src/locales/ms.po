@@ -698,9 +698,13 @@ msgid "Back in the player"
 msgstr "Kembali dalam pemain"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/app/settings/interface.tsx src/app/settings/subtitles.tsx
-#: src/app/settings/theme.tsx
+#: src/app/settings/subtitles.tsx src/app/settings/theme.tsx
 msgid "Background"
+msgstr "Latar Belakang"
+
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "Background from artwork"
 msgstr "Latar Belakang"
 
 #: src/lib/input/keys.ts
@@ -1793,7 +1797,7 @@ msgstr "Masa bingkai"
 msgid "From the start"
 msgstr "Dari permulaan"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Frosted glass"
 msgstr "Kaca pudar"
 
@@ -1813,6 +1817,14 @@ msgstr "Umum"
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Berikan kod ini kepada sesiapa yang menyiasat masalah ini."
+
+#: src/app/settings/theme.tsx
+msgid "Glass panels"
+msgstr ""
+
+#: src/app/settings/theme.tsx
+msgid "Glass surface"
+msgstr ""
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2214,7 +2226,7 @@ msgstr "Lesen"
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 msgstr "Pautkan pek yang dikongsi oleh seseorang, dalam format aplikasi ini atau yang digunakan oleh Fusion dan Nuvio."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Liquid glass"
 msgstr "Kaca cecair"
 
@@ -2328,6 +2340,10 @@ msgstr "Sederhana"
 #: src/lib/input/keys.ts
 msgid "Menu key"
 msgstr "Kekunci menu"
+
+#: src/app/settings/theme.tsx
+msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
+msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2789,6 +2805,11 @@ msgstr "Item lebih lama akan menunggu pelayan. Tanpa sambungan, semua yang disim
 #: src/features/party/in-party.tsx
 msgid "on {relay}"
 msgstr "di {relay}"
+
+#: src/app/settings/interface.tsx
+#, fuzzy
+msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgstr "Semasa sepanduk utama berputar. Apabila kursor tetikus diarahkan, kad sentiasa menonjol keluar, manakala kad di sebelahnya kekal di tempatnya."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -4265,7 +4286,7 @@ msgstr "Label kecil pada setiap versi untuk kandungannya, daripada pek yang anda
 msgid "Smaller subtitles"
 msgstr "Sarikata lebih kecil"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Solid"
 msgstr "Padu"
 
@@ -4677,6 +4698,10 @@ msgstr "Pemain aplikasi"
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Pemain aplikasi dan pilihannya, seperti memulakan video dalam mod melintang."
+
+#: src/app/settings/theme.tsx
+msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5448,8 +5473,9 @@ msgstr "Apa yang dihantar pengguna lain muncul pada video selama beberapa saat."
 msgid "What the app did each day, kept for a week."
 msgstr "Aktiviti harian aplikasi, disimpan selama seminggu."
 
-#: src/app/settings/interface.tsx
-msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
 msgstr "Latar navigasi di atas halaman: warna apl itu sendiri, atau kaca yang menampakkan halaman di sebaliknya. Kaca cecair juga membengkokkan apa yang ada di sebalik tepinya, yang lebih membebankan peranti perlahan."
 
 #: src/features/party/chat.tsx
@@ -5559,10 +5585,6 @@ msgstr "Semasa saluran dimainkan. Pada TV, butang atas dan bawah juga menukar sa
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "Semasa menyegerakkan sari kata secara pendengaran."
-
-#: src/app/settings/interface.tsx
-msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr "Semasa sepanduk utama berputar. Apabila kursor tetikus diarahkan, kad sentiasa menonjol keluar, manakala kad di sebelahnya kekal di tempatnya."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"
