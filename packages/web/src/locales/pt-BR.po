@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 22:29+0000\n"
+"PO-Revision-Date: 2026-11-13 23:04+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -2803,9 +2803,8 @@ msgid "on {relay}"
 msgstr "em {relay}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "Esta opção vale enquanto os destaques se alternam. Com o mouse, a prévia aparece sobre o card, sem deslocar os demais."
+msgstr "Funciona na página inicial enquanto os destaques se alternam e nas grades. Ao manter o mouse sobre um card na grade, uma prévia aparece sobreposta, sem deslocar os demais."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -4691,7 +4690,7 @@ msgstr "O Player do app e suas opções, como iniciar vídeos em paisagem."
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
-msgstr ""
+msgstr "A imagem do título selecionado aparece desfocada e escurecida ao fundo das páginas e da lista de versões."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5458,9 +5457,8 @@ msgid "What the app did each day, kept for a week."
 msgstr "O que o aplicativo fez a cada dia, mantido por uma semana."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
-msgstr "O que sustenta a navegação sobre a página: a cor própria do aplicativo ou vidro que mostra a página através dele. O vidro líquido também distorce o que está atrás das bordas, o que custa mais em um dispositivo lento."
+msgstr "As barras de navegação e os painéis sobre as imagens podem usar a cor do app ou um efeito de vidro que deixa a página visível por trás. O vidro líquido também distorce o que aparece atrás das bordas da navegação e pode deixar o app mais lento em dispositivos menos potentes."
 
 #: src/features/party/chat.tsx
 msgid "What the others say shows here."
