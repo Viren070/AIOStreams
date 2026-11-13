@@ -245,6 +245,12 @@ const BaseFileInfoSchema = z.object({
   fileIndex: z.number().optional(),
 });
 
+const ResolvedLinkInfoSchema = z.object({
+  url: z.string(),
+  index: z.number().optional(),
+  filename: z.string().optional(),
+});
+
 const TorrentInfoSchema = BaseFileInfoSchema.extend({
   downloadUrl: z.string().optional(),
   hash: z.string(),
@@ -289,6 +295,7 @@ export type FileInfo = z.infer<typeof FileInfoSchema>;
 export type TorrentInfo = z.infer<typeof TorrentInfoSchema>;
 export type UsenetInfo = z.infer<typeof UsenetInfoSchema>;
 export type TitleMetadata = z.infer<typeof TitleMetadataSchema>;
+export type ResolvedLinkInfo = z.infer<typeof ResolvedLinkInfoSchema>;
 
 interface BaseDebridService {
   readonly serviceName: ServiceId;
@@ -305,7 +312,7 @@ interface BaseDebridService {
      * should thread it into their I/O; others may ignore it.
      */
     signal?: AbortSignal
-  ): Promise<string | undefined>;
+  ): Promise<ResolvedLinkInfo | undefined>;
 
   refreshLibraryCache?(sources?: ('torrent' | 'nzb')[]): Promise<void>;
 }
