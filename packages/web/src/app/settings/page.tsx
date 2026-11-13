@@ -189,7 +189,23 @@ function sections(): Section[] {
   ];
 }
 
-const TAB_REST_MS = 350;
+/** Memoised, so focus moving along the tabs leaves the open section alone. */
+const SectionPanel = React.memo(function SectionPanel({
+  section,
+}: {
+  section: Section;
+}) {
+  return (
+    <>
+      <SettingsPageHeader
+        title={section.label}
+        description={section.description}
+        icon={section.icon}
+      />
+      <section.Content />
+    </>
+  );
+});
 
 export function SettingsPage({
   tab,
@@ -203,10 +219,9 @@ export function SettingsPage({
   // With no marker sliding, the tabs keep the usual focus mark.
   const still = useReducedMotion();
   const active = all.find((s) => s.id === tab) ?? all[0];
-  // Passing through tabs would build every section on the way.
+  // Built in the background, so a key can cut short a section still building.
+  const shown = React.useDeferredValue(active.id);
   const [focused, setFocused] = React.useState<string | null>(null);
-  const resting = React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  React.useEffect(() => () => clearTimeout(resting.current), []);
   const groups = new Map<Section['group'], Section[]>();
   for (const s of all) groups.set(s.group, [...(groups.get(s.group) ?? []), s]);
 
@@ -216,7 +231,7 @@ export function SettingsPage({
         <Trans>Settings</Trans>
       </h1>
       <Tabs
-        value={active.id}
+        value={shown}
         onValueChange={onTabChange}
         activationMode="manual"
         marked={focused ?? undefined}
@@ -236,7 +251,7 @@ export function SettingsPage({
           data-ui="settings-tabs"
           data-sticky
           data-nav-enter="[role=tab][data-state=active]"
-          className="max-w-full flex-wrap lg:sticky lg:top-6 lg:space-y-3"
+          className="max-w-full flex-wrap lg:sticky lg:top-6 lg:z-[1] lg:space-y-3"
         >
           {[...groups.entries()].map(([group, items]) => (
             <Card
@@ -258,16 +273,9 @@ export function SettingsPage({
                   className="group"
                   onFocus={() => {
                     setFocused(s.id);
-                    clearTimeout(resting.current);
-                    resting.current = setTimeout(
-                      () => onTabChange(s.id),
-                      TAB_REST_MS
-                    );
+                    onTabChange(s.id);
                   }}
-                  onBlur={() => {
-                    setFocused(null);
-                    clearTimeout(resting.current);
-                  }}
+                  onBlur={() => setFocused(null)}
                 >
                   <s.icon className="me-3 text-xl transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
                   {s.label}
@@ -298,16 +306,7 @@ export function SettingsPage({
               data-name={s.id}
               className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
             >
-              {s.id === active.id && (
-                <>
-                  <SettingsPageHeader
-                    title={s.label}
-                    description={s.description}
-                    icon={s.icon}
-                  />
-                  <s.Content />
-                </>
-              )}
+              {s.id === shown && <SectionPanel section={s} />}
             </TabsContent>
           ))}
         </div>
