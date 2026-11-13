@@ -375,23 +375,23 @@ function onWheel(e: WheelEvent): void {
   }
 }
 
-export function startInput(): () => void {
+export function startInput(target: Window = window): () => void {
   const early = (e: KeyboardEvent) => onKey(e, true);
   const late = (e: KeyboardEvent) => onKey(e, false);
-  window.addEventListener('keydown', early, true);
-  window.addEventListener('keydown', late);
-  window.addEventListener('keyup', onKeyUp, true);
-  window.addEventListener('blur', onBlur);
-  window.addEventListener('wheel', onWheel, { passive: true });
-  window.addEventListener('pointerdown', onPointer, true);
-  window.addEventListener('focusin', onFocus, true);
+  target.addEventListener('keydown', early, true);
+  target.addEventListener('keydown', late);
+  target.addEventListener('keyup', onKeyUp, true);
+  target.addEventListener('blur', onBlur);
+  target.addEventListener('wheel', onWheel, { passive: true });
+  target.addEventListener('pointerdown', onPointer, true);
+  target.addEventListener('focusin', onFocus, true);
   return () => {
-    window.removeEventListener('focusin', onFocus, true);
-    window.removeEventListener('pointerdown', onPointer, true);
-    window.removeEventListener('keyup', onKeyUp, true);
-    window.removeEventListener('blur', onBlur);
-    window.removeEventListener('keydown', early, true);
-    window.removeEventListener('keydown', late);
-    window.removeEventListener('wheel', onWheel);
+    target.removeEventListener('focusin', onFocus, true);
+    target.removeEventListener('pointerdown', onPointer, true);
+    target.removeEventListener('keyup', onKeyUp, true);
+    target.removeEventListener('blur', onBlur);
+    target.removeEventListener('keydown', early, true);
+    target.removeEventListener('keydown', late);
+    target.removeEventListener('wheel', onWheel);
   };
 }

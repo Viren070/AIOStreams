@@ -13,12 +13,10 @@ import {
 } from 'react-icons/lu';
 import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
-import { appBridge } from '@/lib/hosts/shell/bridge';
-import { leaveAppPip } from '@/lib/hosts/shell/pip';
 import type { PlayerController } from '@/lib/playback/controller';
 import { settings, useSetting } from '@/lib/settings';
 import { PlayerAction } from './buttons';
-import { PlayerTime } from './controls';
+import { PlayerTime, useLiftSubtitles } from './controls';
 import { Notice, SpeedPill, useNotice, useSeekFlash } from './feedback';
 import { useBurstSeek } from './hooks';
 import { usePlayerKeys } from './keys';
@@ -30,17 +28,22 @@ const PRESSABLE = 'button, [role="slider"]';
 /** How long a shortcut shows the controls for. */
 const AWAKE_MS = 2000;
 
-/** The player in the desktop app's window shrunk to its video. */
+/** The player in a small window: the desktop app's own, shrunk, or the browser's picture-in-picture one. */
 export function PictureInPicture({
   player,
   skipping,
   live,
   onClose,
+  onLeave,
+  onDrag,
 }: {
   player: PlayerController;
   skipping: SegmentSkip;
   live: boolean;
   onClose(): void;
+  /** Back to the full player. */
+  onLeave(): void;
+  onDrag?(): void;
 }) {
   const root = React.useRef<HTMLDivElement>(null);
   const [stepSeconds] = useSetting(settings.controls.seekStep);
@@ -65,6 +68,8 @@ export function PictureInPicture({
   }, []);
   const [hovered, setHovered] = React.useState(false);
   const visible = paused || awake || hovered;
+  const bottomBar = React.useRef<HTMLDivElement>(null);
+  useLiftSubtitles(player, bottomBar, visible);
 
   const skip = (deltaMs: number) => {
     if (live) return;
@@ -87,7 +92,7 @@ export function PictureInPicture({
       return false;
     },
     endScrub: () => false,
-    onBack: leaveAppPip,
+    onBack: onLeave,
     skipSegment: skipping.skip,
     speedUp: speed.start,
   });
@@ -95,8 +100,8 @@ export function PictureInPicture({
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || (e.target as Element).closest(PRESSABLE)) return;
     e.preventDefault();
-    if (e.detail === 2) leaveAppPip();
-    else appBridge()?.send({ type: 'window-drag' });
+    if (e.detail === 2) onLeave();
+    else onDrag?.();
   };
 
   return (
@@ -137,7 +142,7 @@ export function PictureInPicture({
             <PipButton
               name="leave"
               label={t`Exit picture-in-picture`}
-              onClick={leaveAppPip}
+              onClick={onLeave}
             >
               <LuPictureInPicture2 />
             </PipButton>
@@ -181,7 +186,7 @@ export function PictureInPicture({
             </PipButton>
           )}
         </div>
-        <div className="px-3 pb-1.5 [--time:0.75rem]">
+        <div ref={bottomBar} className="px-3 pb-1.5 [--time:0.75rem]">
           {!live && durationMs > 0 && (
             <>
               <PlayerTime

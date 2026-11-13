@@ -191,6 +191,9 @@ export const PLAYER_ENGINES = [
   'browser',
 ] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
+/** A browser's picture-in-picture: a window with the player in it, or its own of the video alone. */
+export const PIP_WINDOWS = ['player', 'video'] as const;
+export type PipWindow = (typeof PIP_WINDOWS)[number];
 /** What Back does in the player: stop, or play on in the mini player. */
 export const PLAYER_BACKS = ['stop', 'minimise'] as const;
 export type PlayerBack = (typeof PLAYER_BACKS)[number];
@@ -603,6 +606,11 @@ export const settings = {
       'aiostreams-web-player-back',
       'stop',
       PLAYER_BACKS
+    ),
+    pictureInPicture: device<PipWindow>(
+      'aiostreams-web-player-picture-in-picture',
+      'player',
+      PIP_WINDOWS
     ),
     /** Where the mini player was left. */
     miniCorner: device<MiniCorner>(

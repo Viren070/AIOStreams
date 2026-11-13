@@ -957,31 +957,33 @@ function useFocusInside(
   }, [wake, root]);
 }
 
-function useLiftSubtitles(
+export function useLiftSubtitles(
   player: PlayerController,
   bottomBar: React.RefObject<HTMLElement | null>,
   visible: boolean
 ) {
   const latest = useLatest(player);
   React.useEffect(() => {
+    // The bar's own window, which can be a picture-in-picture one.
+    const view = bottomBar.current?.ownerDocument.defaultView ?? window;
     const lift = () => {
       const tops = Array.from(bottomBar.current?.children ?? [])
         .map((child) => child.getBoundingClientRect())
         .filter((r) => r.height > 0)
         .map((r) => r.top);
       latest.current.liftSubtitles?.(
-        visible && tops.length ? 1 - Math.min(...tops) / innerHeight : 0
+        visible && tops.length ? 1 - Math.min(...tops) / view.innerHeight : 0
       );
     };
     lift();
     if (!visible) return;
     // The bar grows with what opens in it, such as a remote's scrub.
-    const grows = new ResizeObserver(lift);
+    const grows = new view.ResizeObserver(lift);
     if (bottomBar.current) grows.observe(bottomBar.current);
-    window.addEventListener('resize', lift);
+    view.addEventListener('resize', lift);
     return () => {
       grows.disconnect();
-      window.removeEventListener('resize', lift);
+      view.removeEventListener('resize', lift);
     };
   }, [visible, latest, bottomBar]);
   React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);

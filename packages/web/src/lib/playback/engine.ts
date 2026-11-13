@@ -72,6 +72,7 @@ export type EngineState = Partial<
     | 'subtitle'
     | 'passthrough'
     | 'stream'
+    | 'pictureInPicture'
   >
 >;
 
@@ -164,7 +165,10 @@ export interface PlayerEngine {
   /** Draws the video in `frame` over the page, or back behind it filling the window. */
   setFrame?(frame: VideoFrame | null): void;
   toggleFullscreen?(): void;
+  /** Opens or closes a picture-in-picture window of its own. */
   togglePictureInPicture?(): void;
+  /** The page's own window shows the video, which a hidden page may still be painted for. */
+  setPictureInPicture?(open: boolean): void;
   /** The text of a subtitle file it was given, null for one it can't read; server ones are read from their address. */
   ownText?(id: string): string | null;
   /** Reports when the lines of one of the file's own subtitles show, as it reads them, until stopped. */

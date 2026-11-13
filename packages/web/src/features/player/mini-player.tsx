@@ -17,6 +17,7 @@ import {
   expandPlayback,
 } from '@/lib/playback/session';
 import { useDock } from '@/lib/playback/dock';
+import { useDocumentPip } from '@/lib/playback/document-pip';
 import { settings, useSetting, type MiniCorner } from '@/lib/settings';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
@@ -457,6 +458,8 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
 
   const started = !!player?.state.started;
   const paused = !!player?.state.paused;
+  const pageWindow = useDocumentPip();
+  const elsewhere = !!player?.state.pictureInPicture || !!pageWindow;
   const backdrop = item ? landscapeUrl(client, item, { maxWidth: 640 }) : null;
   const title = item ? itemTitle(item) : '';
   const detail = error ? t`Playback failed` : item ? itemSubtitle(item) : '';
@@ -523,7 +526,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
         )}
         style={{ width: room.width, height: room.height }}
       >
-        {backdrop && (!started || frame.hidden) && (
+        {backdrop && (!started || frame.hidden || elsewhere) && (
           <CachedImage
             data-ui="mini-player-image"
             src={backdrop}

@@ -53,6 +53,8 @@ export interface PlayerState {
   passthrough?: boolean;
   /** The server's conversion that plays in place of the file, which reports name. */
   stream?: { playSessionId: string | null; liveStreamId?: string };
+  /** In the engine's own picture-in-picture window, not on the page. */
+  pictureInPicture?: boolean;
 }
 
 /** What some players add to what a browser's video can do. */
@@ -121,6 +123,7 @@ export interface PlayerController {
   /** Missing where the page always fills the screen. */
   toggleFullscreen?: () => void;
   togglePictureInPicture?: () => void;
+  setPictureInPicture?: (open: boolean) => void;
   setFrame?: (frame: VideoFrame | null) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];

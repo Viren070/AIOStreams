@@ -124,11 +124,13 @@ export function usePlayer(
   const [engine, setEngine] = React.useState(() => make(0));
   const active = React.useRef(engine);
   const engineAt = React.useRef(0);
+  const inPip = React.useRef(false);
   const use = (at: number) => {
     const made = make(at);
     active.current = made;
     engineAt.current = at;
     setEngine(made);
+    if (inPip.current) made.setPictureInPicture?.(true);
     return made;
   };
   // The picks a version keeps when it moves to the next engine mid-play.
@@ -565,6 +567,10 @@ export function usePlayer(
       engine.toggleFullscreen && (() => engine.toggleFullscreen!()),
     togglePictureInPicture:
       engine.togglePictureInPicture && (() => engine.togglePictureInPicture!()),
+    setPictureInPicture: (open) => {
+      inPip.current = open;
+      active.current.setPictureInPicture?.(open);
+    },
     setFrame: engine.setFrame && ((frame) => engine.setFrame!(frame)),
     chapters: chapters?.length ? chapters : opts.chapters,
     stats: stats && {

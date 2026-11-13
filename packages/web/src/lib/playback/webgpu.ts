@@ -93,7 +93,10 @@ interface GpuPlayer {
     inactivePasses: readonly { name: string; reason: string; detail: string }[];
   }>;
   setHDROutput(enabled: boolean): Promise<void>;
-  captureStream(): MediaStream | null;
+  pictureStream(
+    onPicture?: () => void
+  ): { stream: MediaStream; stop(): void } | null;
+  setPictureInPicture(open: boolean): void;
   destroy(): void;
 }
 
@@ -203,21 +206,61 @@ export function webGpuEngine(
     let detach: (() => void)[] = [];
     let lastClock: { clockMs: number; at: number } | null = null;
     let struggling = false;
-    // Picture-in-picture shows the canvas as a stream in a video of its own.
-    let pip: HTMLVideoElement | null = null;
+    let pageWindow = false;
+    let pip: { video: HTMLVideoElement; stop(): void } | null = null;
+    let revealing = false;
+    const followPip = () => player?.setPictureInPicture(pageWindow || !!pip);
     const leavePip = () => {
       const shown = pip;
       pip = null;
+      revealing = false;
       if (!shown) return;
-      if (document.pictureInPictureElement === shown)
+      if (document.pictureInPictureElement === shown.video)
         void document.exitPictureInPicture().catch(() => {});
-      for (const track of (
-        shown.srcObject as MediaStream | null
-      )?.getTracks() ?? [])
-        track.stop();
-      shown.srcObject = null;
-      shown.remove();
+      shown.stop();
+      followPip();
+      set({ pictureInPicture: false });
     };
+    /** A paused stream keeps its last frame, so it plays until it shows the newest copy. */
+    const reveal = (shown: HTMLVideoElement) => {
+      if (revealing) return;
+      revealing = true;
+      const done = () => {
+        if (!revealing) return;
+        revealing = false;
+        clearTimeout(timer);
+        if (paused && pip?.video === shown) shown.pause();
+      };
+      const timer = setTimeout(done, 500);
+      shown.requestVideoFrameCallback?.(done);
+      // A paused video drops the frames sent meanwhile, so the copy is sent again.
+      void shown.play().then(
+        () =>
+          (
+            (shown.srcObject as MediaStream | null)?.getVideoTracks()[0] as
+              CanvasCaptureMediaStreamTrack | undefined
+          )?.requestFrame?.(),
+        () => {}
+      );
+    };
+    /** Once its first frame arrives, which the window needs to open. */
+    const framed = (shown: HTMLVideoElement) =>
+      shown.readyState >= HTMLMediaElement.HAVE_METADATA
+        ? Promise.resolve()
+        : new Promise<void>((done, failed) => {
+            const timer = setTimeout(
+              () => failed(new Error('the picture stream sent no frame')),
+              2000
+            );
+            shown.addEventListener(
+              'loadedmetadata',
+              () => {
+                clearTimeout(timer);
+                done();
+              },
+              { once: true }
+            );
+          });
     let dropBase: { shown: number; dropped: number } | null = null;
 
     const set = (state: EngineState) => emit({ type: 'state', state });
@@ -431,12 +474,12 @@ export function webGpuEngine(
           if (!current()) return;
           if (state === 'playing') {
             paused = false;
-            void pip?.play().catch(() => {});
+            void pip?.video.play().catch(() => {});
             embedded?.setPlaying(true);
             set({ started: true, paused: false, waiting: false });
           } else if (state === 'paused') {
             paused = true;
-            pip?.pause();
+            if (!revealing) pip?.video.pause();
             set({ paused: true, waiting: false });
           } else if (state === 'ended') emit({ type: 'ended' });
           else set({ waiting: true });
@@ -479,6 +522,7 @@ export function webGpuEngine(
         { container, video: el },
         events(load)
       ));
+      followPip();
       await Promise.all([
         applyPasses(opened).catch((error: unknown) =>
           appLog('warn', `webgpu: passes not set: ${String(error)}`)
@@ -625,33 +669,54 @@ export function webGpuEngine(
         fit = next.fit;
       },
       toggleFullscreen: canFullscreen() ? toggleDocumentFullscreen : undefined,
+      setPictureInPicture(open) {
+        pageWindow = open;
+        followPip();
+      },
       ...(document.pictureInPictureEnabled &&
         'captureStream' in HTMLCanvasElement.prototype && {
           async togglePictureInPicture() {
             if (pip) return leavePip();
-            const stream = player?.captureStream();
-            if (!stream) return;
+            const copies = player?.pictureStream(() => {
+              if (paused && pip?.video.isConnected) reveal(pip.video);
+            });
+            if (!copies) return;
             const shown = document.createElement('video');
             shown.muted = true;
             shown.playsInline = true;
-            shown.srcObject = stream;
-            shown.className = 'pointer-events-none absolute size-px opacity-0';
-            (video.current?.parentElement ?? document.body).append(shown);
-            pip = shown;
-            shown.addEventListener('leavepictureinpicture', leavePip);
+            shown.srcObject = copies.stream;
+            shown.className = 'pointer-events-none fixed size-px opacity-0';
+            document.body.append(shown);
+            const current = (pip = {
+              video: shown,
+              stop() {
+                copies.stop();
+                shown.srcObject = null;
+                shown.remove();
+              },
+            });
+            shown.addEventListener('leavepictureinpicture', () => {
+              if (pip === current) leavePip();
+            });
             // The window's own play and pause buttons act on this video.
             shown.addEventListener('pause', () => {
-              if (pip === shown && !paused) player?.pause();
+              if (pip === current && !paused && !revealing) player?.pause();
             });
             shown.addEventListener('play', () => {
-              if (pip === shown && paused) player?.play();
+              if (pip === current && paused && !revealing) player?.play();
             });
             try {
-              await shown.play();
+              // Its play event plays the playback, so a paused one only waits for a frame.
+              if (paused) await framed(shown);
+              else await shown.play();
               await shown.requestPictureInPicture();
+              if (pip !== current) return;
+              followPip();
+              set({ pictureInPicture: true });
+              if (paused) reveal(shown);
             } catch (error) {
               appLog('warn', `webgpu: picture-in-picture: ${String(error)}`);
-              leavePip();
+              if (pip === current) leavePip();
             }
           },
         }),

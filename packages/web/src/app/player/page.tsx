@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -38,7 +39,7 @@ import {
 } from '@/lib/playback/stream';
 import { PlaybackReporter } from '@/lib/playback/reporter';
 import { currentHost } from '@/lib/hosts';
-import { appLog } from '@/lib/hosts/shell/bridge';
+import { appBridge, appLog } from '@/lib/hosts/shell/bridge';
 import { useFeature } from '@/lib/jellyfin/server-info';
 import {
   leaveFullscreen,
@@ -98,6 +99,13 @@ import {
   usePlayback,
 } from '@/lib/playback/session';
 import { leaveAppPip, useAppPip } from '@/lib/hosts/shell/pip';
+import {
+  canUseDocumentPip,
+  closeDocumentPip,
+  onDocumentPipLeave,
+  openDocumentPip,
+  useDocumentPip,
+} from '@/lib/playback/document-pip';
 import { PictureInPicture } from '@/features/player/picture-in-picture';
 import { noteChannelPlayed } from '@/features/live-tv/live-tv';
 import { useZap, type Zap } from '@/features/player/live';
@@ -308,6 +316,7 @@ export function PlayerPage({
     () => () => {
       const open = playbackNow();
       if (!open || open.mini) leaveAppPip();
+      if (!open) closeDocumentPip();
     },
     []
   );
@@ -637,6 +646,17 @@ function Failure({
   );
 }
 
+function windowSize(source: SourceInfo): { width: number; height: number } {
+  const video = source.MediaStreams?.find((s) => s.Type === 'Video');
+  const ratio =
+    video?.Width && video.Height ? video.Width / video.Height : 16 / 9;
+  const area = 480 * 270;
+  return {
+    width: Math.round(Math.sqrt(area * ratio)),
+    height: Math.round(Math.sqrt(area / ratio)),
+  };
+}
+
 /** Sized from the video's height, as a cue is by default; Firefox reads a percentage against the page font. */
 function cueCss(style: SubtitleStyle): string {
   const css = subtitleCss(style);
@@ -963,13 +983,54 @@ function Player({
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
   const pip = useAppPip();
-  useFullWindowFor(!!failure || next.asking || !!launched);
+  const needsPage = !!failure || next.asking || !!launched;
+  useFullWindowFor(needsPage);
   const covered = !pip && (!player.state.started || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const [place, setPlace] = React.useState<MiniVideoPlace | null>(null);
   React.useEffect(() => {
     if (mini) leaveFullscreen();
   }, [mini]);
+
+  const [pipWindow] = useSetting(settings.player.pictureInPicture);
+  const windowed = !hostPlayer && canUseDocumentPip() && pipWindow === 'player';
+  const pageWindow = useDocumentPip();
+  const inWindow = windowed ? pageWindow : null;
+  React.useEffect(() => {
+    if (needsPage || !windowed) closeDocumentPip();
+  }, [needsPage, windowed]);
+  const [frameHost] = React.useState(() => {
+    const host = document.createElement('div');
+    host.className = 'contents';
+    return host;
+  });
+  const slot = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    (inWindow?.document.body ?? slot.current)?.prepend(frameHost);
+  }, [inWindow, frameHost]);
+  React.useEffect(() => {
+    const leave = onDocumentPipLeave(() => slot.current?.append(frameHost));
+    return () => {
+      leave();
+      frameHost.remove();
+    };
+  }, [frameHost]);
+  const followWindow = useLatest(own.setPictureInPicture);
+  React.useEffect(() => {
+    followWindow.current?.(!!inWindow);
+  }, [inWindow, followWindow]);
+  const shownControls: PlayerController = windowed
+    ? {
+        ...controls,
+        togglePictureInPicture: () =>
+          inWindow
+            ? closeDocumentPip()
+            : void openDocumentPip(windowSize(source)),
+        // The window's controls lift the subtitles instead.
+        liftSubtitles: inWindow ? undefined : controls.liftSubtitles,
+      }
+    : controls;
+  const elsewhere = !!inWindow || !!player.state.pictureInPicture;
 
   if (pip)
     return (
@@ -981,6 +1042,8 @@ function Player({
             skipping={skipping}
             live={!!source.IsInfiniteStream}
             onClose={stop}
+            onLeave={leaveAppPip}
+            onDrag={() => appBridge()?.send({ type: 'window-drag' })}
           />
         )}
       </div>
@@ -990,41 +1053,57 @@ function Player({
     <div data-page="player" className={mini ? 'contents' : 'fixed inset-0'}>
       {!hostPlayer && (
         <>
-          <style>{cueCss(subtitleStyle)}</style>
-          {/* The engine's canvas and the subtitle layers sit here with the video, and move with it. */}
-          <div
-            data-ui="video-frame"
-            className={
-              // Over the mini player's card, which comes after it.
-              cn(
-                '[container-type:size]',
-                mini
-                  ? 'pointer-events-none fixed left-0 top-0 z-[41] h-full w-full overflow-hidden'
-                  : 'absolute inset-0 isolate'
-              )
-            }
-            style={mini && place ? place : undefined}
-          >
-            <video
-              ref={video}
-              data-ui="video"
-              className={cn(
-                'h-full w-full bg-black transition-opacity duration-700 ease-out',
-                mini ? 'object-contain' : OBJECT_FIT[fit],
-                !player.state.started && 'opacity-0'
-              )}
-              autoPlay
-              playsInline
-            />
-            <PageSubtitle
-              framed
-              text={player.subtitleText}
-              style={subtitleStyle}
-              lift={mini ? undefined : player.subtitleLift}
-            />
-          </div>
+          <div ref={slot} className="contents" />
+          {createPortal(
+            <>
+              <style>{cueCss(subtitleStyle)}</style>
+              {/* The engine's canvas and the subtitle layers sit here with the video, and move with it. */}
+              <div
+                data-ui="video-frame"
+                className={cn(
+                  '[container-type:size]',
+                  // Over the mini player's card, which comes after it.
+                  mini && !inWindow
+                    ? 'pointer-events-none fixed left-0 top-0 z-[41] h-full w-full overflow-hidden'
+                    : 'absolute inset-0 isolate',
+                  player.state.pictureInPicture && 'invisible'
+                )}
+                style={mini && place && !inWindow ? place : undefined}
+              >
+                <video
+                  ref={video}
+                  data-ui="video"
+                  className={cn(
+                    'h-full w-full bg-black transition-opacity duration-700 ease-out',
+                    mini || inWindow ? 'object-contain' : OBJECT_FIT[fit],
+                    !player.state.started && 'opacity-0'
+                  )}
+                  autoPlay
+                  playsInline
+                />
+                <PageSubtitle
+                  framed
+                  text={player.subtitleText}
+                  style={subtitleStyle}
+                  lift={mini ? undefined : player.subtitleLift}
+                />
+              </div>
+            </>,
+            frameHost
+          )}
         </>
       )}
+      {inWindow &&
+        createPortal(
+          <PictureInPicture
+            player={controls}
+            skipping={skipping}
+            live={!!source.IsInfiniteStream}
+            onClose={stop}
+            onLeave={closeDocumentPip}
+          />,
+          inWindow.document.body
+        )}
       {mini && (
         <MiniPlayer
           item={item}
@@ -1051,6 +1130,14 @@ function Player({
               <Trans>Playing in {launchedName}</Trans>
             </p>
           )}
+          {elsewhere && (
+            <p
+              data-ui="player-elsewhere"
+              className="pointer-events-none fixed inset-x-0 top-1/4 text-center text-lg font-medium text-white/80"
+            >
+              <Trans>Playing in picture-in-picture</Trans>
+            </p>
+          )}
           {player.state.error ? (
             <Failure
               itemId={item.Id!}
@@ -1066,7 +1153,7 @@ function Player({
               {!next.asking && (
                 <PlayerControls
                   item={item}
-                  player={controls}
+                  player={shownControls}
                   skipping={skipping}
                   onBack={back}
                   onMinimise={minimise}

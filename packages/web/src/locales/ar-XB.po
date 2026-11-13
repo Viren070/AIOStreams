@@ -366,6 +366,10 @@ msgstr ""
 msgid "A set time before the end."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr ""
@@ -3242,6 +3246,7 @@ msgid "Pick the version to download."
 msgstr ""
 
 #: src/app/settings/apps.tsx
+#: src/app/settings/playback.tsx
 #: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr ""
@@ -3421,6 +3426,10 @@ msgstr ""
 msgid "Player link"
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "Player window"
+msgstr ""
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx
 #: src/features/party/in-party.tsx
@@ -3433,6 +3442,10 @@ msgstr ""
 
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
+msgstr ""
+
+#: src/app/player/page.tsx
+msgid "Playing in picture-in-picture"
 msgstr ""
 
 #: src/features/versions/external-prompt.tsx
@@ -5053,6 +5066,10 @@ msgstr ""
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr ""
@@ -5477,6 +5494,10 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "Video only"
 msgstr ""
 
 #: src/app/settings/apps.tsx

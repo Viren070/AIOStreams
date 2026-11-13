@@ -366,6 +366,10 @@ msgstr "A remote's or gamepad's buttons work too."
 msgid "A set time before the end."
 msgstr "A set time before the end."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -3242,6 +3246,7 @@ msgid "Pick the version to download."
 msgstr "Pick the version to download."
 
 #: src/app/settings/apps.tsx
+#: src/app/settings/playback.tsx
 #: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Picture-in-picture"
@@ -3421,6 +3426,10 @@ msgstr "Player"
 msgid "Player link"
 msgstr "Player link"
 
+#: src/app/settings/playback.tsx
+msgid "Player window"
+msgstr "Player window"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx
 #: src/features/party/in-party.tsx
@@ -3434,6 +3443,10 @@ msgstr "Playing"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "Playing in {launchedName}"
+
+#: src/app/player/page.tsx
+msgid "Playing in picture-in-picture"
+msgstr "Playing in picture-in-picture"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -5053,6 +5066,10 @@ msgstr "This browser keeps no files for this site."
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr "This browser's own player, which plays the formats this browser supports."
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "This code has expired."
@@ -5478,6 +5495,10 @@ msgstr "Versions play in this browser. Choose another player to open them in it 
 #: src/app/settings/playback.tsx
 msgid "Video"
 msgstr "Video"
+
+#: src/app/settings/playback.tsx
+msgid "Video only"
+msgstr "Video only"
 
 #: src/app/settings/apps.tsx
 msgid "Video output"

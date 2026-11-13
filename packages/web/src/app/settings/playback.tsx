@@ -22,6 +22,7 @@ import {
   playerOptions,
 } from '@/lib/playback/player-choice';
 import { addShader, removeShader, shaderNames } from '@/lib/playback/shaders';
+import { canPickPipWindow } from '@/lib/playback/document-pip';
 import {
   settings,
   useSetting,
@@ -37,6 +38,7 @@ import {
   type CacheSize,
   type PlayerBack,
   type PlayerEngine,
+  type PipWindow,
   type NextPrompt,
   type SegmentAction,
   type SegmentType,
@@ -452,6 +454,17 @@ const backOptions = (): { value: PlayerBack; label: string }[] => [
   { value: 'minimise', label: t`Opens the mini player` },
 ];
 
+const pipOptions = (): { value: PipWindow; label: string }[] => [
+  { value: 'player', label: t`Player window` },
+  { value: 'video', label: t`Video only` },
+];
+
+const pipHelp = (window: PipWindow) =>
+  ({
+    player: t`A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top.`,
+    video: t`This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause.`,
+  })[window];
+
 const engineOptions = (): { value: PlayerEngine; label: string }[] => [
   { value: 'auto', label: t`Automatic` },
   { value: 'exoplayer', label: 'ExoPlayer' },
@@ -524,6 +537,9 @@ function PlayerCard() {
   const browserEngine = engine === 'browser' ? engine : 'webgpu';
   const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
   const [back, setBack] = useSetting(settings.player.back);
+  const [pipWindow, setPipWindow] = useSetting(
+    settings.player.pictureInPicture
+  );
   const [quality, setQuality] = useSetting(settings.player.quality);
   const { user } = useSession();
   const found = useExternalPlayers();
@@ -622,6 +638,20 @@ function PlayerCard() {
               </>
             )}
           </>
+        )}
+      {!currentHost().player &&
+        !currentHost().tv &&
+        canPickPipWindow() &&
+        !launched &&
+        !preset &&
+        player !== CUSTOM_LINK && (
+          <Select
+            label={t`Picture-in-picture`}
+            help={pipHelp(pipWindow)}
+            options={pipOptions()}
+            value={pipWindow}
+            onValueChange={(v) => setPipWindow(v as PipWindow)}
+          />
         )}
       {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
         <>
