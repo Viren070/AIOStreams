@@ -56,12 +56,12 @@ function Shade() {
       <div
         data-ui="hero-shade"
         data-name="side"
-        className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/70 via-35% to-transparent max-sm:hidden rtl:bg-gradient-to-l"
+        className="absolute inset-0 bg-[--background] [mask-image:linear-gradient(to_right,black,rgb(0_0_0/0.7)_35%,transparent)] max-sm:hidden rtl:[mask-image:linear-gradient(to_left,black,rgb(0_0_0/0.7)_35%,transparent)]"
       />
       <div
         data-ui="hero-shade"
         data-name="bottom"
-        className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[--background] via-[--background]/60 to-transparent max-sm:h-1/2"
+        className="absolute inset-x-0 bottom-0 h-2/3 bg-[--background] [mask-image:linear-gradient(to_top,black,rgb(0_0_0/0.6),transparent)] max-sm:h-1/2"
       />
     </>
   );
@@ -626,9 +626,9 @@ function HeroTrailer({
       <div className="absolute -inset-px">
         {fades && (
           <>
-            <div className="absolute inset-y-0 start-0 w-2/5 bg-gradient-to-r from-[--background] via-[--background]/60 via-30% to-transparent rtl:bg-gradient-to-l" />
-            <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[--background] via-[--background]/60 via-30% to-transparent" />
-            <div className="absolute inset-x-0 top-0 h-[12%] bg-gradient-to-b from-[--background]/70 to-transparent" />
+            <div className="absolute inset-y-0 start-0 w-2/5 bg-[--background] [mask-image:linear-gradient(to_right,black,rgb(0_0_0/0.6)_30%,transparent)] rtl:[mask-image:linear-gradient(to_left,black,rgb(0_0_0/0.6)_30%,transparent)]" />
+            <div className="absolute inset-x-0 bottom-0 h-2/5 bg-[--background] [mask-image:linear-gradient(to_top,black,rgb(0_0_0/0.6)_30%,transparent)]" />
+            <div className="absolute inset-x-0 top-0 h-[12%] bg-[--background] [mask-image:linear-gradient(to_bottom,rgb(0_0_0/0.7),transparent)]" />
           </>
         )}
         <TrailerVeil shown={shown} />

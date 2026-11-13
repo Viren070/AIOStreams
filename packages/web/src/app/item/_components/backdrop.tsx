@@ -93,12 +93,12 @@ export function Backdrop({
       <div
         data-ui="item-backdrop-shade"
         data-name="side"
-        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent landscape:block lg:block rtl:bg-gradient-to-l"
+        className="absolute inset-0 hidden bg-gradient-to-r from-[--background] to-transparent landscape:block lg:block rtl:bg-gradient-to-l"
       />
       <div
         data-ui="item-backdrop-shade"
         data-name="bottom"
-        className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[--background] via-[--background]/70 to-transparent max-sm:h-1/2"
+        className="absolute inset-x-0 bottom-0 h-3/4 bg-[--background] [mask-image:linear-gradient(to_top,black,rgb(0_0_0/0.7),transparent)] max-sm:h-1/2"
       />
     </div>
   );
