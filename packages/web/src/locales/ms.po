@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 23:04+0000\n"
+"PO-Revision-Date: 2026-11-13 23:05+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -5187,9 +5187,8 @@ msgid "Up next: {upNext}"
 msgstr "Seterusnya: {upNext}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
-msgstr "Sehingga {MAX_FEATURED}, dicampur bersama. Dibiarkan kosong, katalog filem dan siri pertama anda dipilih."
+msgstr "Sehingga {MAX_FEATURED}, dicampur bersama. Jika dibiarkan kosong, pustaka filem dan rancangan pertama anda akan dipaparkan sebagai pilihan."
 
 #: src/lib/hosts/shell/index.ts
 msgid "Up to date."
@@ -5321,9 +5320,8 @@ msgid "Video"
 msgstr "Video"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Video only"
-msgstr "Video"
+msgstr "Video sahaja"
 
 #: src/app/settings/apps.tsx
 msgid "Video output"
