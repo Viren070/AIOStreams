@@ -365,6 +365,10 @@ msgstr "Λειτουργούν και τα κουμπιά τηλεχειριστ
 msgid "A set time before the end."
 msgstr "Καθορισμένο χρονικό διάστημα πριν από το τέλος."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "Το κομμάτι ήχου που η έκδοση ορίζει ως προεπιλεγμένο αναπαράγεται ακόμη κι αν υπάρχει άλλο σε μία από τις γλώσσες σου. Απενεργοποίησέ το για να προηγούνται πάντα οι γλώσσες σου."
@@ -3122,7 +3126,8 @@ msgstr "Επίλεξε την ατάκα που άκουσες στο {heardAt}.
 msgid "Pick the version to download."
 msgstr "Επίλεξε την έκδοση για λήψη."
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Εικόνα μέσα σε εικόνα"
 
@@ -3292,6 +3297,11 @@ msgstr "Πρόγραμμα αναπαραγωγής"
 msgid "Player link"
 msgstr "Σύνδεσμος προγράμματος αναπαραγωγής"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "Αναπαραγωγή τώρα"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3302,6 +3312,11 @@ msgstr "Γίνεται αναπαραγωγή"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "Αναπαραγωγή στο {launchedName}"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "Έξοδος από την εικόνα μέσα σε εικόνα"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4874,6 +4889,10 @@ msgstr "Το πρόγραμμα περιήγησης δεν έχει αποθη�
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr "Το ενσωματωμένο πρόγραμμα αναπαραγωγής του προγράμματος περιήγησης. Παίζει τις μορφές που εκείνο υποστηρίζει."
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "Αυτός ο κωδικός έχει λήξει."
@@ -5289,6 +5308,11 @@ msgstr "Οι εκδόσεις αναπαράγονται σε αυτό το πρ
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr "Βίντεο"
+
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
 msgstr "Βίντεο"
 
 #: src/app/settings/apps.tsx

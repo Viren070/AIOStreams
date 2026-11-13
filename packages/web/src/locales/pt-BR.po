@@ -365,6 +365,10 @@ msgstr "Os botões do controle remoto ou do gamepad também funcionam."
 msgid "A set time before the end."
 msgstr "Um tempo definido antes do fim."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "Uma faixa marcada como padrão pela versão será reproduzida mesmo quando houver outra em um dos seus idiomas. Desative esta opção para que seus idiomas sempre tenham prioridade."
@@ -3118,7 +3122,8 @@ msgstr "Selecione a linha da legenda correspondente à fala que você ouviu em {
 msgid "Pick the version to download."
 msgstr "Escolha a versão para baixar."
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Modo picture-in-picture (PiP)"
 
@@ -3288,6 +3293,11 @@ msgstr "Reprodutor"
 msgid "Player link"
 msgstr "Link para o reprodutor"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "Reproduzir agora"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3298,6 +3308,11 @@ msgstr "Assistindo agora"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "Assistindo no {launchedName}"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "Voltar à janela normal"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4865,6 +4880,10 @@ msgstr "Este navegador não salva arquivos deste site."
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr "Usa o player nativo do navegador e reproduz apenas os formatos compatíveis."
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "Este código expirou."
@@ -5277,6 +5296,11 @@ msgstr "Versões são reproduzidas neste navegador. Escolha outro player para ab
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr "Vídeo"
+
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
 msgstr "Vídeo"
 
 #: src/app/settings/apps.tsx

@@ -366,6 +366,10 @@ msgstr "遥控器或游戏手柄上的按键也可使用。"
 msgid "A set time before the end."
 msgstr "在结束前指定的时间。"
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "即使存在你所使用语言的音轨，版本标记为默认的音轨仍会优先播放。关闭此选项后，你偏好的语言将始终优先。"
@@ -3146,7 +3150,8 @@ msgstr "选择你在 {heardAt} 听到的台词。"
 msgid "Pick the version to download."
 msgstr "选择要下载的版本。"
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "画中画"
 
@@ -3321,6 +3326,11 @@ msgstr "播放器"
 msgid "Player link"
 msgstr "播放器链接"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "立即播放"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3331,6 +3341,11 @@ msgstr "正在播放"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "正在 {launchedName} 中播放"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "画中画"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4920,6 +4935,10 @@ msgstr ""
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "此代码已过期。"
@@ -5337,6 +5356,11 @@ msgstr "版本会在此浏览器中播放。选择其他播放器即可改用该
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr "视频"
+
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
 msgstr "视频"
 
 #: src/app/settings/apps.tsx

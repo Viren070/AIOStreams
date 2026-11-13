@@ -365,6 +365,10 @@ msgstr "Tombol pada remote atau gamepad juga dapat digunakan."
 msgid "A set time before the end."
 msgstr "Jangka waktu tertentu sebelum berakhir."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "Trek yang ditandai sebagai bawaan oleh suatu versi tetap diputar meskipun trek lain tersedia dalam salah satu bahasa Anda. Nonaktifkan opsi ini agar bahasa Anda selalu diprioritaskan."
@@ -3126,7 +3130,8 @@ msgstr "Pilih dialog yang Anda dengar pada {heardAt}."
 msgid "Pick the version to download."
 msgstr "Pilih versi yang akan diunduh."
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Picture-in-picture"
 
@@ -3298,6 +3303,11 @@ msgstr "Pemutar"
 msgid "Player link"
 msgstr "Tautan pemutar"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "Putar sekarang"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3308,6 +3318,11 @@ msgstr "Sedang diputar"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "Diputar di {launchedName}"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "Picture-in-picture"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4884,6 +4899,10 @@ msgstr "Server ini tidak memiliki detail untuk {id}."
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "Kode ini telah kedaluwarsa."
@@ -5300,6 +5319,11 @@ msgstr "Versi diputar di browser ini. Pilih pemutar lain untuk membukanya di pem
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr "Video"
+
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
 msgstr "Video"
 
 #: src/app/settings/apps.tsx

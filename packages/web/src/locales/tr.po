@@ -366,6 +366,10 @@ msgstr "Bir kumandanın ya da oyun kolunun tuşları da işe yarar."
 msgid "A set time before the end."
 msgstr "Bitmeden önce ayarlanmış bir süre."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "Sürümün varsayılan olarak işaretlediği ses parçası, başka bir parça tercih ettiğin dillerden birinde olsa da oynatılır. Dil tercihlerinin her zaman öncelikli olması için bunu kapat."
@@ -3145,7 +3149,8 @@ msgstr "{heardAt} konumunda duyduğun repliği seç."
 msgid "Pick the version to download."
 msgstr "İndirilecek sürümü seç."
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Küçük pencere (PiP)"
 
@@ -3320,6 +3325,11 @@ msgstr "Oynatıcı"
 msgid "Player link"
 msgstr "Oynatıcı bağlantısı"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "Şimdi oynat"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3330,6 +3340,11 @@ msgstr "Oynatılıyor"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "{launchedName} ile oynatılıyor"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "Küçük pencere (PiP)"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4913,6 +4928,10 @@ msgstr ""
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "Bu kodun süresi doldu."
@@ -5330,6 +5349,11 @@ msgstr "Sürümler bu tarayıcıda oynatılır. Başka bir oynatıcıda açmak i
 
 #: src/app/settings/playback.tsx
 msgid "Video"
+msgstr "Video"
+
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
 msgstr "Video"
 
 #: src/app/settings/apps.tsx
