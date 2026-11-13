@@ -327,6 +327,10 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
 }
+[data-tv] [cmdk-input][data-on-filter] {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 
 /* A guide programme's title moves with the day's scroll to stay beside the
    channels, until its cell's end leaves no room. */
