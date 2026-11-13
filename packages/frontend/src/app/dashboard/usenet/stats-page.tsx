@@ -81,7 +81,7 @@ const STATE_DOT: Record<ProviderState, string> = {
   connecting: 'bg-amber-500',
   offline: 'bg-[--muted]',
   auth_failed: 'bg-red-400',
-  disabled: 'bg-[--muted]/40',
+  disabled: 'bg-white/[0.16]',
 };
 
 /** How recently a pool must have proven wire contact to still show green. */
@@ -103,7 +103,7 @@ interface PoolHealth {
  */
 function poolHealth(p: ProviderPoolInfo): PoolHealth {
   if (p.state === 'disabled') {
-    return { tone: 'off', cls: 'bg-[--muted]/40', label: 'Disabled' };
+    return { tone: 'off', cls: 'bg-white/[0.16]', label: 'Disabled' };
   }
   if (p.state === 'auth_failed') {
     return {
@@ -497,7 +497,7 @@ function ProviderTable({
         </thead>
         <tbody>
           {providers.map((p) => (
-            <tr key={p.id} className="border-b border-[--border]/50">
+            <tr key={p.id} className="border-b border-white/5">
               <td className="py-2 pr-3">
                 <div className="flex items-center gap-2">
                   <span
@@ -762,7 +762,7 @@ function IndexerTable({
         </thead>
         <tbody>
           {indexers.map((i) => (
-            <tr key={i.indexer} className="border-b border-[--border]/50">
+            <tr key={i.indexer} className="border-b border-white/5">
               <td className="py-2 pr-3">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{i.indexer}</span>

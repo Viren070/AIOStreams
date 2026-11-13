@@ -18,7 +18,7 @@ export const COMMAND_PALETTE_SHORTCUT = APPLE_PLATFORM.test(platform)
   : 'Ctrl K';
 
 const SURFACE =
-  'flex items-center rounded-md border border-[--border] bg-[--subtle]/50 hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors';
+  'flex items-center rounded-md border border-[--border] bg-white/[0.03] hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors';
 
 /**
  * The sidebar entry point to a command palette, for both the configure and the

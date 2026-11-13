@@ -185,7 +185,7 @@ function ReviewCard({ item }: { item: CommunityItem }) {
 
       <PayloadView kind={item.kind} payload={shown.payload} />
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-[--border]/50 pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
         {item.kind === 'template' && !isUpdate && (
           <label className="mr-2 flex items-center gap-2 text-xs text-[--muted]">
             <Checkbox value={trusted} onValueChange={(v) => setTrusted(!!v)} />
@@ -282,9 +282,9 @@ function ChangedFields({
     );
   }
   return (
-    <div className="overflow-x-auto rounded border border-[--border]/60">
+    <div className="overflow-x-auto rounded border border-white/[0.06]">
       <table className="w-full text-xs">
-        <thead className="bg-[--subtle]/40 uppercase text-[--muted]">
+        <thead className="bg-white/[0.024] uppercase text-[--muted]">
           <tr className="text-left">
             <th className="p-2">Field</th>
             <th className="p-2">Published</th>
@@ -293,7 +293,7 @@ function ChangedFields({
         </thead>
         <tbody>
           {rows.map(([label, a, b]) => (
-            <tr key={label} className="border-t border-[--border]/40">
+            <tr key={label} className="border-t border-white/[0.04]">
               <td className="p-2 font-medium">{label}</td>
               <td className="max-w-[240px] whitespace-pre-wrap break-words p-2 text-[--muted]">
                 {a || '—'}

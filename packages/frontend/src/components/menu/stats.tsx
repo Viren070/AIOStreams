@@ -313,7 +313,7 @@ function AddonTable({
             return (
               <tr
                 key={`${r.presetType}-${r.instanceHash}`}
-                className="border-b border-[--border] last:border-0 hover:bg-[--subtle]/30"
+                className="border-b border-[--border] last:border-0 hover:bg-white/[0.018]"
               >
                 <Td>
                   <div className="font-medium">{displayName}</div>
@@ -377,7 +377,7 @@ function ServiceTable({ rows }: { rows: UserAnalyticsResponse['perService'] }) {
           {rows.map((r) => (
             <tr
               key={r.serviceId}
-              className="border-b border-[--border] last:border-0 hover:bg-[--subtle]/30"
+              className="border-b border-[--border] last:border-0 hover:bg-white/[0.018]"
             >
               <Td>
                 <span className="font-medium">{r.serviceId}</span>

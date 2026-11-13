@@ -49,7 +49,7 @@ function SortableReorderItem({ item }: { item: ReorderItem }) {
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg border bg-[var(--background)] select-none ${
-        isDragging ? 'shadow-lg border-[--brand]/50' : 'border-[--border]'
+        isDragging ? 'shadow-lg border-brand-300/50' : 'border-[--border]'
       } ${!item.enabled ? 'opacity-50' : ''}`}
       {...attributes}
     >

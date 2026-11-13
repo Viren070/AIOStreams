@@ -20,7 +20,7 @@ function CompactNumber({ value }: { value: number }) {
   return (
     <Tooltip
       trigger={
-        <span className="tabular-nums cursor-default border-b border-dotted border-[--muted]/40">
+        <span className="tabular-nums cursor-default border-b border-dotted border-white/[0.16]">
           {compact}
         </span>
       }
@@ -197,10 +197,7 @@ function UserActivityModal({
                   </thead>
                   <tbody>
                     {d.ips.map((ip) => (
-                      <tr
-                        key={ip.ipPrefix}
-                        className="border-b border-[--border]/50"
-                      >
+                      <tr key={ip.ipPrefix} className="border-b border-white/5">
                         <td className="py-1.5 pr-3 font-mono text-xs">
                           {ip.ipPrefix}
                         </td>
@@ -353,7 +350,7 @@ export function AnalyticsPage() {
                       {d.addons.map((a) => (
                         <tr
                           key={a.presetId}
-                          className="border-b border-[--border]/50"
+                          className="border-b border-white/5"
                         >
                           <td className="py-2 pr-3 font-medium">
                             {a.presetId}
@@ -441,10 +438,7 @@ export function AnalyticsPage() {
                 <table className="w-full text-sm">
                   <tbody>
                     {d.topUsers.map((u) => (
-                      <tr
-                        key={u.uuidHash}
-                        className="border-b border-[--border]/50"
-                      >
+                      <tr key={u.uuidHash} className="border-b border-white/5">
                         <td className="py-1.5 font-mono text-xs text-[--muted] break-all">
                           {u.uuidHash.slice(0, 16)}
                         </td>

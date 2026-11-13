@@ -67,7 +67,7 @@ export const tabsRootClass = cn(
 
 export const tabsTriggerClass = cn(
   'font-bold text-base px-6 rounded-[--radius-md] w-fit lg:w-full border-none data-[state=active]:bg-[--subtle] data-[state=active]:text-white dark:hover:text-white',
-  'h-9 lg:justify-start px-3 transition-all duration-200 hover:bg-[--subtle]/50 hover:transform'
+  'h-9 lg:justify-start px-3 transition-all duration-200 hover:bg-white/[0.03] hover:transform'
 );
 
 export const tabsListClass = cn(

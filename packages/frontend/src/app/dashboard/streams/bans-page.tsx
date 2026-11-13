@@ -143,7 +143,7 @@ export function StreamsBansPage() {
             <Card className="overflow-hidden p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-[--subtle]/40 text-xs uppercase text-[--muted]">
+                  <thead className="bg-white/[0.024] text-xs uppercase text-[--muted]">
                     <tr className="text-left">
                       <th className="p-3">User</th>
                       <th className="p-3">Scope</th>
@@ -157,7 +157,7 @@ export function StreamsBansPage() {
                     {entries.map((b) => (
                       <tr
                         key={b.id}
-                        className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                        className="border-t border-white/5 hover:bg-white/[0.018]"
                       >
                         <td className="p-3 font-medium">{b.username}</td>
                         <td className="p-3">

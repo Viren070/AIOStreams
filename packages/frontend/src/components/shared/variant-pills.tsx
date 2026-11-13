@@ -22,7 +22,7 @@ export const pill = (active: boolean) =>
   cn(
     'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
     active
-      ? 'bg-[--brand]/20 text-[--brand] border-[--brand]/50'
+      ? 'bg-brand-300/20 text-[--brand] border-brand-300/50'
       : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
   );
 

@@ -390,7 +390,7 @@ export function FormatterSelection() {
                   href="https://aiostreams.org/reference/custom-formatter"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[--brand] hover:text-[--brand]/80 hover:underline"
+                  className="text-[--brand] hover:text-brand-300/80 hover:underline"
                 >
                   docs
                 </a>{' '}

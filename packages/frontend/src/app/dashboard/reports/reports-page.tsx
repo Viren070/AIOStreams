@@ -162,7 +162,7 @@ export function ReportsPage() {
             <Card className="overflow-hidden p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-[--subtle]/40 text-xs uppercase text-[--muted]">
+                  <thead className="bg-white/[0.024] text-xs uppercase text-[--muted]">
                     <tr className="text-left">
                       <th className="w-10 p-3">
                         <Checkbox
@@ -190,7 +190,7 @@ export function ReportsPage() {
                       <tr
                         key={r.code}
                         onClick={() => setOpen(r.code)}
-                        className="cursor-pointer border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                        className="cursor-pointer border-t border-white/5 hover:bg-white/[0.018]"
                       >
                         <td
                           className="p-3"
@@ -226,7 +226,7 @@ export function ReportsPage() {
                 </table>
               </div>
               {pages > 1 && (
-                <div className="flex justify-end border-t border-[--border]/50 p-3">
+                <div className="flex justify-end border-t border-white/5 p-3">
                   <Pagination>
                     <PaginationTrigger
                       direction="previous"
@@ -295,7 +295,7 @@ function ReportModal({
       ) : (
         <div className="space-y-3">
           {r.note && (
-            <p className="whitespace-pre-wrap rounded-lg bg-[--subtle]/40 p-3">
+            <p className="whitespace-pre-wrap rounded-lg bg-white/[0.024] p-3">
               {r.note}
             </p>
           )}

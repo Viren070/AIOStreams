@@ -26,7 +26,7 @@ export function OverviewCard({
       className={cn(
         'flex h-full min-w-0 flex-col gap-3 p-4',
         to &&
-          'transition-colors group-hover:border-[--muted]/40 group-hover:bg-[--subtle]/50',
+          'transition-colors group-hover:border-white/[0.16] group-hover:bg-white/[0.03]',
         className
       )}
     >

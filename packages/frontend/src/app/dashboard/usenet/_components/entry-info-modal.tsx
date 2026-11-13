@@ -34,7 +34,7 @@ function Row({
 }) {
   if (value == null && !children) return null;
   return (
-    <div className="flex items-start gap-3 py-1.5 border-b border-[--border]/40 last:border-0">
+    <div className="flex items-start gap-3 py-1.5 border-b border-white/[0.04] last:border-0">
       <span className="w-28 shrink-0 text-xs font-medium text-[--muted] pt-0.5">
         {label}
       </span>

@@ -795,7 +795,7 @@ export function MyAddons({
                   }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors flex items-center gap-3 ${
                     selectedFields.has(opt.id)
-                      ? 'border-[--brand]/50 bg-[--brand]/10'
+                      ? 'border-brand-300/50 bg-brand-300/10'
                       : 'border-[--border] hover:bg-[--subtle]'
                   }`}
                 >

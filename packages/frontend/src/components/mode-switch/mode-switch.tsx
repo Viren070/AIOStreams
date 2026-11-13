@@ -32,7 +32,7 @@ export function ModeSwitch({
     >
       {/* Thumb, inset so it reads as a pill inside the track rather than filling it */}
       <div
-        className="absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] bg-white border border-[--brand]/30 rounded-full transition-transform duration-300 ease-in-out"
+        className="absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] bg-white border border-brand-300/30 rounded-full transition-transform duration-300 ease-in-out"
         style={{ transform: `translateX(${value === 'pro' ? '100%' : '0'})` }}
       />
 

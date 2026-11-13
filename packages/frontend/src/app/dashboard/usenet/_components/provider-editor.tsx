@@ -772,7 +772,7 @@ function ProviderRow({
 
           {/* Toggles grouped together so they read as one set of options.
               (Enabled lives as the power icon button in the header row.) */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border border-[--border]/60 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border border-white/[0.06] px-3 py-2.5">
             <Switch
               value={d.tls}
               onValueChange={(v) => onChange({ tls: v })}

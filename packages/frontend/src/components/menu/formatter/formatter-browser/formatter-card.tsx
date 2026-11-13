@@ -33,7 +33,7 @@ export function FormatterCard({
       transitionDuration="0.3s"
       className={cn(
         'flex flex-col gap-3 bg-gray-900 border-gray-800 hover:border-gray-600 transition-colors duration-200 rounded-lg p-4',
-        active && 'border-[--brand] ring-1 ring-[--brand]/40'
+        active && 'border-[--brand] ring-1 ring-brand-300/40'
       )}
     >
       {header ?? (

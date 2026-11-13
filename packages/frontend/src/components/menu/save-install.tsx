@@ -1647,7 +1647,7 @@ function StremioCustomSourceModal({
                   key={`${cat.type}-${cat.id}`}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                     cat.selected
-                      ? 'bg-[--brand]/5 hover:bg-[--brand]/10'
+                      ? 'bg-brand-300/5 hover:bg-brand-300/10'
                       : 'hover:bg-gray-800/40'
                   }`}
                 >

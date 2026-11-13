@@ -210,7 +210,7 @@ function Segmented<T extends string>({
   }>;
 }) {
   return (
-    <div className="inline-flex rounded-md border border-[--border] bg-[--subtle]/30 p-0.5 text-xs">
+    <div className="inline-flex rounded-md border border-[--border] bg-white/[0.018] p-0.5 text-xs">
       {options.map((o) => (
         <button
           key={o.value}

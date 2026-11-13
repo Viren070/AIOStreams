@@ -89,7 +89,7 @@ export function AddonCard({
                   key={sid}
                   side="top"
                   trigger={
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-[--brand]/10 text-[--brand] border border-[--brand]/20">
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-brand-300/10 text-[--brand] border border-brand-300/20">
                       {service?.shortName || sid}
                     </span>
                   }

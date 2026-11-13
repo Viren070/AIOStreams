@@ -38,7 +38,7 @@ export function PlaybackBehavior() {
                     rel="noopener noreferrer"
                     href="https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/stream.md#additional-properties-to-provide-information--behaviour-flags"
                     target="_blank"
-                    className="text-[--brand] hover:text-[--brand]/80 hover:underline"
+                    className="text-[--brand] hover:text-brand-300/80 hover:underline"
                   >
                     bingeGroup
                   </a>

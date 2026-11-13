@@ -363,7 +363,7 @@ function SourcesView({
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+            <thead className="text-[--muted] text-xs uppercase bg-white/[0.024]">
               <tr className="text-left">
                 <th className="p-3 w-10">
                   {sources.length > 0 && (
@@ -389,10 +389,10 @@ function SourcesView({
                 <tr
                   key={source.id}
                   className={cn(
-                    'border-t border-[--border]/50',
+                    'border-t border-white/5',
                     selectedIds.has(source.id)
-                      ? 'bg-[--accent]/5'
-                      : 'hover:bg-[--subtle]/30'
+                      ? 'bg-brand-500/5'
+                      : 'hover:bg-white/[0.018]'
                   )}
                 >
                   <td className="p-3">

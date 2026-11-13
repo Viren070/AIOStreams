@@ -209,7 +209,7 @@ export function DashboardHome() {
               value={pendingCount}
               intent="warn"
               hint="Community submissions waiting"
-              className="h-full transition-colors group-hover:border-[--muted]/40 group-hover:bg-[--subtle]/50"
+              className="h-full transition-colors group-hover:border-white/[0.16] group-hover:bg-white/[0.03]"
             />
           </Link>
         )}

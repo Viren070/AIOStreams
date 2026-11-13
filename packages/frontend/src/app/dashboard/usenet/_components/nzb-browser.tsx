@@ -135,7 +135,7 @@ export function NzbBrowser({
                   return (
                     <div
                       key={`${folder}-${i}`}
-                      className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-[--border]/60 px-2.5 py-1.5"
+                      className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-white/[0.06] px-2.5 py-1.5"
                     >
                       <div className="flex w-full min-w-0 items-start gap-2 sm:w-auto sm:flex-1">
                         <BiFile className="text-[--muted] shrink-0 mt-0.5" />
