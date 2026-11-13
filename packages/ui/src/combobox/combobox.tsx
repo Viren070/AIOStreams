@@ -146,6 +146,9 @@ export type ComboboxProps = Omit<
     maxDisplayedItems?: number;
   };
 
+/** A highlight no option has, which leaves the keys on the filter above them. */
+const ON_FILTER = '\u0000filter';
+
 export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
   (props, ref) => {
     const [props1, basicFieldProps] = extractBasicFieldProps<ComboboxProps>(
@@ -212,6 +215,8 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
     );
 
     const [open, setOpen] = React.useState(false);
+    const [highlight, setHighlight] = React.useState(ON_FILTER);
+    const onFilter = highlight === ON_FILTER || !highlight;
 
     const handleUpdateValue = React.useCallback((value: string[]) => {
       setValue(value);
@@ -255,6 +260,11 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
     const selectedOptions = options.filter((option) =>
       value.includes(option.value)
     );
+
+    const openList = (next: boolean) => {
+      if (next) setHighlight(ON_FILTER);
+      setOpen(next);
+    };
 
     const maxReached =
       multiple && typeof maxItems === 'number' && value.length >= maxItems;
@@ -330,7 +340,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
 
           <Popover
             open={open}
-            onOpenChange={setOpen}
+            onOpenChange={openList}
             // Opened from keys, focus moves into the list; a pointer or touch keeps it.
             onOpenAutoFocus={(e) => {
               if (!buttonRef.current?.matches(':focus-visible'))
@@ -408,8 +418,39 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               </button>
             }
           >
-            <Command inputContainerClass="py-1" {...commandProps}>
+            <Command
+              inputContainerClass="py-1"
+              value={highlight}
+              onValueChange={setHighlight}
+              onKeyDown={(e) => {
+                const root = e.currentTarget;
+                const items = [
+                  ...root.querySelectorAll<HTMLElement>(
+                    '[cmdk-item]:not([aria-disabled="true"])'
+                  ),
+                ];
+                if (e.key === 'ArrowDown' && onFilter) {
+                  const chosen = selectedOptions[0]?.textValue;
+                  if (!items.some((i) => i.dataset.value === chosen)) return;
+                  e.preventDefault();
+                  setHighlight(chosen!);
+                  requestAnimationFrame(() =>
+                    root
+                      .querySelector('[cmdk-item][data-selected="true"]')
+                      ?.scrollIntoView({ block: 'nearest' })
+                  );
+                } else if (e.key === 'ArrowUp') {
+                  if (onFilter) e.preventDefault();
+                  else if (items[0]?.dataset.value === highlight) {
+                    e.preventDefault();
+                    setHighlight(ON_FILTER);
+                  }
+                }
+              }}
+              {...commandProps}
+            >
               <CommandInput
+                data-on-filter={onFilter || undefined}
                 placeholder={placeholder}
                 onValueChange={onTextChange}
               />
