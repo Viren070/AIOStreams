@@ -765,7 +765,16 @@ function IndexerTable({
             <tr key={i.indexer} className="border-b border-[--border]/50">
               <td className="py-2 pr-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{i.indexer}</span>
+                  <span
+                    className="font-medium"
+                    title={
+                      i.mergedFrom
+                        ? `Merged: ${i.mergedFrom.join(' · ')}`
+                        : undefined
+                    }
+                  >
+                    {i.indexer}
+                  </span>
                   {i.lastError &&
                     Date.now() - i.lastError.atMs < INDEXER_ERROR_RECENT_MS && (
                       <IndexerErrorPopover
