@@ -787,6 +787,8 @@ export const UserDataSchema = z.object({
         id: z.string(),
         version: z.string(),
         url: z.string().optional(),
+        // Template config as last applied, without credentials.
+        config: z.record(z.string(), z.unknown()).optional(),
         dismissedVersion: z.string().optional(), // dismissed update notification up to this version
         ignored: z.boolean().optional(), // permanently ignore all future update notifications
       })
