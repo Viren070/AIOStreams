@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-12 18:26+0000\n"
+"PO-Revision-Date: 2026-11-13 21:32+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.2.dev0\n"
+"X-Generator: Weblate 2026.12.dev0\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: src/features/party/in-party.tsx
@@ -102,7 +102,7 @@ msgstr "{got} z {size}"
 
 #: src/lib/playback/quality.ts
 msgid "{height}, {mbps} Mbps"
-msgstr ""
+msgstr "{height}, {mbps} Mb/s"
 
 #: src/features/player/options.tsx
 msgid "{height}%"
@@ -367,7 +367,7 @@ msgstr "Określony czas przed końcem."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "Małe okno z odtwarzaczem zawierającym napisy, elementy sterujące i pasek postępu. Przeglądarka dodaje u góry własny pasek."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -608,7 +608,7 @@ msgstr "Zastosuj także do stylizowanych napisów"
 
 #: src/app/settings/account.tsx
 msgid "Approve"
-msgstr ""
+msgstr "Zatwierdź"
 
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
@@ -631,9 +631,8 @@ msgid "As the host"
 msgstr "Jako host"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Ascending"
-msgstr "Wysyłanie…"
+msgstr "Rosnąco"
 
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
@@ -966,7 +965,7 @@ msgstr "Zamknij"
 
 #: src/app/settings/account.tsx
 msgid "Code"
-msgstr ""
+msgstr "Kod"
 
 #: src/features/party/in-party.tsx
 msgid "Code copied"
@@ -1286,7 +1285,7 @@ msgstr "Cyjan"
 
 #: src/components/media/sort-picker.tsx
 msgid "Date added"
-msgstr ""
+msgstr "Data dodania"
 
 #: src/app/history/page.tsx
 msgid "Date not known"
@@ -1343,9 +1342,8 @@ msgid "Delete playlist"
 msgstr "Usuń playlistę"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Descending"
-msgstr "Wysyłanie…"
+msgstr "Malejąco"
 
 #: src/app/settings/theme.tsx
 msgid "Desert"
@@ -1555,9 +1553,8 @@ msgid "Enter"
 msgstr "Enter"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Enter a code"
-msgstr "Interfejs"
+msgstr "Wpisz kod"
 
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
@@ -1569,7 +1566,7 @@ msgstr "Wpisz adres serwera pośredniczącego"
 
 #: src/app/settings/account.tsx
 msgid "Enter the code the other device shows."
-msgstr ""
+msgstr "Wpisz kod widoczny na drugim urządzeniu."
 
 #: src/app/sign-in/page.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
@@ -1998,7 +1995,7 @@ msgstr "W Ulubionych"
 
 #: src/app/discover/page.tsx
 msgid "In progress"
-msgstr ""
+msgstr "W trakcie"
 
 #: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
@@ -2562,7 +2559,7 @@ msgstr "Brak szczegółów dla tego tytułu"
 
 #: src/app/settings/account.tsx
 msgid "No device is waiting with that code."
-msgstr ""
+msgstr "Żadne urządzenie nie czeka na połączenie z tym kodem."
 
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
@@ -2945,9 +2942,8 @@ msgid "Or type one"
 msgstr "Lub wpisz własne"
 
 #: src/lib/playback/quality.ts
-#, fuzzy
 msgid "Original"
-msgstr "Język oryginalny"
+msgstr "Oryginalna"
 
 #: src/app/settings/audio.tsx
 msgid "Original language"
@@ -3298,9 +3294,8 @@ msgid "Player link"
 msgstr "Link do odtwarzacza"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Player window"
-msgstr "Odtwórz teraz"
+msgstr "Okno odtwarzacza"
 
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
@@ -3314,9 +3309,8 @@ msgid "Playing in {launchedName}"
 msgstr "Odtwarzanie w {launchedName}"
 
 #: src/app/player/page.tsx
-#, fuzzy
 msgid "Playing in picture-in-picture"
-msgstr "Opuść obraz w obrazie (PiP)"
+msgstr "Odtwarzanie w trybie obrazu w obrazie"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -3445,7 +3439,7 @@ msgstr "Kod QR"
 
 #: src/app/settings/playback.tsx src/features/player/options.tsx
 msgid "Quality"
-msgstr ""
+msgstr "Jakość"
 
 #: src/app/settings/account.tsx src/app/sign-in/page.tsx
 msgid "Quick Connect"
@@ -3564,9 +3558,8 @@ msgid "Relay address"
 msgstr "Adres serwera pośredniczącego"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Release date"
-msgstr "Wydano"
+msgstr "Data wydania"
 
 #: src/app/item/_components/details.tsx
 msgid "Released"
@@ -3773,7 +3766,7 @@ msgstr "Działa z inną prędkością niż wideo"
 
 #: src/components/media/sort-picker.tsx
 msgid "Runtime"
-msgstr ""
+msgstr "Czas trwania"
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -3997,9 +3990,8 @@ msgid "Share the invite"
 msgstr "Udostępnij zaproszenie"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr "Wyostrza kontury i redukuje artefakty kompresji w anime podczas odtwarzania, szczególnie w starszych produkcjach oraz w niższej rozdzielczości. Funkcja działa dla tytułów oznaczonych w katalogach jako anime. Klawisz U w odtwarzaczu pozwala przełączyć ją dla bieżącego wideo. Zwiększa zużycie energii i wyłącza się automatycznie, jeśli urządzenie nie nadąża z płynnym odtwarzaniem. Materiały HDR oraz wideo o rozdzielczości zbliżonej do rozdzielczości ekranu pozostają bez zmian."
+msgstr "Wyostrza kontury i usuwa artefakty kompresji w anime podczas odtwarzania, szczególnie w starszych seriach oraz materiałach o niższej rozdzielczości. Działa dla tytułów oznaczonych jako anime. Naciśnięcie klawisza U na klawiaturze w odtwarzaczu przełącza tę funkcję dla bieżącego materiału. Zwiększa zużycie energii i wyłącza się automatycznie, jeśli urządzenie nie nadąża z przetwarzaniem wideo. Materiały HDR oraz wideo o rozdzielczości zbliżonej do rozmiaru ekranu pozostają bez zmian."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -4081,9 +4073,8 @@ msgid "Shows"
 msgstr "Seriale"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
-msgstr "Pokazuje podgląd klatki wideo w miejscu, które wskazujesz, przeciągasz lub do którego przeskakujesz na pasku postępu. Każdy podgląd pobiera niewielką część pliku, więc wyłącz tę opcję, aby oszczędzać dane."
+msgstr "Pokazuje podgląd klatki wideo w miejscu, które wskażesz, do którego przeciągniesz suwak lub przeskoczysz na pasku postępu. Każdy podgląd pobiera niewielką ilość danych, więc wyłącz tę funkcję, aby oszczędzać transfer."
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
@@ -4123,7 +4114,7 @@ msgstr "Pasek boczny"
 
 #: src/app/settings/account.tsx
 msgid "Sign another device in as you, with the code it shows."
-msgstr ""
+msgstr "Zaloguj inne urządzenie na swoje konto, używając wyświetlanego na nim kodu."
 
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
@@ -4283,7 +4274,7 @@ msgstr "Coś, czego to urządzenie nie potrafi odczytać"
 
 #: src/components/media/sort-picker.tsx
 msgid "Sort by"
-msgstr ""
+msgstr "Sortuj według"
 
 #: src/app/settings/audio.tsx src/app/settings/interface.tsx
 #: src/features/player/options.tsx
@@ -4680,7 +4671,7 @@ msgstr "Odtwarzacz aplikacji i jego opcje, takie jak uruchamianie wideo w orient
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
-msgstr ""
+msgstr "Urządzenie zostało zalogowane"
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
@@ -4721,7 +4712,7 @@ msgstr "Miniodtwarzacz kontynuuje odtwarzanie wideo nad stronami podczas przegl�
 
 #: src/app/settings/playback.tsx
 msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
-msgstr ""
+msgstr "Maksymalna jakość strumieniowania dla danej wersji. Powyżej tego progu serwer obniża jakość wideo, co pomaga przy wolnym połączeniu. Opcja „Oryginał” odtwarza każdą wersję bez zmian. Menu jakości w samym odtwarzaczu również zmienia to ustawienie."
 
 #: src/app/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4789,9 +4780,8 @@ msgstr "To samo dotyczy odcinków oznaczonych jako podsumowanie (recap)."
 
 #. Follows "Playback failed:"
 #: src/lib/playback/transcoding.ts
-#, fuzzy
 msgid "the server could not convert this version"
-msgstr "odtwarzacz nie mógł odtworzyć tej wersji"
+msgstr "serwer nie mógł przekonwertować tej wersji"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
@@ -4800,9 +4790,8 @@ msgstr "strumień zakończył się przedwcześnie"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
-#, fuzzy
 msgid "the stream stopped loading"
-msgstr "transmisja na żywo została przerwana"
+msgstr "strumień przestał się ładować"
 
 #: src/app/settings/apps.tsx
 msgid "The title, the episode and the time left."
@@ -4891,7 +4880,7 @@ msgstr "Wbudowany odtwarzacz tej przeglądarki, który odtwarza formaty przez ni
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
-msgstr ""
+msgstr "Osobne okno samej przeglądarki z samym wideo, bez tego paska, ale bez napisów i tylko z przeglądarkowymi przyciskami odtwarzania i pauzy."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -4938,9 +4927,8 @@ msgid "This server can't list what you've watched."
 msgstr "Ten serwer nie może wyświetlić listy obejrzanych pozycji."
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "This server doesn't let your account change these."
-msgstr "Ten serwer nie może wyświetlić listy obejrzanych pozycji."
+msgstr "Ten serwer nie pozwala Twojemu kontu na zmianę tych ustawień."
 
 #: src/app/item/_components/no-details.tsx
 msgid "This server has no details for {id}."
@@ -5020,9 +5008,8 @@ msgid "Title pages"
 msgstr "Strony tytułów"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Titles, synopses and version names stay in the language the server sends."
-msgstr "Tytuły, opisy fabuły i nazwy strumieni pozostają w języku przesyłanym przez Twoje dodatki."
+msgstr "Tytuły, opisy i nazwy wersji pozostają w języku wysyłanym przez serwer."
 
 #: src/app/calendar/page.tsx src/app/live-tv/page.tsx
 msgid "Today"
@@ -5177,9 +5164,8 @@ msgid "Up next: {upNext}"
 msgstr "Następnie: {upNext}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
-msgstr "Maksymalnie {MAX_FEATURED}, wymieszane ze sobą. Jeśli pozostawisz puste, wyświetlane będą pozycje z Twojego pierwszego katalogu filmów i seriali."
+msgstr "Maksymalnie {MAX_FEATURED}, wymieszane ze sobą. Jeśli pozostawisz to pole puste, wyróżnione zostaną Twoje pierwsze biblioteki filmów i seriali."
 
 #: src/lib/hosts/shell/index.ts
 msgid "Up to date."
@@ -5311,9 +5297,8 @@ msgid "Video"
 msgstr "Wideo"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Video only"
-msgstr "Wideo"
+msgstr "Tylko wideo"
 
 #: src/app/settings/apps.tsx
 msgid "Video output"
