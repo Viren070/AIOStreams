@@ -407,6 +407,19 @@ On a phone they stay at the top, where they span the screen.
 }
 ```
 
+### One colour from the artwork
+
+With **Background from artwork** on, the pages and the version list can take the artwork's colour instead of the blurred artwork.
+
+```css
+[data-ui='art-wash'] canvas {
+  display: none;
+}
+[data-ui='art-wash'] {
+  background-color: var(--art-tint);
+}
+```
+
 ### Window buttons in a pill of their own
 
 With the navigation along the top, the desktop app puts its window buttons at the end of the last pill. To give them a pill of their own:
@@ -477,11 +490,14 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | `html[data-nav]`                                                             | The navigation on a wide screen: `sidebar`, on a touch screen `rail` or `bar`, and on a TV `tv-rail` or `tv-top`. A narrow screen always has the bar at the bottom                                                                                                                                                                                             |
 | `html[data-in-rows]`                                                         | Set while focus is in the rows under a banner that follows the selected card                                                                                                                                                                                                                                                                                   |
 | `html[data-pointer-focus]`                                                   | Set while focus came from a mouse or a touch, not from keys, a remote or a gamepad                                                                                                                                                                                                                                                                             |
+| `html[data-art-wash]`                                                        | Set while Background from artwork has put a title's artwork behind the pages                                                                                                                                                                                                                                                                                   |
+| `html[data-art-glass]`                                                       | Set while **Glass panels** is on: `frosted` or `liquid`, as **Glass surface** is set                                                                                                                                                                                                                                                                           |
 | `html.playing`                                                               | Set while the player fills the window, not in the mini player                                                                                                                                                                                                                                                                                                  |
 | `html[data-blur-spoilers]`                                                   | Set while **Blur episodes you haven't started** is on                                                                                                                                                                                                                                                                                                          |
 | `[data-page]`                                                                | Each page's container: `home`, `discover`, `library` (a catalog), `search`, `favourites`, `live`, `calendar`, `history`, `downloads`, `settings`, `item`, `person`, `player` or `sign-in`. A trailer's player is `player` with `data-name="trailer"`                                                                                                           |
 | `[data-page='sign-in']`                                                      | The screens before you're signed in; `data-name` is `sign-in`, `quick-connect`, `user-picker`, `servers` or `unreachable`                                                                                                                                                                                                                                      |
 | `page-background`                                                            | The colour behind every page                                                                                                                                                                                                                                                                                                                                   |
+| `art-wash`                                                                   | The blurred artwork behind the pages and the version list, with `--art-tint` set on it                                                                                                                                                                                                                                                                         |
 | `shell`                                                                      | The pages and the navigation, kept under the player while a video plays                                                                                                                                                                                                                                                                                        |
 | `page-body`, `page-header`, `page-title`                                     | A page's padded column, its heading row and its title                                                                                                                                                                                                                                                                                                          |
 | `page-message`                                                               | A message that fills the page, such as when there are no catalogs. The message itself is `[data-luffy-error]` (see [shared components](#shared-components))                                                                                                                                                                                                    |
@@ -533,6 +549,7 @@ States are attributes set only while true, such as `data-watched`. Match them wi
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `hero`                                                     | The banner; `data-follow` when it follows the selected card, `data-loading` while it loads                        |
 | `hero-backdrop`, `backdrop-frame`, `hero-backdrops`        | The picture, the box holding it, and the layer of them all in the rotating hero, which scrolls at half speed      |
+| `hero-art`                                                 | The still box around that layer, which fades its edges                                                            |
 | `hero-shade`                                               | The shading over the picture; `data-name` is `side` or `bottom`                                                   |
 | `hero-content`, `hero-logo`, `hero-title`, `hero-overview` | The text part, the logo or title, and the description                                                             |
 | `hero-meta`                                                | The line of facts; each has `data-name` (`year` or `episode`, `score`, `genres`), with a `meta-separator` between |
@@ -705,6 +722,7 @@ The theme's colours are CSS variables, which you can set in your CSS as well. Th
 | `--color-gray-50` to `--color-gray-950`               | The background's shades, used by panels and text, as `R G B` |
 | `--background`                                        | The page's colour                                            |
 | `--paper`                                             | The colour of menus and dialogs                              |
+| `--art-tint`                                          | The artwork's colour where it meets the page, on `art-wash`  |
 | `--foreground`, `--muted`, `--muted-highlight`        | Text, dimmed text, and dimmed text on hover                  |
 | `--border`, `--ring`                                  | Borders, and the ring around what has keyboard focus         |
 | `--subtle`, `--subtle-highlight`                      | Faint fills, such as behind a hovered item                   |
