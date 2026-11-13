@@ -58,7 +58,7 @@ import {
   Preview,
   ProgrammeDetails,
 } from './_components/channel-details';
-import { Guide, programmeAt } from './_components/guide';
+import { Guide, GuidePlaceholder, programmeAt } from './_components/guide';
 
 const WIDE = '(min-width: 1024px)';
 const OWN_GROUPS = new Set([FAVOURITES, RECENT, ALL]);
@@ -520,7 +520,7 @@ export function LiveTvPage({
           />
         </div>
         {loading ? (
-          <Skeleton className="min-h-0 flex-1 rounded-xl" />
+          <GuidePlaceholder className="min-h-0 flex-1" />
         ) : (
           empty || (
             <div data-nav-start className="flex min-h-0 flex-1 flex-col pb-4">

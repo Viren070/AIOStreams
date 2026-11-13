@@ -34,6 +34,48 @@ export interface GuideFocus {
   at: number;
 }
 
+/** Programme lengths, in half hours. */
+const PLACEHOLDER_ROWS = [
+  [2, 1, 3, 2, 2],
+  [1, 2, 2, 3, 1],
+  [3, 1, 2, 1, 2],
+  [2, 2, 1, 2, 3],
+];
+
+export function GuidePlaceholder({ className }: { className?: string }) {
+  const halfHour = 30 * PX_PER_MINUTE;
+  return (
+    <div
+      aria-hidden
+      data-ui="guide-placeholder"
+      className={cn('animate-pulse overflow-hidden', className)}
+    >
+      <div style={{ height: RULER }} />
+      {Array.from({ length: 12 }, (_, i) => (
+        <div key={i} className="flex" style={{ height: ROW }}>
+          <div
+            className="flex flex-none items-center gap-2 pe-2"
+            style={{ width: CHANNEL_COLUMN }}
+          >
+            <span className="w-8 flex-none" />
+            <div className="h-10 w-16 flex-none rounded-md bg-white/5" />
+            <div className="h-3 flex-1 rounded-full bg-white/5" />
+          </div>
+          {PLACEHOLDER_ROWS[i % PLACEHOLDER_ROWS.length].map((length, j) => (
+            <div
+              key={j}
+              className="my-1 flex-none px-0.5"
+              style={{ width: length * halfHour }}
+            >
+              <div className="h-full rounded-lg bg-white/[0.04]" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** The programme at `at`, or the next one after it. */
 export function programmeAt(
   programmes: BaseItemDto[] | undefined,
