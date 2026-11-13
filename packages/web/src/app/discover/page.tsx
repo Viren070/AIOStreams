@@ -67,6 +67,9 @@ const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
   },
 ];
 
+/** A catalog finds their few matches only by reading page after page. */
+const STOCK_FILTERS: ItemFilter[] = ['resumable', 'played', 'favorite'];
+
 /** A catalog keeps its own order; a server's own library sorts as asked. */
 const LIBRARY_SORTS: SortKey[] = [
   'name',
@@ -222,9 +225,12 @@ export function DiscoverPage({
   const genres = useGenres(viewId);
   const all = views.data?.Items ?? [];
   const view = all.find((v) => v.Id === viewId);
-  const [filterParam, setFilterParam] = useSearchParam('filter');
-  const filter = FILTERS.find((f) => f.value === filterParam)?.value;
   const { stock } = useServerInfo();
+  const filters = stock
+    ? FILTERS
+    : FILTERS.filter((f) => !f.value || !STOCK_FILTERS.includes(f.value));
+  const [filterParam, setFilterParam] = useSearchParam('filter');
+  const filter = filters.find((f) => f.value === filterParam)?.value;
   const [sort, setSort] = useSortParam(LIBRARY_SORTS, 'name');
   const [sortParam] = useSearchParam('sort');
   const kept = { filter: filterParam, sort: sortParam };
@@ -390,7 +396,7 @@ export function DiscoverPage({
         )}
         <PillTabs
           name="filter"
-          options={FILTERS}
+          options={filters}
           value={filter}
           onChange={setFilterParam}
         />
