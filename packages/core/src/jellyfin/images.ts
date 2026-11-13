@@ -79,8 +79,21 @@ export function decodeImageTag(tag: string): string | null {
     code === '0'
       ? rest
       : (HOST_PREFIXES.find(([c]) => c === code)?.[1] ?? '') + rest;
-  if (!/^https?:\/\//i.test(url)) return null;
+  if (!isHttp(url)) return null;
   return url;
+}
+
+function isHttp(url?: string): url is string {
+  if (typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.hostname !== ''
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function imageTagsFor(images: ItemImages): {
@@ -88,21 +101,29 @@ export function imageTagsFor(images: ItemImages): {
   BackdropImageTags: string[];
 } {
   const ImageTags: Partial<Record<ImageKind, string>> = {};
-  if (images.Primary) ImageTags.Primary = encodeImageTag(images.Primary);
-  if (images.Logo) ImageTags.Logo = encodeImageTag(images.Logo);
-  if (images.Thumb) ImageTags.Thumb = encodeImageTag(images.Thumb);
+  if (isHttp(images.Primary))
+    ImageTags.Primary = encodeImageTag(images.Primary);
+  if (isHttp(images.Logo)) ImageTags.Logo = encodeImageTag(images.Logo);
+  if (isHttp(images.Thumb)) ImageTags.Thumb = encodeImageTag(images.Thumb);
   return {
     ImageTags,
-    BackdropImageTags: images.Backdrop ? [encodeImageTag(images.Backdrop)] : [],
+    BackdropImageTags: isHttp(images.Backdrop)
+      ? [encodeImageTag(images.Backdrop)]
+      : [],
   };
 }
 
 /** Fallback for clients that request an image without its tag. */
 export function rememberImages(itemId: string, images: ItemImages): void {
-  if (!images.Primary && !images.Backdrop && !images.Logo && !images.Thumb)
-    return;
+  const clean: ItemImages = {
+    Primary: isHttp(images.Primary) ? images.Primary : undefined,
+    Backdrop: isHttp(images.Backdrop) ? images.Backdrop : undefined,
+    Logo: isHttp(images.Logo) ? images.Logo : undefined,
+    Thumb: isHttp(images.Thumb) ? images.Thumb : undefined,
+  };
+  if (!clean.Primary && !clean.Backdrop && !clean.Logo && !clean.Thumb) return;
   if (!firstWriteOf(`img:${itemId}`)) return;
-  void imageCache.set(itemId, images, IMAGE_TTL).catch(() => undefined);
+  void imageCache.set(itemId, clean, IMAGE_TTL).catch(() => undefined);
 }
 
 export function recallImages(itemId: string): Promise<ItemImages | undefined> {
