@@ -79,7 +79,12 @@ export interface SearchMetadata extends TitleMetadata {
   /** Scene-mapping search titles, best (non-identity) first. */
   sceneTitles?: string[];
   titleConflicts?: TitleConflict[];
+  /** Whether the anime database identifies this entry as using absolute episode numbers */
+  absoluteOrder?: boolean;
 }
+
+/** Which episode numbering a series search asks for when an absolute episode number is known. */
+export type AbsoluteEpisodeHandling = 'seasonEpisode' | 'absolute' | 'both';
 
 export const BaseDebridConfigSchema = z.object({
   services: BuiltinDebridServices,
@@ -492,11 +497,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       /** @deprecated Use titleLanguages instead. */
       useAllTitles?: boolean;
       titleLanguages?: string[];
+      absoluteEpisodeHandling?: AbsoluteEpisodeHandling;
     }
   ): string[] {
-    const { addYear, addSeasonEpisode } = {
+    const { addYear, addSeasonEpisode, absoluteEpisodeHandling } = {
       addYear: true,
       addSeasonEpisode: true,
+      absoluteEpisodeHandling: 'both' as AbsoluteEpisodeHandling,
       ...options,
     };
     let queries: string[] = [];
@@ -619,7 +626,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       // season numbers are meaningless in release names when episodes are
       // numbered continuously across seasons
       const continuousAbsolute = (metadata.resolvedSeasonFirstEpisode ?? 1) > 1;
+      // only drop one numbering when the other one can be searched
+      const includeSeasonEpisode =
+        absoluteEpisodeHandling !== 'absolute' || !metadata.absoluteEpisode;
+      const includeAbsolute = absoluteEpisodeHandling !== 'seasonEpisode';
       if (
+        includeSeasonEpisode &&
         parsedId.season &&
         !metadata.isDateBased &&
         !continuousAbsolute &&
@@ -631,12 +643,13 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         );
       }
       if (metadata.absoluteEpisode) {
-        addQuery(
-          metadata.isAnime
-            ? `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
-            : `${titlePlaceholder} E${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
-          seriesTitles
-        );
+        if (includeAbsolute)
+          addQuery(
+            metadata.isAnime
+              ? `${titlePlaceholder} ${metadata.absoluteEpisode!.toString().padStart(2, '0')}`
+              : `${titlePlaceholder} E${metadata.absoluteEpisode!.toString().padStart(2, '0')}`,
+            seriesTitles
+          );
       } else if (parsedId.episode && !parsedId.season) {
         addQuery(
           `${titlePlaceholder} E${parsedId.episode!.toString().padStart(2, '0')}`,
@@ -644,6 +657,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         );
       }
       if (
+        includeAbsolute &&
         // if relative absolute exists and is different from absoluteEpisode and episode
         metadata.relativeAbsoluteEpisode &&
         [metadata.absoluteEpisode, parsedId.episode].every(
@@ -655,7 +669,12 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           seriesTitles
         );
       }
-      if (parsedId.season && parsedId.episode && !continuousAbsolute) {
+      if (
+        includeSeasonEpisode &&
+        parsedId.season &&
+        parsedId.episode &&
+        !continuousAbsolute
+      ) {
         addQuery(
           `${titlePlaceholder} S${parsedId.season!.toString().padStart(2, '0')}E${parsedId.episode!.toString().padStart(2, '0')}`,
           seriesTitles
@@ -851,6 +870,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       sceneTitles: metadata.sceneTitles,
       country: metadata.country,
       titleConflicts: metadata.titleConflicts,
+      absoluteOrder: animeEntry?.tvdb.absoluteOrder,
     };
 
     this.logger.debug(
