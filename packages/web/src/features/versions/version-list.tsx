@@ -363,9 +363,8 @@ export function Versions({
           <CachedImage
             src={art}
             alt=""
-            className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25"
+            className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25 [mask-image:linear-gradient(to_bottom,black_30%,transparent)]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[--paper]/30 via-[--paper]/70 to-[--paper]" />
         </div>
       )}
       {compact ? (
