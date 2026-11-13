@@ -6,13 +6,11 @@ import { useViews } from '@/lib/jellyfin/queries';
 import { dateFormat, libraryLabel } from '@/lib/format';
 import { currentHost } from '@/lib/hosts';
 import { HIDDEN_LOCALES, LOCALES, localeName, systemLocale } from '@/lib/i18n';
-import { canRefract } from '@/components/shell/bar-surface';
 import {
   settings,
   useSetting,
   MAX_FEATURED,
   type EpisodeLayout,
-  type BarBackground,
   type DesktopNavigation,
   type RailNames,
   type RailShape,
@@ -71,17 +69,12 @@ function NavigationCard() {
   const [tabNames, setTabNames] = useSetting(settings.interface.tabNames);
   const [railShape, setRailShape] = useSetting(settings.interface.railShape);
   const [railNames, setRailNames] = useSetting(settings.interface.railNames);
-  const [background, setBackground] = useSetting(
-    settings.interface.barBackground
-  );
   const [startPage, setStartPage] = useSetting(settings.interface.startPage);
   const rail = tv
     ? tvNavigation === 'rail'
     : touch && touchNavigation === 'rail';
   const topTabs =
     (tv ? tvNavigation : touch ? touchNavigation : desktopNavigation) === 'top';
-  // A TV's docked rail and fade sit on nothing.
-  const onBar = !tv || (rail ? railShape !== 'docked' : topBar !== 'fade');
   return (
     <SettingsCard
       name="navigation"
@@ -203,23 +196,6 @@ function NavigationCard() {
           ]}
           value={tabNames}
           onValueChange={(value) => setTabNames(value as TabNames)}
-        />
-      )}
-      {onBar && (
-        <Select
-          label={t`Background`}
-          help={t`What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device.`}
-          options={[
-            { value: 'solid', label: t`Solid` },
-            { value: 'frosted', label: t`Frosted glass` },
-            ...(canRefract
-              ? [{ value: 'liquid', label: t`Liquid glass` }]
-              : []),
-          ]}
-          value={
-            background === 'liquid' && !canRefract ? 'frosted' : background
-          }
-          onValueChange={(value) => setBackground(value as BarBackground)}
         />
       )}
     </SettingsCard>

@@ -3,12 +3,17 @@ import { createPortal } from 'react-dom';
 import { themeVariables } from '@aiostreams/ui/utils/palette';
 import { settings, useSetting, CUSTOM_CSS_OFF } from '@/lib/settings';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
+import { clearArtBackground } from '@/lib/artwork/background';
 
 /** Last on the page, so the user's colours and CSS win ties. */
 export function ThemeStyles() {
   const [colors] = useSetting(settings.theme.colors);
   const [css] = useSetting(settings.theme.customCss);
   const [blurSpoilers] = useSetting(settings.interface.blurSpoilers);
+  const [artBackground] = useSetting(settings.theme.artBackground);
+  React.useEffect(() => {
+    if (!artBackground) clearArtBackground();
+  }, [artBackground]);
   React.useEffect(() => {
     document.documentElement.toggleAttribute(
       'data-blur-spoilers',

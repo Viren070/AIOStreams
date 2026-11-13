@@ -3,7 +3,7 @@ import { t } from '@lingui/core/macro';
 import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { BrandLogo } from '@/components/brand-logo';
-import { BarSurface } from '@/components/shell/bar-surface';
+import { GlassSurface } from '@/components/shell/glass-surface';
 import { ENTER_CURRENT, NavEntry, select } from './common';
 import { YouIcon } from './account';
 
@@ -70,7 +70,7 @@ export function TvRail({
         className="group/rail fixed inset-y-0 start-0 z-50 flex items-center ps-6"
       >
         {shade}
-        <BarSurface
+        <GlassSurface
           className={cn(
             'flex flex-col gap-1 rounded-[1.875rem] p-1.5 transition-[width] duration-200',
             open ? 'w-56' : 'w-[calc(4rem+2px)] group-focus-within/rail:w-56'
@@ -81,7 +81,7 @@ export function TvRail({
           {items.map(entry)}
           {divider}
           {footerItems.map(entry)}
-        </BarSurface>
+        </GlassSurface>
       </nav>
     );
   }

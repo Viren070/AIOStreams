@@ -8,7 +8,7 @@ import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import type { TopBar } from '@/lib/settings';
 import { BrandLogo } from '@/components/brand-logo';
-import { BarSurface } from '@/components/shell/bar-surface';
+import { GlassSurface } from '@/components/shell/glass-surface';
 import { useScrollAway } from '@/components/shell/page-scroll';
 import { HistoryButtons } from '@/components/shell/history-buttons';
 import { ENTER_CURRENT, NavEntry, select } from './common';
@@ -143,7 +143,7 @@ export function TopTabs({
         />
       )}
       {style === 'bar' ? (
-        <BarSurface
+        <GlassSurface
           className={cn(row, 'rounded-none border-x-0 border-t-0 py-4')}
         >
           {logo}
@@ -151,19 +151,19 @@ export function TopTabs({
           <div data-ui="top-tabs-end" className={cn(endClass, 'gap-1')}>
             {end}
           </div>
-        </BarSurface>
+        </GlassSurface>
       ) : style === 'pill' ? (
         <div className={cn(row, 'pb-2 pt-6')}>
           {logo}
-          <BarSurface className="flex items-center gap-1 rounded-full p-1.5">
+          <GlassSurface className="flex items-center gap-1 rounded-full p-1.5">
             {tabs}
-          </BarSurface>
-          <BarSurface
+          </GlassSurface>
+          <GlassSurface
             data-ui="top-tabs-end"
             className={cn(endClass, 'gap-1 rounded-full p-1.5')}
           >
             {end}
-          </BarSurface>
+          </GlassSurface>
         </div>
       ) : (
         <div className={cn(row, 'pb-2 pt-8')}>

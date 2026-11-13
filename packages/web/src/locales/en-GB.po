@@ -719,11 +719,14 @@ msgid "Back in the player"
 msgstr "Back in the player"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/app/settings/interface.tsx
 #: src/app/settings/subtitles.tsx
 #: src/app/settings/theme.tsx
 msgid "Background"
 msgstr "Background"
+
+#: src/app/settings/theme.tsx
+msgid "Background from artwork"
+msgstr "Background from artwork"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -1866,7 +1869,7 @@ msgstr "Frame timings"
 msgid "From the start"
 msgstr "From the start"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Frosted glass"
 msgstr "Frosted glass"
 
@@ -1887,6 +1890,14 @@ msgstr "General"
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Give this code to whoever looks into it."
+
+#: src/app/settings/theme.tsx
+msgid "Glass panels"
+msgstr "Glass panels"
+
+#: src/app/settings/theme.tsx
+msgid "Glass surface"
+msgstr "Glass surface"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2299,7 +2310,7 @@ msgstr "Licences"
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 msgstr "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Liquid glass"
 msgstr "Liquid glass"
 
@@ -2418,6 +2429,10 @@ msgstr "Medium"
 #: src/lib/input/keys.ts
 msgid "Menu key"
 msgstr "Menu key"
+
+#: src/app/settings/theme.tsx
+msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
+msgstr "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -4436,7 +4451,7 @@ msgstr "Small labels on each version for what it has, from packs you link or bad
 msgid "Smaller subtitles"
 msgstr "Smaller subtitles"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Solid"
 msgstr "Solid"
 
@@ -4859,6 +4874,10 @@ msgstr "The app's player"
 #: src/lib/hosts/jellyfin-android.ts
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "The app's player and its options, such as starting videos in landscape."
+
+#: src/app/settings/theme.tsx
+msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgstr "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5645,9 +5664,9 @@ msgstr "What others send shows over the video for a few seconds. It always stays
 msgid "What the app did each day, kept for a week."
 msgstr "What the app did each day, kept for a week."
 
-#: src/app/settings/interface.tsx
-msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
-msgstr "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+#: src/app/settings/theme.tsx
+msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
+msgstr "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
 
 #: src/features/party/chat.tsx
 msgid "What the others say shows here."

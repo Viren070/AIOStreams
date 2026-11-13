@@ -70,6 +70,8 @@ import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
 import { useTrailerCovers } from '@/features/trailers/preview';
 import { PageScroll } from './page-scroll';
+import { ArtWash } from './art-wash';
+import { setWashPaused } from '@/lib/artwork/background';
 import { HistoryButtons } from './history-buttons';
 import { ConnectionNote } from './unreachable';
 import { Logo, onBar } from './nav/common';
@@ -94,12 +96,24 @@ const PAGE_FADE = {
  * transparent page shows nothing beneath it; the player hides it.
  */
 export function PageBackground() {
+  const [wash] = useSetting(settings.theme.artBackground);
+  const [glass] = useSetting(settings.theme.artGlass);
+  const [surface] = useSetting(settings.theme.glassSurface);
+  const playing = !!usePlayback();
+  React.useEffect(() => setWashPaused(playing), [playing]);
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (glass && surface !== 'solid') root.dataset.artGlass = surface;
+    else delete root.dataset.artGlass;
+  }, [glass, surface]);
   return (
     <div
       aria-hidden
       data-ui="page-background"
       className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
-    />
+    >
+      {wash && <ArtWash />}
+    </div>
   );
 }
 

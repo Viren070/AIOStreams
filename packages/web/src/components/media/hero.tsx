@@ -26,6 +26,10 @@ import { pageRtl } from '@/lib/direction';
 import { useHold } from '@/hooks/use-hold';
 import { useLatest } from '@/hooks/use-latest';
 import { CachedImage } from '@/components/cached-image';
+import {
+  releaseArtSelection,
+  useArtBackground,
+} from '@/lib/artwork/background';
 import { GlideLayers } from '@/components/shell/glide-layers';
 import {
   TrailerPreview,
@@ -634,6 +638,7 @@ function HeroTrailer({
           item={item}
           spot={spot}
           within={spot.parentElement ?? undefined}
+          soft
           onShown={(on) => {
             setShown(on);
             onShown(on);
@@ -656,6 +661,7 @@ export function Hero({
   const { client } = useSession();
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
+  useArtBackground(featured[index]);
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
@@ -664,6 +670,10 @@ export function Hero({
   const [slots, setSlots] = React.useState<[number, number, number]>([0, 1, 2]);
   // Only a title the user went to plays its trailer, not one the page opened on.
   const [chosen, setChosen] = React.useState(false);
+  // A title picked here takes the background back from a card rested on.
+  React.useEffect(() => {
+    if (chosen) releaseArtSelection();
+  }, [chosen, index]);
   const swipe = useSwipeFade((step) => {
     setChosen(true);
     setIndex((i) => (i + step + featured.length) % featured.length);
@@ -791,6 +801,7 @@ export function Hero({
     >
       {trailer.box}
       <div
+        data-ui="hero-art"
         // Fades out at its edge, where some GPUs draw the art's last row past
         // the shade. Not on the art's own box, which moves as the page scrolls.
         className="absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_2px)]"
@@ -1032,6 +1043,7 @@ export function FollowHero({
     };
   }, [scroller]);
   const item = picked ?? items.find((i) => backdropSrc(client, i)) ?? items[0];
+  useArtBackground(item);
   const trailer = useHeroTrailer(resting, true);
 
   return (

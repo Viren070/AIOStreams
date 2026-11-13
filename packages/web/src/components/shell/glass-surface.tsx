@@ -133,13 +133,13 @@ const sameShape = (a: Shape, b: Shape) =>
  * What a navigation bar sits on: the app's own background, or glass, frosted
  * or with a bending rim where set and drawable.
  */
-export function BarSurface({
+export function GlassSurface({
   className,
   style,
   children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  const [look] = useSetting(settings.interface.barBackground);
+  const [look] = useSetting(settings.theme.glassSurface);
   const liquid = look === 'liquid' && canRefract;
   const ref = React.useRef<HTMLDivElement>(null);
   const [shape, setShape] = React.useState<Shape>();
@@ -179,7 +179,7 @@ export function BarSurface({
     <div
       ref={ref}
       data-surface={map ? 'liquid' : look === 'solid' ? 'solid' : 'frosted'}
-      className={cn('bar-surface', className)}
+      className={cn('glass-surface', className)}
       style={
         map ? { ...style, backdropFilter: `blur(2px) url(#${id})` } : style
       }

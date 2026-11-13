@@ -1,5 +1,14 @@
-import type { ShrinkJob, ShrinkReply } from './messages';
+import type { ShrinkJob, ShrinkReply, WashJob } from './messages';
 import { readImage, writeImage } from '@/lib/cache/store';
+import {
+  drawWash,
+  GRID_H,
+  GRID_W,
+  makeWash,
+  WASH_H,
+  WASH_W,
+  type Wash,
+} from './wash';
 
 const scope = self as unknown as Worker;
 
@@ -132,6 +141,33 @@ async function decode(
   }
 }
 
+/** Decoded no larger than a `width`x`height` box needs, where the format allows. */
+async function decodeFor(
+  data: ArrayBuffer,
+  head: Head,
+  width: number,
+  height: number
+): Promise<Decoded> {
+  let size: { width: number; height: number } | undefined;
+  if (head.type === 'image/jpeg' && head.width && head.height) {
+    // JPEG decodes in eighths and rounds a requested size down, so ask for the eighth above.
+    const need = Math.min(
+      1,
+      Math.max(width / head.width, height / head.height) * HEADROOM
+    );
+    const eighths = Math.ceil(need * 8 - 1e-9);
+    if (eighths < 8)
+      size = {
+        width: Math.ceil((head.width * eighths) / 8),
+        height: Math.ceil((head.height * eighths) / 8),
+      };
+  }
+  // Some JPEGs fail to decode at a reduced size but decode whole.
+  return decode(data, head.type, size).catch((err) =>
+    size ? decode(data, head.type) : Promise.reject(err)
+  );
+}
+
 /** The source rectangle `object-fit: cover` shows of a `w`x`h` image in the box. */
 function cover(w: number, h: number, width: number, height: number) {
   const scale = Math.max(width / w, height / h);
@@ -143,11 +179,12 @@ function cover(w: number, h: number, width: number, height: number) {
 
 async function load(
   url: string,
-  accept: string
+  accept: string,
+  priority?: RequestPriority
 ): Promise<ArrayBuffer | Omit<ShrinkReply, 'id'>> {
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Accept: accept } });
+    res = await fetch(url, { headers: { Accept: accept }, priority });
   } catch (err) {
     // Usually a host that does not allow reading its images across origins.
     return { error: String(err), blocked: true };
@@ -206,24 +243,7 @@ async function shrink({
       bytes: data.byteLength,
     };
 
-  let size: { width: number; height: number } | undefined;
-  if (head.type === 'image/jpeg' && head.width && head.height) {
-    // JPEG decodes in eighths and rounds a requested size down, so ask for the eighth above.
-    const need = Math.min(
-      1,
-      Math.max(width / head.width, height / head.height) * HEADROOM
-    );
-    const eighths = Math.ceil(need * 8 - 1e-9);
-    if (eighths < 8)
-      size = {
-        width: Math.ceil((head.width * eighths) / 8),
-        height: Math.ceil((head.height * eighths) / 8),
-      };
-  }
-  // Some JPEGs fail to decode at a reduced size but decode whole.
-  const image = await decode(data, head.type, size).catch((err) =>
-    size ? decode(data, head.type) : Promise.reject(err)
-  );
+  const image = await decodeFor(data, head, width, height);
   const canvas = new OffscreenCanvas(width, height);
   try {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -245,6 +265,84 @@ async function shrink({
   later.push({ url, width, height, canvas, copy: save ? copy : null });
   if (later.length > LATER_MAX) later.shift();
   return { id, bitmap };
+}
+
+/** Each title's wash, so showing one again only draws it out. */
+const washes = new Map<string, Wash>();
+const WASHES_MAX = 60;
+let washCanvas: OffscreenCanvas | null = null;
+let washPixels: ImageData | null = null;
+
+async function makeWashOf({
+  url,
+  save,
+  look,
+  accept,
+}: WashJob): Promise<Wash | Omit<ShrinkReply, 'id'>> {
+  const kept = look ? await readImage(url).catch(() => null) : null;
+  // Behind the artwork on screen, which the same connections fetch.
+  const data = kept
+    ? await kept.blob.arrayBuffer()
+    : await load(url, accept, 'low');
+  if (!(data instanceof ArrayBuffer)) return data;
+  const head = sniff(new Uint8Array(data, 0, Math.min(data.byteLength, 65536)));
+  if (!head) throw new Error('unknown image type');
+  if (save && !kept)
+    void writeImage(url, head.type, data).then(
+      (bytes) =>
+        scope.postMessage({
+          id: -1,
+          saved: { url, bytes },
+        } satisfies ShrinkReply),
+      () => undefined
+    );
+  const image = await decodeFor(data, head, GRID_W, GRID_H);
+  try {
+    const canvas = new OffscreenCanvas(GRID_W, GRID_H);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
+    if (!ctx) return { error: 'no 2d context', unsupported: true };
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(
+      image.source,
+      ...cover(image.width, image.height, GRID_W, GRID_H),
+      0,
+      0,
+      GRID_W,
+      GRID_H
+    );
+    return makeWash(ctx.getImageData(0, 0, GRID_W, GRID_H).data);
+  } finally {
+    image.close();
+  }
+}
+
+async function wash(job: WashJob): Promise<ShrinkReply> {
+  if (typeof OffscreenCanvas !== 'function')
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
+    return { id: job.id, error: 'no OffscreenCanvas', unsupported: true };
+  let made = washes.get(job.url);
+  if (made) washes.delete(job.url);
+  else {
+    const result = await makeWashOf(job);
+    if (!('rgb' in result)) return { id: job.id, ...result };
+    made = result;
+  }
+  washes.set(job.url, made);
+  if (washes.size > WASHES_MAX) washes.delete(washes.keys().next().value!);
+  washCanvas ??= new OffscreenCanvas(WASH_W, WASH_H);
+  const ctx = washCanvas.getContext('2d');
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- only logged
+  if (!ctx) return { id: job.id, error: 'no 2d context', unsupported: true };
+  washPixels ??= ctx.createImageData(WASH_W, WASH_H);
+  drawWash(made, washPixels.data);
+  ctx.putImageData(washPixels, 0, 0);
+  return {
+    id: job.id,
+    bitmap: washCanvas.transferToImageBitmap(),
+    tint: made.tint,
+    panel: made.panel,
+  };
 }
 
 /**
@@ -298,7 +396,9 @@ async function encodeLater() {
 }
 
 scope.onmessage = (
-  e: MessageEvent<ShrinkJob | { revoke: string } | { id: number; blob: Blob }>
+  e: MessageEvent<
+    ShrinkJob | WashJob | { revoke: string } | { id: number; blob: Blob }
+  >
 ) => {
   // An address made here, which the page no longer shows.
   if ('revoke' in e.data) return URL.revokeObjectURL(e.data.revoke);
@@ -309,7 +409,7 @@ scope.onmessage = (
     } satisfies ShrinkReply);
   const job = e.data;
   active++;
-  shrink(job)
+  ('wash' in job ? wash(job) : shrink(job))
     .then(
       (reply) => scope.postMessage(reply, reply.bitmap ? [reply.bitmap] : []),
       (err) =>

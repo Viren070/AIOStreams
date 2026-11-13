@@ -14,14 +14,27 @@ export interface ShrinkJob {
   accept: string;
 }
 
+export interface WashJob {
+  id: number;
+  wash: true;
+  url: string;
+  save: boolean;
+  look: boolean;
+  accept: string;
+}
+
 export interface ShrinkReply {
   id: number;
   /** The image as it is, at a blob address the worker made. */
   src?: string;
   /** How large the image at `src` is. */
   bytes?: number;
-  /** The image shrunk to the box. */
+  /** The image shrunk to the box, or a wash drawn out. */
   bitmap?: ImageBitmap;
+  /** A wash's colour where it meets the page. */
+  tint?: string;
+  /** A wash's shade for panels over it. */
+  panel?: string;
   /** Sent on its own once a shrunk image has a small encoded copy. */
   encoded?: { url: string; bytes: number } & Drawn;
   error?: string;

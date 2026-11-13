@@ -183,6 +183,7 @@ export function useItemTrailer(item: BaseItemDto | undefined) {
           item={item}
           spot={spot}
           full={full}
+          soft
           onShown={(on, trailer) => {
             setShown(on);
             setName(trailer.name);

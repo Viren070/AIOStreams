@@ -11,13 +11,16 @@ import {
 } from '@aiostreams/ui/utils/palette';
 import { Button } from '@aiostreams/ui/button';
 import { Switch } from '@aiostreams/ui/switch';
+import { Select } from '@aiostreams/ui/select';
 import { cn } from '@aiostreams/ui/core/styling';
 import {
   settings,
   useSetting,
   CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
+  type GlassSurface,
 } from '@/lib/settings';
+import { canRefract } from '@/components/shell/glass-surface';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { currentHost } from '@/lib/hosts';
 import { focusOn, keyboardFocus } from '@/lib/input';
@@ -47,6 +50,11 @@ export function ThemeSection() {
   const [colors, setColors] = useSetting(settings.theme.colors);
   const [css, setCss] = useSetting(settings.theme.customCss);
   const [serverCss, setServerCss] = useSetting(settings.theme.serverCss);
+  const [artBackground, setArtBackground] = useSetting(
+    settings.theme.artBackground
+  );
+  const [artGlass, setArtGlass] = useSetting(settings.theme.artGlass);
+  const [surface, setSurface] = useSetting(settings.theme.glassSurface);
   const server = useServerInfo();
   const [draft, setDraft] = React.useState(css);
   const accent = colors.accent ?? DEFAULT_ACCENT;
@@ -157,6 +165,33 @@ export function ThemeSection() {
         value={background}
         onValueChange={(value) => pick({ accent, background: value })}
       />
+      <Select
+        label={t`Glass surface`}
+        help={t`What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device.`}
+        options={[
+          { value: 'solid', label: t`Solid` },
+          { value: 'frosted', label: t`Frosted glass` },
+          ...(canRefract ? [{ value: 'liquid', label: t`Liquid glass` }] : []),
+        ]}
+        value={surface === 'liquid' && !canRefract ? 'frosted' : surface}
+        onValueChange={(value) => setSurface(value as GlassSurface)}
+      />
+      <Switch
+        side="right"
+        label={t`Background from artwork`}
+        help={t`The artwork of the title you're on, blurred and darkened, behind the pages and the version list.`}
+        value={artBackground}
+        onValueChange={setArtBackground}
+      />
+      {artBackground && surface !== 'solid' && (
+        <Switch
+          side="right"
+          label={t`Glass panels`}
+          help={t`Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing.`}
+          value={artGlass}
+          onValueChange={setArtGlass}
+        />
+      )}
       {server.css && (
         <Switch
           side="right"

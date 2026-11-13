@@ -35,6 +35,8 @@ import type { BaseItemDto, PlaybackInfoResponse } from '@/lib/jellyfin/types';
 import { type Request, Versions, focusSelf } from './version-list';
 import { type Unaired, UnairedQuestion } from './unaired-question';
 import { ExternalPrompt } from './external-prompt';
+import { useArtBackground } from '@/lib/artwork/background';
+import { ArtWash } from '@/components/shell/art-wash';
 
 interface PickerValue {
   /** Lists the item's versions; nothing is resolved until this is called. */
@@ -329,6 +331,8 @@ export function VersionPickerProvider({
     };
   }, []);
   const item = request?.item;
+  useArtBackground(item, true);
+  const [wash] = useSetting(settings.theme.artBackground);
   const open = !!request;
   // A sheet over the player, or where a short screen leaves a dialog no room.
   const short = useMediaQuery('(max-height: 500px)');
@@ -384,10 +388,11 @@ export function VersionPickerProvider({
               ? itemSubtitle(item)
               : item?.ProductionYear || undefined
           }
-          contentClass="flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
+          contentClass="isolate flex w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 max-md:h-[100dvh] max-md:rounded-none max-md:border-0 md:max-h-[85vh]"
           headerClass="relative z-[1] px-4 pb-3 pe-14 pt-5 text-start max-md:pt-[calc(1.25rem+env(safe-area-inset-top))] sm:px-5 sm:pe-14"
           closeClass="z-[2] max-md:top-[calc(1rem+env(safe-area-inset-top))]"
         >
+          {wash && <ArtWash className="-z-10" />}
           {versions}
         </Modal>
       )}

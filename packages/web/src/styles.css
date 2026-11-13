@@ -156,6 +156,51 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
 html.playing .page-background {
   display: none !important;
 }
+
+/* Over the artwork, a row's hover lifts it rather than painting it over. */
+html[data-art-wash] [data-ui='settings-card-item']:hover {
+  background-color: var(--subtle);
+}
+/* A fading ancestor cuts glass off from what's behind it, so the tab only rises. */
+html[data-art-wash][data-art-glass]:not(.playing) [data-ui='settings-panel'] {
+  animation-name: rise;
+}
+@keyframes rise {
+  from {
+    transform: translateY(0.5rem);
+  }
+}
+/* A list's own paper would hide its panel's glass. */
+html[data-art-wash][data-art-glass]:not(.playing) .UI-Command__root {
+  background-color: transparent;
+}
+/* Background from artwork: title art fades out into its own blur. */
+html[data-art-wash] [data-ui='item-backdrop'],
+html[data-art-wash] [data-ui='item-trailer'],
+html[data-art-wash] [data-ui='hero'] {
+  --background: transparent;
+}
+html[data-art-wash] [data-ui='item-backdrop'],
+html[data-art-wash] [data-ui='hero-art'] {
+  --fade-down: linear-gradient(to top, transparent, #000 50%);
+  -webkit-mask-image: var(--fade-down);
+  mask-image: var(--fade-down);
+}
+/* Beside the details, the art fades on their side too. */
+@media (orientation: landscape), (min-width: 1024px) {
+  html[data-art-wash] [data-ui='item-backdrop'],
+  html[data-art-wash] [data-ui='hero-art'] {
+    --fade-side: linear-gradient(to right, transparent, #000 50%);
+    -webkit-mask-image: var(--fade-down), var(--fade-side);
+    -webkit-mask-composite: source-in;
+    mask-image: var(--fade-down), var(--fade-side);
+    mask-composite: intersect;
+  }
+  html[dir='rtl'][data-art-wash] [data-ui='item-backdrop'],
+  html[dir='rtl'][data-art-wash] [data-ui='hero-art'] {
+    --fade-side: linear-gradient(to left, transparent, #000 50%);
+  }
+}
 html.playing [data-ui='window-controls'] {
   opacity: 0;
   pointer-events: none;
@@ -366,14 +411,29 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 }
 
 /* Glass for bars over the page; the grain breaks up the bands a strong blur leaves. */
-.bar-surface {
+.glass-surface {
   border: 1px solid rgb(255 255 255 / 0.1);
   box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
 }
-.bar-surface[data-surface='solid'] {
+.glass-surface[data-surface='solid'] {
   background-color: var(--background);
 }
-.bar-surface:not([data-surface='solid']) {
+.glass-surface:not([data-surface='solid']),
+html[data-art-wash][data-art-glass]:not(.playing)
+  :is(
+    .UI-Popover__root,
+    .UI-DropdownMenu__root,
+    .UI-DropdownMenu__subContent,
+    .UI-ContextMenu__root,
+    .UI-Select__content,
+    .UI-Tooltip__root,
+    .UI-Modal__content,
+    .UI-Drawer__content,
+    [data-ui='settings-card-body'],
+    [data-ui='settings-tab-group'],
+    [data-ui='pill-tabs']
+  ) {
+  border: 1px solid rgb(255 255 255 / 0.1);
   background-color: rgb(14 14 18 / 0.55);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.07 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
@@ -383,9 +443,31 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
     0 12px 32px -12px rgb(0 0 0 / 0.7);
   backdrop-filter: blur(24px) saturate(1.8);
 }
-.bar-surface[data-surface='liquid'] {
+.glass-surface[data-surface='liquid'],
+html[data-art-wash][data-art-glass='liquid']:not(.playing)
+  :is(
+    .UI-Popover__root,
+    .UI-DropdownMenu__root,
+    .UI-DropdownMenu__subContent,
+    .UI-ContextMenu__root,
+    .UI-Select__content,
+    .UI-Tooltip__root,
+    .UI-Modal__content,
+    .UI-Drawer__content,
+    [data-ui='settings-card-body'],
+    [data-ui='settings-tab-group'],
+    [data-ui='pill-tabs']
+  ) {
   background-color: rgb(14 14 18 / 0.12);
   border-color: rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 1px 1px 0.5px rgb(255 255 255 / 0.16),
+    inset -1px -1px 0.5px rgb(255 255 255 / 0.05),
+    inset 12px 12px 24px -16px rgb(255 255 255 / 0.05),
+    inset -12px -12px 24px -16px rgb(0 0 0 / 0.12),
+    0 12px 32px -12px rgb(0 0 0 / 0.6);
+}
+.glass-surface[data-surface='liquid'] {
   box-shadow:
     inset 1px 1px 0.5px rgb(255 255 255 / 0.4),
     inset -1px -1px 0.5px rgb(255 255 255 / 0.14),
@@ -393,8 +475,12 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
     inset -12px -12px 24px -16px rgb(0 0 0 / 0.32),
     0 12px 32px -12px rgb(0 0 0 / 0.6);
 }
+/* Fields sit recessed in the glass rather than being glass themselves. */
+html[data-art-wash][data-art-glass]:not(.playing) .UI-Input__root {
+  --paper: rgb(0 0 0 / 0.25);
+}
 /* Over a bright picture, grey labels are lost. */
-:is(.bar-surface:not([data-surface='solid']), [data-ui='top-tabs'])
+:is(.glass-surface:not([data-surface='solid']), [data-ui='top-tabs'])
   :is([data-ui='nav-item'], [data-ui='mobile-nav-item']):not(
     [aria-current='page']
   ) {
