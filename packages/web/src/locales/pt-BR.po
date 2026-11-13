@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
 "PO-Revision-Date: 2026-11-13 21:32+0000\n"
-"Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
+"Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
@@ -3294,9 +3294,8 @@ msgid "Player link"
 msgstr "Link para o reprodutor"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Player window"
-msgstr "Reproduzir agora"
+msgstr "Janela do player"
 
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
@@ -3310,9 +3309,8 @@ msgid "Playing in {launchedName}"
 msgstr "Assistindo no {launchedName}"
 
 #: src/app/player/page.tsx
-#, fuzzy
 msgid "Playing in picture-in-picture"
-msgstr "Voltar à janela normal"
+msgstr "Assistindo em janela flutuante"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4882,7 +4880,7 @@ msgstr "Usa o player nativo do navegador e reproduz apenas os formatos compatív
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
-msgstr ""
+msgstr "Uma janela do navegador que mostra apenas o vídeo, sem a barra superior nem legendas, com controles só para reproduzir e pausar."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -5299,9 +5297,8 @@ msgid "Video"
 msgstr "Vídeo"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Video only"
-msgstr "Vídeo"
+msgstr "Apenas vídeo"
 
 #: src/app/settings/apps.tsx
 msgid "Video output"
