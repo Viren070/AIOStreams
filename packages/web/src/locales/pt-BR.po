@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 00:12+0000\n"
+"PO-Revision-Date: 2026-11-13 15:25+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -158,7 +158,7 @@ msgstr "{movieCount, plural, one {# filme} other {# filmes}}"
 
 #: src/app/history/page.tsx
 msgid "{movies} and {episodes} watched"
-msgstr "{movies} filmes e {episodes} episódios assistidos"
+msgstr "{movies} e {episodes} assistidos"
 
 #: src/app/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
