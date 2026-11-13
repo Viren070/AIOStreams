@@ -4,6 +4,11 @@ import { config as appConfig } from '../../config/index.js';
 import { getSimpleTextHash } from '../../utils/index.js';
 import { XtreamClient } from './api.js';
 import {
+  type XtreamFilter,
+  XtreamFilterSchema,
+  resolveFilter,
+} from './filter.js';
+import {
   type Lineup,
   channelCount,
   groupsOf,
@@ -28,6 +33,7 @@ export const XtreamConfigSchema = z.object({
   server: z.string().min(1),
   username: z.string().min(1),
   password: z.string().min(1),
+  ...XtreamFilterSchema.shape,
 });
 export type XtreamConfig = z.infer<typeof XtreamConfigSchema>;
 
@@ -72,17 +78,19 @@ export class XtreamAddon {
   private readonly client: XtreamClient;
   /** Per account, so two logins in one config keep their channels apart. */
   private readonly prefix: string;
+  private readonly filter: XtreamFilter;
 
   constructor(config: unknown) {
     const login = XtreamConfigSchema.parse(config);
     this.client = new XtreamClient(login);
+    this.filter = resolveFilter(login);
     this.prefix = `xtream.${getSimpleTextHash(login.username).slice(0, 8)}:`;
   }
 
   async getManifest(): Promise<Manifest> {
     const [groups, catchupDays] = await Promise.all([
-      groupsOf(this.client),
-      longestCatchupOf(this.client),
+      groupsOf(this.client, this.filter),
+      longestCatchupOf(this.client, this.filter),
     ]);
     return {
       id: `aiostreams.${this.prefix.slice(0, -1)}`,
@@ -125,7 +133,7 @@ export class XtreamAddon {
     if (type !== 'tv' || id !== CATALOG_ID)
       throw new Error(`Unknown catalog ${type}/${id}`);
     const { genre, skip, date, ids, search } = parseExtras(extras);
-    const lineup = await lineupOf(this.client);
+    const lineup = await lineupOf(this.client, this.filter);
     const indexes: number[] = [];
     if (ids) {
       for (const id of ids.split(',').slice(0, MAX_IDS)) {
@@ -162,7 +170,7 @@ export class XtreamAddon {
   }
 
   async getMeta(type: string, id: string): Promise<Meta> {
-    const lineup = await lineupOf(this.client);
+    const lineup = await lineupOf(this.client, this.filter);
     const index = this.indexOf(lineup, id);
     if (type !== 'tv' || index < 0) throw new Error(`Unknown channel ${id}`);
     const guides = await this.schedules(lineup, [index], 0, Infinity);
@@ -175,7 +183,7 @@ export class XtreamAddon {
   async getStreams(type: string, id: string): Promise<Stream[]> {
     const ref = this.parse(id);
     if (type !== 'tv' || !ref) return [];
-    const lineup = await lineupOf(this.client);
+    const lineup = await lineupOf(this.client, this.filter);
     const index = indexOfStream(lineup, ref.streamId);
     if (index < 0) return [];
     if (ref.start !== undefined) {

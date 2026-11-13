@@ -7,6 +7,12 @@ import type {
   XtreamStream,
 } from './api.js';
 import { TieredStore, deltas, sums } from './store.js';
+import {
+  type XtreamFilter,
+  filterSignature,
+  isUnfiltered,
+  nameTest,
+} from './filter.js';
 
 const logger = createLogger('xtream');
 
@@ -214,26 +220,42 @@ function sortedByIds(ids: ArrayLike<number>): Int32Array {
   return Int32Array.from(packed, (p) => p % scale);
 }
 
-export function groupNames(categories: XtreamCategory[]): string[] {
+export function groupNames(
+  categories: XtreamCategory[],
+  filter?: XtreamFilter
+): string[] {
+  const keep = nameTest(
+    filter?.excludeGroups ?? [],
+    filter?.includeGroups ?? []
+  );
   const names = new Set<string>();
   for (const category of Array.isArray(categories) ? categories : []) {
     const name = text(category.category_name);
-    if (name) names.add(name);
+    if (name && keep(name)) names.add(name);
   }
   return [...names];
 }
 
-function build(
+export function build(
   account: XtreamAccount,
   categories: XtreamCategory[],
-  streams: XtreamStream[]
+  streams: XtreamStream[],
+  filter: XtreamFilter
 ): Lineup {
+  const keepGroup = nameTest(filter.excludeGroups, filter.includeGroups);
+  const keepChannel = nameTest(filter.excludeChannels, filter.includeChannels);
   const groupByCategory = new Map<string, number>();
   const groupByName = new Map<string, number>();
   const groups: string[] = [];
+  /** Categories the filter hides, so their channels can go with them. */
+  const hiddenCategories = new Set<string>();
   for (const category of Array.isArray(categories) ? categories : []) {
     const name = text(category.category_name);
     if (!name) continue;
+    if (!keepGroup(name)) {
+      hiddenCategories.add(String(category.category_id));
+      continue;
+    }
     let group = groupByName.get(name);
     if (group === undefined) {
       group = groups.length;
@@ -261,6 +283,22 @@ function build(
     const name = text(stream.name);
     const id = Number(stream.stream_id);
     if (!name || !Number.isFinite(id) || SEPARATOR.test(name)) continue;
+    if (!keepChannel(name)) continue;
+    const categoryIds =
+      Array.isArray(stream.category_ids) && stream.category_ids.length
+        ? stream.category_ids
+        : [stream.category_id];
+    const channelGroups: number[] = [];
+    let hidden = false;
+    for (const category of categoryIds) {
+      const group = groupByCategory.get(String(category));
+      if (group !== undefined) channelGroups.push(group);
+      else if (hiddenCategories.has(String(category))) hidden = true;
+    }
+    // A channel only in hidden groups goes too, as does an ungrouped one
+    // when groups are limited to those listed.
+    if (!channelGroups.length && (hidden || filter.includeGroups.length))
+      continue;
     const index = names.length;
     const num = Number(stream.num);
     const icon = text(stream.stream_icon);
@@ -301,14 +339,8 @@ function build(
     } else {
       epgOf.push(-1);
     }
-    const categoryIds =
-      Array.isArray(stream.category_ids) && stream.category_ids.length
-        ? stream.category_ids
-        : [stream.category_id];
     let first = -1;
-    for (const category of categoryIds) {
-      const group = groupByCategory.get(String(category));
-      if (group === undefined) continue;
+    for (const group of channelGroups) {
       if (first < 0) first = group;
       if (members[group].at(-1) !== index) members[group].push(index);
     }
@@ -358,9 +390,19 @@ function build(
   };
 }
 
-const keyOf = (client: XtreamClient) => getSimpleTextHash(client.cacheKey);
+/** Per login and filter, as a filter changes which channels the lineup holds. */
+const keyOf = (client: XtreamClient, filter: XtreamFilter) =>
+  getSimpleTextHash(
+    isUnfiltered(filter)
+      ? client.cacheKey
+      : `${client.cacheKey}\n${filterSignature(filter)}`
+  );
 
-function load(client: XtreamClient, key: string): Promise<Lineup> {
+function load(
+  client: XtreamClient,
+  key: string,
+  filter: XtreamFilter
+): Promise<Lineup> {
   return lineups.load(
     key,
     async () => {
@@ -369,7 +411,7 @@ function load(client: XtreamClient, key: string): Promise<Lineup> {
         client.categories(),
         client.streams(),
       ]);
-      const lineup = build(account, categories, streams);
+      const lineup = build(account, categories, streams, filter);
       await groupLists.set(
         key,
         lineup.groups,
@@ -390,13 +432,16 @@ function load(client: XtreamClient, key: string): Promise<Lineup> {
 }
 
 /** The account's channels, refreshed in the background once they're old. */
-export function lineupOf(client: XtreamClient): Promise<Lineup> {
-  const key = keyOf(client);
+export function lineupOf(
+  client: XtreamClient,
+  filter: XtreamFilter
+): Promise<Lineup> {
+  const key = keyOf(client, filter);
   return lineups.getOrRevalidate(
     key,
-    () => load(client, key),
+    () => load(client, key, filter),
     () =>
-      load(client, key).then(
+      load(client, key, filter).then(
         () => undefined,
         async (err) => {
           logger.warn(
@@ -416,8 +461,11 @@ export function lineupOf(client: XtreamClient): Promise<Lineup> {
  * The account's group names for its manifest: from its channels when they're
  * loaded, else its categories, asked for ahead of other requests.
  */
-export async function groupsOf(client: XtreamClient): Promise<string[]> {
-  const key = keyOf(client);
+export async function groupsOf(
+  client: XtreamClient,
+  filter: XtreamFilter
+): Promise<string[]> {
+  const key = keyOf(client, filter);
   const lineup = await lineups.peek(key);
   if (lineup) return lineup[0].groups;
   const fetch = async () => {
@@ -426,7 +474,7 @@ export async function groupsOf(client: XtreamClient): Promise<string[]> {
       client.categories(true),
     ]);
     return {
-      value: groupNames(categories),
+      value: groupNames(categories, filter),
       ttl: appConfig.builtins.xtream.lineupTtl + STALE_SECONDS,
     };
   };
@@ -442,8 +490,11 @@ export async function groupsOf(client: XtreamClient): Promise<string[]> {
 }
 
 /** The longest catch-up of the account's channels, 0 until they've loaded. */
-export async function longestCatchupOf(client: XtreamClient): Promise<number> {
-  return (await catchups.peek(keyOf(client)))?.[0] ?? 0;
+export async function longestCatchupOf(
+  client: XtreamClient,
+  filter: XtreamFilter
+): Promise<number> {
+  return (await catchups.peek(keyOf(client, filter)))?.[0] ?? 0;
 }
 
 export function indexOfStream(lineup: Lineup, streamId: number): number {

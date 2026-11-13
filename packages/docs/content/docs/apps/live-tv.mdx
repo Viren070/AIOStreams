@@ -21,8 +21,34 @@ Once your configuration has one, **Live TV** shows in the navigation. The same c
 
 <Callout type="info">
   Hiding, renaming and reordering channels is up to the addon. The Xtream
-  addon keeps your provider's order and groups.
+  addon keeps your provider's order and groups, and can hide some of them, as
+  below.
 </Callout>
+
+### Hiding groups and channels from an Xtream login
+
+The Xtream addon has four options, in its advanced settings, that take comma-separated keywords. A keyword matches anywhere in a name and ignores case.
+
+| Option               | Does                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| **Exclude Groups**   | Hides groups matching a keyword, and channels only in them. |
+| **Include Groups**   | Shows only groups matching a keyword.                       |
+| **Exclude Channels** | Hides channels matching a keyword.                          |
+| **Include Channels** | Shows only channels matching a keyword.                     |
+
+An exclude always wins over an include, and a channel in several groups stays while one of them does.
+
+Some examples:
+
+- **Hide pay-per-view and adult groups.** Exclude Groups: `PPV, ADULT` hides groups such as `US | PPV Events` and `XXX Adult`.
+- **Keep only UK and Irish channels.** Include Groups: `UK, IRE` shows groups such as `UK | News` and `IRE | Sports`, and nothing else.
+- **Drop radio and test channels.** Exclude Channels: `RADIO, TEST` hides `BBC Radio 4` and `Test Card`.
+- **Only a few broadcasters.** Include Channels: `BBC, ITV` shows channels such as `BBC One HD` and `ITV2`.
+- **Combine them.** Include Groups: `UK` with Exclude Channels: `Shopping` shows the UK groups without their shopping channels.
+
+Whoever runs the instance can set defaults for addons that leave an option empty, with the `BUILTIN_XTREAM_EXCLUDE_GROUPS`, `BUILTIN_XTREAM_INCLUDE_GROUPS`, `BUILTIN_XTREAM_EXCLUDE_CHANNELS` and `BUILTIN_XTREAM_INCLUDE_CHANNELS` [environment variables](/configuration/environment-variables). For example, `BUILTIN_XTREAM_EXCLUDE_GROUPS=PPV,ADULT` hides those groups for everyone. An addon that sets its own keywords uses them instead.
+
+Channels you hide can't be played either, as they're no longer in the list.
 
 ## Finding a channel
 

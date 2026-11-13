@@ -1296,6 +1296,46 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    excludeGroups: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream excluded groups',
+      env: 'BUILTIN_XTREAM_EXCLUDE_GROUPS',
+      description:
+        'Comma-separated keywords. Groups whose name contains one (ignoring case) are hidden along with channels only in them, such as `PPV,ADULT`. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    includeGroups: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream included groups',
+      env: 'BUILTIN_XTREAM_INCLUDE_GROUPS',
+      description:
+        'Comma-separated keywords. When set, only groups whose name contains one (ignoring case) are kept. Excluded groups are still hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    excludeChannels: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream excluded channels',
+      env: 'BUILTIN_XTREAM_EXCLUDE_CHANNELS',
+      description:
+        'Comma-separated keywords. Channels whose name contains one (ignoring case) are hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
+    includeChannels: {
+      schema: commaSeparatedList,
+      default: [],
+      label: 'Xtream included channels',
+      env: 'BUILTIN_XTREAM_INCLUDE_CHANNELS',
+      description:
+        'Comma-separated keywords. When set, only channels whose name contains one (ignoring case) are kept. Excluded channels are still hidden. Used by Xtream addons that do not set their own.',
+      requiresRestart: false,
+      secret: false,
+    },
     lineupMemory: {
       schema: byteSize,
       default: 256 * MB,
