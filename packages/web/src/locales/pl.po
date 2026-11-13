@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 21:32+0000\n"
+"PO-Revision-Date: 2026-11-14 12:02+0000\n"
 "Last-Translator: Krzysztof <krzysiek@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Polish <https://hosted.weblate.org/projects/aiostreams/web-app/pl/>\n"
 "Language: pl\n"
@@ -702,9 +702,8 @@ msgid "Background"
 msgstr "Tło"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Background from artwork"
-msgstr "Tło"
+msgstr "Tło z grafiki"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -1817,11 +1816,11 @@ msgstr "Przekaż ten kod osobie, która bada problem."
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
-msgstr ""
+msgstr "Szklane panele"
 
 #: src/app/settings/theme.tsx
 msgid "Glass surface"
-msgstr ""
+msgstr "Szklana powierzchnia"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2340,7 +2339,7 @@ msgstr "Klawisz Menu"
 
 #: src/app/settings/theme.tsx
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
-msgstr ""
+msgstr "Menu, listy, pola i karty nad grafiką są umieszczone na szklanej powierzchni zamiast na jej kolorze. Wolniejsze urządzenia mogą odczuć dodatkowe obciążenie podczas rysowania interfejsu."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2804,9 +2803,8 @@ msgid "on {relay}"
 msgstr "na {relay}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "Podczas automatycznej zmiany slajdów w banerze głównym. Po najechaniu myszą karta zawsze wysuwa się z podglądem, dzięki czemu karty obok niej pozostają na swoim miejscu."
+msgstr "Na ekranie głównym podczas obracania banera oraz w siatkach. W siatce, po najechaniu kursorem, karta wysuwa się na wierzch, dzięki czemu sąsiednie karty pozostają na swoim miejscu."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -4692,7 +4690,7 @@ msgstr "Odtwarzacz aplikacji i jego opcje, takie jak uruchamianie wideo w orient
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
-msgstr ""
+msgstr "Grafika przeglądanego tytułu, rozmyta i przyciemniona, wyświetlana w tle stron oraz listy wersji."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5459,9 +5457,8 @@ msgid "What the app did each day, kept for a week."
 msgstr "Zapis działań aplikacji z każdego dnia, przechowywany przez tydzień."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
-msgstr "Tło nawigacji nad stroną: własny kolor aplikacji lub szkło, przez które prześwituje strona. Płynne szkło dodatkowo załamuje obraz za swoimi krawędziami, co bardziej obciąża wolniejsze urządzenia."
+msgstr "Tło dla nawigacji oraz szklanych paneli nad grafiką: jednolity kolor aplikacji lub szkło, przez które prześwituje strona. Płynne szkło dodatkowo załamuje obraz za krawędziami nawigacji, co bardziej obciąża wolniejsze urządzenia."
 
 #: src/features/party/chat.tsx
 msgid "What the others say shows here."
