@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 23:05+0000\n"
+"PO-Revision-Date: 2026-11-13 23:28+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -5457,9 +5457,8 @@ msgid "What the app did each day, kept for a week."
 msgstr "Aktiviti harian aplikasi, disimpan selama seminggu."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
-msgstr "Latar navigasi di atas halaman: warna apl itu sendiri, atau kaca yang menampakkan halaman di sebaliknya. Kaca cecair juga membengkokkan apa yang ada di sebalik tepinya, yang lebih membebankan peranti perlahan."
+msgstr "Lapisan tempat navigasi dan panel kaca di atas karya seni diletakkan: warna apl itu sendiri, atau kaca yang memaparkan halaman di sebaliknya. Kaca cecair juga melencongkan objek di sebalik pinggir navigasi, yang memerlukan lebih banyak kos pemprosesan pada peranti perlahan."
 
 #: src/features/party/chat.tsx
 msgid "What the others say shows here."
