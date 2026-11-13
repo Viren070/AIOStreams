@@ -2904,6 +2904,10 @@ msgstr ""
 msgid "on {relay}"
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgstr ""
+
 #: src/lib/discord.ts
 msgid "On the calendar"
 msgstr ""
@@ -5751,10 +5755,6 @@ msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
-msgstr ""
-
-#: src/app/settings/interface.tsx
-msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
 msgstr ""
 
 #: src/app/settings/interface.tsx

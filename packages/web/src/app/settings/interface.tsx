@@ -428,7 +428,7 @@ export function InterfaceSection() {
         <SettingsCard name="cards" title={t`Cards`} description={onDevice()}>
           <Select
             label={t`Card you rest on`}
-            help={t`While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put.`}
+            help={t`On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put.`}
             options={[
               { value: 'open', label: t`Opens out to its details` },
               { value: 'pop', label: t`Pops out a preview` },

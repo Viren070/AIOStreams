@@ -2904,6 +2904,10 @@ msgstr "Older ones wait for the server instead. Without a connection, everything
 msgid "on {relay}"
 msgstr "on {relay}"
 
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgstr "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+
 #: src/lib/discord.ts
 msgid "On the calendar"
 msgstr "On the calendar"
@@ -5752,10 +5756,6 @@ msgstr "While a channel plays. On a TV, up and down change channel too, and the 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "While syncing subtitles by ear."
-
-#: src/app/settings/interface.tsx
-msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"

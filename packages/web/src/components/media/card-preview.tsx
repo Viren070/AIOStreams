@@ -2,6 +2,7 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem } from '@/lib/jellyfin/queries';
 import { currentHost } from '@/lib/hosts';
@@ -204,6 +205,10 @@ function closeSlide(card: HTMLElement) {
 
 export function CardPreviewHost({ children }: { children: React.ReactNode }) {
   const [mode] = useSetting(settings.interface.cardPreview);
+  const pointer = useMediaQuery(
+    '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
+  );
+  const on = mode !== 'off' && (pointer || !!currentHost().tv);
   const latestMode = React.useRef(mode);
   latestMode.current = mode;
   const [shown, setShown] = React.useState<Shown | null>(null);
@@ -291,11 +296,12 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
     };
   }, [popped, previews]);
 
-  const frame = ready && frameOf(ready.card);
+  const frame = on && ready && frameOf(ready.card);
   return (
-    <PreviewContext.Provider value={previews}>
+    <PreviewContext.Provider value={on ? previews : null}>
       {children}
-      {popped &&
+      {on &&
+        popped &&
         createPortal(
           <Preview target={popped} onClose={() => setShown(null)} />,
           document.body
