@@ -58,8 +58,10 @@ export function useExternalReturn() {
 
     for (const key of MARKS) inHash.delete(key);
     const rest = inHash.toString();
+    // The router keeps its place in the history in the entry's state; an
+    // entry without it counts as the first, after which Back leaves the app.
     window.history.replaceState(
-      null,
+      window.history.state,
       '',
       `${window.location.pathname}${hashPath}${rest ? `?${rest}` : ''}`
     );
