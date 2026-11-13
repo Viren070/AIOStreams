@@ -372,7 +372,7 @@ export const builtinsSchema = {
     absoluteSearch: {
       languages: {
         schema: commaSeparatedList,
-        default: ['ko', 'zh', 'ja', 'th'],
+        default: ['ko', 'zh', 'ja', 'th', 'tr'],
         label: 'Absolute search languages',
         description:
           'Original languages (ISO 639-1) whose non-anime series also get absolute-episode search queries (e.g. Asian dramas released as "Show E40"). Requires a TMDB key for original language detection. Empty disables.',
