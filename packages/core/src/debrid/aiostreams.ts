@@ -14,6 +14,7 @@ import {
   PlaybackInfo,
   UsenetDebridService,
 } from './base.js';
+import { canonicalNzbHash } from './utils.js';
 import {
   getUsenetEngineConfig,
   NativeUsenetCredentialSchema,
@@ -214,7 +215,12 @@ export class NativeUsenetService implements UsenetDebridService {
       });
     }
 
-    const nzbHash = playbackInfo.hash;
+    const shapedFromUrl = playbackInfo.nzb
+      ? canonicalNzbHash(playbackInfo.nzb)
+      : undefined;
+    const nzbHash = shapedFromUrl?.known
+      ? shapedFromUrl.hash
+      : playbackInfo.hash;
 
     const resolved = await UsenetLibraryRepository.getResolved(nzbHash).catch(
       () => undefined
