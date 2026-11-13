@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 15:25+0000\n"
+"PO-Revision-Date: 2026-11-13 21:32+0000\n"
 "Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -367,7 +367,7 @@ msgstr "Um tempo definido antes do fim."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "Uma janela pequena com o player completo, incluindo legendas, controles e barra de busca. O navegador adiciona uma barra própria na parte superior."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
