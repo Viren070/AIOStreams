@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 00:12+0000\n"
+"PO-Revision-Date: 2026-11-13 21:32+0000\n"
 "Last-Translator: Sebastian Porta <spg76@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/aiostreams/web-app/es/>\n"
 "Language: es\n"
@@ -367,7 +367,7 @@ msgstr "Un tiempo determinado antes del final."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "Una ventana pequeña que contiene el reproductor: subtítulos, controles y la barra de búsqueda. El navegador añade su propia barra en la parte superior."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -4882,7 +4882,7 @@ msgstr "El reproductor propio de este navegador, que reproduce los formatos comp
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
-msgstr ""
+msgstr "La ventana propia del navegador que muestra solo el video, sin esa barra, pero sin subtítulos y solo con los botones de reproducir y pausar del navegador."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
