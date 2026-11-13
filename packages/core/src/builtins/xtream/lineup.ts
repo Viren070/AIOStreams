@@ -460,7 +460,8 @@ export function lineupOf(
 
 /**
  * The account's group names for its manifest: from its channels when they're
- * loaded, else its categories, asked for ahead of other requests.
+ * loaded, else its categories, asked for ahead of other requests. With
+ * channels filtered, from the filtered channels, loading them if need be.
  */
 export async function groupsOf(
   client: XtreamClient,
@@ -469,6 +470,19 @@ export async function groupsOf(
   const key = keyOf(client, filter);
   const lineup = await lineups.peek(key);
   if (lineup) return lineup[0].groups;
+  // Categories alone cannot say which groups keep a channel once channels are
+  // filtered, so the groups come from the filtered channels. If they cannot be
+  // loaded, the categories stand in.
+  if (filter.excludeChannels.length || filter.includeChannels.length) {
+    try {
+      return (await lineupOf(client, filter)).groups;
+    } catch (err) {
+      logger.warn(
+        { err: err instanceof Error ? err.message : err },
+        'xtream channel list unavailable for the manifest, using categories'
+      );
+    }
+  }
   const fetch = async () => {
     const [, categories] = await Promise.all([
       client.account(true),
