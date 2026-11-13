@@ -741,15 +741,19 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onTracksChanged(tracks: Tracks) {
             this@ExoEngine.tracks.update(tracks)
             if (!tracks.isEmpty) selector.tracksKnown = true
-            if (!chosen && !this@ExoEngine.tracks.isEmpty()) {
-                chosen = true
+            if (!chosen) {
+                // Before any wait for a track to play: a file with nothing to play never has one.
                 Failures.undecodable(tracks)?.let { error ->
+                    chosen = true
                     url = null
                     player.stop()
                     listener?.onUnplayable(error)
                     return
                 }
-                chooseTracks()
+                if (!this@ExoEngine.tracks.isEmpty()) {
+                    chosen = true
+                    chooseTracks()
+                }
             }
             reportTracks()
             reportChapters()
