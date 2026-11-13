@@ -100,6 +100,10 @@ msgstr "{found, plural, one {# sürümü filtrele} other {# sürümü filtrele}}
 msgid "{got} of {size}"
 msgstr "{got} / {size}"
 
+#: src/lib/playback/quality.ts
+msgid "{height}, {mbps} Mbps"
+msgstr ""
+
 #: src/features/player/options.tsx
 msgid "{height}%"
 msgstr "%{height}"
@@ -362,6 +366,10 @@ msgstr "Bir kumandanın ya da oyun kolunun tuşları da işe yarar."
 msgid "A set time before the end."
 msgstr "Bitmeden önce ayarlanmış bir süre."
 
+#: src/app/settings/playback.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr ""
+
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
 msgstr "Sürümün varsayılan olarak işaretlediği ses parçası, başka bir parça tercih ettiğin dillerden birinde olsa da oynatılır. Dil tercihlerinin her zaman öncelikli olması için bunu kapat."
@@ -601,6 +609,10 @@ msgstr "CSS uygula"
 msgid "Apply to styled subtitles too"
 msgstr "Stillendirilmiş altyazılara da uygula"
 
+#: src/app/settings/account.tsx
+msgid "Approve"
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
 msgstr "Onaylandı. Giriş yapılıyor…"
@@ -620,6 +632,11 @@ msgstr "Görsel"
 #: src/features/party/in-party.tsx
 msgid "As the host"
 msgstr "Sunucu olarak"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Ascending"
+msgstr "Gönderiliyor…"
 
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
@@ -685,9 +702,13 @@ msgid "Back in the player"
 msgstr "Yerleşik oynatıcı"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/app/settings/interface.tsx src/app/settings/subtitles.tsx
-#: src/app/settings/theme.tsx
+#: src/app/settings/subtitles.tsx src/app/settings/theme.tsx
 msgid "Background"
+msgstr "Arkaplan"
+
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "Background from artwork"
 msgstr "Arkaplan"
 
 #: src/lib/input/keys.ts
@@ -953,6 +974,10 @@ msgstr "Seçimi temizle"
 msgid "Close"
 msgstr "Kapat"
 
+#: src/app/settings/account.tsx
+msgid "Code"
+msgstr ""
+
 #: src/features/party/in-party.tsx
 msgid "Code copied"
 msgstr "Kod kopyalandı"
@@ -962,7 +987,7 @@ msgid "Code or invite link"
 msgstr "Kod veya davet bağlantısı"
 
 #: src/app/discover/page.tsx src/app/item/_components/collection.tsx
-#: src/lib/format.ts
+#: src/app/search/page.tsx src/lib/format.ts
 msgid "Collections"
 msgstr "Koleksiyonlar"
 
@@ -1270,6 +1295,10 @@ msgstr "Özel bağlantı"
 msgid "Cyan"
 msgstr "Camgöbeği"
 
+#: src/components/media/sort-picker.tsx
+msgid "Date added"
+msgstr ""
+
 #: src/app/history/page.tsx
 msgid "Date not known"
 msgstr "Tarih bilinmiyor"
@@ -1324,6 +1353,11 @@ msgstr "Tümünü sil"
 #: src/features/playlists/playlists.tsx
 msgid "Delete playlist"
 msgstr "Oynatma listesini sil"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Descending"
+msgstr "Gönderiliyor…"
 
 #: src/app/settings/theme.tsx
 msgid "Desert"
@@ -1534,6 +1568,11 @@ msgstr "Motor"
 msgid "Enter"
 msgstr "Enter"
 
+#: src/app/settings/account.tsx
+#, fuzzy
+msgid "Enter a code"
+msgstr "Arayüz"
+
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
 msgstr "Davet bağlantısını veya kod ile aracı sunucuyu gir"
@@ -1541,6 +1580,10 @@ msgstr "Davet bağlantısını veya kod ile aracı sunucuyu gir"
 #: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
 msgstr "Aracı sunucu adresini gir"
+
+#: src/app/settings/account.tsx
+msgid "Enter the code the other device shows."
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
@@ -1566,8 +1609,9 @@ msgstr "Bölüm ayrıntıları"
 msgid "Episode layout"
 msgstr "Bölüm görünümü"
 
-#: src/app/item/_components/seasons.tsx src/app/settings/interface.tsx
-#: src/features/player/episodes.tsx src/features/player/options.tsx
+#: src/app/item/_components/seasons.tsx src/app/search/page.tsx
+#: src/app/settings/interface.tsx src/features/player/episodes.tsx
+#: src/features/player/options.tsx
 msgid "Episodes"
 msgstr "Bölümler"
 
@@ -1645,9 +1689,9 @@ msgstr "Hızlandır"
 msgid "Favourite"
 msgstr "Favoriler"
 
-#: src/app/favourites/page.tsx src/app/settings/apps.tsx
-#: src/app/settings/interface.tsx src/components/shell/layout.tsx
-#: src/features/live-tv/live-tv.ts
+#: src/app/discover/page.tsx src/app/favourites/page.tsx
+#: src/app/settings/apps.tsx src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx src/features/live-tv/live-tv.ts
 msgid "Favourites"
 msgstr "Favoriler"
 
@@ -1765,7 +1809,7 @@ msgstr "Kare zamanlamaları"
 msgid "From the start"
 msgstr "Baştan"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Frosted glass"
 msgstr "Buzlu cam"
 
@@ -1785,6 +1829,14 @@ msgstr "Genel"
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Sorunu inceleyecek kişiye bu kodu ilet."
+
+#: src/app/settings/theme.tsx
+msgid "Glass panels"
+msgstr ""
+
+#: src/app/settings/theme.tsx
+msgid "Glass surface"
+msgstr ""
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -1969,6 +2021,10 @@ msgstr "Keşfette"
 #: src/lib/discord.ts
 msgid "In Favourites"
 msgstr "Favorilerde"
+
+#: src/app/discover/page.tsx
+msgid "In progress"
+msgstr ""
 
 #: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
@@ -2185,7 +2241,7 @@ msgstr "Lisanslar"
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
 msgstr "Bu uygulamanın ya da Fusion ve Nuvio uygulamalarının biçiminde paylaşılan bir paket bağlantısı ekle. Paket, hazırlayan kişinin değişiklikleriyle güncel kalır."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Liquid glass"
 msgstr "Sıvı cam"
 
@@ -2300,6 +2356,10 @@ msgstr "Orta"
 #: src/lib/input/keys.ts
 msgid "Menu key"
 msgstr "Menü tuşu"
+
+#: src/app/settings/theme.tsx
+msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
+msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2422,7 +2482,7 @@ msgid "Mute key"
 msgstr "Sessize alma tuşu"
 
 #: src/app/settings/_components/version-settings.tsx
-#: src/features/playlists/playlists.tsx
+#: src/components/media/sort-picker.tsx src/features/playlists/playlists.tsx
 msgid "Name"
 msgstr "İsim"
 
@@ -2534,6 +2594,10 @@ msgstr ""
 #, fuzzy
 msgid "No details for this title"
 msgstr "Bu içerik yüklenemedi"
+
+#: src/app/settings/account.tsx
+msgid "No device is waiting with that code."
+msgstr ""
 
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
@@ -2764,6 +2828,10 @@ msgstr "Daha eski içerikler için sunucunun yanıtı beklenir. Bağlantı yoksa
 msgid "on {relay}"
 msgstr "{relay} üzerinde"
 
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgstr ""
+
 #: src/lib/discord.ts
 msgid "On the calendar"
 msgstr "Takvimde"
@@ -2918,6 +2986,11 @@ msgstr "Uygulamanın kendine ayırdığı seçenekler."
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "Or type one"
 msgstr "Veya bir adres yaz"
+
+#: src/lib/playback/quality.ts
+#, fuzzy
+msgid "Original"
+msgstr "Özgün dil"
 
 #: src/app/settings/audio.tsx
 msgid "Original language"
@@ -3096,7 +3169,8 @@ msgstr "{heardAt} konumunda duyduğun repliği seç."
 msgid "Pick the version to download."
 msgstr "İndirilecek sürümü seç."
 
-#: src/app/settings/apps.tsx src/features/player/options.tsx
+#: src/app/settings/apps.tsx src/app/settings/playback.tsx
+#: src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Küçük pencere (PiP)"
 
@@ -3271,6 +3345,11 @@ msgstr "Oynatıcı"
 msgid "Player link"
 msgstr "Oynatıcı bağlantısı"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Player window"
+msgstr "Şimdi oynat"
+
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
 #: src/features/player/chapters.tsx src/features/player/episodes.tsx
@@ -3281,6 +3360,11 @@ msgstr "Oynatılıyor"
 #: src/app/player/page.tsx
 msgid "Playing in {launchedName}"
 msgstr "{launchedName} ile oynatılıyor"
+
+#: src/app/player/page.tsx
+#, fuzzy
+msgid "Playing in picture-in-picture"
+msgstr "Küçük pencere (PiP)"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -3409,7 +3493,11 @@ msgstr "Tüm tuşları varsayılan hâline döndürür."
 msgid "QR code"
 msgstr "QR kodu"
 
-#: src/app/sign-in/page.tsx
+#: src/app/settings/playback.tsx src/features/player/options.tsx
+msgid "Quality"
+msgstr ""
+
+#: src/app/settings/account.tsx src/app/sign-in/page.tsx
 msgid "Quick Connect"
 msgstr "Hızlı bağlantı"
 
@@ -3464,7 +3552,7 @@ msgstr "Puan ver"
 msgid "Rate season"
 msgstr "Sezona puan ver"
 
-#: src/components/media/scores.tsx
+#: src/components/media/scores.tsx src/components/media/sort-picker.tsx
 msgid "Rating"
 msgstr "Puan"
 
@@ -3526,6 +3614,11 @@ msgstr "Ara sunucu"
 #: src/features/party/not-in-party.tsx
 msgid "Relay address"
 msgstr "Aracı sunucu adresi"
+
+#: src/components/media/sort-picker.tsx
+#, fuzzy
+msgid "Release date"
+msgstr "Yayın tarihi"
 
 #: src/app/item/_components/details.tsx
 msgid "Released"
@@ -3729,6 +3822,10 @@ msgstr "Sıralar, kataloglar ve takvim."
 #: src/features/player/options.tsx
 msgid "Runs at a different speed to the video"
 msgstr "Videodan farklı bir hızda ilerliyor"
+
+#: src/components/media/sort-picker.tsx
+msgid "Runtime"
+msgstr ""
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -3954,7 +4051,7 @@ msgid "Share the invite"
 msgstr "Daveti paylaş"
 
 #: src/app/settings/playback.tsx
-msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
 #: src/lib/input/keys.ts
@@ -4039,7 +4136,8 @@ msgid "Shows"
 msgstr "Diziler"
 
 #: src/app/settings/playback.tsx
-msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one reads a little of the file, so turn them off to save data."
+#, fuzzy
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 msgstr "İlerleme çubuğunda işaret ettiğin, sürüklediğin veya atladığın konumun görüntüsünü gösterir. Her görüntü için dosyanın bir kısmı okunur; veri tasarrufu için kapatabilirsin."
 
 #: src/app/settings/playback.tsx
@@ -4077,6 +4175,10 @@ msgstr "Yan menü ekranın kenarında, Üst sekmeler ise her sayfanın üst kıs
 #: src/app/settings/interface.tsx
 msgid "Sidebar"
 msgstr "Kenar çubuğu"
+
+#: src/app/settings/account.tsx
+msgid "Sign another device in as you, with the code it shows."
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
@@ -4218,7 +4320,7 @@ msgstr "Her sürümün özelliklerini gösteren küçük etiketler. Eklediğin p
 msgid "Smaller subtitles"
 msgstr "Altyazıları küçült"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Solid"
 msgstr "Düz"
 
@@ -4233,6 +4335,10 @@ msgstr "bu cihazın okuyamadığı bir içerik"
 #: src/features/party/in-party.tsx
 msgid "Something this device cannot read"
 msgstr "Bu cihazın okuyamadığı bir içerik"
+
+#: src/components/media/sort-picker.tsx
+msgid "Sort by"
+msgstr ""
 
 #: src/app/settings/audio.tsx src/app/settings/interface.tsx
 #: src/features/player/options.tsx
@@ -4630,6 +4736,14 @@ msgstr "Uygulamanın oynatıcısı"
 msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Uygulamanın oynatıcısı ve videoları yatay başlatma gibi seçenekleri."
 
+#: src/app/settings/theme.tsx
+msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgstr ""
+
+#: src/app/settings/account.tsx
+msgid "The device is signed in"
+msgstr ""
+
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
 msgstr "Ev sahibi seni birlikte izlemeden çıkardı."
@@ -4665,6 +4779,10 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
 msgstr ""
 
 #: src/app/settings/apps.tsx
@@ -4732,8 +4850,20 @@ msgid "The same for episodes marked as a recap."
 msgstr "Özet olarak işaretlenen bölümler de aynı şekilde atlanır."
 
 #. Follows "Playback failed:"
+#: src/lib/playback/transcoding.ts
+#, fuzzy
+msgid "the server could not convert this version"
+msgstr "oynatıcı bu sürümü oynatamadı"
+
+#. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the stream ended early"
+msgstr "yayın erken sona erdi"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+#, fuzzy
+msgid "the stream stopped loading"
 msgstr "yayın erken sona erdi"
 
 #: src/app/settings/apps.tsx
@@ -4822,6 +4952,10 @@ msgstr ""
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
+#: src/app/settings/playback.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr ""
+
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
 msgstr "Bu kodun süresi doldu."
@@ -4864,6 +4998,11 @@ msgstr "Bu sunucu"
 
 #: src/app/history/page.tsx
 msgid "This server can't list what you've watched."
+msgstr "Bu sunucu izlediklerini listeleyemiyor."
+
+#: src/app/settings/_components/common.tsx
+#, fuzzy
+msgid "This server doesn't let your account change these."
 msgstr "Bu sunucu izlediklerini listeleyemiyor."
 
 #: src/app/item/_components/no-details.tsx
@@ -4944,7 +5083,8 @@ msgid "Title pages"
 msgstr "İçerik sayfaları"
 
 #: src/app/settings/interface.tsx
-msgid "Titles, synopses and stream names stay in the language your addons send."
+#, fuzzy
+msgid "Titles, synopses and version names stay in the language the server sends."
 msgstr "İçerik adları, özetler ve yayın adları, eklentilerinin gönderdiği dilde kalır."
 
 #: src/app/calendar/page.tsx src/app/live-tv/page.tsx
@@ -5002,7 +5142,8 @@ msgstr "Sorun giderme"
 
 #: src/app/downloads/page.tsx src/app/sign-in/page.tsx
 #: src/components/media/random-pick.tsx src/features/party/not-in-party.tsx
-#: src/features/versions/version-list.tsx src/lib/playback/use-player.ts
+#: src/features/versions/version-list.tsx src/lib/playback/transcoding.ts
+#: src/lib/playback/use-player.ts
 msgid "Try again"
 msgstr "Yeniden dene"
 
@@ -5100,7 +5241,8 @@ msgid "Up next: {upNext}"
 msgstr "Sıradaki: {upNext}"
 
 #: src/app/settings/interface.tsx
-msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and series catalogs are featured."
+#, fuzzy
+msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 msgstr "En fazla {MAX_FEATURED} kaynak birleştirilir. Boş bırakırsan ilk film ve dizi katalogların öne çıkarılır."
 
 #: src/lib/hosts/shell/index.ts
@@ -5233,6 +5375,11 @@ msgstr "Sürümler bu tarayıcıda oynatılır. Başka bir oynatıcıda açmak i
 msgid "Video"
 msgstr "Video"
 
+#: src/app/settings/playback.tsx
+#, fuzzy
+msgid "Video only"
+msgstr "Video"
+
 #: src/app/settings/apps.tsx
 msgid "Video output"
 msgstr "Video çıkışı"
@@ -5322,7 +5469,8 @@ msgstr "Birlikte izleme"
 msgid "Watch together"
 msgstr "Birlikte izle"
 
-#: src/app/history/page.tsx src/app/item/_components/actions.tsx
+#: src/app/discover/page.tsx src/app/history/page.tsx
+#: src/app/item/_components/actions.tsx
 msgid "Watched"
 msgstr "İzlendi"
 
@@ -5366,8 +5514,9 @@ msgstr "Başkalarının gönderdikleri birkaç saniyeliğine videonun üzerinde 
 msgid "What the app did each day, kept for a week."
 msgstr "Uygulamanın günlük kayıtları bir hafta saklanır."
 
-#: src/app/settings/interface.tsx
-msgid "What the navigation sits on over the page: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind its edges, which costs more on a slow device."
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
 msgstr "Gezinme menüsünün arka planı: uygulamanın kendi rengi veya sayfayı arkada gösteren cam. Sıvı cam, kenarlarının arkasındaki görüntüyü de büker; yavaş cihazlarda daha fazla kaynak tüketir."
 
 #: src/features/party/chat.tsx
@@ -5477,10 +5626,6 @@ msgstr ""
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "While syncing subtitles by ear."
 msgstr "Altyazıları dinleyerek eşitlerken."
-
-#: src/app/settings/interface.tsx
-msgid "While the hero rotates. Under a mouse a card always pops out, so the cards beside it stay put."
-msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "While you're in it"
