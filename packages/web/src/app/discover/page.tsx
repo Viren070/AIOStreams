@@ -274,7 +274,11 @@ export function DiscoverPage({
     ...(stock && { sortBy: SORTS[sort.key], descending: sort.descending }),
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
-  const total = pages.data?.pages[0]?.TotalRecordCount;
+  // A catalog's total is a guess until it has been read to the end.
+  const total =
+    stock || !pages.hasNextPage
+      ? pages.data?.pages.at(-1)?.TotalRecordCount
+      : undefined;
   const label = view ? libraryLabel(view) : undefined;
 
   React.useEffect(() => {

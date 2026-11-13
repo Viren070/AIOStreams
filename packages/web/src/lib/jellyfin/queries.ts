@@ -21,6 +21,8 @@ import type {
 } from './types';
 
 export const PAGE = 60;
+/** Within most catalogs' own page, so the first answer waits on one upstream page. */
+const FIRST_PAGE = 20;
 
 /** Jellyfin's sort for what was added last. */
 export const NEWEST = 'DateCreated,SortName';
@@ -194,7 +196,7 @@ export function useItemPages(
         userId: user.Id,
         ParentId: parentId,
         StartIndex: pageParam,
-        Limit: pageSize,
+        Limit: pageParam ? pageSize : Math.min(pageSize, FIRST_PAGE),
         IncludeItemTypes: opts.types,
         GenreIds: opts.genreId,
         Recursive: opts.recursive,
