@@ -50,6 +50,12 @@ Whoever runs the instance can set defaults for addons that leave an option empty
 
 Channels you hide can't be played either, as they're no longer in the list.
 
+### Cleaning up channel names
+
+Providers often put a tag before each channel's name, such as `UK | BBC One HD` or `[US] CNN`. Turn on **Clean Channel Names** on the Xtream addon to show `BBC One HD` and `CNN` instead. It removes a short tag at the start of a name (`UK | `, `|UK| `, `|| UK || ` or `[UK] `) and tidies repeated spaces, and leaves the rest. A name that is only a tag is kept as it is.
+
+Group names are left as they are, since `UK | News` and `US | News` would otherwise both become `News`. Include and exclude keywords still match the full name, so `Exclude Channels: US |` works with it on. Whoever runs the instance can turn it on for every Xtream addon with `BUILTIN_XTREAM_CLEAN_NAMES=true`.
+
 ### Choosing the stream format
 
 Xtream servers offer a channel as HLS, as MPEG-TS, or both. The **Stream Format** option sets which are offered and in what order:

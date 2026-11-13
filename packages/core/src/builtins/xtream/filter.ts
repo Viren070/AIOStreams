@@ -20,6 +20,7 @@ export const XtreamFilterSchema = z.object({
   includeGroups: list.optional(),
   excludeChannels: list.optional(),
   includeChannels: list.optional(),
+  cleanNames: z.boolean().optional(),
 });
 export type XtreamFilterInput = z.input<typeof XtreamFilterSchema>;
 
@@ -28,6 +29,8 @@ export interface XtreamFilter {
   includeGroups: string[];
   excludeChannels: string[];
   includeChannels: string[];
+  /** Channel names lose their leading tag, such as `UK | `. */
+  cleanNames: boolean;
 }
 
 const FIELDS = [
@@ -47,6 +50,7 @@ export function resolveFilter(
 ): XtreamFilter {
   const own = XtreamFilterSchema.parse(input);
   const out = {} as XtreamFilter;
+  out.cleanNames = own.cleanNames || defaults.cleanNames === true;
   for (const field of FIELDS) {
     const mine = own[field];
     out[field] = mine?.length
@@ -62,11 +66,13 @@ export function filterSignature(filter: XtreamFilter): string {
     [...new Set(filter[field].map((k) => k.toLowerCase()))]
       .sort()
       .join('\u0001')
-  ).join('\u0002');
+  )
+    .concat(filter.cleanNames ? 'clean' : '')
+    .join('\u0002');
 }
 
 export const isUnfiltered = (filter: XtreamFilter) =>
-  FIELDS.every((field) => !filter[field].length);
+  !filter.cleanNames && FIELDS.every((field) => !filter[field].length);
 
 export type NameTest = (name: string) => boolean;
 

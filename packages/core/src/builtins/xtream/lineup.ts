@@ -7,6 +7,7 @@ import type {
   XtreamStream,
 } from './api.js';
 import { TieredStore, deltas, sums } from './store.js';
+import { cleanName } from './names.js';
 import {
   type XtreamFilter,
   filterSignature,
@@ -308,7 +309,7 @@ export function build(
         ? Math.min(255, Math.max(0, Number(stream.tv_archive_duration) || 0))
         : 0;
     streamIds.push(id);
-    names.push(name);
+    names.push(filter.cleanNames ? cleanName(name) : name);
     numbers.push(Number.isInteger(num) && num > 0 && num < 2 ** 32 ? num : 0);
     archiveDays.push(days);
     if (/^https?:\/\//i.test(icon)) {

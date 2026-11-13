@@ -80,6 +80,15 @@ export class XtreamPreset extends Preset {
         required: true,
       },
       {
+        id: 'cleanNames',
+        name: 'Clean Channel Names',
+        description:
+          'Strip the tag providers put before channel names, so `UK | BBC One` shows as `BBC One`. Group names are left as they are. Include and exclude keywords still match the full name.',
+        type: 'boolean',
+        default: false,
+        showInSimpleMode: false,
+      },
+      {
         id: 'format',
         name: 'Stream Format',
         description:
@@ -179,6 +188,7 @@ export class XtreamPreset extends Preset {
         server: options.server,
         username: options.username,
         password: options.password,
+        ...(options.cleanNames === true && { cleanNames: true }),
         ...(options.format &&
           options.format !== 'default' && { format: options.format }),
         ...Object.fromEntries(

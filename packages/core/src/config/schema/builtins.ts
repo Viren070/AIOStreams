@@ -1336,6 +1336,16 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    cleanNames: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Xtream clean channel names',
+      env: 'BUILTIN_XTREAM_CLEAN_NAMES',
+      description:
+        'Strip the tag providers put before channel names, so `UK | BBC One` shows as `BBC One`. When on, it applies to every Xtream addon. Filters still match the full name.',
+      requiresRestart: false,
+      secret: false,
+    },
     format: {
       schema: z.enum(['hls-first', 'ts-first', 'hls', 'ts']),
       default: 'hls-first',

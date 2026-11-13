@@ -8,6 +8,7 @@ const NONE = {
   includeGroups: [],
   excludeChannels: [],
   includeChannels: [],
+  cleanNames: false,
 };
 
 const categories = [
@@ -105,5 +106,34 @@ describe('build with a filter', () => {
       'Sky Sports',
       'Sky Sports PPV',
     ]);
+  });
+});
+
+describe('build with clean names', () => {
+  const tagged = [
+    { stream_id: 1, name: 'UK | BBC One', category_id: '1' },
+    { stream_id: 2, name: 'US | CNN', category_id: '1' },
+  ];
+  const channelsOf = (filter: Partial<typeof NONE>) => {
+    const lineup = build({}, categories, tagged, { ...NONE, ...filter });
+    return Array.from({ length: channelCount(lineup) }, (_, i) =>
+      nameOf(lineup, i)
+    );
+  };
+  it('strips the tags only when asked', () => {
+    assert.deepEqual(channelsOf({}), ['UK | BBC One', 'US | CNN']);
+    assert.deepEqual(channelsOf({ cleanNames: true }), ['BBC One', 'CNN']);
+  });
+  it('filters on the full name', () => {
+    assert.deepEqual(
+      channelsOf({ cleanNames: true, excludeChannels: ['us |'] }),
+      ['BBC One']
+    );
+  });
+  it('is part of the cache identity', () => {
+    assert.notEqual(
+      filterSignature(NONE),
+      filterSignature({ ...NONE, cleanNames: true })
+    );
   });
 });
