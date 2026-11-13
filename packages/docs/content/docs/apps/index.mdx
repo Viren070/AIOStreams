@@ -13,7 +13,7 @@ The AIOStreams app browses and plays what your configuration finds, with your ca
 
 | Your device                       | Get it                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Any device with a browser         | Nothing to install: press **Open in browser** under **Save & Install → AIOStreams app** on the configure page |
+| Any device with a browser         | Nothing to install: press **Open in browser** under **Save & Install → AIOStreams app** on the configure page, or open [web.aiostreams.org](https://web.aiostreams.org) |
 | Windows, Mac and Linux            | The [desktop app](/apps/desktop#download)                                                                     |
 | Android phones and tablets        | The [Android app](/apps/android#download)                                                                     |
 | Android TV, Google TV and Fire TV | The [Android app](/apps/android#on-a-tv), which has a layout made for the remote                              |
@@ -48,7 +48,8 @@ It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and S
 
 ## What it has
 
-- **Home** opens on a featured title with **Play** and **More info**, then Continue Watching, Next Up, episodes airing soon, your favourite channels and a row for each catalog. The featured title moves on every few seconds, or after as long as you set, and a swipe or a drag moves it on sooner. While it rotates, a card you rest on with a mouse or a remote grows into a bigger preview with its details.
+- **Home** opens on a featured title with **Play** and **More info**, then Continue Watching, Next Up, episodes airing soon, your favourite channels and a row for each catalog. The featured title moves on every few seconds, or after as long as you set, and a swipe or a drag moves it on sooner. While it rotates, a card you rest on with a remote or the keyboard opens out in its row to its details, and with a mouse pops out a bigger preview. **Card you rest on** under **Settings → Interface** picks which, or turns them off.
+- **Trailers play by themselves** when you rest on a title: in its card on Home, in the featured title, and behind a title's page, where **Up** shows the trailer whole. **Play by themselves** and **Sound** under **Settings → Interface** pick where they play and whether with sound. They're on with a mouse and on TVs, and off on phones and tablets.
 - **Discover** browses any catalog by type and genre, and **Search** looks through all of them, suggesting titles as you type.
 - **Title pages** show the details, the ratings from each source your addons send, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](/apps/media-server#versions) to choose from. Below it, a row of actions: **Trailer**, **Favourite**, **Rate**, **Watched** and the rest, which on a phone or tablet sit under **More**. Episodes show their title first with their air date, and **Settings → Interface** can blur the ones you haven't started.
 - **[Live TV](/apps/live-tv)** lists the channels from your addons, with a programme guide, catch-up and reminders.
@@ -68,6 +69,7 @@ It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and S
 - **On another device.** **Play on another device**, on a title's page or in its menu, sends it to another device with the app open, and the app becomes its remote: pause, seek, skip, stop, and pick the audio and subtitles. While it plays, a button at the bottom of the screen brings the remote back. See [who controls what](/apps/media-server#playing-on-another-device).
 - **Other players.** Choose another player under **Settings → Playback → Player** and **Play** opens versions in it: VLC, Infuse, Outplayer, IINA or another Android app where your device has them, or a link of your own. Each version also has **Copy stream link**.
 - **Mini player.** **Mini player** in the player keeps the video going in a corner while you look around the app; tap it to open the player again. Set **Back in the player** under **Settings → Playback → Player** to open it with **Back** too. Not on TVs, where Live TV's preview is the only small player.
+- **Picture-in-picture.** The button in the player's controls moves the video into a small window over your other apps. In Chrome, Edge and Firefox the whole player goes into it, with subtitles and controls; in Chrome and Edge, **Picture-in-picture** under **Settings → Playback → Player** can show the video alone instead, as Safari does. The desktop app does it on Windows, shrinking its window to the video, and the Android app on phones and tablets, as it does when you leave the app.
 - **Sound.** In the desktop and Android apps, **Settings → Audio** sets how many channels your speakers take and mixes down what has more, passes Dolby and DTS through to a receiver format by format, and can turn other surround sound into Dolby Digital for an optical or ARC link. **Dialogue boost**, **Night mode** and a **Delay** for wireless headphones are there too.
 
 ## Anime upscaling
@@ -98,7 +100,7 @@ Prefer your own shaders? The desktop app's mpv folder takes your `mpv.conf`, scr
 
 Some settings are saved to your account and follow you to every device: what is featured on the home page, whether next up joins the continue watching row, the poster size and what shows under posters, and your audio and subtitle languages and subtitle types. The rest, such as the player, the subtitle style and the navigation, stay on the device, so each can suit its screen.
 
-The navigation and home page change to suit you, under **Settings → Interface**. On a TV, the navigation runs along the top as floating pills, a bar or a fade, or down the side as a rail, a floating rail or a button in the corner. On a computer or a tablet held sideways, the same tabs can run along the top instead, and the tabs along the top and the bar at the bottom can show their icons alone. The bars sit on solid, frosted or liquid glass, and the featured title at the top of the home page rotates, follows the card you are on, or follows it from the corner.
+The navigation and home page change to suit you, under **Settings → Interface**. On a TV, the navigation runs along the top as floating pills, a bar or a fade, or down the side as a rail, a floating rail or a button in the corner. On a computer or a tablet held sideways, the same tabs can run along the top instead, and the tabs along the top and the bar at the bottom can show their icons alone. The bars sit on solid, frosted or liquid glass, set with **Glass surface** under **Settings → Theme**, and the featured title at the top of the home page rotates, follows the card you are on, or follows it from the corner.
 
 <Gallery
   slides={[
@@ -154,11 +156,13 @@ The navigation and home page change to suit you, under **Settings → Interface*
   ]}
 />
 
-Under **Settings → Theme** you can pick a preset or your own accent and background colours, and add custom CSS. These follow you too. See [web app themes and custom CSS](/reference/web-app-css) for the parts of the app CSS can target.
+Under **Settings → Theme** you can pick a preset or your own accent and background colours, and add custom CSS. These follow you too. **Background from artwork** puts the artwork of the title you are on behind every page, blurred and darkened, until you get to another, with menus and panels in its colours; **Glass panels** puts them on glass instead. See [web app themes and custom CSS](/reference/web-app-css) for the parts of the app CSS can target.
 
 ## In a browser
 
 Press **Open in browser** under **Save & Install → AIOStreams app**. It opens on your [address with a sign-in picker](/apps/jellyfin#connecting-an-app), and signs you straight in if you are signed in on the configure page in the same browser. Opening the plain server address in a browser works too; type your UUID or alias as well there.
+
+The same app is also hosted at [web.aiostreams.org](https://web.aiostreams.org), for any server: add your configuration's media server address or a Jellyfin server's, then sign in. The server needs an `https://` address, as a browser won't reach a plain `http://` one from a secure page. Your browser can install it to open it like an app.
 
 - **On a phone**, add it to your home screen from the browser's menu and it opens like an app. The first time, you sign in again there.
 - **What plays.** The player's **WebGPU** engine decodes the file in the page and draws it with the graphics card, so HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS play, and the audio menu switches between a file's tracks.

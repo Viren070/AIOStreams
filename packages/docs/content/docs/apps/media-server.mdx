@@ -202,9 +202,7 @@ Each user with a history of its own can sync with its own tracker addons, for ex
 
 ## Different addons for the apps and Stremio
 
-Stremio and the apps read the same configuration, so an addon you add for one shows up in the other. Some addons only make sense in one of them: a metadata addon with catalogs built to be libraries, say, or one you already install in Stremio on its own. A [variant](/reference/config-expressions) keeps them apart.
-
-Keep the apps' setup in your base configuration and give Stremio a variant. The configure page always edits the base configuration, so this way you can still arrange the addon's catalogs and resources there as usual.
+Stremio and the apps read the same configuration, so an addon you add for one shows up in the other. Some addons only make sense in one of them: a metadata addon with catalogs built to be libraries, say, or one you already install in Stremio on its own. **Who gets this** keeps them apart.
 
 <Steps>
 
@@ -218,32 +216,19 @@ Add the addon, then order and enable its catalogs under **Addons → Catalogs** 
 
 <Step>
 
-### Add a variant for Stremio
+### Keep it out of Stremio
 
-In **Miscellaneous → Variants** (Advanced mode), add a variant with the id `stremio` that takes out what Stremio should not see:
-
-```
-# the addons only the apps should use
-disable presets[instanceId=8ae]
-```
-
-The editor completes instance ids after `presets[instanceId=` and names each addon. Anything else that should differ in Stremio can go in the same variant, such as `set addonName = "..."`, or `enable` an addon kept disabled in the base configuration.
-
-</Step>
-
-<Step>
-
-### Install it in Stremio
-
-On **Save & Install**, pick the `stremio` variant, then install from there. Stremio's install links end in `/v/stremio`, and the server addresses stay as they are.
+In **My Addons**, click the people button beside the addon to open **Who gets this**. Turn off **Base config**, which is what a Stremio install link without a variant gets, and leave on the users who should have it. Then save.
 
 </Step>
 
 </Steps>
 
-Two other ways to do it:
+Stremio needs nothing new: its install link stays the same. The addon's catalogs stay on the configure page while any user has it, and each catalog in **Catalogs** has the same button, for a catalog only the apps should show. If you install Stremio from a variant's link, turn that variant off instead of **Base config**.
 
-- **Per user.** Open [who gets the addon](/reference/config-expressions#who-gets-an-addon-or-catalog) from the people button beside it in **My Addons**, untick **Base config**, and leave ticked the users who should have it. Stremio then needs nothing new, and the addon's catalogs stay on the configure page while any user has it.
+**Who gets this** writes [variant](/reference/config-expressions) lines for you; [who gets an addon or catalog](/reference/config-expressions#who-gets-an-addon-or-catalog) explains them. Two other ways to do it:
+
+- **A variant of your own**, for anything else that should differ in Stremio, such as its addon name. In **Miscellaneous → Variants** (Advanced mode), add a variant with the id `stremio`, with lines such as `disable presets[instanceId=8ae]` (the editor completes instance ids and names each addon) or `set addonName = "..."`. Then pick the `stremio` variant on **Save & Install** and install Stremio from there; its install links end in `/v/stremio`.
 - **A separate configuration**, when the two setups share little. Create a second configuration for the apps and sign in to that one instead. See [variants or a parent config](/reference/config-expressions#variants-or-a-parent-config) for how the two approaches compare.
 
 ## API keys

@@ -35,14 +35,30 @@ export function StartWatching({ versions }: { versions: AppVersions }) {
       title: 'Make a configuration',
       body: 'On a public instance, free and with nothing to host, or on your own. Add your services and addons, then save it with a password.',
       action: (
-        <Link href="/getting-started/public-instances" className={linkClass}>
-          Find a public instance <FaArrowRight className="size-3" />
-        </Link>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link href="/getting-started/public-instances" className={linkClass}>
+            Find a public instance <FaArrowRight className="size-3" />
+          </Link>
+          <Link href="/configuration/setup" className={linkClass}>
+            Follow the setup guide <FaArrowRight className="size-3" />
+          </Link>
+        </div>
       ),
     },
     {
       title: 'Get the app',
-      body: 'For your computer, phone or TV, or open it in any browser. In Stremio, install it as an addon instead.',
+      body: (
+        <>
+          For your computer, phone or TV, or open it in any browser at{' '}
+          <a
+            href="https://web.aiostreams.org"
+            className="font-medium text-fd-foreground hover:underline"
+          >
+            web.aiostreams.org
+          </a>
+          . In Stremio, install it as an addon instead.
+        </>
+      ),
       action:
         ready && mine && file ? (
           <>

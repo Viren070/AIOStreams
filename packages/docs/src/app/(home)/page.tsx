@@ -20,10 +20,14 @@ import {
 } from 'react-icons/fa';
 import { SiJellyfin, SiStremio } from 'react-icons/si';
 import {
+  LuClapperboard,
   LuFilter,
+  LuGlobe,
+  LuHistory,
   LuHouse,
   LuLanguages,
   LuListMusic,
+  LuPictureInPicture,
   LuPictureInPicture2,
   LuPuzzle,
   LuSettings2,
@@ -303,6 +307,18 @@ const MORE: Array<{
     href: '/apps#playing',
   },
   {
+    icon: LuPictureInPicture,
+    title: 'Picture-in-picture',
+    body: 'Keep watching in a small window over your other apps, in a browser, on Windows and on Android.',
+    href: '/apps#playing',
+  },
+  {
+    icon: LuClapperboard,
+    title: 'Trailers on their own',
+    body: 'Rest on a title and its trailer plays, in its card, the featured title or behind its page.',
+    href: '/apps#what-it-has',
+  },
+  {
     icon: LuListMusic,
     title: 'Playlists',
     body: 'Line titles up, shuffle them, or repeat.',
@@ -337,6 +353,18 @@ const MORE: Array<{
     title: 'Jellyfin both ways',
     body: 'Infuse, Swiftfin and Kodi sign in to your configuration, and the app signs in to Jellyfin servers.',
     href: '/apps#jellyfin-servers',
+  },
+  {
+    icon: LuGlobe,
+    title: 'Nothing to install',
+    body: 'Open the app at web.aiostreams.org and sign in to your configuration or any Jellyfin server.',
+    href: 'https://web.aiostreams.org',
+  },
+  {
+    icon: LuHistory,
+    title: 'From Stremio or Nuvio',
+    body: 'Watch Import brings your watch history, Continue Watching and library along.',
+    href: 'https://watch-import.viren070.me',
   },
 ];
 

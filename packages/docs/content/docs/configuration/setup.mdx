@@ -60,6 +60,7 @@ One configuration serves all of these at once, so you can start with one and add
 
     - **It plays streams with a link**: debrid, Usenet and direct links. P2P torrents stay in Stremio, so get a service in step 2.
     - **It only sees what your configuration provides**, so it needs catalogs and metadata from an addon inside AIOStreams. Step 7 adds one.
+    - **It needs an instance with its media server on.** The ElfHosted public instance has it off, so the app can't sign in there: pick another instance in step 4. A private ElfHosted instance has it off too until you turn it on.
 
   </Tab>
   <Tab value="Other apps">
@@ -265,10 +266,13 @@ Select a public instance below and click **Open Template**. This takes you direc
   [Public Instances](/getting-started/public-instances) for a comparison.
   **Yeb's** is the recommended starting point for most users. **ElfHosted** is
   a reliable and reputable option but the public instance disables P2P, HTTP,
-  and Live stream types. If you need those, consider a
+  and Live stream types, and has the media server off, so **the AIOStreams app
+  can't be used with it**. If you need those, consider a
   [private ElfHosted instance](/getting-started/deployment#elfhosted-paid-managed)
-  (paid, no restrictions, relaxed rate limits, direct ElfHosted support, and
-  33% of your subscription goes to the developer).
+  (paid, with no restrictions, rate limits you are unlikely to hit and direct
+  ElfHosted support; ElfHosted is a project sponsor). Its media server is off
+  until you turn on **Enable media server** under **Settings → Media server**
+  in its dashboard.
 </Callout>
 
 <TemplateOpener templateUrl="https://git.tamtaro.de/complete.json" defaultChannel="nightly">
@@ -430,10 +434,71 @@ The template brings streams but no catalogs. **[AIOMetadata](https://github.com/
 
     After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** card (**Addons → Installed → Catalogs**) and save, so AIOStreams picks up the new list.
 
-    Using Stremio too? Keep AIOMetadata out of your Stremio install with a variant, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
+    Using Stremio too? Keep AIOMetadata out of your Stremio install with **Who gets this**, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
 
   </Tab>
 </Tabs>
+
+---
+
+## Step 8 (optional): Track what you watch
+
+AIOMetadata can also be your tracker in the AIOStreams app: it records what you watch to the
+watch-history services you connect, and brings what they know you watched elsewhere into
+AIOStreams' **Continue Watching** and **Next Up**. Skip this step if you don't use one. It needs
+AIOMetadata inside AIOStreams, as in the **AIOStreams app** tab of step 7.
+
+<Steps>
+  <Step>
+    In AIOMetadata's configuration, go to **Integrations** and connect the services you use.
+    Watch tracking works with Simkl, MDBList, AniList, MyAnimeList and PublicMetaDB.
+  </Step>
+  <Step>
+    Go to **General → Watch Tracking** and turn on each service your plays should be recorded
+    to. The button beside each switch picks what it records, such as films, shows or anime.
+  </Step>
+  <Step>
+    Set **When to record** to **When playback starts and stops**.
+
+    AIOMetadata marks this **Jellyfin only**, as its pages are written for its own Jellyfin
+    server. Here, read Jellyfin as AIOStreams: the AIOStreams app reports playback the way
+    Jellyfin apps do. A title you stop partway through stays a resume point instead of being
+    marked watched, and what you watched on other devices shows in Continue Watching.
+
+    As AIOMetadata warns, watching anywhere else, Stremio included, then records nothing. If you
+    mostly watch in Stremio, leave it on **When a title is opened**, which records a title as
+    watched as soon as you open it, in any app; AIOStreams then gets nothing from AIOMetadata.
+
+  </Step>
+  <Step>
+    Save AIOMetadata's configuration. Then in AIOStreams, go to **Save & Install** and click
+    **Save**, so it reads AIOMetadata's changes. **Media server → Trackers** on the same page now
+    lists AIOMetadata.
+  </Step>
+</Steps>
+
+### AIOMetadata's Jellyfin button
+
+Once its configuration is saved, AIOMetadata may show a **Jellyfin** button next to **Install**.
+It's for AIOMetadata's own Jellyfin server, which you don't need: the AIOStreams app signs in to
+AIOStreams. So leave the dialog's server address, Quick Connect, client password and stream addon
+alone.
+
+One part of it matters if several people use your AIOStreams, each with their own watch-history
+accounts: **users**. Add a user for each person, with **Same person as you** off, and connect
+their own accounts on their card. Under **Also known as (AIOStreams)**, put their name on
+AIOStreams, and the **tracker id** that **Save & Install → Media server → Users** shows for them.
+Then pick AIOMetadata as their tracker there: see
+[trackers for each user](/apps/media-server#trackers-for-each-user).
+
+No **Jellyfin** button means whoever runs that AIOMetadata instance hasn't turned its Jellyfin
+server on. Tracking still works for you, as above, but not for each person separately.
+
+<Callout type="tip">
+  Coming from Stremio or Nuvio? [Watch Import](https://watch-import.viren070.me) is a tracker
+  addon that brings your watch history, Continue Watching and library from there into
+  AIOStreams.
+</Callout>
 
 ---
 
