@@ -2,6 +2,7 @@ import { t } from '@lingui/core/macro';
 import { LuArrowDownWideNarrow, LuArrowUpNarrowWide } from 'react-icons/lu';
 import { IconButton } from '@aiostreams/ui/button';
 import { Select } from '@aiostreams/ui/select';
+import { useSearchParam } from '@/hooks/use-search-param';
 
 /* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's sort names */
 export const SORTS = {
@@ -34,6 +35,27 @@ export const sortFor = (key: SortKey): Sort => ({
   key,
   descending: key !== 'name',
 });
+
+export function useSortParam(
+  keys: SortKey[],
+  fallback: SortKey
+): [Sort, (next: Sort) => void] {
+  const [param, setParam] = useSearchParam('sort');
+  const [name, way] = (param ?? '').split('-');
+  const key = keys.find((k) => k === name) ?? fallback;
+  const sort =
+    way === 'asc' || way === 'desc'
+      ? { key, descending: way === 'desc' }
+      : sortFor(key);
+  const set = (next: Sort) => {
+    const turned = next.descending !== sortFor(next.key).descending;
+    const value = turned
+      ? `${next.key}-${next.descending ? 'desc' : 'asc'}`
+      : next.key;
+    setParam(value === fallback ? undefined : value);
+  };
+  return [sort, set];
+}
 
 export function SortPicker({
   keys,

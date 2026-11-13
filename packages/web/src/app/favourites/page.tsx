@@ -14,7 +14,7 @@ import {
   useSchedules,
 } from '@/features/live-tv/live-tv';
 import { useInView } from '@/hooks/use-in-view';
-import { navigate, to } from '@/lib/paths';
+import { useSearchParam } from '@/hooks/use-search-param';
 import { PageBody } from '@/components/shell/page';
 import { PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
@@ -25,8 +25,7 @@ import { openRandom } from '@/components/media/random-pick';
 import {
   SORTS,
   SortPicker,
-  sortFor,
-  type Sort,
+  useSortParam,
   type SortKey,
 } from '@/components/media/sort-picker';
 
@@ -64,7 +63,8 @@ export function FavouritesPage({ kind }: { kind?: string }) {
     : KINDS;
   const types = kinds.find((k) => k.value === kind)?.value ?? KINDS[0].value;
   const channels = types === CHANNELS;
-  const [sort, setSort] = React.useState<Sort>(() => sortFor('added'));
+  const [, setKind] = useSearchParam('kind');
+  const [sort, setSort] = useSortParam(FAVOURITE_SORTS, 'added');
   const pages = useItemPages('', {
     filter: 'favorite',
     types,
@@ -95,12 +95,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
             options={kinds}
             value={types}
             onChange={(next) =>
-              navigate(
-                to.favourites(next === KINDS[0].value ? undefined : next),
-                {
-                  replace: true,
-                }
-              )
+              setKind(next === KINDS[0].value ? undefined : next)
             }
           />
           {!channels && (

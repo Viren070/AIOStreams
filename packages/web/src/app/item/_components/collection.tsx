@@ -12,7 +12,7 @@ import { MediaRow } from '@/components/media/media-row';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { PosterCard } from '@/components/media/cards';
 import { ItemMenu } from '@/components/media/item-menu';
-import { KINDS, KindTabs } from '@/components/media/kind-tabs';
+import { KindTabs, useKindParam } from '@/components/media/kind-tabs';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { Section } from './section';
 
@@ -69,7 +69,7 @@ export function SubCollections({ parent }: { parent: BaseItemDto }) {
 /** A collection's members, paged like a library. */
 export function Members({ parent }: { parent: BaseItemDto }) {
   const { client } = useSession();
-  const [types, setTypes] = React.useState(KINDS[0].types);
+  const [types, setTypes] = useKindParam();
   const pages = useItemPages(parent.Id!, { types });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   // Keyed on pages: a page can be all of one kind and none of it kept here.

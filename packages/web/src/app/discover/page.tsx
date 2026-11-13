@@ -23,10 +23,10 @@ import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
 import {
   SORTS,
   SortPicker,
-  sortFor,
-  type Sort,
+  useSortParam,
   type SortKey,
 } from '@/components/media/sort-picker';
+import { useSearchParam } from '@/hooks/use-search-param';
 import { tab, tabList } from '@/lib/input';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
@@ -222,9 +222,12 @@ export function DiscoverPage({
   const genres = useGenres(viewId);
   const all = views.data?.Items ?? [];
   const view = all.find((v) => v.Id === viewId);
-  const [filter, setFilter] = React.useState<ItemFilter | undefined>();
+  const [filterParam, setFilterParam] = useSearchParam('filter');
+  const filter = FILTERS.find((f) => f.value === filterParam)?.value;
   const { stock } = useServerInfo();
-  const [sort, setSort] = React.useState<Sort>(() => sortFor('name'));
+  const [sort, setSort] = useSortParam(LIBRARY_SORTS, 'name');
+  const [sortParam] = useSearchParam('sort');
+  const kept = { filter: filterParam, sort: sortParam };
 
   const current: Kind = (KINDS.find((k) => k.kind === kind)?.kind ??
     kindOf(view) ??
@@ -275,8 +278,19 @@ export function DiscoverPage({
   // A genre carried from another catalog is dropped when this one lacks it.
   React.useEffect(() => {
     if (genre && genres.isSuccess && !genreItem)
-      navigate(to.discover(viewId, { kind }), { replace: true });
-  }, [genre, genres.isSuccess, genreItem, viewId, kind]);
+      navigate(
+        to.discover(viewId, { kind, filter: filterParam, sort: sortParam }),
+        { replace: true }
+      );
+  }, [
+    genre,
+    genres.isSuccess,
+    genreItem,
+    viewId,
+    kind,
+    filterParam,
+    sortParam,
+  ]);
 
   // Collections excepted, which a catalog with no kind rarely holds.
   const kindFor = (target: BaseItemDto | undefined): Kind =>
@@ -287,6 +301,7 @@ export function DiscoverPage({
       to.discover(id, {
         genre: genre ?? undefined,
         kind: kindOf(all.find((v) => v.Id === id)) === next ? undefined : next,
+        ...(id === viewId && kept),
       })
     );
 
@@ -367,6 +382,7 @@ export function DiscoverPage({
                 to.discover(viewId, {
                   genre: name ?? undefined,
                   kind: kindOf(view) === current ? undefined : current,
+                  ...kept,
                 })
               )
             }
@@ -376,7 +392,7 @@ export function DiscoverPage({
           name="filter"
           options={FILTERS}
           value={filter}
-          onChange={setFilter}
+          onChange={setFilterParam}
         />
         {stock && (
           <SortPicker keys={LIBRARY_SORTS} value={sort} onChange={setSort} />

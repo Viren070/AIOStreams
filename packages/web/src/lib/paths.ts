@@ -27,12 +27,14 @@ export const to = {
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',
   discover: (
     viewId?: string,
-    opts: { genre?: string; kind?: string } = {}
+    opts: { genre?: string; kind?: string; filter?: string; sort?: string } = {}
   ): string => {
     if (!viewId) return '/discover';
     const params = new URLSearchParams();
     if (opts.genre) params.set('genre', opts.genre);
     if (opts.kind) params.set('kind', opts.kind);
+    if (opts.filter) params.set('filter', opts.filter);
+    if (opts.sort) params.set('sort', opts.sort);
     const query = params.toString();
     return `/discover/${viewId}${query ? `?${query}` : ''}`;
   },

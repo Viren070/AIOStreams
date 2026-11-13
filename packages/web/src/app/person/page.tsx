@@ -1,6 +1,5 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
-import React from 'react';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
@@ -12,7 +11,7 @@ import { PageBody, PageMessage } from '@/components/shell/page';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { ExternalLinks } from '@/components/media/external-links';
 import { Overview } from '@/components/media/overview';
-import { KINDS, KindTabs } from '@/components/media/kind-tabs';
+import { KindTabs, useKindParam } from '@/components/media/kind-tabs';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
 
@@ -108,7 +107,7 @@ function Header({ person }: { person: BaseItemDto }) {
 
 function Filmography({ personId }: { personId: string }) {
   const { client } = useSession();
-  const [types, setTypes] = React.useState(KINDS[0].types);
+  const [types, setTypes] = useKindParam();
   const pages = usePersonItems(personId, types);
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const total = pages.data?.pages[0]?.TotalRecordCount;
