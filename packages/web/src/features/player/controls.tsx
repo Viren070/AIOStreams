@@ -727,7 +727,7 @@ export function PlayerControls({
             <ControlButton
               name="play"
               label={state.paused ? t`Play` : t`Pause`}
-              onClick={togglePlay}
+              onClick={() => endScrub(true) || togglePlay()}
             >
               {state.paused ? <LuPlay /> : <LuPause />}
             </ControlButton>
