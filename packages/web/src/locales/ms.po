@@ -1,14 +1,14 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-12 18:26+0000\n"
+"PO-Revision-Date: 2026-11-13 23:04+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.11.2.dev0\n"
+"X-Generator: Weblate 2026.12.dev0\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: src/features/party/in-party.tsx
@@ -102,7 +102,7 @@ msgstr "{got} daripada {size}"
 
 #: src/lib/playback/quality.ts
 msgid "{height}, {mbps} Mbps"
-msgstr ""
+msgstr "{height}, {mbps} Mbps"
 
 #: src/features/player/options.tsx
 msgid "{height}%"
@@ -367,7 +367,7 @@ msgstr "Masa tetapan sebelum penamat."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "Tetingkap kecil dengan pemain di dalamnya: sarikata, kawalan dan bar kemajuan. Pelayar menambah bar sendiri di bahagian atas."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -608,7 +608,7 @@ msgstr "Gunakan pada sarikata berstail juga"
 
 #: src/app/settings/account.tsx
 msgid "Approve"
-msgstr ""
+msgstr "Luluskan"
 
 #: src/app/sign-in/page.tsx
 msgid "Approved. Signing in…"
@@ -631,9 +631,8 @@ msgid "As the host"
 msgstr "Sebagai hos"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Ascending"
-msgstr "Menghantar…"
+msgstr "Menaik"
 
 #: src/app/settings/playback.tsx
 msgid "Ask if you are still watching"
@@ -703,9 +702,8 @@ msgid "Background"
 msgstr "Latar Belakang"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Background from artwork"
-msgstr "Latar Belakang"
+msgstr "Latar belakang daripada karya seni"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -970,7 +968,7 @@ msgstr "Tutup"
 
 #: src/app/settings/account.tsx
 msgid "Code"
-msgstr ""
+msgstr "Kod"
 
 #: src/features/party/in-party.tsx
 msgid "Code copied"
@@ -1290,7 +1288,7 @@ msgstr "Sian"
 
 #: src/components/media/sort-picker.tsx
 msgid "Date added"
-msgstr ""
+msgstr "Tarikh ditambah"
 
 #: src/app/history/page.tsx
 msgid "Date not known"
@@ -1347,9 +1345,8 @@ msgid "Delete playlist"
 msgstr "Padam senarai main"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Descending"
-msgstr "Menghantar…"
+msgstr "Menurun"
 
 #: src/app/settings/theme.tsx
 msgid "Desert"
@@ -1559,9 +1556,8 @@ msgid "Enter"
 msgstr "Enter"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Enter a code"
-msgstr "Antaramuka"
+msgstr "Masukkan kod"
 
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
@@ -1573,7 +1569,7 @@ msgstr "Masukkan alamat geganti"
 
 #: src/app/settings/account.tsx
 msgid "Enter the code the other device shows."
-msgstr ""
+msgstr "Masukkan kod yang dipaparkan oleh peranti lain."
 
 #: src/app/sign-in/page.tsx
 msgid "Enter this code under Quick Connect in an app already signed in to this server."
@@ -1820,11 +1816,11 @@ msgstr "Berikan kod ini kepada sesiapa yang menyiasat masalah ini."
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
-msgstr ""
+msgstr "Panel kaca"
 
 #: src/app/settings/theme.tsx
 msgid "Glass surface"
-msgstr ""
+msgstr "Permukaan kaca"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2010,7 +2006,7 @@ msgstr "Dalam Kegemaran"
 
 #: src/app/discover/page.tsx
 msgid "In progress"
-msgstr ""
+msgstr "Sedang berjalan"
 
 #: src/lib/playback/sound.ts src/lib/subtitles/delay.ts
 msgid "In sync"
@@ -2343,7 +2339,7 @@ msgstr "Kekunci menu"
 
 #: src/app/settings/theme.tsx
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
-msgstr ""
+msgstr "Menu, senarai, medan dan kad di atas karya seni terletak di atas permukaan kaca dan bukannya warna karya seni tersebut. Peranti yang lebih perlahan mungkin merasai beban lukisan tambahan ini."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2578,7 +2574,7 @@ msgstr "Tiada butiran untuk tajuk ini"
 
 #: src/app/settings/account.tsx
 msgid "No device is waiting with that code."
-msgstr ""
+msgstr "Tiada peranti yang menunggu dengan kod tersebut."
 
 #: src/features/downloads/download-button.tsx
 msgid "No episodes to download there"
@@ -2807,9 +2803,8 @@ msgid "on {relay}"
 msgstr "di {relay}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "Semasa sepanduk utama berputar. Apabila kursor tetikus diarahkan, kad sentiasa menonjol keluar, manakala kad di sebelahnya kekal di tempatnya."
+msgstr "Pada skrin utama semasa sepanduk utama berputar, dan dalam grid. Di dalam grid, dan di bawah tetikus, kad menonjol keluar, manakala kad di sebelahnya kekal di tempatnya."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -2966,9 +2961,8 @@ msgid "Or type one"
 msgstr "Atau taip satu"
 
 #: src/lib/playback/quality.ts
-#, fuzzy
 msgid "Original"
-msgstr "Bahasa asal"
+msgstr "Asal"
 
 #: src/app/settings/audio.tsx
 msgid "Original language"
@@ -3319,9 +3313,8 @@ msgid "Player link"
 msgstr "Pautan pemain"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Player window"
-msgstr "Main sekarang"
+msgstr "Tetingkap pemain"
 
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
@@ -3335,9 +3328,8 @@ msgid "Playing in {launchedName}"
 msgstr "Dimainkan dalam {launchedName}"
 
 #: src/app/player/page.tsx
-#, fuzzy
 msgid "Playing in picture-in-picture"
-msgstr "Tutup gambar-dalam-gambar"
+msgstr "Main dalam mod gambar-dalam-gambar"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -3466,7 +3458,7 @@ msgstr "Kod QR"
 
 #: src/app/settings/playback.tsx src/features/player/options.tsx
 msgid "Quality"
-msgstr ""
+msgstr "Kualiti"
 
 #: src/app/settings/account.tsx src/app/sign-in/page.tsx
 msgid "Quick Connect"
@@ -3585,9 +3577,8 @@ msgid "Relay address"
 msgstr "Alamat geganti"
 
 #: src/components/media/sort-picker.tsx
-#, fuzzy
 msgid "Release date"
-msgstr "Dikeluarkan"
+msgstr "Tarikh keluaran"
 
 #: src/app/item/_components/details.tsx
 msgid "Released"
@@ -3794,7 +3785,7 @@ msgstr "Berjalan pada kelajuan berbeza daripada video"
 
 #: src/components/media/sort-picker.tsx
 msgid "Runtime"
-msgstr ""
+msgstr "Tempoh tayangan"
 
 #. A season and episode number, as in S01E04
 #: src/lib/format.ts
@@ -4018,9 +4009,8 @@ msgid "Share the invite"
 msgstr "Kongsi jemputan"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
-msgstr "Mempertajam garis dan membersihkan mampatan anime semasa dimainkan, terutamanya pada rancangan lama dan beresolusi rendah. Terpakai pada tajuk yang ditandakan sebagai anime. Dengan papan kekunci, kekunci U dalam pemain menogolnya. Mengguna lebih banyak kuasa dan dimatikan secara automatik jika peranti tidak mampu menanganinya. Video HDR dan video yang hampir sebesar skrin kekal seperti biasa."
+msgstr "Menajamkan garisan dan membersihkan mampatan dalam anime semasa dimainkan, terutamanya bagi rancangan lama dan beresolusi rendah. Ciri ini digunakan pada tajuk yang ditandakan sebagai anime. Dengan papan kekunci, kekunci U dalam pemain akan menukarnya untuk video yang sedang dimainkan. Menggunakan lebih banyak kuasa, dan dimatikan secara automatik untuk video yang tidak dapat ditampung oleh peranti ini. Video HDR, dan video yang bersaiz hampir sama dengan skrin, kekal seperti sedia ada."
 
 #: src/lib/input/keys.ts
 msgid "Shift"
@@ -4102,9 +4092,8 @@ msgid "Shows"
 msgstr "Rancangan"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
-msgstr "Memaparkan gambar video di tempat anda menunjuk, menyeret atau melangkau pada bar carian. Setiap satu membaca sebahagian kecil fail, jadi matikannya untuk menjimatkan data."
+msgstr "Menunjukkan gambar video tempat anda halakan, seret atau langkau pada bar carian. Setiap gambar memuatkan sedikit data, jadi matikannya untuk menjimatkannya."
 
 #: src/app/settings/playback.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
@@ -4144,7 +4133,7 @@ msgstr "Bar sisi"
 
 #: src/app/settings/account.tsx
 msgid "Sign another device in as you, with the code it shows."
-msgstr ""
+msgstr "Log masuk peranti lain sebagai anda, menggunakan kod yang dipaparkannya."
 
 #: src/app/sign-in/page.tsx
 msgid "Sign in"
@@ -4304,7 +4293,7 @@ msgstr "Sesuatu yang tidak dapat dibaca oleh peranti ini"
 
 #: src/components/media/sort-picker.tsx
 msgid "Sort by"
-msgstr ""
+msgstr "Isih mengikut"
 
 #: src/app/settings/audio.tsx src/app/settings/interface.tsx
 #: src/features/player/options.tsx
@@ -4701,11 +4690,11 @@ msgstr "Pemain aplikasi dan pilihannya, seperti memulakan video dalam mod melint
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
-msgstr ""
+msgstr "Karya seni tajuk yang anda tonton, dikaburkan dan di gelapkannya, di belakang halaman dan senarai versi."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
-msgstr ""
+msgstr "Peranti telah log masuk"
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
@@ -4746,7 +4735,7 @@ msgstr "Pemain mini memastikan video terus dimainkan melintasi halaman semasa an
 
 #: src/app/settings/playback.tsx
 msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
-msgstr ""
+msgstr "Kadar bit penstriman maksimum untuk sesuatu versi. Melebihi had ini, pelayan akan mengecilkannya, yang membantu sambungan perlahan. Asal memainkan setiap versi seperti sedia ada. Menu kualiti pemain sendiri turut mengubah tetapan ini."
 
 #: src/app/settings/apps.tsx
 msgid "The movie or show whose page is open."
@@ -4814,9 +4803,8 @@ msgstr "Sama seperti episod yang ditandakan sebagai imbas kembali."
 
 #. Follows "Playback failed:"
 #: src/lib/playback/transcoding.ts
-#, fuzzy
 msgid "the server could not convert this version"
-msgstr "pemain tidak dapat memainkan versi ini"
+msgstr "Pelayan tidak dapat menukar versi ini"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
@@ -4825,9 +4813,8 @@ msgstr "penstriman tamat lebih awal"
 
 #. Follows "Playback failed:"
 #: src/lib/playback/video.ts
-#, fuzzy
 msgid "the stream stopped loading"
-msgstr "Siaran langsung terhenti"
+msgstr "strim berhenti dimuatkan"
 
 #: src/app/settings/apps.tsx
 msgid "The title, the episode and the time left."
@@ -4916,7 +4903,7 @@ msgstr "Pemain pelayar ini sendiri, yang memainkan format yang disokong oleh pel
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
-msgstr ""
+msgstr "Tetingkap pelayar ini sendiri untuk video sahaja, tanpa bar tersebut, tetapi tanpa sari kata dan hanya butang main dan jeda pelayar."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -4963,9 +4950,8 @@ msgid "This server can't list what you've watched."
 msgstr "Pelayan ini tidak dapat menyenaraikan apa yang telah anda tonton."
 
 #: src/app/settings/_components/common.tsx
-#, fuzzy
 msgid "This server doesn't let your account change these."
-msgstr "Pelayan ini tidak dapat menyenaraikan apa yang telah anda tonton."
+msgstr "Pelayan ini tidak membenarkan akaun anda menukar tetapan ini."
 
 #: src/app/item/_components/no-details.tsx
 msgid "This server has no details for {id}."
@@ -5045,9 +5031,8 @@ msgid "Title pages"
 msgstr "Halaman tajuk"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Titles, synopses and version names stay in the language the server sends."
-msgstr "Tajuk, sinopsis dan nama penstriman kekal dalam bahasa yang dihantar oleh addon anda."
+msgstr "Tajuk, sinopsis dan nama versi kekal dalam bahasa yang dihantar oleh pelayan."
 
 #: src/app/calendar/page.tsx src/app/live-tv/page.tsx
 msgid "Today"
