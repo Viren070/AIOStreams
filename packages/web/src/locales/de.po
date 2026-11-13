@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 15:25+0000\n"
+"PO-Revision-Date: 2026-11-13 21:55+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -367,7 +367,7 @@ msgstr "Fester Zeitpunkt vor dem Ende."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "Ein kleines Fenster mit integriertem Player samt Untertiteln, Steuerung und Zeitleiste. Der Browser fügt oben eine eigene Leiste hinzu."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
@@ -3294,9 +3294,8 @@ msgid "Player link"
 msgstr "Player-Link"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Player window"
-msgstr "Jetzt abspielen"
+msgstr "Player-Fenster"
 
 #: src/app/history/_components/sessions.tsx
 #: src/app/item/_components/trailer.tsx src/features/party/in-party.tsx
@@ -3310,9 +3309,8 @@ msgid "Playing in {launchedName}"
 msgstr "Wiedergabe in {launchedName}"
 
 #: src/app/player/page.tsx
-#, fuzzy
 msgid "Playing in picture-in-picture"
-msgstr "Bild-in-Bild beenden"
+msgstr "Wiedergabe im Bild-in-Bild-Modus"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Playing in your player"
@@ -4882,7 +4880,7 @@ msgstr "Der browser-eigene Player, der die vom Browser unterstützten Formate ab
 
 #: src/app/settings/playback.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
-msgstr ""
+msgstr "Das browser-eigene Videofenster ohne die obere Leiste, aber auch ohne Untertitel und nur mit den Wiedergabe-/Pause-Schaltflächen des Browsers."
 
 #: src/app/sign-in/page.tsx
 msgid "This code has expired."
@@ -5299,9 +5297,8 @@ msgid "Video"
 msgstr "Video"
 
 #: src/app/settings/playback.tsx
-#, fuzzy
 msgid "Video only"
-msgstr "Video"
+msgstr "Nur Video"
 
 #: src/app/settings/apps.tsx
 msgid "Video output"
