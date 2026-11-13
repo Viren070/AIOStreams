@@ -992,6 +992,12 @@ function withShowWatchedAt(
   };
 }
 
+function availableAt(item: JellyfinItem, row: WatchStateRow): number {
+  const aired =
+    typeof item.PremiereDate === 'string' ? Date.parse(item.PremiereDate) : 0;
+  return Math.max(row.sortAt, Math.min(aired || 0, Date.now()));
+}
+
 /** How many of the most recently watched shows Next Up looks through. */
 const NEXT_UP_SHOWS = 200;
 
@@ -1042,13 +1048,26 @@ router.get(
         // A part-played anchor can still come back to resume.
         if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
           return null;
-        return nextUpForSeries(ctx, d, row, { includeResumable }).then(
-          (item) => item && withShowWatchedAt(item, row),
-          () => null
+        const item = await nextUpForSeries(ctx, d, row, {
+          includeResumable,
+        }).catch(() => null);
+        return (
+          item && {
+            item: withShowWatchedAt(item, row),
+            at: availableAt(item, row),
+          }
         );
       };
+      const found: NonNullable<Awaited<ReturnType<typeof check>>>[] = [];
+      const take = (next: Awaited<ReturnType<typeof check>>) => {
+        if (!next || (next.item.UserData as { Played: boolean }).Played) return;
+        const series = String(next.item.SeriesId ?? next.item.Id);
+        if (shown.has(series)) return;
+        shown.add(series);
+        found.push(next);
+      };
       // A new check starts as each one ends, and answers are taken in the shows' order.
-      const running: Promise<JellyfinItem | null>[] = [];
+      const running: ReturnType<typeof check>[] = [];
       let started = 0;
       const fill = async () => {
         while (running.length < ROW_CONCURRENCY && started < NEXT_UP_SHOWS) {
@@ -1059,15 +1078,15 @@ router.get(
         }
       };
       await fill();
-      while (running.length && items.length < limit) {
+      while (running.length && found.length < limit) {
         const next = await running.shift()!;
         await fill();
-        if (!next || (next.UserData as { Played: boolean }).Played) continue;
-        const series = String(next.SeriesId ?? next.Id);
-        if (shown.has(series)) continue;
-        shown.add(series);
-        items.push(next);
+        take(next);
       }
+      // Checks already started cost nothing more, and may find an episode out since.
+      for (const next of await Promise.all(running)) take(next);
+      found.sort((a, b) => b.at - a.at);
+      items.push(...found.slice(0, limit).map((f) => f.item));
     }
     send(req, res, items, items.length, 0);
   })
