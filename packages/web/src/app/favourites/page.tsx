@@ -89,7 +89,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
         <h1 data-ui="page-title" className="text-3xl font-bold">
           <Trans>Favourites</Trans>
         </h1>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <PillTabs
             name="kind"
             options={kinds}
@@ -110,7 +110,7 @@ export function FavouritesPage({ kind }: { kind?: string }) {
               data-ui="random-pick"
               size="sm"
               intent="gray-subtle"
-              className="rounded-full"
+              className="ms-auto rounded-full"
               leftIcon={<BiShuffle />}
               onClick={() => openRandom({ kind: 'favourite', types })}
             >
