@@ -79,6 +79,23 @@ export class XtreamPreset extends Preset {
         type: 'password',
         required: true,
       },
+      {
+        id: 'format',
+        name: 'Stream Format',
+        description:
+          'Which formats channels are offered in. HLS suits most players, MPEG-TS suits players that cannot play HLS well. A format your account does not allow is skipped.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'default',
+        options: [
+          { label: 'Instance default', value: 'default' },
+          { label: 'HLS first, then MPEG-TS', value: 'hls-first' },
+          { label: 'MPEG-TS first, then HLS', value: 'ts-first' },
+          { label: 'HLS only', value: 'hls' },
+          { label: 'MPEG-TS only', value: 'ts' },
+        ],
+      },
       ...(
         [
           [
@@ -162,6 +179,8 @@ export class XtreamPreset extends Preset {
         server: options.server,
         username: options.username,
         password: options.password,
+        ...(options.format &&
+          options.format !== 'default' && { format: options.format }),
         ...Object.fromEntries(
           FILTER_OPTIONS.map((id) => [id, this.splitList(options[id])])
         ),

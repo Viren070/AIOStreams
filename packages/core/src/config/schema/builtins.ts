@@ -1336,6 +1336,16 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    format: {
+      schema: z.enum(['hls-first', 'ts-first', 'hls', 'ts']),
+      default: 'hls-first',
+      label: 'Xtream stream format',
+      env: 'BUILTIN_XTREAM_FORMAT',
+      description:
+        "Which formats Xtream channels are offered in: `hls-first` or `ts-first` offer both with that one first, `hls` or `ts` offer only that one. A format the account does not allow is skipped, and if none is left the account's own formats are used. Used by Xtream addons that do not set their own.",
+      requiresRestart: false,
+      secret: false,
+    },
     lineupMemory: {
       schema: byteSize,
       default: 256 * MB,

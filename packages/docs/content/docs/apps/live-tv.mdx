@@ -50,6 +50,16 @@ Whoever runs the instance can set defaults for addons that leave an option empty
 
 Channels you hide can't be played either, as they're no longer in the list.
 
+### Choosing the stream format
+
+Xtream servers offer a channel as HLS, as MPEG-TS, or both. The **Stream Format** option sets which are offered and in what order:
+
+- **HLS first, then MPEG-TS** (the default) suits most players.
+- **MPEG-TS first, then HLS** or **MPEG-TS only** is for players that handle HLS badly, which some providers' HLS is.
+- **HLS only** is for players that cannot play MPEG-TS, such as a browser.
+
+A format your account doesn't allow is skipped, and if that leaves none, the account's own formats are used, so a channel always has a stream. The instance default comes from `BUILTIN_XTREAM_FORMAT`, one of `hls-first`, `ts-first`, `hls` or `ts`.
+
 ## Finding a channel
 
 - **Groups** run along the top: **Favourites** and **Recent** first, then **All channels** and the groups your addons send. With many groups, a button opens them in a list you can search.

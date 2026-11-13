@@ -4,6 +4,11 @@ import { config as appConfig } from '../../config/index.js';
 import { getSimpleTextHash } from '../../utils/index.js';
 import { XtreamClient } from './api.js';
 import {
+  type XtreamFormat,
+  XtreamFormatSchema,
+  orderFormats,
+} from './format.js';
+import {
   type XtreamFilter,
   XtreamFilterSchema,
   resolveFilter,
@@ -34,6 +39,7 @@ export const XtreamConfigSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
   ...XtreamFilterSchema.shape,
+  format: XtreamFormatSchema.optional(),
 });
 export type XtreamConfig = z.infer<typeof XtreamConfigSchema>;
 
@@ -79,11 +85,13 @@ export class XtreamAddon {
   /** Per account, so two logins in one config keep their channels apart. */
   private readonly prefix: string;
   private readonly filter: XtreamFilter;
+  private readonly format: XtreamFormat;
 
   constructor(config: unknown) {
     const login = XtreamConfigSchema.parse(config);
     this.client = new XtreamClient(login);
     this.filter = resolveFilter(login);
+    this.format = login.format ?? appConfig.builtins.xtream.format;
     this.prefix = `xtream.${getSimpleTextHash(login.username).slice(0, 8)}:`;
   }
 
@@ -207,15 +215,16 @@ export class XtreamAddon {
       // Without an archive, a programme on now plays live.
       if (ref.end <= now) return [];
     }
-    const formats = lineup.formats.length ? lineup.formats : ['m3u8', 'ts'];
-    return [...formats]
-      .sort((a, b) => (a === 'm3u8' ? -1 : b === 'm3u8' ? 1 : 0))
-      .map((format) => ({
-        url: this.client.liveUrl(ref.streamId, format),
-        name: 'Xtream',
-        description: format === 'm3u8' ? 'HLS' : 'MPEG-TS',
-        ...(format === 'ts' && { behaviorHints: { notWebReady: true } }),
-      }));
+    const formats = orderFormats(
+      lineup.formats.length ? lineup.formats : ['m3u8', 'ts'],
+      this.format
+    );
+    return formats.map((format) => ({
+      url: this.client.liveUrl(ref.streamId, format),
+      name: 'Xtream',
+      description: format === 'm3u8' ? 'HLS' : 'MPEG-TS',
+      ...(format === 'ts' && { behaviorHints: { notWebReady: true } }),
+    }));
   }
 
   /** `<prefix><stream id>` for a channel, `:<start>:<end>` after it for a programme. */
