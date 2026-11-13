@@ -25,6 +25,9 @@ finish-args:
   - --share=network
   # Includes NVIDIA's device nodes, for CUDA decoding.
   - --device=dri
+  # Game controllers. Adding --device-if=all:!has-input-device grants every device
+  # on Flatpak before 1.19.
+  - --device=input
   # The media widget and media keys.
   - --own-name=org.mpris.MediaPlayer2.aiostreams
   # Discord's socket, for showing what plays on the user's profile.
