@@ -27,17 +27,62 @@ const IMDBSuggestionSchema = z.object({
   v: z.number(),
 });
 
+export interface IMDBSearchResult {
+  id: string;
+  title: string;
+  year?: number;
+  /** IMDb title type, e.g. 'movie', 'tvSeries', 'tvMiniSeries' */
+  kind?: string;
+  poster?: string;
+}
+
 export class IMDBMetadata {
   private readonly titleCache: Cache<string, Metadata>;
   private readonly cinemetaCache: Cache<string, Meta>;
+  private readonly searchCache: Cache<string, IMDBSearchResult[]>;
   private readonly titleCacheTTL = 7 * 24 * 60 * 60;
   private readonly cinemetaCacheTTL = 7 * 24 * 60 * 60;
+  private readonly searchCacheTTL = 7 * 24 * 60 * 60;
   private readonly IMDB_SUGGESTION_API =
     'https://v3.sg.media-imdb.com/suggestion/a/';
   private readonly CINEMETA_URL = 'https://v3-cinemeta.strem.io';
   public constructor() {
     this.titleCache = Cache.getInstance('imdb-title');
     this.cinemetaCache = Cache.getInstance('cinemeta');
+    this.searchCache = Cache.getInstance('imdb-search');
+  }
+
+  /**
+   * Search IMDb titles by free text using the suggestion API.
+   * Only title results (tt ids) are returned; people and other entities are dropped.
+   */
+  public async searchTitles(query: string): Promise<IMDBSearchResult[]> {
+    const normalisedQuery = query.trim().toLowerCase();
+    if (!normalisedQuery) return [];
+    return this.searchCache.wrap(
+      async () => {
+        const firstChar = normalisedQuery.match(/[a-z0-9]/)?.[0] ?? 'x';
+        const url = `https://v3.sg.media-imdb.com/suggestion/${firstChar}/${encodeURIComponent(normalisedQuery)}.json`;
+        const response = await makeRequest(url, {
+          timeout: 5000,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = IMDBSuggestionSchema.parse(await response.json());
+        return data.d
+          .filter((item) => item.id.startsWith('tt'))
+          .map((item) => ({
+            id: item.id,
+            title: item.l,
+            year: item.y,
+            kind: item.qid,
+            poster: item.i?.imageUrl,
+          }));
+      },
+      normalisedQuery,
+      this.searchCacheTTL
+    );
   }
 
   public async getTitleAndYear(id: string, type: string): Promise<Metadata> {
