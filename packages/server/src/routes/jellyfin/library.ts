@@ -372,6 +372,14 @@ export function send(
   res.json(listResult(out, wantsTotal(req) ? total : out.length, startIndex));
 }
 
+function untilClosed(res: Response): AbortSignal {
+  const controller = new AbortController();
+  res.on('close', () => {
+    if (!res.writableFinished) controller.abort();
+  });
+  return controller.signal;
+}
+
 /** Rows in flight while building a shelf; each one costs a meta lookup. */
 export const ROW_CONCURRENCY = 6;
 
@@ -593,6 +601,7 @@ async function handleItems(
         select: pageFilter(req, ctx, types, { parentId }),
         kinds: searchKindsFor(types),
         collectionsOnly: isBoxsetOnly(types),
+        signal: untilClosed(res),
       });
       const items = await itemsFromPreviews(ctx, page.items, { parentId });
       send(req, res, applySort(req, items), page.total, startIndex);
@@ -776,6 +785,7 @@ async function handleItems(
       exactTotal: isKodi(ctx) && wantsTotal(req),
       cursorKey: `${ctx.scope()}|${filterShape(req, types)}`,
       select: pageFilter(req, ctx, types, { parentId, catalog }),
+      signal: untilClosed(res),
     });
     const items = await itemsFromPreviews(ctx, page.items, {
       parentId,
