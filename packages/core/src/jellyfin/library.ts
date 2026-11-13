@@ -81,6 +81,10 @@ export interface CatalogPageOptions {
   cursorKey?: string;
   /** Entry keys to skip as if the catalog never held them. */
   exclude?: ReadonlySet<string>;
+  /** Ends the walk between pages, with what it has read. */
+  signal?: AbortSignal;
+  /** See {@link limitedCatalog}. */
+  background?: boolean;
 }
 
 /** A page boundary the walk passed through. */
@@ -114,31 +118,54 @@ const WALK_CONCURRENCY = 4;
 const SEARCH_CONCURRENCY = 4;
 
 const MAX_LIBRARIES = 500;
+const BACKGROUND_CONCURRENCY = 2;
+
+interface CatalogLanes {
+  reads: LimitFunction;
+  background: LimitFunction;
+  /** Background reads waiting for `reads` to empty. */
+  waiting: (() => void)[];
+}
+
 /** Per configuration, so the rows of one home screen can't flood its addons. */
-const catalogLimits = new Map<string, LimitFunction>();
+const catalogLanes = new Map<string, CatalogLanes>();
 
 export const libraryLimit = () =>
   Math.min(appConfig.jellyfin.maxLibraries || MAX_LIBRARIES, MAX_LIBRARIES);
 
+const busy = (limit: LimitFunction) =>
+  limit.activeCount > 0 || limit.pendingCount > 0;
+
+/** A background read starts only while no other read of the configuration is under way. */
 export function limitedCatalog<T>(
   uuid: string,
-  request: () => Promise<T>
+  request: () => Promise<T>,
+  background = false
 ): Promise<T> {
-  let limit = catalogLimits.get(uuid);
-  if (!limit) {
-    limit = pLimit(appConfig.jellyfin.catalogConcurrency);
-    catalogLimits.set(uuid, limit);
+  let lanes = catalogLanes.get(uuid);
+  if (!lanes) {
+    lanes = {
+      reads: pLimit(appConfig.jellyfin.catalogConcurrency),
+      background: pLimit(BACKGROUND_CONCURRENCY),
+      waiting: [],
+    };
+    catalogLanes.set(uuid, lanes);
   }
-  const own = limit;
+  const own = lanes;
+  const run = background
+    ? own.background(async () => {
+        while (busy(own.reads))
+          await new Promise<void>((wake) => own.waiting.push(wake));
+        return request();
+      })
+    : own.reads(request);
   // p-limit frees the slot just after the request settles.
-  return own(request).finally(() =>
+  return run.finally(() =>
     setTimeout(() => {
-      if (
-        !own.activeCount &&
-        !own.pendingCount &&
-        catalogLimits.get(uuid) === own
-      )
-        catalogLimits.delete(uuid);
+      if (busy(own.reads)) return;
+      for (const wake of own.waiting.splice(0)) wake();
+      if (!busy(own.background) && catalogLanes.get(uuid) === own)
+        catalogLanes.delete(uuid);
     })
   );
 }
@@ -263,8 +290,10 @@ export async function getCatalogPage(
       similar: opts.similar,
       skip: pageSkip,
     });
-    const res = await limitedCatalog(engine.getUserData().uuid ?? '', () =>
-      engine.getCatalog(catalog.type, catalog.id, extras)
+    const res = await limitedCatalog(
+      engine.getUserData().uuid ?? '',
+      () => engine.getCatalog(catalog.type, catalog.id, extras),
+      opts.background
     );
     if (res.errors?.length) {
       logger.debug(
@@ -281,6 +310,7 @@ export async function getCatalogPage(
   };
 
   while (!exhausted && guard < 60) {
+    if (opts.signal?.aborted) break;
     if (!opts.exactTotal && offset >= wantEnd) break;
     if (read >= cap) {
       capped = true;
@@ -368,7 +398,7 @@ export async function collectionMembers(
   meta: Pick<Meta, 'collection'>,
   opts: Pick<
     CatalogPageOptions,
-    'startIndex' | 'limit' | 'exactTotal' | 'select' | 'cursorKey'
+    'startIndex' | 'limit' | 'exactTotal' | 'select' | 'cursorKey' | 'signal'
   > & {
     /** A source known to hold none of these is passed over unread. */
     kinds?: ContentKind[];
@@ -391,6 +421,7 @@ export async function collectionMembers(
   let offset = kept.length;
   const walked = new Set<string>();
   for (const source of meta.collection?.sources ?? []) {
+    if (opts.signal?.aborted) break;
     if (!opts.exactTotal && offset >= want)
       return {
         items: out,
@@ -403,9 +434,12 @@ export async function collectionMembers(
     const sourceKey = `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
     if (!catalog || walked.has(sourceKey)) continue;
     walked.add(sourceKey);
-    if (opts.kinds || opts.collectionsOnly) {
+    const narrowed =
+      !!opts.kinds &&
+      !(opts.kinds.includes('movie') && opts.kinds.includes('series'));
+    if (narrowed || opts.collectionsOnly) {
       const held = await catalogKinds(engine, catalog);
-      if (opts.kinds && held && !held.some((k) => opts.kinds!.includes(k)))
+      if (narrowed && held && !held.some((k) => opts.kinds!.includes(k)))
         continue;
       if (
         opts.collectionsOnly &&
@@ -422,6 +456,7 @@ export async function collectionMembers(
       select: opts.select,
       cursorKey: opts.cursorKey,
       exclude: seen,
+      signal: opts.signal,
     }).catch(() => null);
     if (!page) continue;
     out.push(...page.items);
@@ -514,13 +549,15 @@ async function sniffEntryTypes(
   engine: AIOStreams,
   userData: UserData,
   key: string,
-  catalog: Catalog
+  catalog: Catalog,
+  background = false
 ): Promise<void> {
   try {
     const page = await getCatalogPage(engine, catalog, {
       startIndex: 0,
       limit: 20,
       singlePage: true,
+      background,
     });
     const types = [
       ...new Set(
@@ -566,7 +603,7 @@ function scheduleSniff(
   const worker = async () => {
     while (cursor < todo.length) {
       const { key, catalog } = todo[cursor++];
-      await sniffEntryTypes(engine, userData, key, catalog);
+      await sniffEntryTypes(engine, userData, key, catalog, true);
       sniffing.delete(key);
     }
   };
