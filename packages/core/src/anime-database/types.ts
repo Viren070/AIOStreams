@@ -190,6 +190,8 @@ export interface AnimeEntryMappings {
 
 /** Public anime entry returned by {@link AnimeDatabase.getEntryById}. */
 export interface AnimeEntry {
+  /** Distinct titles of other anime parts sharing an external show ID. */
+  siblingTitles?: string[];
   mappings?: AnimeEntryMappings;
   type: AnimeType;
   imdb?: {

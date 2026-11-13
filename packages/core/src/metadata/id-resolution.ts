@@ -18,10 +18,18 @@ export function resolveCrossProviderIds(
   animeEntry: AnimeEntry | null,
   mediaType: 'movie' | 'series'
 ): ResolvedIds {
+  // A separate IMDb series can number an OVA as S01 while anime datasets
+  // attach it to the parent show's specials. Resolve that provider through
+  // the requested IMDb identity instead of inheriting the parent show ID.
+  const imdbSeasonRequest =
+    mediaType === 'series' &&
+    parsedId.type === 'imdbId' &&
+    Number(parsedId.season) > 0;
   let tmdbId =
     parsedId.type === 'themoviedbId'
       ? Number(parsedId.value)
-      : animeEntry?.mappings?.themoviedbId
+      : animeEntry?.mappings?.themoviedbId &&
+          !(imdbSeasonRequest && animeEntry.tmdb?.seasonNumber === 0)
         ? Number(animeEntry.mappings.themoviedbId)
         : undefined;
   let imdbId =
@@ -31,7 +39,9 @@ export function resolveCrossProviderIds(
   let tvdbId =
     parsedId.type === 'thetvdbId'
       ? Number(parsedId.value)
-      : animeEntry?.mappings?.thetvdbId && mediaType === 'series'
+      : animeEntry?.mappings?.thetvdbId &&
+          mediaType === 'series' &&
+          !(imdbSeasonRequest && animeEntry.tvdb?.seasonNumber === 0)
         ? Number(animeEntry.mappings.thetvdbId)
         : undefined;
 
@@ -54,4 +64,27 @@ export function resolveCrossProviderIds(
   }
 
   return { imdbId, tmdbId, tvdbId };
+}
+
+/** Episode hints belong to their mapped provider record, never another record. */
+export function scopeAnimeEpisodeMappings(
+  entry: AnimeEntry | null,
+  ids: { tmdbId?: number | null; tvdbId?: number | null }
+): AnimeEntry | null {
+  if (!entry) return null;
+  const differentTmdb =
+    ids.tmdbId != null &&
+    entry.mappings?.themoviedbId != null &&
+    Number(entry.mappings.themoviedbId) !== Number(ids.tmdbId);
+  const differentTvdb =
+    ids.tvdbId != null &&
+    entry.mappings?.thetvdbId != null &&
+    Number(entry.mappings.thetvdbId) !== Number(ids.tvdbId);
+  if (!differentTmdb && !differentTvdb) return entry;
+  return {
+    ...entry,
+    tmdb: differentTmdb ? { seasonNumber: null, seasonId: null } : entry.tmdb,
+    tvdb: differentTvdb ? { seasonNumber: null, seasonId: null } : entry.tvdb,
+    episodeMappings: differentTvdb ? undefined : entry.episodeMappings,
+  };
 }
