@@ -123,7 +123,13 @@ export function watchedAt(item: BaseItemDto): number {
   return (at && Date.parse(at)) || 0;
 }
 
-/** Most recently watched first; next episodes without times stay after resume points. */
+export function upNextAt(item: BaseItemDto): number {
+  const watched = watchedAt(item);
+  const aired = Date.parse(item.PremiereDate ?? '') || 0;
+  return watched && Math.max(watched, Math.min(aired, Date.now()));
+}
+
+/** Most recently watched or aired first; next episodes without times stay after resume points. */
 export function mergeRows(
   resume: BaseItemDto[] | null | undefined,
   nextUp: BaseItemDto[] | null | undefined
@@ -136,7 +142,7 @@ export function mergeRows(
       keys.forEach((k) => seen.add(k));
       return true;
     })
-    .sort((a, b) => watchedAt(b) - watchedAt(a));
+    .sort((a, b) => upNextAt(b) - upNextAt(a));
 }
 
 export type ItemFilter = 'unplayed' | 'played' | 'favorite' | 'resumable';
