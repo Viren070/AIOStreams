@@ -20,6 +20,11 @@ const VERBS: Completion[] = [
     type: 'keyword',
     detail: 'insert [n] [before|after] <path> = <value>',
   },
+  {
+    label: 'move',
+    type: 'keyword',
+    detail: 'move <path> [n] before|after [<position or selector>]',
+  },
   { label: 'remove', type: 'keyword', detail: 'remove <path> [<value>, ...]' },
   { label: 'enable', type: 'keyword', detail: 'enable <path>' },
   { label: 'disable', type: 'keyword', detail: 'disable <path>' },
@@ -33,13 +38,21 @@ const VERBS: Completion[] = [
 
 /** A config root may only appear as the first token after a verb. */
 const ROOT_POSITION =
-  /^\s*(set|merge|unset|clear|add|prepend|remove|enable|disable|insert(\s+\d+\s+(before|after)|\s+(before|after))?)\s+\w*$/;
+  /^\s*(set|merge|unset|clear|add|prepend|remove|enable|disable|move|insert(\s+\d+\s+(before|after)|\s+(before|after))?)\s+\w*$/;
 
 /** `insert` may be followed by a placement keyword, or go straight to a root. */
 const PLACEMENT_POSITION = /^\s*insert\s+\w*$/;
 
 /** A count has to say which way it counts, so only placements follow it. */
 const COUNTED_PLACEMENT_POSITION = /^\s*insert\s+\d+\s+\w*$/;
+
+/** A move path ends in an index or selector, then takes a placement. */
+const MOVE_PLACEMENT_POSITION =
+  /^\s*move\s+[\w.]+(\[[^\]]*\][\w.]*)*\[[^\]]*\]\s+(\d+\s+)?\w*$/;
+
+/** A move anchor, completed as a selector on the moved path's root. */
+const MOVE_ANCHOR =
+  /^\s*move\s+(\w+)(?:\[[^\]]*\])+\s+(?:\d+\s+)?(?:before|after)\s+(\[[^\]]*)$/;
 
 const PLACEMENTS: Completion[] = [
   {
@@ -78,6 +91,8 @@ export function celCompletion({
       (context: CompletionContext): CompletionResult | null => {
         const line = context.state.doc.lineAt(context.pos);
         const before = context.state.sliceDoc(line.from, context.pos);
+        const anchor = MOVE_ANCHOR.exec(before);
+        const selector = anchor ? anchor[1] + anchor[2] : before;
 
         const savedFormatter = /use\s+formatter\s+"?([\w\s-]*)$/.exec(before);
         if (savedFormatter) {
@@ -111,7 +126,7 @@ export function celCompletion({
         }
 
         const presetRef = /presets\[instanceId\s*!?\*?=\s*"?([\w-]*)$/.exec(
-          before
+          selector
         );
         if (presetRef) {
           return {
@@ -126,7 +141,9 @@ export function celCompletion({
           };
         }
 
-        const presetType = /presets\[type\s*!?\*?=\s*"?([\w-]*)$/.exec(before);
+        const presetType = /presets\[type\s*!?\*?=\s*"?([\w-]*)$/.exec(
+          selector
+        );
         if (presetType) {
           const types = [
             ...new Set((userData.presets ?? []).map((p) => p.type)),
@@ -142,7 +159,7 @@ export function celCompletion({
           };
         }
 
-        const serviceRef = /services\[id\s*!?\*?=\s*"?([\w-]*)$/.exec(before);
+        const serviceRef = /services\[id\s*!?\*?=\s*"?([\w-]*)$/.exec(selector);
         if (serviceRef) {
           return {
             from: context.pos - serviceRef[1].length,
@@ -163,7 +180,10 @@ export function celCompletion({
         if (/^\s*\w*$/.test(before)) {
           return { from: word.from, options: VERBS, validFor: /^\w*$/ };
         }
-        if (COUNTED_PLACEMENT_POSITION.test(before)) {
+        if (
+          COUNTED_PLACEMENT_POSITION.test(before) ||
+          MOVE_PLACEMENT_POSITION.test(before)
+        ) {
           return { from: word.from, options: PLACEMENTS, validFor: /^\w*$/ };
         }
         if (PLACEMENT_POSITION.test(before)) {

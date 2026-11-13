@@ -193,7 +193,7 @@ Several variants can apply to one request: every one you selected, and every one
 1. Variants whose **condition matched**, in the order they are listed in **Miscellaneous → Variants**.
 2. Variants **named in the URL**, left to right.
 
-Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove` and `insert` build on it. Prefer those in a variant meant to combine with others.
+Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove`, `insert` and `move` build on it. Prefer those in a variant meant to combine with others.
 
 | Request                                       | Applies                                   |
 | --------------------------------------------- | ----------------------------------------- |
@@ -260,6 +260,8 @@ merge deduplicator = {
 | `insert <path> = <value>, ...`      | Insert at the position the path names. The value lands there and the rest shift down.                  |
 | `insert after <path> = <value>`     | The same, placed just past the addressed entry. `insert before` spells out the default.                |
 | `insert <n> after <path> = <value>` | `n` places from the addressed entry: `2 after` leaves one entry in between. `before` counts backwards. |
+| `move <path> before <anchor>`       | Move the entries the path selects next to the anchor, a position or selector in the same list.         |
+| `move <path> <n> after <anchor>`    | `after` lands past the anchor. A count works as it does for `insert`.                                  |
 | `remove <path> <value>, ...`        | Remove matching values from a list.                                                                    |
 | `remove <path>`                     | With no values, the path itself selects the elements to remove.                                        |
 | `enable <path>` / `disable <path>`  | Shorthand for `set <path>.enabled = true` / `false`.                                                   |
@@ -404,16 +406,31 @@ insert excludedKeywords[0] = "cam"          # the front, where prepend puts it
 insert after excludedKeywords[-1] = "cam"   # the end, where add puts it
 ```
 
-Several values at once keep their order. Unlike `add`, nothing is skipped for being already present, which is what makes moving an entry work:
-
-```
-unset excludedKeywords[="cam"]
-insert excludedKeywords[0] = "cam"
-```
+Several values at once keep their order. Unlike `add`, nothing is skipped for being already present. To reorder entries the list already has, use [`move`](#moving-entries).
 
 <Callout type="info">
 An insert names one place per list. A path that reaches several lists, such as `presets[*].options.<list>`, writes one value into each of them, the way `add` does. Within a list, a selector that matches several entries uses the first and says so in the editor preview. A position that falls outside a list is skipped rather than clamped, and a trailing `[*]` is rejected.
 </Callout>
+
+---
+
+## Moving entries
+
+`move` reorders a list without writing its entries out. That matters most for services, addons and catalogs, whose entries carry all their options: a copy pasted into a script would include your API keys and go stale the next time you change them. The path picks the entries, and `before` or `after` an anchor says where they go:
+
+```
+move services[id=torbox] before [0]
+move presets[type=comet] before [0]
+move catalogModifications[id*="anime"] after [id="8ae1a2b.top"][type=movie]
+move sortCriteria[*][key=resolution] before [key=cached]
+```
+
+The anchor is a position or selectors, like the last part of a path, and it always means an entry of the same list. It is read once the moving entries are out of the list, so `before [0]` is the front and `after [-1]` the end wherever they started.
+
+- **Several entries move together**, in the order they already had. The second example gathers every anime catalog after that one.
+- **A count works as it does for `insert`.** `move presets[type=comet] 2 after [type=torrentio]` leaves one addon in between.
+- **`[*]` earlier in the path moves within each list it reaches.** The third example puts resolution above cache status in every sort list that has both, and leaves the others alone.
+- **An anchor that matches several entries uses the first**, and the editor preview says so. A move whose path or anchor matches nothing is skipped.
 
 ---
 
@@ -494,10 +511,10 @@ set sortCriteria.global = [
 ]
 ```
 
-Or slot one criterion into second place in every sort list you have defined, leaving the rest of each list alone:
+Or move one criterion above another in every sort list you have defined, leaving the rest of each list alone:
 
 ```
-insert sortCriteria[*][1] = { "key": "resolution", "direction": "desc" }
+move sortCriteria[*][key=resolution] before [key=cached]
 ```
 
 **Layering.** Either reference one variant from another:

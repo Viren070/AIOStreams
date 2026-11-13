@@ -407,6 +407,10 @@ the lines it writes.
 - **Back-to-back selectors** narrow the same list, so
   `presets[type=torrentio][options.name*="4K"]` is only the Torrentio instances with 4K in their
   name.
+- **Moving entries.** `move` reorders a list without writing its entries out, so
+  `move presets[type=comet] before [0]` puts Comet first. An addon or catalog moved this way keeps
+  its options, API keys included, out of the script, where a pasted copy would go stale. See
+  [moving entries](/reference/config-expressions#moving-entries).
 - **One work budget.** The variants on a request share a budget of work in place of six separate
   limits, and an instance allows 50 variants by default, up from 10. See [Upgrading](#upgrading).
 

@@ -40,6 +40,12 @@ export interface CelPath {
   index: number;
 }
 
+export interface CelAnchor {
+  segment: Extract<CelPathSegment, { kind: 'index' | 'filter' }>;
+  raw: string;
+  index: number;
+}
+
 export type CelStatement = {
   /** Offset of the statement keyword, for diagnostics. */
   index: number;
@@ -56,6 +62,13 @@ export type CelStatement = {
       placement: 'before' | 'after';
       /** How many places from it, counting the adjacent gap as one. */
       count: number;
+    }
+  | {
+      op: 'move';
+      path: CelPath;
+      placement: 'before' | 'after';
+      count: number;
+      anchor: CelAnchor;
     }
   | { op: 'useFormatter'; name: string }
   | { op: 'useVariant'; id: string }
@@ -134,12 +147,13 @@ const VERBS: ReadonlySet<string> = new Set([
   'prepend',
   'remove',
   'insert',
+  'move',
   'enable',
   'disable',
   'use',
 ]);
 
-/** Optional placement keywords between `insert` and its path. */
+/** Placement keywords: optional after `insert`, required after a `move` path. */
 const PLACEMENTS: ReadonlySet<string> = new Set(['before', 'after']);
 
 export const VARIANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
@@ -532,6 +546,11 @@ function parsePath(s: Scanner): CelPath {
     });
   }
 
+  const segments = parseSegments(s, root);
+  return { root, segments, raw: s.src.slice(start, s.pos), index: start };
+}
+
+function parseSegments(s: Scanner, root: string): CelPathSegment[] {
   const segments: CelPathSegment[] = [];
   while (!s.eof) {
     if (s.peek() === '.') {
@@ -606,8 +625,42 @@ function parsePath(s: Scanner): CelPath {
       break;
     }
   }
+  return segments;
+}
 
-  return { root, segments, raw: s.src.slice(start, s.pos), index: start };
+const ANCHOR_HINT = 'such as "[0]" or "[type=torrentio]"';
+
+function parseAnchor(s: Scanner): CelAnchor {
+  const start = s.pos;
+  if (s.peek() !== '[') {
+    s.fail(`expected an entry of the same list, ${ANCHOR_HINT}`);
+  }
+  const segments = parseSegments(s, '');
+  const raw = s.src.slice(start, s.pos);
+  const segment = segments[0];
+  if (
+    segments.length !== 1 ||
+    (segment.kind !== 'index' && segment.kind !== 'filter')
+  ) {
+    s.fail(`the anchor must be one entry of the same list, ${ANCHOR_HINT}`, {
+      index: start,
+      source: raw,
+    });
+  }
+  return { segment, raw, index: start };
+}
+
+function parseCount(s: Scanner, verb: string): number {
+  const start = s.pos;
+  const count = readNumber(s);
+  if (!Number.isInteger(count) || count < 1) {
+    s.fail(`${verb} count must be a whole number of places, from 1`, {
+      index: start,
+      source: s.src.slice(start, s.pos),
+    });
+  }
+  s.skipTrivia();
+  return count;
 }
 
 function parseValueList(s: Scanner): CelLiteral[] {
@@ -674,18 +727,8 @@ function parseStatement(s: Scanner): CelStatement {
     }
     case 'insert': {
       let placement: 'before' | 'after' = 'before';
-      let count = 1;
       const countStart = s.pos;
-      if (isDigit(s.peek())) {
-        count = readNumber(s);
-        if (!Number.isInteger(count) || count < 1) {
-          s.fail('an insert count must be a whole number of places, from 1', {
-            index: countStart,
-            source: s.src.slice(countStart, s.pos),
-          });
-        }
-        s.skipTrivia();
-      }
+      const count = isDigit(s.peek()) ? parseCount(s, 'an insert') : 1;
       const word = peekIdent(s);
       // A config root is never named `before` or `after`, so no lookahead.
       if (word && PLACEMENTS.has(word)) {
@@ -713,6 +756,39 @@ function parseStatement(s: Scanner): CelStatement {
         s.fail('insert requires at least one value', { index });
       }
       return { op: keyword, path, values, placement, count, index, line };
+    }
+    case 'move': {
+      const path = parsePath(s);
+      const last = path.segments[path.segments.length - 1];
+      if (last?.kind !== 'index' && last?.kind !== 'filter') {
+        s.fail('move needs list entries: end the path in a selector or index', {
+          index: path.index,
+          source: path.raw,
+        });
+      }
+      s.skipTrivia();
+      const count = isDigit(s.peek()) ? parseCount(s, 'a move') : 1;
+      const wordStart = s.pos;
+      const word = peekIdent(s);
+      if (!word || !PLACEMENTS.has(word)) {
+        s.fail('expected "before" or "after" after the path in move', {
+          index: wordStart,
+          source: word,
+          suggestion: word && nearestMatch(word, [...PLACEMENTS]),
+        });
+      }
+      s.advance(word.length);
+      s.skipTrivia();
+      const anchor = parseAnchor(s);
+      return {
+        op: keyword,
+        path,
+        placement: word as 'before' | 'after',
+        count,
+        anchor,
+        index,
+        line,
+      };
     }
     default: {
       const kindStart = s.pos;
@@ -830,6 +906,7 @@ export function tokenizeCel(src: string): CelToken[] {
   let afterVerb = false;
   let afterDot = false;
   let verb = '';
+  let depth = 0;
 
   const push = (kind: CelTokenKind, start: number, end: number) =>
     tokens.push({ kind, start, end });
@@ -887,6 +964,14 @@ export function tokenizeCel(src: string): CelToken[] {
         push('verb', start, pos);
         verb = word;
         afterVerb = true;
+        depth = 0;
+      } else if (
+        verb === 'move' &&
+        depth === 0 &&
+        !afterVerb &&
+        PLACEMENTS.has(word)
+      ) {
+        push('verb', start, pos);
       } else if (afterVerb && !afterDot) {
         // Words that extend the verb rather than start the path.
         const continuation =
@@ -911,6 +996,8 @@ export function tokenizeCel(src: string): CelToken[] {
     }
 
     afterDot = ch === '.';
+    if (ch === '[') depth++;
+    else if (ch === ']' && depth > 0) depth--;
     push('punct', pos, pos + 1);
     pos++;
     atLineStart = false;
@@ -1327,6 +1414,106 @@ function resolveInsertion(
   };
 }
 
+interface MovePlan {
+  list: unknown[];
+  /** Ascending, so the moved entries keep their order. */
+  leaving: number[];
+  /** Index in the list once `leaving` is out of it. */
+  at: number;
+}
+
+type MoveResolution =
+  | {
+      kind: 'ok';
+      plans: MovePlan[];
+      ambiguity?: { count: number };
+    }
+  | { kind: 'no-match' }
+  | { kind: 'no-anchor' }
+  | { kind: 'not-a-list' };
+
+/**
+ * The anchor is read among the entries that stay, so `before [0]` is always
+ * the front and an entry can never anchor on itself.
+ */
+function resolveMove(
+  config: any,
+  statement: Extract<CelStatement, { op: 'move' }>,
+  state: RunState
+): MoveResolution {
+  const { path, anchor, placement, count } = statement;
+  const segments: CelPathSegment[] = [
+    { kind: 'key', name: path.root },
+    ...path.segments,
+  ];
+  const last = segments[segments.length - 1];
+
+  let nodes: any[] = [config];
+  for (let i = 0; i < segments.length - 1; i++) {
+    nodes = step(nodes, segments[i], undefined, state);
+    if (nodes.length === 0) return { kind: 'no-match' };
+  }
+
+  let notAList = false;
+  let matched = false;
+  let anchorHits = 0;
+  const plans: MovePlan[] = [];
+  for (const node of nodes) {
+    if (!Array.isArray(node)) {
+      notAList = true;
+      continue;
+    }
+    let leaving: number[] = [];
+    if (last.kind === 'index') {
+      const index = normaliseIndex(last.index, node.length);
+      if (index !== undefined) leaving = [index];
+    } else if (last.kind === 'filter') {
+      leaving = selectEntries(node, last, state);
+    }
+    if (leaving.length === 0) continue;
+    matched = true;
+
+    const remaining = node.length - leaving.length;
+    let position: number;
+    let hitCount = 1;
+    if (anchor.segment.kind === 'index') {
+      const index = anchor.segment.index;
+      position = index < 0 ? remaining + index : index;
+    } else {
+      const gone = new Set(leaving);
+      const hits = selectEntries(node, anchor.segment, state).filter(
+        (i) => !gone.has(i)
+      );
+      if (hits.length === 0) continue;
+      hitCount = hits.length;
+      position = hits[0] - leaving.filter((i) => i < hits[0]).length;
+    }
+
+    const at = gapFor(position, placement, count);
+    if (at < 0 || at > remaining) continue;
+    plans.push({ list: node, leaving, at });
+    anchorHits += hitCount;
+  }
+
+  if (plans.length === 0) {
+    if (notAList) return { kind: 'not-a-list' };
+    return matched ? { kind: 'no-anchor' } : { kind: 'no-match' };
+  }
+  return {
+    kind: 'ok',
+    plans,
+    ambiguity: anchorHits > plans.length ? { count: anchorHits } : undefined,
+  };
+}
+
+function applyMove({ list, leaving, at }: MovePlan): void {
+  const gone = new Set(leaving);
+  const moving = leaving.map((i) => list[i]);
+  const rest = list.filter((_, i) => !gone.has(i));
+  const order = rest.slice(0, at).concat(moving, rest.slice(at));
+  for (let i = 0; i < order.length; i++) list[i] = order[i];
+}
+
 /** Splices by descending index so earlier removals do not shift later ones. */
 function removeTargets(targets: Target[]): void {
   const byArray = new Map<any[], number[]>();
@@ -1547,6 +1734,65 @@ function runProgram(
         // Cloned per list so the copies never share a reference.
         array.splice(index, 0, ...statement.values.map(cloneLiteral));
       }
+      state.indexes.clear();
+      touchedRoots.add(statement.path.root);
+      continue;
+    }
+
+    if (statement.op === 'move') {
+      const { anchor } = statement;
+      const atAnchor = (message: string, category: CelDiagnosticCategory) => ({
+        ...note(statement, message, category),
+        index: anchor.index,
+        source: anchor.raw,
+      });
+      const resolution = resolveMove(config, statement, state);
+      if (resolution.kind === 'not-a-list') {
+        addNote(
+          note(
+            statement,
+            `"${statement.path.raw}" is not in a list, move skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.kind === 'no-match') {
+        addNote(
+          note(
+            statement,
+            `"${statement.path.raw}" matched nothing, instruction skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.kind === 'no-anchor') {
+        addNote(
+          atAnchor(
+            `"${anchor.raw}" matched no position, move skipped`,
+            'no-match'
+          )
+        );
+        continue;
+      }
+      if (resolution.ambiguity) {
+        const which =
+          resolution.plans.length > 1 ? 'the first in each list' : 'the first';
+        addNote(
+          atAnchor(
+            `"${anchor.raw}" matched ${resolution.ambiguity.count} entries, ${which} was used`,
+            'ambiguous'
+          )
+        );
+      }
+      const cost = resolution.plans.reduce((sum, p) => sum + p.list.length, 0);
+      if (cost > budget.work) {
+        exhaust(statement);
+        return;
+      }
+      budget.work -= cost;
+      for (const plan of resolution.plans) applyMove(plan);
       state.indexes.clear();
       touchedRoots.add(statement.path.root);
       continue;
