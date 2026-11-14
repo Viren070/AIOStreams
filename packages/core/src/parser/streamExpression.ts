@@ -15,6 +15,7 @@ import { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
 import { ObjectFilter, compileObjectFilter } from '../utils/object-filter.js';
 import { describedTracks } from '../utils/media-info.js';
+import { deviceExpressionConstants } from '../utils/device-capabilities.js';
 
 const logger = createLogger('stream-expression');
 
@@ -101,6 +102,10 @@ export abstract class StreamExpressionEngine {
     this.parser.consts.latestSeason = context.latestSeason ?? -1;
     this.parser.consts.ongoingSeason =
       context.hasNextEpisode && context.season === context.latestSeason;
+    Object.assign(
+      this.parser.consts,
+      deviceExpressionConstants(context.device)
+    );
   }
 
   public getPinInstructions(): Map<string, 'top' | 'bottom'> {

@@ -10,7 +10,10 @@ export const corsMiddleware = (
 ) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Range, X-Device-Capabilities'
+  );
   res.setHeader(
     'Access-Control-Expose-Headers',
     'Content-Length, Content-Range, Accept-Ranges'

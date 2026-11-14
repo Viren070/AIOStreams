@@ -874,6 +874,9 @@ export const UserDataSchema = z.object({
       showInfoOnFilter: z.boolean().optional(),
     })
     .optional(),
+  // How to treat streams the client's X-Device-Capabilities header says won't
+  // play. Applied per request after the pipeline cache.
+  deviceCapabilities: z.enum(['off', 'deprioritise', 'exclude']).optional(),
   enableSeadex: z.boolean().optional(),
   excludeSeasonPacks: z.boolean().optional(),
   excludeCached: z.boolean().optional(),
@@ -1296,6 +1299,8 @@ export const ManifestSchema = z
         configurationRequired: z.boolean().optional(),
         epgProvider: z.boolean().optional(),
         catchupDays: z.number().optional(),
+        // Highest X-Device-Capabilities spec version the addon reads.
+        deviceCapabilities: z.number().int().positive().optional(),
       })
       .optional(),
     // not part of the manifest scheme, but needed for stremio-addons.net

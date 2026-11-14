@@ -195,6 +195,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   ageRangeTypes: { label: 'Age Range Types', group: 'filters', type: 'list', menu: 'filters', subTab: 'age' },
 
   digitalReleaseFilter: { label: 'Digital Release Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous' },
+  deviceCapabilities: { label: 'Respect Device Capabilities', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous', keywords: ['dolby vision', 'dv', 'hdr', 'codec', 'tv', 'device'] },
   size: { label: 'Size Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'size' },
   bitrate: { label: 'Bitrate Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'bitrate' },
   titleMatching: { label: 'Title Matching', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'matching' },

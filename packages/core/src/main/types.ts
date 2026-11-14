@@ -17,6 +17,7 @@ import type {
 } from '../streams/index.js';
 import type { ServiceWrapServiceTiming } from './serviceWrapper.js';
 import type { PrecomputeSubTimings } from '../streams/precomputer.js';
+import type { DeviceCapabilities } from '../utils/device-capabilities.js';
 
 export interface AIOStreamsError {
   title?: string;
@@ -35,6 +36,8 @@ export interface AIOStreamsOptions {
   bypassManifestCache?: boolean;
   /** Which client path this engine serves, for media info probes. */
   path?: 'stremio' | 'jellyfin';
+  /** Parsed X-Device-Capabilities header of the request, if it sent one. */
+  deviceCapabilities?: DeviceCapabilities;
 }
 
 export type StatEntry = {

@@ -4038,6 +4038,38 @@ function Content() {
               </div>
               <div className="space-y-4">
                 <SettingsCard
+                  id="deviceCapabilities"
+                  title="Respect Device Capabilities"
+                  description="Some apps tell AIOStreams what the playing device can decode (video codecs, HDR and Dolby Vision, audio formats, resolution). Streams that device can't play can be moved to the bottom or removed, per device, while other devices on the same configuration keep their full list. Apps that don't send this, like Stremio, are unaffected."
+                >
+                  <Select
+                    label="Unplayable Streams"
+                    options={[
+                      { label: 'Off', value: 'off' },
+                      { label: 'Push to bottom', value: 'deprioritise' },
+                      { label: 'Exclude', value: 'exclude' },
+                    ]}
+                    defaultValue="off"
+                    value={userData.deviceCapabilities ?? 'off'}
+                    help={
+                      userData.deviceCapabilities === 'exclude'
+                        ? 'Streams the device reports it cannot play are removed before result limits and failover apply.'
+                        : userData.deviceCapabilities === 'deprioritise'
+                          ? 'Streams the device reports it cannot play are moved below the rest, keeping their order.'
+                          : 'Every device gets the same list.'
+                    }
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        deviceCapabilities: value as
+                          | 'off'
+                          | 'deprioritise'
+                          | 'exclude',
+                      }));
+                    }}
+                  />
+                </SettingsCard>
+                <SettingsCard
                   id="digitalReleaseFilter"
                   title="Digital Release Filter"
                   description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime)."
