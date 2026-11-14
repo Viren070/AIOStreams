@@ -1,6 +1,6 @@
 {
   "name": "aiostreams",
-  "version": "2.37.0",
+  "version": "2.38.0",
   "description": "AIOStreams brings your Stremio addons, debrid services and Usenet together into one list, filtered, sorted and formatted your way, and plays it in Stremio or in its own apps for every screen.",
   "type": "module",
   "main": "dist/index.js",
