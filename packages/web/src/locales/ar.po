@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:49+0000\n"
+"PO-Revision-Date: 2026-11-14 22:00+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -4427,7 +4427,7 @@ msgstr "تم تخطي الملخص"
 
 #: src/features/player/segments.ts
 msgid "Skipped segment"
-msgstr "تم تخطي المقطع"
+msgstr "تم تخطي الجزئية"
 
 #: src/app/settings/playback.tsx
 msgid "Skipping"
