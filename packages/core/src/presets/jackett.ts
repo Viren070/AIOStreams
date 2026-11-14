@@ -8,6 +8,14 @@ export class JackettPreset extends TorznabPreset {
     const supportedResources = [constants.STREAM_RESOURCE];
     const options: Option[] = [
       {
+        id: 'aggregateNote',
+        name: '',
+        description:
+          "Uses Jackett's combined `all` indexer: one slow indexer delays every result, and only title search is possible. For better results, add each indexer as a Torznab addon using its URL from Jackett: `http://<jackett>/api/v2.0/indexers/<indexer>/results/torznab/api`. [More info](https://github.com/Jackett/Jackett#aggregate-indexers)",
+        type: 'alert',
+        intent: 'info',
+      },
+      {
         id: 'name',
         name: 'Name',
         description: 'What to call this addon',
