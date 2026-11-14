@@ -209,12 +209,13 @@ function useVideoHole(box: Box | null, radius: number, soft: boolean) {
     const rtl = pageRtl();
     const down = h * FADE;
     const side = w * FADE;
-    // The page's background, fading back in over the hole's bottom and start.
+    // The page's background, fading back in over the hole's bottom and start,
+    // from a pixel past its edge so no seam shows there.
     const edges = soft
       ? `<defs><linearGradient id="d" x2="0" y2="1"><stop stop-opacity="0"/><stop offset="1"/></linearGradient>` +
         `<linearGradient id="s" x1="${rtl ? 0 : 1}" x2="${rtl ? 1 : 0}"><stop stop-opacity="0"/><stop offset="1"/></linearGradient></defs>` +
-        `<rect x="${x}" y="${y + h - down}" width="${w}" height="${down}" fill="url(#d)"/>` +
-        `<rect x="${rtl ? x + w - side : x}" y="${y}" width="${side}" height="${h}" fill="url(#s)"/>`
+        `<rect x="${x - 1}" y="${y + h - down}" width="${w + 2}" height="${down + 1}" fill="url(#d)"/>` +
+        `<rect x="${rtl ? x + w - side : x - 1}" y="${y - 1}" width="${side + 1}" height="${h + 2}" fill="url(#s)"/>`
       : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${view.width}" height="${view.height}"><path fill-rule="evenodd" d="${path}"/>${edges}</svg>`;
     /* eslint-enable lingui/no-unlocalized-strings */

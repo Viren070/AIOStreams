@@ -944,9 +944,11 @@ function FollowBackdrop({
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       {box}
-      <BackdropFrame className={cn('max-w-[calc(100vh*2.6)]', fade)}>
-        <Backdrops current={src} />
-      </BackdropFrame>
+      <div data-ui="hero-art" className="absolute inset-0">
+        <BackdropFrame className={cn('max-w-[calc(100vh*2.6)]', fade)}>
+          <Backdrops current={src} />
+        </BackdropFrame>
+      </div>
       <Shade />
     </div>
   );

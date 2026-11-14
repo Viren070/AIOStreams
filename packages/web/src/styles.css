@@ -177,7 +177,9 @@ html[data-art-wash][data-art-glass]:not(.playing) .UI-Command__root {
 /* Background from artwork: title art fades out into its own blur. */
 html[data-art-wash] [data-ui='item-backdrop'],
 html[data-art-wash] [data-ui='item-trailer'],
-html[data-art-wash] [data-ui='hero'] {
+html[data-art-wash] [data-ui='hero'],
+html[data-art-wash] [data-ui='hero-shade'],
+html[data-art-wash] [data-ui='hero-trailer'] {
   --background: transparent;
 }
 html[data-art-wash] [data-ui='item-backdrop'],
