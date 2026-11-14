@@ -9,6 +9,7 @@ export enum StaticFiles {
   FORBIDDEN = '403.mp4',
   UNAUTHORIZED = '401.mp4',
   NO_MATCHING_FILE = 'no_matching_file.mp4',
+  ARCHIVE_ONLY = 'archive_only.mp4',
   PAYMENT_REQUIRED = 'payment_required.mp4',
   OK = '200.mp4',
 }
@@ -42,6 +43,8 @@ export function mapDebridErrorToStaticFile(code: string | undefined): string {
       return StaticFiles.DOWNLOAD_FAILED;
     case 'NO_MATCHING_FILE':
       return StaticFiles.NO_MATCHING_FILE;
+    case 'ARCHIVE_ONLY':
+      return StaticFiles.ARCHIVE_ONLY;
     case 'SERVICE_UNAVAILABLE':
       return StaticFiles.DOWNLOAD_FAILED;
     case 'TIMEOUT':

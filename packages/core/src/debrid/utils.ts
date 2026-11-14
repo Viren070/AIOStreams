@@ -1000,6 +1000,34 @@ export function isNotVideoFile(file: DebridFile): boolean {
   );
 }
 
+const ARCHIVE_EXTENSIONS = new Set(['.zip', '.rar', '.7z']);
+// Split volumes: `name.7z.001` and old-style RAR `name.r00`.
+const ARCHIVE_PATTERNS = [/\.7z\.\d+$/, /\.r\d{2}$/];
+
+export function isArchiveFile(file: DebridFile): boolean {
+  const name = file.name?.toLowerCase();
+  return (
+    !!name &&
+    (ARCHIVE_EXTENSIONS.has(name.slice(name.lastIndexOf('.'))) ||
+      ARCHIVE_PATTERNS.some((pattern) => pattern.test(name)))
+  );
+}
+
+/**
+ * Whether a download holds its release only as archives: at least one archive
+ * and no video beside it (sidecars like `.nfo` or `.sfv` may remain). Some
+ * services store a cached torrent this way, e.g. TorBox zips large ones.
+ */
+export function isArchiveOnly(files?: DebridFile[]): boolean {
+  return (
+    !!files?.some(isArchiveFile) &&
+    files.every(
+      (file) =>
+        isArchiveFile(file) || (isNotVideoFile(file) && !isVideoFile(file))
+    )
+  );
+}
+
 const MAX_SELECTABLE_FILES = 10_000;
 
 export function hasTooManySelectableFiles(files?: DebridFile[]): boolean {
