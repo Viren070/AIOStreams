@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Mr_Rosh <mr-rosh@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Romanian <https://hosted.weblate.org/projects/aiostreams/web-app/ro/>\n"
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2;\n"
-"PO-Revision-Date: 2026-11-14 21:49+0000\n"
+"PO-Revision-Date: 2026-11-14 22:00+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -567,7 +567,7 @@ msgstr "Afișează întotdeauna subtitrări, în limba ta când versiunea le are
 
 #: src/app/settings/audio.tsx
 msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
-msgstr "O pistă audio aleasă în timp ce urmărești un serial stabilește limba pentru celelalte episoade ale acestuia. Dacă alegi ce ar reda setările de mai sus, această alegere se uită."
+msgstr "O pistă audio aleasă în timp ce urmărești un serial stabilește limba pentru celelalte episoade ale acestuia. Dacă schimbi setările de mai sus, această alegere se pierde."
 
 #: src/app/settings/about.tsx
 #: src/app/settings/page.tsx
@@ -577,20 +577,20 @@ msgstr "Aplicația Android"
 
 #: src/app/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
-msgstr "Playerul propriu al Android, care consumă mai puțină baterie: ecranul afișează videoclipul așa cum îl decodează dispozitivul, la rata de cadre a videoclipului. Redă videoclipuri pe care dispozitivul le poate decoda. Subtitrările formatate arată ca în mpv."
+msgstr "Playerul propriu de la Android, care consumă mai puțină baterie: ecranul afișează videoclipul așa cum îl decodează dispozitivul, la rata de cadre a videoclipului. Redă videoclipuri pe care dispozitivul le poate decoda. Subtitrările formatate arată ca în fișierul mpv."
 
 #: src/app/settings/playback.tsx
 #: src/lib/input/actions.ts
 msgid "Anime upscaling"
-msgstr "Upscalare anime"
+msgstr "Mărește rezoluția anime"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: off"
-msgstr "Upscalare anime: oprit"
+msgstr "Mărește rezoluția anime: oprit"
 
 #: src/features/player/keys.ts
 msgid "Anime upscaling: on"
-msgstr "Upscalare anime: pornit"
+msgstr "Mărește rezoluția anime: pornit"
 
 #: src/features/party/not-in-party.tsx
 msgid "Another relay"
@@ -699,7 +699,7 @@ msgstr "Automat"
 
 #: src/app/settings/interface.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
-msgstr "Automat afișează episoadele în listă pe ecranele înguste și într-un rând pe cele late."
+msgstr "Afișează automat episoadele în listă pe ecranele înguste și într-un rând pe cele late."
 
 #: src/app/player/page.tsx
 #: src/app/servers/page.tsx
@@ -730,7 +730,7 @@ msgstr "Fundal"
 
 #: src/app/settings/theme.tsx
 msgid "Background from artwork"
-msgstr "Fundal din grafică"
+msgstr "Imagine de fundal preluată din ilustrație"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -750,7 +750,7 @@ msgstr "Înainte de final"
 
 #: src/app/settings/audio.tsx
 msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
-msgstr "Sub zero redă sunetul mai devreme, ca pentru căștile wireless care rămân în urma imaginii."
+msgstr "La valori negative, sunetul este redat mai devreme pentru a compensa întârzierea căștilor wireless față de imagine."
 
 #: src/features/player/options.tsx
 #: src/lib/input/actions.ts
@@ -767,7 +767,7 @@ msgstr "Albastru"
 
 #: src/app/settings/interface.tsx
 msgid "Blur episodes you haven't started"
-msgstr "Estompează episoadele la care nu ai început"
+msgstr "Estompează episoadele pe care nu le-ai început"
 
 #: src/app/settings/interface.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
