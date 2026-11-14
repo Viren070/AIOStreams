@@ -38,6 +38,7 @@ import type {
   AIOStreamsContext,
   AIOStreamsError,
   AIOStreamsResponse,
+  StatEntry,
 } from './types.js';
 import { buildStatistics } from './statistics.js';
 import { precacheCache } from './caches.js';
@@ -62,7 +63,7 @@ const PING_TIMEOUT_MS = 10_000;
 /** Shape returned by getStreams */
 type StreamsResponse = AIOStreamsResponse<{
   streams: ParsedStream[];
-  statistics: { title: string; description: string; forced?: boolean }[];
+  statistics: StatEntry[];
 }>;
 
 /**
@@ -714,8 +715,7 @@ export async function getStreams(
   preCaching: boolean = false
 ): Promise<StreamsResponse> {
   logger.debug({ type, id }, 'handling stream request');
-  const statistics: { title: string; description: string; forced?: boolean }[] =
-    [];
+  const statistics: StatEntry[] = [];
 
   const supportedAddons = getAddonsForResource(ctx, 'stream', type, id);
 
