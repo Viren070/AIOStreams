@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.10.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.9.0...smart-tv-v0.10.0) (2026-11-14)
+
+
+### Features
+
+* **ui:** open a combobox's list with the keys on its filter ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** add a background taken from the title's artwork ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** add sorts and more filters to libraries and favourites ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** approve another device's Quick Connect code from Account settings ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** follow the user's download and preference permissions ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** move the player into a Document Picture-in-Picture window ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** offer the in progress, watched and favourite filters on stock servers only ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** play a server's transcode where the player can't take a version ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** play a title's only version without listing it ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** play any HLS link through hls.js where the browser has no HLS ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** put card grids under the preview host ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** search collections and episodes on servers without extensions ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** ship a web app manifest in the standalone build served on the web ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** sort Continue watching by the later of the last watch and the next episode's airing ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** sort home library rows newest first on servers without extensions ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** treat titles with an Anime genre or tag as anime ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** use the server's chapters and trickplay pictures in the player ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+
+
+### Bug Fixes
+
+* **ui:** replace opacity modifiers on CSS variable colours ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** add useSearchParam to keep a page's choices in its address ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** clear the following heroes' shades and trailer veil over the artwork background ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** end a remote's scrub from the bar's Play button ([#1774](https://github.com/Viren070/AIOStreams/issues/1774)) ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** fade the version list's art out with a mask ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** fall back to Safari's prefixed fullscreen API and hide the button without one ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** give a page swiped back a copy of the artwork wash ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** hold the next episode prompt until the episode plays, and play on once ([#1773](https://github.com/Viren070/AIOStreams/issues/1773)) ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** let webOS open its keyboard on a text field ([#1585](https://github.com/Viren070/AIOStreams/issues/1585)) ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** offer Live TV groups only where the view marks its genres as groups ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** open a TV's keyboard from an open list's filter ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** open versions through the stream route of servers without extensions ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** put the favourites sort beside the tabs and Random pick at the end ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** replace opacity modifiers on CSS variable colours ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** replace the guide and calendar loading skeletons ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** send ApiKey on the session socket ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** word settings help for servers without addons ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+
+
+### Performance Improvements
+
+* **ui:** reuse the number formats formatBytes makes ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** ask for 20 items in a grid's first page ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+* **web:** switch settings tabs as soon as one takes focus ([3727a19](https://github.com/Viren070/AIOStreams/commit/3727a19195de932b99f33089735a20add12d48bf))
+
 ## [0.9.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.8.0...smart-tv-v0.9.0) (2026-11-12)
 
 
