@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:19+0000\n"
+"PO-Revision-Date: 2026-11-14 21:25+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -1081,7 +1081,7 @@ msgstr "اتصال"
 
 #: src/app/settings/apps.tsx
 msgid "Connected to Discord."
-msgstr "متصل بـ Discord."
+msgstr "متصل بـ ديسكورد."
 
 #: src/features/party/in-party.tsx
 msgid "Connection lost"
@@ -1435,7 +1435,7 @@ msgstr "تم نسخ التشخيصات"
 
 #: src/lib/i18n.ts
 msgid "Dialog"
-msgstr "نافذة حوارية"
+msgstr "الحوار"
 
 #: src/features/player/options.tsx
 msgid "Dialogue"
@@ -1459,15 +1459,15 @@ msgstr "المخرج"
 
 #: src/app/settings/apps.tsx
 msgid "Discord"
-msgstr "Discord"
+msgstr "ديسكورد"
 
 #: src/app/settings/apps.tsx
 msgid "Discord is not running on this computer."
-msgstr "Discord غير قيد التشغيل على هذا الحاسوب."
+msgstr "ديسكورد غير قيد التشغيل على هذا الحاسوب."
 
 #: src/app/settings/apps.tsx
 msgid "Discord refused the status: {message}"
-msgstr "رفض Discord الحالة: {message}"
+msgstr "رفض ديسكورد الحالة: {message}"
 
 #: src/app/discover/page.tsx
 #: src/app/settings/apps.tsx
@@ -1503,7 +1503,7 @@ msgstr "لا يطابق ترجمة الفيديو نفسه"
 
 #: src/app/settings/playback.tsx
 msgid "Dolby Vision"
-msgstr "Dolby Vision"
+msgstr "دولبي فيجن"
 
 #: src/app/settings/page.tsx
 msgid "Donate"
@@ -2377,7 +2377,7 @@ msgstr "خفض الترجمة"
 
 #: src/app/settings/apps.tsx
 msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
-msgstr "يعرض macOS الفيديو، ويستهلك طاقة أقل، ويعرض Dolby Vision بنفسه. لا تنطبق الشيدرات وخيارات الصورة في mpv."
+msgstr "يعرض macOS الفيديو، ويستهلك طاقة أقل، ويعرض دولبي فيجن بنفسه. لا تنطبق الشيدرات وخيارات الصورة في mpv."
 
 #: src/lib/i18n.ts
 msgid "Magenta"
@@ -3504,7 +3504,7 @@ msgstr "يعمل أسرع أو أبطأ قليلًا للّحاق بجلسة ا�
 
 #: src/app/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
-msgstr "يشغّل Dolby Vision حيث تعرضه الشاشة. أوقفه لتشغيل صورة HDR10 التي يحملها معظم هذه الفيديوهات أيضًا، إذا بدا Dolby Vision خافتًا أو وامضًا. أما الفيديوهات التي لا تحمل صورة HDR10 فتظل تُشغَّل بـ Dolby Vision."
+msgstr "يشغّل دولبي فيجن حيث تعرضه الشاشة. أوقفه لتشغيل صورة HDR10 التي يحملها معظم هذه الفيديوهات أيضًا، إذا بدا دولبي فيجن خافتًا أو وامضًا. أما الفيديوهات التي لا تحمل صورة HDR10 فتظل تُشغَّل بـ دولبي فيجن."
 
 #: src/lib/input/actions.ts
 msgid "Plays faster for as long as the key is held, at the speed set in Playback settings."
@@ -3682,7 +3682,7 @@ msgstr "التفاعلات"
 
 #: src/app/settings/playback.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
-msgstr "يقرأ الملف ويفك ترميزه بنفسه ويرسمه على بطاقة الرسومات، فيشغّل بذلك صيغًا لا يستطيع هذا المتصفح تشغيلها، مثل HEVC وDolby Vision وAC-3 وE-AC-3 وTrueHD وDTS. وتنتقل النسخة التي لا يستطيع تشغيلها إلى مشغّل هذا المتصفح نفسه."
+msgstr "يقرأ الملف ويفك ترميزه بنفسه ويرسمه على بطاقة الرسومات، فيشغّل بذلك صيغًا لا يستطيع هذا المتصفح تشغيلها، مثل HEVC ودولبي فيجن وAC-3 وE-AC-3 وTrueHD وDTS. وتنتقل النسخة التي لا يستطيع تشغيلها إلى مشغّل هذا المتصفح نفسه."
 
 #: src/lib/format.ts
 msgid "Recap"
@@ -4934,7 +4934,7 @@ msgstr "الفيلم أو المسلسل الذي صفحته مفتوحة."
 
 #: src/app/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
-msgstr "الطريقة الأقدم التي يرسم بها mpv، لأجهزة Mac التي تفشل فيها الطرق الأخرى. تظهر بعض فيديوهات Dolby Vision بألوان خاطئة."
+msgstr "الطريقة الأقدم التي يرسم بها mpv، لأجهزة Mac التي تفشل فيها الطرق الأخرى. تظهر بعض فيديوهات دولبي فيجن بألوان خاطئة."
 
 #: src/app/settings/_components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
@@ -5410,7 +5410,7 @@ msgstr "التحديثات"
 
 #: src/app/settings/page.tsx
 msgid "Updates, Discord, mpv and troubleshooting"
-msgstr "التحديثات وDiscord وmpv واستكشاف الأخطاء وإصلاحها"
+msgstr "التحديثات وديسكورد وmpv واستكشاف الأخطاء وإصلاحها"
 
 #: src/app/settings/page.tsx
 msgid "Updates, mpv and troubleshooting"
@@ -5690,7 +5690,7 @@ msgstr "ما يمكنك إرساله من دردشة جلسة المشاهدة."
 
 #: src/app/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."
-msgstr "ما يعرضه ملفك الشخصي في Discord. محفوظ على هذا الجهاز."
+msgstr "ما يعرضه ملفك الشخصي في ديسكورد. محفوظ على هذا الجهاز."
 
 #: src/app/settings/audio.tsx
 msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."
