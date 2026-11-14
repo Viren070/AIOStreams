@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:12+0000\n"
+"PO-Revision-Date: 2026-11-14 21:19+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -115,7 +115,7 @@ msgstr "{help} {bytes}."
 
 #: src/features/party/not-in-party.tsx
 msgid "{host}'s party"
-msgstr "جلسة {host}"
+msgstr "جلسة مشاهدة {host}"
 
 #. Hours, as in 2h
 #: src/lib/format.ts
@@ -177,11 +177,11 @@ msgstr "يُعرض {name} {day} ({until}). هل تريد تشغيله على أ�
 
 #: src/features/party/party-host.tsx
 msgid "{name} joined the party"
-msgstr "انضم {name} إلى الجلسة"
+msgstr "انضم {name} إلى جلسة المشاهدة"
 
 #: src/features/party/party-host.tsx
 msgid "{name} left the party"
-msgstr "غادر {name} الجلسة"
+msgstr "غادر {name} جلسة المشاهدة"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -344,7 +344,7 @@ msgstr "تظهر شارة على كل نسخة يطابق نصها نمطها: �
 
 #: src/features/party/not-in-party.tsx
 msgid "A code is looked up on the relay picked above."
-msgstr "يُبحث عن الرمز على المرحّل المحدد أعلاه."
+msgstr "يُبحث عن الرمز على خادم الجلسات المحدد أعلاه."
 
 #: src/app/settings/cache.tsx
 msgid "A day"
@@ -360,7 +360,7 @@ msgstr "تعبير نمطي. حالة الأحرف لا تهم أبدًا."
 
 #: src/features/party/not-in-party.tsx
 msgid "A relay someone else runs, for people on other servers."
-msgstr "مرحّل يديره شخص آخر، لمن هم على خوادم أخرى."
+msgstr "خادم جلسات يديره شخص آخر، لمن هم على خوادم أخرى."
 
 #: src/components/shell/input-setup.tsx
 msgid "A remote's or gamepad's buttons work too."
@@ -594,7 +594,7 @@ msgstr "تحسين دقة الأنمي: مفعّل"
 
 #: src/features/party/not-in-party.tsx
 msgid "Another relay"
-msgstr "مرحّل آخر"
+msgstr "خادم جلسات آخر"
 
 #: src/features/party/not-in-party.tsx
 msgid "Anyone with the invite can join, from any server."
@@ -1254,7 +1254,7 @@ msgstr "تعذّر حفظ ذلك الإعداد"
 
 #: src/features/party/not-in-party.tsx
 msgid "Could not start a party"
-msgstr "تعذّر بدء جلسة"
+msgstr "تعذّر بدء جلسة مشاهدة"
 
 #: src/lib/party/follow.ts
 msgid "Couldn't open {title}."
@@ -1630,11 +1630,11 @@ msgstr "أدخل رمزًا"
 
 #: src/features/party/not-in-party.tsx
 msgid "Enter an invite link, or a code and its relay"
-msgstr "أدخل رابط دعوة، أو رمزًا ومرحّله"
+msgstr "أدخل رابط دعوة، أو رمزًا وخادم جلساته"
 
 #: src/features/party/not-in-party.tsx
 msgid "Enter the address of a relay"
-msgstr "أدخل عنوان مرحّل"
+msgstr "أدخل عنوان خادم جلسات"
 
 #: src/app/settings/account.tsx
 msgid "Enter the code the other device shows."
@@ -2170,15 +2170,15 @@ msgstr "انضمام"
 #: src/features/party/not-in-party.tsx
 #: src/features/party/party-sheet.tsx
 msgid "Join a party"
-msgstr "الانضمام إلى جلسة"
+msgstr "الانضمام إلى جلسة مشاهدة"
 
 #: src/features/party/not-in-party.tsx
 msgid "Joining leaves the party you're in."
-msgstr "الانضمام يُخرجك من الجلسة التي أنت فيها."
+msgstr "الانضمام يُخرجك من جلسة المشاهدة التي أنت فيها."
 
 #: src/features/party/in-party.tsx
 msgid "Joining the party…"
-msgstr "جارٍ الانضمام إلى الجلسة…"
+msgstr "جارٍ الانضمام إلى جلسة المشاهدة…"
 
 #: src/lib/input/actions.ts
 msgid "Jump through the video"
@@ -2272,7 +2272,7 @@ msgstr "هل تريد مغادرة {from} لفتح هذا على {target}؟"
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
-msgstr "مغادرة الجلسة"
+msgstr "مغادرة جلسة المشاهدة"
 
 #: src/app.tsx
 msgid "Leave this server to add {adding}?"
@@ -2360,7 +2360,7 @@ msgstr "السجلات"
 
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
-msgstr "جارٍ البحث عن الجلسة…"
+msgstr "جارٍ البحث عن جلسة المشاهدة…"
 
 #: src/app/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
@@ -2481,7 +2481,7 @@ msgstr "المزيد"
 
 #: src/features/party/chat.tsx
 msgid "More can be sent once the party is back."
-msgstr "يمكن إرسال المزيد بعد عودة الجلسة."
+msgstr "يمكن إرسال المزيد بعد عودة جلسة المشاهدة."
 
 #: src/features/player/options.tsx
 msgid "More dialogue boost"
@@ -2718,7 +2718,7 @@ msgstr "لا يوجد جهاز آخر جاهز. افتح التطبيق على �
 
 #: src/lib/party/party.ts
 msgid "No party has that code on {relay}."
-msgstr "لا توجد جلسة بهذا الرمز على {relay}."
+msgstr "لا توجد جلسة مشاهدة بهذا الرمز على {relay}."
 
 #: src/features/player/use-play.ts
 msgid "No playable version was found"
@@ -3500,7 +3500,7 @@ msgstr "يُشغَّل <0>{title}</0> لكل من ينضم."
 
 #: src/app/settings/playback.tsx
 msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
-msgstr "يعمل أسرع أو أبطأ قليلًا للّحاق بالجلسة. وعند إيقافه، يقفز الفيديو بدلًا من ذلك."
+msgstr "يعمل أسرع أو أبطأ قليلًا للّحاق بجلسة المشاهدة. وعند إيقافه، يقفز الفيديو بدلًا من ذلك."
 
 #: src/app/settings/playback.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
@@ -3702,7 +3702,7 @@ msgstr "عمليات البحث الأخيرة"
 
 #: src/features/party/party-layer.tsx
 msgid "Reconnecting to the party…"
-msgstr "جارٍ إعادة الاتصال بالجلسة…"
+msgstr "جارٍ إعادة الاتصال بجلسة المشاهدة…"
 
 #: src/components/shell/unreachable.tsx
 #: src/features/player/controls.tsx
@@ -3725,11 +3725,11 @@ msgstr "مرفوض"
 
 #: src/features/party/not-in-party.tsx
 msgid "Relay"
-msgstr "المرحّل"
+msgstr "خادم الجلسات"
 
 #: src/features/party/not-in-party.tsx
 msgid "Relay address"
-msgstr "عنوان المرحّل"
+msgstr "عنوان خادم الجلسات"
 
 #: src/components/media/sort-picker.tsx
 msgid "Release date"
@@ -4132,7 +4132,7 @@ msgstr "يرسل صوت Dolby وDTS إلى جهاز الاستقبال كما ه
 
 #: src/features/party/chat.tsx
 msgid "Sends once the party is back"
-msgstr "يُرسل بمجرد عودة الجلسة"
+msgstr "يُرسل بمجرد عودة جلسة المشاهدة"
 
 #: src/app/settings/apps.tsx
 msgid "Sends this device's details and the app's recent log to the server, with a code to give whoever looks into it."
@@ -4524,7 +4524,7 @@ msgstr "المستقر"
 
 #: src/features/party/not-in-party.tsx
 msgid "Start a party"
-msgstr "بدء جلسة"
+msgstr "بدء جلسة مشاهدة"
 
 #: src/app/settings/interface.tsx
 msgid "Start on"
@@ -4797,15 +4797,15 @@ msgstr "هذا ليس تعبيرًا نمطيًا صالحًا."
 
 #: src/lib/party/party.ts
 msgid "That party has ended."
-msgstr "انتهت تلك الجلسة."
+msgstr "انتهت جلسة المشاهدة تلك."
 
 #: src/lib/party/party.ts
 msgid "That party is full."
-msgstr "تلك الجلسة ممتلئة."
+msgstr "جلسة المشاهدة تلك ممتلئة."
 
 #: src/lib/party/party.ts
 msgid "That party is not letting anyone new in."
-msgstr "تلك الجلسة لا تسمح بدخول أحد جديد."
+msgstr "جلسة المشاهدة تلك لا تسمح بدخول أحد جديد."
 
 #: src/features/versions/version-list.tsx
 msgid "That pattern is not a valid regular expression."
@@ -4813,15 +4813,15 @@ msgstr "ذلك النمط ليس تعبيرًا نمطيًا صالحًا."
 
 #: src/lib/party/party.ts
 msgid "That relay doesn't let you in."
-msgstr "ذلك المرحّل لا يسمح لك بالدخول."
+msgstr "خادم الجلسات ذاك لا يسمح لك بالدخول."
 
 #: src/lib/party/party.ts
 msgid "That relay is too busy for another party."
-msgstr "ذلك المرحّل مشغول جدًا لاستضافة جلسة أخرى."
+msgstr "خادم الجلسات ذاك مشغول جدًا لاستضافة جلسة مشاهدة أخرى."
 
 #: src/lib/party/party.ts
 msgid "That relay runs a different version of watch parties."
-msgstr "يشغّل ذلك المرحّل إصدارًا مختلفًا من جلسات المشاهدة."
+msgstr "يشغّل خادم الجلسات ذاك إصدارًا مختلفًا من جلسات المشاهدة."
 
 #: src/features/remote/remote-target.tsx
 msgid "That title could not be opened"
@@ -4889,7 +4889,7 @@ msgstr "تم تسجيل دخول الجهاز"
 
 #: src/lib/party/party.ts
 msgid "The host removed you from the party."
-msgstr "أزالك المضيف من الجلسة."
+msgstr "أزالك المضيف من جلسة المشاهدة."
 
 #: src/app/settings/about.tsx
 msgid "The interface is built on its components."
@@ -4954,19 +4954,19 @@ msgstr "الصفحة التي يفتح عليها التطبيق. ويظل ال�
 
 #: src/lib/party/party.ts
 msgid "The party ended after a long time with nothing playing."
-msgstr "انتهت الجلسة بعد مدة طويلة دون تشغيل أي شيء."
+msgstr "انتهت جلسة المشاهدة بعد مدة طويلة دون تشغيل أي شيء."
 
 #: src/lib/party/party.ts
 msgid "The party ended."
-msgstr "انتهت الجلسة."
+msgstr "انتهت جلسة المشاهدة."
 
 #: src/features/party/not-in-party.tsx
 msgid "The party is full"
-msgstr "الجلسة ممتلئة"
+msgstr "جلسة المشاهدة ممتلئة"
 
 #: src/features/party/in-party.tsx
 msgid "The party is watching <0>{title}</0>"
-msgstr "الجلسة تشاهد <0>{title}</0>"
+msgstr "جلسة المشاهدة تشاهد <0>{title}</0>"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
@@ -4982,7 +4982,7 @@ msgstr "تُحذف قائمة التشغيل؛ وتبقى العناوين ال�
 
 #: src/lib/party/party.ts
 msgid "The relay could not read that."
-msgstr "تعذّر على المرحّل قراءة ذلك."
+msgstr "تعذّر على خادم الجلسات قراءة ذلك."
 
 #: src/app/settings/downloads.tsx
 msgid "The rest wait their turn."
@@ -5107,7 +5107,7 @@ msgstr "لا تتحدّث هذه النسخة من تلقاء نفسها."
 
 #: src/lib/party/follow.ts
 msgid "This device couldn't read what the party is playing."
-msgstr "تعذّر على هذا الجهاز قراءة ما تشغّله الجلسة."
+msgstr "تعذّر على هذا الجهاز قراءة ما تشغّله جلسة المشاهدة."
 
 #: src/lib/playback/shaders.ts
 msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
@@ -5296,7 +5296,7 @@ msgstr "حاول مرة أخرى"
 
 #: src/lib/party/party.ts
 msgid "Try starting the party again."
-msgstr "جرّب بدء الجلسة مرة أخرى."
+msgstr "جرّب بدء جلسة المشاهدة مرة أخرى."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Try them"
@@ -5678,7 +5678,7 @@ msgstr "ما يقوله الآخرون يظهر هنا."
 
 #: src/app/settings/playback.tsx
 msgid "What the people you watch with say shows for a few seconds. It always stays in the party's chat."
-msgstr "ما يقوله من تشاهد معهم يظهر لبضع ثوان. ويبقى دائمًا في دردشة الجلسة."
+msgstr "ما يقوله من تشاهد معهم يظهر لبضع ثوان. ويبقى دائمًا في دردشة جلسة المشاهدة."
 
 #: src/app/settings/cache.tsx
 msgid "What to save"
@@ -5686,7 +5686,7 @@ msgstr "ما يُحفظ"
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
-msgstr "ما يمكنك إرساله من دردشة الجلسة."
+msgstr "ما يمكنك إرساله من دردشة جلسة المشاهدة."
 
 #: src/app/settings/apps.tsx
 msgid "What your Discord profile shows. Kept on this device."
@@ -5850,7 +5850,7 @@ msgstr "يمكنك تغيير هذا لاحقًا في الإعدادات، تح
 
 #: src/lib/party/party.ts
 msgid "You left the party."
-msgstr "غادرت الجلسة."
+msgstr "غادرت جلسة المشاهدة."
 
 #: src/app/live-tv/page.tsx
 msgid "You'll be reminded at {time}"
@@ -5882,7 +5882,7 @@ msgstr "لا يبلغ مشغّلك عن التقدم، لذا ضع علامة م
 
 #: src/features/party/not-in-party.tsx
 msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
-msgstr "يُشغَّل مشغّلك في تطبيق آخر، لا يستطيع متابعة جلسة. اختر مشغّل التطبيق نفسه في الإعدادات للمشاهدة معًا."
+msgstr "يُشغَّل مشغّلك في تطبيق آخر، لا يستطيع متابعة جلسة مشاهدة. اختر مشغّل التطبيق نفسه في الإعدادات للمشاهدة معًا."
 
 #: src/app/item/_components/rating.tsx
 msgid "Your rating"
