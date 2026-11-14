@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: Mr_Rosh <mr-rosh@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Romanian <https://hosted.weblate.org/projects/aiostreams/web-app/ro/>\n"
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2;\n"
-"PO-Revision-Date: 2026-11-14 22:00+0000\n"
+"PO-Revision-Date: 2026-11-15 22:54+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -916,7 +916,7 @@ msgstr "Schimbă scurtăturile"
 
 #: src/features/party/in-party.tsx
 msgid "Change speed to catch up"
-msgstr "Modifică viteza pentru a ajunge din urmă"
+msgstr "Ajustează viteza de redare pentru a recupera decalajul"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Change these on a phone, a computer or in a browser."
@@ -946,7 +946,7 @@ msgstr "Canale"
 
 #: src/app/live-tv/page.tsx
 msgid "Channels show here once your setup has an addon with live TV."
-msgstr "Canalele apar aici după ce configurația ta are un addon cu TV în direct."
+msgstr "Canalele apar aici după ce configurația ta are un addon cu canale TV."
 
 #: src/features/player/chapters.tsx
 #: src/features/player/keys.ts
@@ -1190,7 +1190,7 @@ msgstr "Nu s-au putut lista episoadele"
 
 #: src/app/live-tv/page.tsx
 msgid "Could not load Live TV"
-msgstr "Nu s-a putut încărca TV în direct"
+msgstr "Nu s-a putut încărca televiziunea în direct"
 
 #: src/app/calendar/page.tsx
 msgid "Could not load the calendar"
@@ -1274,7 +1274,7 @@ msgstr "Țară"
 
 #: src/app/settings/playback.tsx
 msgid "Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
-msgstr "Face numărătoarea inversă, apoi redă episodul următor în același tip de versiune. Oprit, mesajul așteaptă să alegi tu."
+msgstr "După numărătoarea inversă, redă următorul episod în aceeași variantă. Dacă este dezactivată, așteaptă confirmarea ta."
 
 #: src/app/settings/playback.tsx
 msgid "Counts down, then plays the next episode. Off, the prompt waits for you."
@@ -1299,7 +1299,7 @@ msgstr "Distribuție"
 
 #: src/app/settings/playback.tsx
 msgid "Credits that end an episode are left to the next episode prompt when it shows."
-msgstr "Genericul de final al unui episod este lăsat mesajului pentru episodul următor, când apare."
+msgstr "Creditele de la finalul episodului sunt incluse în timpul de așteptare până la afișarea sugestiei pentru episodul următor."
 
 #: src/components/media/people.tsx
 msgid "Crew"
@@ -1307,7 +1307,7 @@ msgstr "Echipă"
 
 #: src/app/settings/theme.tsx
 msgid "Crimson"
-msgstr "Carmin"
+msgstr "Roșu purpuriu"
 
 #: src/features/player/options.tsx
 msgid "Crop"
@@ -1339,7 +1339,7 @@ msgstr "Link personalizat"
 
 #: src/lib/i18n.ts
 msgid "Cyan"
-msgstr "Cyan"
+msgstr "Turcoaz"
 
 #: src/components/media/sort-picker.tsx
 msgid "Date added"
@@ -1347,7 +1347,7 @@ msgstr "Data adăugării"
 
 #: src/app/history/page.tsx
 msgid "Date not known"
-msgstr "Data necunoscută"
+msgstr "Dată necunoscută"
 
 #: src/app/live-tv/page.tsx
 msgid "Day"
@@ -1483,7 +1483,7 @@ msgstr "Închide"
 
 #: src/app/settings/playback.tsx
 msgid "Do nothing"
-msgstr "Nu face nimic"
+msgstr "Nu fă nimic"
 
 #: src/app/settings/interface.tsx
 msgid "Docked"
@@ -1491,7 +1491,7 @@ msgstr "Ancorat"
 
 #: src/app/settings/interface.tsx
 msgid "Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
-msgstr "Ancorat îl păstrează într-o coloană proprie. Plutitor îl afișează peste pagină, puțin retras de la margine. Butonul din colț îl reduce la butonul paginii curente din colțul de sus, care deschide întregul meniu."
+msgstr "Andocat îl păstrează într-o coloană separată. Plutitor îl afișează deasupra paginii, puțin retras de la margine. Butonul din colț îl restrânge la un buton în colțul de sus al paginii curente, care deschide întregul meniu."
 
 #: src/app/settings/about.tsx
 msgid "Documentation"
@@ -1597,7 +1597,7 @@ msgstr "Renunță la serial"
 
 #: src/features/player/controls.tsx
 msgid "Drop to add subtitles"
-msgstr "Plasează aici pentru a adăuga subtitrări"
+msgstr "Trage fișierul aici pentru a adăuga subtitrări"
 
 #. An episode number, as in E04
 #: src/lib/format.ts
@@ -1606,7 +1606,7 @@ msgstr "E{e}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
-msgstr "Fiecare filtru apare ca o pastilă deasupra listei de versiuni. Căutarea lui reprezintă cuvinte care trebuie să apară toate sau o expresie regulată între bare oblice, de exemplu /2160p|4k/. Nu se face diferența între litere mari și mici."
+msgstr "Fiecare filtru este afișat ca o etichetă deasupra listei de versiuni. Căutarea poate conține cuvinte care trebuie să apară toate sau o expresie regulată între bare oblice, de exemplu /2160p|4k/. Nu se face diferența între litere mari și mici."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Edit"
@@ -1679,7 +1679,7 @@ msgstr "Episoadele se termină fără a-l propune pe următorul."
 
 #: src/app/settings/playback.tsx
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
-msgstr "Episoadele care nu au fost încă difuzate apar ca nedifuzate, întreabă înainte de redare și sunt sărite când continui redarea sau descarci un sezon. Dezactivează dacă datele lor de difuzare sunt des greșite."
+msgstr "Episoadele care nu au fost difuzate încă sunt marcate ca nelansate. Înainte de redare, ți se va cere confirmarea, iar acestea vor fi sărite la redarea sau descărcarea unui sezon. Dezactivează această opțiune dacă datele de difuzare sunt adesea incorecte."
 
 #: src/lib/input/keys.ts
 msgid "Esc"
@@ -1687,7 +1687,7 @@ msgstr "Esc"
 
 #: src/app/settings/audio.tsx
 msgid "Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
-msgstr "Echilibrează scenele zgomotoase și cele liniștite, pentru ascultare la volum mic. Nu se aplică sunetului transmis mai departe."
+msgstr "Echilibrează scenele cu sunet puternic și cele cu sunet încet, pentru a putea asculta la volum redus. Nu se aplică sunetului transmis către alte dispozitive."
 
 #: src/app/item/_components/details.tsx
 msgid "Every {list}"
@@ -1825,7 +1825,7 @@ msgstr "Folder"
 
 #: src/app/settings/interface.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
-msgstr "Modul Urmărește fixează fundalul deasupra rândurilor și afișează cardul pe care se află cursorul, tastatura sau telecomanda, începând cu un titlu recomandat, în spatele întregii pagini sau în colțul de sus al acesteia. Ecranele tactile și ferestrele înguste îl lasă să se rotească."
+msgstr "Modulul de previzualizare afișează deasupra rândurilor cardul titlului indicat de cursor, tastatură sau telecomandă, începând cu un titlu recomandat. Poate fi afișat în fundalul întregii pagini sau în colțul de sus. Pe ecranele tactile și în ferestrele înguste, titlurile se schimbă automat."
 
 #: src/app/settings/interface.tsx
 msgid "Follows the selected card"
@@ -1841,11 +1841,11 @@ msgstr "Font"
 
 #: src/app/settings/audio.tsx
 msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
-msgstr "Pentru un receiver conectat prin cablu optic sau ARC, care altfel primește celelalte formate surround ca stereo."
+msgstr "Pentru un receiver conectat printr-o conexiune optică sau ARC, care altfel primește celelalte formate audio surround în format stereo."
 
 #: src/app/settings/interface.tsx
 msgid "For clocks and times of day, such as the player's clock and the TV guide."
-msgstr "Pentru ceasuri și ore din zi, cum ar fi ceasul playerului și ghidul TV."
+msgstr "Pentru afișarea orei și a momentelor zilei, de exemplu ceasul playerului și ghidul TV."
 
 #: src/lib/playback/controller.ts
 msgid "Forced"
@@ -1905,7 +1905,7 @@ msgstr "Suprafață de sticlă"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
-msgstr "Fișiere shader GLSL pentru mpv integrat, aplicate în ordinea numelui peste ce se redă. Cele solicitante pot face videoclipul să se bâlbâie."
+msgstr "Fișiere shader GLSL pentru playerul mpv integrat, aplicate în ordinea alfabetică a numelor asupra conținutului redat. Cele complexe pot provoca sacadări video."
 
 #: src/router.tsx
 msgid "Go home"
@@ -1913,7 +1913,7 @@ msgstr "Mergi la pagina principală"
 
 #: src/features/player/live.tsx
 msgid "Go live"
-msgstr "Mergi la direct"
+msgstr "Intră în direct"
 
 #: src/components/media/item-menu.tsx
 msgid "Go to show"
@@ -2027,11 +2027,11 @@ msgstr "Gazdă"
 
 #: src/app/settings/subtitles.tsx
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
-msgstr "Cât de sus stau subtitrările față de locul lor obișnuit de lângă marginea de jos sau cât de jos, până la margine."
+msgstr "Cât de mult sunt deplasate subtitrările față de poziția obișnuită din partea de jos, în sus sau în jos, până la marginea ecranului."
 
 #: src/app/settings/playback.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
-msgstr "Cât de departe sar butoanele de sărire, dublul tap și tastele cu săgeți."
+msgstr "Intervalul de derulare la apăsarea butoanelor de salt, la atingerea de două ori a ecranului sau la folosirea tastelor săgeată."
 
 #: src/app/settings/playback.tsx
 msgid "How fast playback runs while you press and hold the video, or hold Space or Select."
@@ -2047,7 +2047,7 @@ msgstr "Cât timp rămâne bannerul principal pe un titlu recomandat în timp ce
 
 #: src/app/settings/playback.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
-msgstr "Cât de mult din videoclip ține playerul în memorie: înainte, pentru a trece peste o conexiune lentă, și în urmă, pentru a sări înapoi instant. Automat îl dimensionează în funcție de memoria acestui dispozitiv."
+msgstr "Cât de mult din videoclip păstrează playerul în memorie: în avans, pentru a compensa o conexiune lentă, și în urmă, pentru a permite derularea înapoi instantanee. Modul automat ajustează dimensiunea în funcție de memoria disponibilă pe acest dispozitiv."
 
 #: src/app/settings/playback.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
@@ -2288,7 +2288,7 @@ msgstr "Stânga"
 
 #: src/app/settings/interface.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
-msgstr "Lăsat gol, posterele stau singure. Un poster fără grafică își afișează totuși titlul."
+msgstr "Dacă este lăsat necompletat, posterele sunt afișate fără alte elemente. Chiar și un poster fără imagine păstrează titlul."
 
 #: src/features/player/options.tsx
 msgid "Less dialogue boost"
@@ -2300,11 +2300,11 @@ msgstr "Permite alăturarea de persoane noi"
 
 #: src/app/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
-msgstr "Lasă decodorul televizorului să sincronizeze singur imaginea cu sunetul, ceea ce redă mai fluid 4K și HDR pe unele televizoare. Doar pentru videoclipurile redate de ExoPlayer. Dezactivează dacă videoclipul se bâlbâie sau rămâne negru."
+msgstr "Permite decodorului televizorului să sincronizeze imaginea și sunetul, ceea ce asigură o redare mai fluidă a videoclipurilor 4K și HDR pe anumite televizoare. Se aplică doar videoclipurilor redate cu ExoPlayer. Dezactivează această opțiune dacă imaginea se sacadează sau ecranul rămâne negru."
 
 #: src/app/settings/playback.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
-msgstr "Lasă decodorul televizorului să sincronizeze singur imaginea cu sunetul, ceea ce redă mai fluid 4K și HDR pe unele televizoare. Dezactivează dacă videoclipul se bâlbâie sau rămâne negru."
+msgstr "Permite decodorului televizorului să sincronizeze direct imaginea și sunetul, asigurând o redare mai fluidă a conținutului 4K și HDR pe anumite televizoare. Dezactivează această opțiune dacă imaginea se sacadează sau ecranul rămâne negru."
 
 #: src/app/settings/_components/licenses.tsx
 msgid "Licences"
@@ -2312,7 +2312,7 @@ msgstr "Licențe"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
-msgstr "Leagă un pachet partajat de cineva, în formatul acestei aplicații sau în cel folosit de Fusion și Nuvio. Rămâne actualizat cu modificările autorului său."
+msgstr "Adaugă un link către un pachet partajat de altcineva, în formatul acestei aplicații sau în formatul folosit de Fusion și Nuvio. Pachetul se actualizează automat odată cu modificările făcute de autor."
 
 #: src/app/settings/theme.tsx
 msgid "Liquid glass"
@@ -2364,11 +2364,11 @@ msgstr "Se caută sesiunea Watch party…"
 
 #: src/app/settings/playback.tsx
 msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
-msgstr "Caută versiuni imediat ce se deschide pagina unui titlu, ca Redare și lista de versiuni să nu aștepte. Fiecare titlu pe care îl deschizi este căutat, chiar dacă nu îl redai."
+msgstr "Caută versiunile disponibile imediat ce deschizi pagina unui titlu, astfel încât butonul Redare și lista versiunilor să fie gata fără întârziere. Căutarea se efectuează pentru fiecare titlu deschis, chiar dacă nu îl redai."
 
 #: src/features/party/in-party.tsx
 msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
-msgstr "S-a pierdut conexiunea la {relay}. Se reconectează… Playerul tău continuă și se resincronizează când conexiunea revine."
+msgstr "Conexiunea cu {relay} s-a întrerupt. Se încearcă reconectarea… Playerul continuă redarea și se resincronizează după restabilirea conexiunii."
 
 #: src/features/player/options.tsx
 #: src/lib/input/actions.ts
@@ -2436,7 +2436,7 @@ msgstr "Tasta meniu"
 
 #: src/app/settings/theme.tsx
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
-msgstr "Meniurile, listele, câmpurile și cardurile peste grafică stau pe suprafața de sticlă în loc de culoarea acesteia. Dispozitivele mai lente pot simți desenarea suplimentară."
+msgstr "Meniurile, listele, câmpurile și cardurile sunt afișate peste ilustrație, pe suprafața transparentă, în loc să aibă un fundal colorat. Pe dispozitivele mai lente, acest efect poate încetini interfața."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2519,7 +2519,7 @@ msgstr "Mută în sus"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
-msgstr "Se deplasează între elementele de pe ecran și la Căutare și Acasă. Se poate folosi și d-pad-ul sau stickul stâng al gamepad-ului."
+msgstr "Navighează între elementele afișate pe ecran, precum și către Căutare și Acasă. Funcționează și cu butoanele direcționale (D-pad) și joystick-ul stâng al gamepad-ului."
 
 #: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
@@ -2562,7 +2562,7 @@ msgstr "Fără sunet"
 
 #: src/lib/input/keys.ts
 msgid "Mute key"
-msgstr "Tasta de silențiere"
+msgstr "Tasta de dezactivare a sunetului"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/media/sort-picker.tsx
@@ -2662,7 +2662,7 @@ msgstr "Nightly"
 
 #: src/app/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
-msgstr "Versiunile Nightly provin din fiecare modificare, înaintea lansărilor, și pot fi instabile."
+msgstr "Versiunile Nightly sunt generate la fiecare modificare, înainte de lansările oficiale, și pot conține erori."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "No badges match."
@@ -2857,7 +2857,7 @@ msgstr "Nu s-a auzit nimic"
 
 #: src/app/history/page.tsx
 msgid "Nothing watched yet."
-msgstr "Încă nu s-a văzut nimic."
+msgstr "Nu ai vizionat nimic încă."
 
 #: src/features/party/in-party.tsx
 msgid "Nothing yet. Anything anyone plays now plays for everyone."
@@ -2901,7 +2901,7 @@ msgstr "Oprit"
 
 #: src/app/settings/theme.tsx
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
-msgstr "Dezactivat pentru această vizită, deoarece adresa se termină cu <0>?safe</0>. Corectează sau golește aici, apoi deschide aplicația fără el."
+msgstr "Dezactivat pentru această vizită, deoarece adresa se termină în <0>?safe</0>. Corectează sau șterge adresa aici, apoi deschide aplicația fără acest parametru."
 
 #: src/app/settings/interface.tsx
 msgid "Off, a trailer still plays with sound once you open it whole."
@@ -2917,7 +2917,7 @@ msgstr "OK"
 
 #: src/app/settings/cache.tsx
 msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
-msgstr "Cele mai vechi așteaptă serverul. Fără conexiune, se afișează tot ce este salvat."
+msgstr "Versiunile mai vechi așteaptă răspunsul serverului. Fără conexiune la internet, sunt afișate toate elementele salvate."
 
 #: src/features/party/in-party.tsx
 msgid "on {relay}"
@@ -2925,7 +2925,7 @@ msgstr "pe {relay}"
 
 #: src/app/settings/interface.tsx
 msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "Pe pagina principală cât timp se rotește bannerul și în grile. Într-o grilă și sub un mouse, cardul iese în evidență, iar cardurile vecine rămân pe loc."
+msgstr "Pe pagina principală, în timpul schimbării automate a imaginii principale și în grile. În grilă, cardul indicat de cursor se mărește în afara rândului, astfel încât cardurile alăturate să rămână pe loc."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -2949,11 +2949,11 @@ msgstr "O dată pe zi, aplicația trimite un număr anonim împreună cu tipul d
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
-msgstr "După ce unul dintre comenzi este selectat, tastele cu săgeți se deplasează între comenzi."
+msgstr "După selectarea unuia dintre controale, tastele săgeată permit navigarea între controale."
 
 #: src/app/settings/interface.tsx
 msgid "Once you rest on a title for a moment. In the hero, only one you went to."
-msgstr "După ce staționezi o clipă pe un titlu. În banner, doar pe unul la care ai mers."
+msgstr "După ce menții cursorul pe un titlu pentru câteva momente. În secțiunea principală, doar pentru titlul selectat."
 
 #: src/lib/subtitles/files.ts
 msgid "Only {names} files can be added"
@@ -3059,7 +3059,7 @@ msgstr "Opțional. O adresă de imagine, afișată în locul etichetei."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Optional. Match only these parts of a version, named as the formatter names them, such as seMatched for the stream expression it matched."
-msgstr "Opțional. Potrivește doar aceste părți ale unei versiuni, numite cum le numește formatorul, de exemplu seMatched pentru expresia de flux care s-a potrivit."
+msgstr "Opțional. Potrivește doar aceste câmpuri ale unei versiuni, folosind denumirile atribuite de formator, de exemplu seMatched pentru expresia de streaming care a fost identificată."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Optional. Only the first badge of a group that matches shows."
@@ -3156,11 +3156,11 @@ msgstr "Page Up"
 
 #: src/app/settings/cache.tsx
 msgid "Pages and artwork open straight away from this device, then refresh. Without a connection, whatever was saved can still be browsed."
-msgstr "Paginile și grafica se deschid imediat de pe acest dispozitiv, apoi se reîmprospătează. Fără conexiune, poți naviga prin ce a fost salvat."
+msgstr "Paginile și imaginile se încarcă imediat din memoria dispozitivului, apoi sunt actualizate. Fără conexiune la internet, poți naviga în continuare prin conținutul salvat."
 
 #: src/app/settings/page.tsx
 msgid "Pages and artwork saved on this device"
-msgstr "Pagini și grafică salvate pe acest dispozitiv"
+msgstr "Pagini și imagini salvate pe acest dispozitiv"
 
 #: src/app/settings/theme.tsx
 msgid "Pages and panels take their shades from it. Dark colours read best."
@@ -3226,11 +3226,11 @@ msgstr "În pauză la {name}, la {at}"
 
 #: src/app/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
-msgstr "Pune pe pauză și întreabă înainte de episodul următor după ce atâtea au fost redate la rând fără o tastă, un clic sau o apăsare de buton."
+msgstr "Oprește redarea și solicită confirmarea înainte de episodul următor, după ce au fost redate consecutiv atâtea episoade fără nicio intervenție de la tastatură, mouse sau telecomandă."
 
 #: src/app/settings/playback.tsx
 msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Pauza, redarea sau sărirea cu telecomanda ori tastatura afișează comenzile, pentru o clipă după o sărire. Dezactivat, apare doar o pictogramă scurtă."
+msgstr "La pauză, la reluarea redării sau la derularea înainte și înapoi folosind telecomanda ori tastatura, comenzile playerului sunt afișate automat. După derulare, acestea rămân vizibile pentru scurt timp. Dacă dezactivezi opțiunea, va apărea doar o pictogramă temporară."
 
 #: src/app/search/page.tsx
 msgid "People"
@@ -3288,7 +3288,7 @@ msgstr "Imagine: {label}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Pills above the version list that each apply a search you save, such as one for 4K versions."
-msgstr "Pastile deasupra listei de versiuni, fiecare aplicând o căutare pe care o salvezi, de exemplu una pentru versiunile 4K."
+msgstr "Etichete deasupra listei de versiuni, fiecare aplicând un filtru de căutare salvat, de exemplu pentru versiunile 4K."
 
 #: src/app/sign-in/page.tsx
 msgid "PIN"
@@ -3348,7 +3348,7 @@ msgstr "Redă-l automat"
 
 #: src/app/settings/playback.tsx
 msgid "Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming."
-msgstr "Redă listează versiunile din care poți alege, dar reluarea revine la versiunea pe care o urmăreai. Ține apăsat Redă pentru invers: pornește prima versiune sau listează-le la reluare."
+msgstr "La apăsarea butonului Redare, se afișează lista versiunilor disponibile, pentru a putea alege una. La reluarea vizionării, se redă automat versiunea urmărită anterior. Ține apăsat butonul Redare pentru a inversa acest comportament: pornește prima versiune disponibilă sau afișează lista versiunilor la reluarea vizionării."
 
 #: src/features/player/next-episode.tsx
 msgid "Play now"
@@ -3374,7 +3374,7 @@ msgstr "Redă sau pauză ori mergi la comenzi"
 
 #: src/app/settings/playback.tsx
 msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
-msgstr "Redă pornește prima versiune, iar reluarea revine la versiunea pe care o urmăreai. Ține apăsat Redă pentru a alege."
+msgstr "Butonul Redare pornește prima versiune disponibilă, iar la reluarea vizionării redă versiunea urmărită anterior. Ține apăsat butonul Redare pentru a alege o altă versiune."
 
 #: src/components/media/item-menu.tsx
 msgid "Play straight away"
@@ -3481,7 +3481,7 @@ msgstr "Se redă pe {name}"
 
 #: src/app/settings/playback.tsx
 msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
-msgstr "Continuă redarea, iar butoanele pentru episodul următor și anterior sar peste episoadele marcate ca filler. Poți reda unul și singur."
+msgstr "La redarea continuă, butoanele pentru episodul următor și anterior sar peste episoadele marcate ca episoade de umplutură (filler). Le poți reda în continuare manual."
 
 #: src/app/item/_components/actions.tsx
 #: src/features/player/options.tsx
