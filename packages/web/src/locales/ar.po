@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:36+0000\n"
+"PO-Revision-Date: 2026-11-14 21:49+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -549,7 +549,7 @@ msgstr "أرسل أيضًا إلى المطوّر"
 
 #: src/app/settings/account.tsx
 msgid "Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
-msgstr "وأيضًا عند العودة إليه بعد نصف ساعة. يتابع من كان يشاهد دون رمز PIN الخاص به."
+msgstr "وأيضًا عند العودة إليه بعد نصف ساعة. يتابع من كان يشاهد دون رقمه السري."
 
 #: src/lib/input/keys.ts
 msgid "Alt"
@@ -1581,7 +1581,7 @@ msgstr "التنزيلات المتزامنة"
 
 #: src/app/settings/downloads.tsx
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
-msgstr "تنتظر التنزيلات شبكة Wi-Fi أو شبكة أخرى غير محدودة بدلًا من استخدام بيانات الجوال."
+msgstr "تنتظر التنزيلات شبكة وايفاي أو شبكة أخرى غير محدودة بدلًا من استخدام بيانات الجوال."
 
 #: src/lib/i18n.ts
 msgid "Drawer"
@@ -1951,7 +1951,7 @@ msgstr "فك الترميز بالعتاد"
 
 #: src/app/sign-in/page.tsx
 msgid "Has a PIN"
-msgstr "لديه رمز PIN"
+msgstr "لديه رقم سري"
 
 #: src/app/settings/playback.tsx
 msgid "HDR output"
@@ -2969,7 +2969,7 @@ msgstr "أنا فقط أتحكم بالتشغيل"
 
 #: src/app/settings/downloads.tsx
 msgid "Only on Wi-Fi"
-msgstr "عبر Wi-Fi فقط"
+msgstr "عبر الوايفاي فقط"
 
 #: src/features/party/not-in-party.tsx
 msgid "Only people signed in to this server can join."
@@ -3292,11 +3292,11 @@ msgstr "حبات فوق قائمة النسخ يطبّق كل منها بحثً�
 
 #: src/app/sign-in/page.tsx
 msgid "PIN"
-msgstr "PIN"
+msgstr "الرقم السري"
 
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
-msgstr "PIN أو كلمة المرور"
+msgstr "الرقم السري أو كلمة المرور"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -5179,7 +5179,7 @@ msgstr "هذا الإعلان التشويقي لم يعد موجودًا."
 
 #: src/app/sign-in/page.tsx
 msgid "This user has a PIN."
-msgstr "لدى هذا المستخدم رمز PIN."
+msgstr "لدى هذا المستخدم رقم سري."
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5443,11 +5443,11 @@ msgstr "استخدم UUID تهيئتك أو اسمها المستعار وكلم
 
 #: src/app/sign-in/page.tsx
 msgid "Use your PIN, or the configuration’s password."
-msgstr "استخدم رمز PIN الخاص بك، أو كلمة مرور التهيئة."
+msgstr "استخدم رقمك السري، أو كلمة مرور التهيئة."
 
 #: src/app/sign-in/page.tsx
 msgid "Use your PIN."
-msgstr "استخدم رمز PIN الخاص بك."
+msgstr "استخدم رقمك السري."
 
 #: src/app/sign-in/page.tsx
 msgid "Use your user name and password."
@@ -5455,7 +5455,7 @@ msgstr "استخدم اسم المستخدم وكلمة المرور."
 
 #: src/app/sign-in/page.tsx
 msgid "Use your user name and PIN, or the configuration’s UUID and its password."
-msgstr "استخدم اسم المستخدم ورمز PIN، أو UUID التهيئة وكلمة مرورها."
+msgstr "استخدم اسم المستخدم والرقم السري، أو UUID التهيئة وكلمة مرورها."
 
 #: src/app/settings/playback.tsx
 msgid "Used when an episode has no credits marked."
@@ -5600,7 +5600,7 @@ msgstr "المشاهدة معًا"
 
 #: src/app/settings/account.tsx
 msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
-msgstr "شاهد بصفتك شخصًا آخر على هذه التهيئة. يحتاج المستخدم الذي لديه رمز PIN إلى إدخاله مرة أخرى بعد التبديل."
+msgstr "شاهد بصفتك شخصًا آخر على هذه التهيئة. يحتاج المستخدم الذي لديه رقم سري إلى إدخاله مرة أخرى بعد التبديل."
 
 #: src/app/settings/playback.tsx
 msgid "Watch parties"
