@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 21:32+0000\n"
+"PO-Revision-Date: 2026-11-14 12:02+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -702,9 +702,8 @@ msgid "Background"
 msgstr "Sfondo"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Background from artwork"
-msgstr "Sfondo"
+msgstr "Sfondo dalla copertina"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
