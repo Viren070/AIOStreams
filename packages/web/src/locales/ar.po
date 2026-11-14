@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:25+0000\n"
+"PO-Revision-Date: 2026-11-14 21:36+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -573,11 +573,11 @@ msgstr "المسار الصوتي الذي تختاره أثناء مشاهدة 
 #: src/app/settings/page.tsx
 #: src/lib/hosts/jellyfin-android.ts
 msgid "Android app"
-msgstr "تطبيق Android"
+msgstr "تطبيق أندرويد"
 
 #: src/app/settings/playback.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
-msgstr "مشغّل Android نفسه، ويستهلك بطارية أقل: تعرض الشاشة الفيديو كما يفك الجهاز ترميزه، بمعدل إطارات الفيديو. يشغّل الفيديو الذي يستطيع الجهاز فك ترميزه. تبدو الترجمة المنسّقة كما تبدو في mpv."
+msgstr "مشغّل أندرويد نفسه، ويستهلك بطارية أقل: تعرض الشاشة الفيديو كما يفك الجهاز ترميزه، بمعدل إطارات الفيديو. يشغّل الفيديو الذي يستطيع الجهاز فك ترميزه. تبدو الترجمة المنسّقة كما تبدو في mpv."
 
 #: src/app/settings/playback.tsx
 #: src/lib/input/actions.ts
@@ -1355,7 +1355,7 @@ msgstr "اليوم"
 
 #: src/app/settings/playback.tsx
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
-msgstr "يفك ترميز أي فيديو تقريبًا، بالبرمجيات حيث لا يملك الجهاز مفكك ترميز له. يأخذ ملف mpv.conf الخاص بك ضمن تطبيق Android."
+msgstr "يفك ترميز أي فيديو تقريبًا، بالبرمجيات حيث لا يملك الجهاز مفكك ترميز له. يأخذ ملف mpv.conf الخاص بك ضمن تطبيق أندرويد."
 
 #: src/app/settings/playback.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
@@ -2161,7 +2161,7 @@ msgstr "مخرجا الفيديو Metal وAVFoundation الخاصان به."
 
 #: src/app/settings/about.tsx
 msgid "Jellyfin API"
-msgstr "واجهة Jellyfin البرمجية (API)"
+msgstr "واجهة جيليفين البرمجية (API)"
 
 #: src/features/party/not-in-party.tsx
 msgid "Join"
@@ -2312,7 +2312,7 @@ msgstr "التراخيص"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
-msgstr "اربط حزمة يشاركها شخص ما، بصيغة هذا التطبيق أو بالصيغة التي يستخدمها Fusion وNuvio. وتبقى محدّثة بتغييرات صاحبها."
+msgstr "اربط حزمة يشاركها شخص ما، بصيغة هذا التطبيق أو بالصيغة التي يستخدمها فيوجن ونوفيو. وتبقى محدّثة بتغييرات صاحبها."
 
 #: src/app/settings/theme.tsx
 msgid "Liquid glass"
@@ -3931,7 +3931,7 @@ msgstr "يتنقل بين العناوين المميزة"
 
 #: src/components/media/scores.tsx
 msgid "Rotten Tomatoes audience"
-msgstr "جمهور Rotten Tomatoes"
+msgstr "جمهور روتن توميتوز"
 
 #: src/app/settings/interface.tsx
 msgid "Row"
@@ -4014,7 +4014,7 @@ msgstr "يُحفظ في حسابك، فيتبعك إلى كل جهاز."
 
 #: src/app/settings/_components/common.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
-msgstr "يُحفظ في حسابك، فتستخدمه أجهزتك الأخرى وتطبيقات Jellyfin أيضًا."
+msgstr "يُحفظ في حسابك، فتستخدمه أجهزتك الأخرى وتطبيقات جيليفين أيضًا."
 
 #: src/lib/playback/external-return.ts
 msgid "Saved your place at {at}"
@@ -4120,15 +4120,15 @@ msgstr "جارٍ الإرسال…"
 
 #: src/app/settings/audio.tsx
 msgid "Sends Dolby and DTS audio as it is even when your TV or receiver does not say it decodes them, as some do without saying so."
-msgstr "يرسل صوت Dolby وDTS كما هو حتى عندما لا يذكر التلفزيون أو جهاز الاستقبال أنه يفك ترميزهما، إذ إن بعضها يفعل دون أن يذكر ذلك."
+msgstr "يرسل صوت دولبي وDTS كما هو حتى عندما لا يذكر التلفزيون أو جهاز الاستقبال أنه يفك ترميزهما، إذ إن بعضها يفعل دون أن يذكر ذلك."
 
 #: src/app/settings/audio.tsx
 msgid "Sends Dolby and DTS audio as it is when your TV or receiver says it decodes them, which keeps Atmos. Otherwise this app decodes it."
-msgstr "يرسل صوت Dolby وDTS كما هو عندما يذكر التلفزيون أو جهاز الاستقبال أنه يفك ترميزهما، مما يحافظ على Atmos. وإلا فيفك هذا التطبيق ترميزه."
+msgstr "يرسل صوت دولبي وDTS كما هو عندما يذكر التلفزيون أو جهاز الاستقبال أنه يفك ترميزهما، مما يحافظ على أتموس. وإلا فيفك هذا التطبيق ترميزه."
 
 #: src/app/settings/audio.tsx
 msgid "Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
-msgstr "يرسل صوت Dolby وDTS إلى جهاز الاستقبال كما هو. لا تفعّله إلا إذا كان جهاز الاستقبال يفك ترميزهما."
+msgstr "يرسل صوت دولبي وDTS إلى جهاز الاستقبال كما هو. لا تفعّله إلا إذا كان جهاز الاستقبال يفك ترميزهما."
 
 #: src/features/party/chat.tsx
 msgid "Sends once the party is back"
@@ -4590,7 +4590,7 @@ msgstr "النمط"
 
 #: src/app/settings/subtitles.tsx
 msgid "Styled subtitles, common in anime, keep their own fonts and colours unless this is on. Blu-ray and DVD subtitles always keep their look and size. Only in the desktop app."
-msgstr "تحتفظ الترجمة المنسّقة، الشائعة في الأنمي، بخطوطها وألوانها ما لم يكن هذا الخيار مفعّلًا. أما ترجمة Blu-ray وDVD فتحتفظ دائمًا بمظهرها وحجمها. في تطبيق سطح المكتب فقط."
+msgstr "تحتفظ الترجمة المنسّقة، الشائعة في الأنمي، بخطوطها وألوانها ما لم يكن هذا الخيار مفعّلًا. أما ترجمة بلو راي وDVD فتحتفظ دائمًا بمظهرها وحجمها. في تطبيق سطح المكتب فقط."
 
 #: src/app/settings/downloads.tsx
 msgid "Subtitle files go next to the video, named so players find them."
@@ -4841,7 +4841,7 @@ msgstr "يجب أن يبدأ العنوان بـ http:// أو https://."
 
 #: src/app/servers/page.tsx
 msgid "The address of the AIOStreams instance where you set up your addon. Other Jellyfin servers work too."
-msgstr "عنوان نسخة AIOStreams التي أعددت فيها إضافتك. وتعمل خوادم Jellyfin الأخرى أيضًا."
+msgstr "عنوان نسخة AIOStreams التي أعددت فيها إضافتك. وتعمل خوادم جيليفين الأخرى أيضًا."
 
 #: src/app/settings/about.tsx
 msgid "The API this app speaks."
@@ -4934,7 +4934,7 @@ msgstr "الفيلم أو المسلسل الذي صفحته مفتوحة."
 
 #: src/app/settings/apps.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
-msgstr "الطريقة الأقدم التي يرسم بها mpv، لأجهزة Mac التي تفشل فيها الطرق الأخرى. تظهر بعض فيديوهات دولبي فيجن بألوان خاطئة."
+msgstr "الطريقة الأقدم التي يرسم بها mpv، لأجهزة ماك التي تفشل فيها الطرق الأخرى. تظهر بعض فيديوهات دولبي فيجن بألوان خاطئة."
 
 #: src/app/settings/_components/licenses.tsx
 msgid "The open-source software in this app, and the licence of each."
@@ -5025,7 +5025,7 @@ msgstr "فشل مشغّل التلفزيون ({code})"
 
 #: src/lib/playback/player-choice.ts
 msgid "the video app Android picks"
-msgstr "تطبيق الفيديو الذي يختاره Android"
+msgstr "تطبيق الفيديو الذي يختاره أندرويد"
 
 #: src/app/settings/apps.tsx
 msgid "The video output changes when the app opens again."
@@ -5074,7 +5074,7 @@ msgstr "رفيع"
 
 #: src/app/settings/audio.tsx
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
-msgstr "يفك هذا التطبيق ترميز صوت Dolby وDTS بنفسه، مما يفقد Atmos."
+msgstr "يفك هذا التطبيق ترميز صوت دولبي وDTS بنفسه، مما يفقد أتموس."
 
 #: src/app/settings/playback.tsx
 msgid "This browser"
@@ -5191,7 +5191,7 @@ msgstr "لم يُحمَّل هذا الفيديو."
 
 #: src/app/settings/about.tsx
 msgid "This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
-msgstr "تطبيق الويب هذا مع مشغّل خاص به، يشغّل ما لا يستطيعه المتصفح، على Windows وMac وLinux."
+msgstr "تطبيق الويب هذا مع مشغّل خاص به، يشغّل ما لا يستطيعه المتصفح، على ويندوز وماك ولينكس."
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Those were too far apart to be one line. Try another line."
@@ -5312,7 +5312,7 @@ msgstr "إيقاف"
 
 #: src/app/settings/audio.tsx
 msgid "Turn other surround sound into Dolby Digital"
-msgstr "تحويل الصوت المحيطي الآخر إلى Dolby Digital"
+msgstr "تحويل الصوت المحيطي الآخر إلى دولبي ديجيتال"
 
 #: src/app/settings/cache.tsx
 msgid "Turning one off also clears it."
