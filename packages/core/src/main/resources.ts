@@ -701,6 +701,8 @@ function emitAddonContributions(args: {
       latency_ms: info.latencyMs || null,
       result_count: info.rawCount,
       final_count: survivors.length,
+      kept_count: info.keptCount ?? null,
+      unique_count: info.uniqueCount ?? null,
       disposition: info.disposition,
       service_breakdown: serviceBreakdown,
     });

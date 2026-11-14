@@ -14,6 +14,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { Alert } from '@aiostreams/ui/alert';
 import { Card, CardContent } from '@aiostreams/ui/card';
 import { cn } from '@aiostreams/ui/core/styling';
+import { Select } from '@aiostreams/ui/select';
 
 /**
  * Per-user request stats for the configure-page Stats tab.
@@ -121,9 +122,17 @@ function LoadingSkeleton() {
   );
 }
 
+const TYPE_FILTERS = {
+  all: { label: 'All types', types: [] },
+  usenet: { label: 'Usenet', types: ['usenet', 'stremio-usenet'] },
+  torrent: { label: 'Torrent', types: ['p2p', 'debrid'] },
+} as const;
+type TypeFilter = keyof typeof TYPE_FILTERS;
+
 function StatsView({ data }: { data: UserAnalyticsResponse }) {
   const { status } = useStatus();
   const user = useUserData();
+  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>('all');
 
   // Build a name lookup for known presets so the table shows friendly labels
   // and we can detect addons that were removed from the user's config but
@@ -132,6 +141,13 @@ function StatsView({ data }: { data: UserAnalyticsResponse }) {
     const m = new Map<string, string>();
     for (const p of status?.settings.presets ?? []) {
       m.set(p.ID, p.NAME);
+    }
+    return m;
+  }, [status?.settings.presets]);
+  const streamTypesByPreset = React.useMemo(() => {
+    const m = new Map<string, readonly string[]>();
+    for (const p of status?.settings.presets ?? []) {
+      m.set(p.ID, p.SUPPORTED_STREAM_TYPES ?? []);
     }
     return m;
   }, [status?.settings.presets]);
@@ -154,7 +170,15 @@ function StatsView({ data }: { data: UserAnalyticsResponse }) {
   // Split rows into current vs removed (preset type no longer in config).
   const current: UserAnalyticsAddon[] = [];
   const removed: UserAnalyticsAddon[] = [];
+  const wanted: readonly string[] = TYPE_FILTERS[typeFilter].types;
   for (const row of data.perAddon) {
+    const types = streamTypesByPreset.get(row.presetType) ?? [];
+    // Presets without declared types (e.g. Custom) stay visible.
+    const excluded =
+      wanted.length > 0 &&
+      types.length > 0 &&
+      !wanted.some((t) => types.includes(t));
+    if (excluded) continue;
     if (currentTypes.has(row.presetType)) current.push(row);
     else removed.push(row);
   }
@@ -165,7 +189,18 @@ function StatsView({ data }: { data: UserAnalyticsResponse }) {
 
       <SettingsCard
         title="Per-addon performance"
-        description="One row per (preset, addon instance). Quality metrics use only requests that contributed to your final list — addons whose results were dropped because the exit condition fired aren't penalised."
+        description="One row per (preset, addon instance). Quality metrics use only requests that contributed to your final list — addons whose results were dropped because the exit condition fired aren't penalised. Unique is the share of an addon's filtered results that no other addon returned, matched by filename or info hash regardless of dedup settings; under 1% marks it Redundant."
+        action={
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => setTypeFilter(v as TypeFilter)}
+            options={Object.entries(TYPE_FILTERS).map(([value, f]) => ({
+              value,
+              label: f.label,
+            }))}
+            fieldClass="w-[140px]"
+          />
+        }
       >
         <AddonTable rows={current} presetNameByType={presetNameByType} />
       </SettingsCard>
@@ -289,6 +324,7 @@ function AddonTable({
             <Th align="right">Requests</Th>
             <Th align="right">Avg final</Th>
             <Th align="right">Final share</Th>
+            <Th align="right">Unique</Th>
             <Th align="right">Cut-off</Th>
             <Th align="right">Errors</Th>
             <Th align="right">Avg latency</Th>
@@ -329,6 +365,9 @@ function AddonTable({
                 <Td align="right">{r.requests}</Td>
                 <Td align="right">{r.avgFinalContribution.toFixed(1)}</Td>
                 <Td align="right">{r.finalShare.toFixed(1)}%</Td>
+                <Td align="right">
+                  {r.uniqueShare == null ? '—' : `${r.uniqueShare.toFixed(0)}%`}
+                </Td>
                 <Td align="right">
                   <span className={cn(r.cutOffRate > 30 && 'text-amber-400')}>
                     {r.cutOffRate.toFixed(0)}%
