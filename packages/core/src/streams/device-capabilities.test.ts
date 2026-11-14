@@ -6,6 +6,8 @@ import StreamDeduplicator from './deduplicator.js';
 import { parseDeviceCapabilities } from '../utils/device-capabilities.js';
 import {
   applyDeviceCapabilities,
+  deduplicateForDevice,
+  type DeviceCapabilitiesMode,
   getUnplayableReasons,
   playChainScope,
 } from './device-capabilities.js';
@@ -351,7 +353,10 @@ describe('exclude before deduplication', () => {
     },
   ];
 
-  async function dedupFor(device: DeviceCapabilities) {
+  async function dedupFor(
+    device: DeviceCapabilities,
+    mode: DeviceCapabilitiesMode = 'exclude'
+  ) {
     const deduplicator = new StreamDeduplicator({
       deduplicator: {
         enabled: true,
@@ -361,8 +366,13 @@ describe('exclude before deduplication', () => {
       presets: [],
       services: [],
     } as unknown as UserData);
-    const kept = applyDeviceCapabilities(group(), device, 'exclude').streams;
-    return (await deduplicator.deduplicate(kept)).map((s) => s.id);
+    const result = await deduplicateForDevice(
+      group(),
+      (streams) => deduplicator.deduplicate(streams),
+      device,
+      mode
+    );
+    return result.streams.map((s) => s.id);
   }
 
   it('keeps the playable duplicate for a device that cannot play the other', async () => {
@@ -371,6 +381,10 @@ describe('exclude before deduplication', () => {
 
   it('still dedupes to one stream for a device that plays both', async () => {
     assert.equal((await dedupFor(phone)).length, 1);
+  });
+
+  it('leaves dedup alone when the mode is not exclude', async () => {
+    assert.deepEqual(await dedupFor(tv, 'deprioritise'), ['dv-only']);
   });
 
   it('gives each device its own chain scope only in exclude mode', () => {

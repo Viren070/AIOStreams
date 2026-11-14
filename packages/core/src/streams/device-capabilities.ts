@@ -149,6 +149,27 @@ export function applyDeviceCapabilities(
 }
 
 /**
+ * Runs deduplication, removing the device's unplayable streams first when the
+ * mode is "exclude". Done in this order, an unplayable stream can't win a
+ * dedup group over a playable duplicate or become a failover variant.
+ */
+export async function deduplicateForDevice(
+  streams: ParsedStream[],
+  deduplicate: (streams: ParsedStream[]) => Promise<ParsedStream[]>,
+  caps: DeviceCapabilities | undefined,
+  mode: DeviceCapabilitiesMode | undefined
+): Promise<{ streams: ParsedStream[]; unplayable: number }> {
+  const filtered =
+    mode === 'exclude'
+      ? applyDeviceCapabilities(streams, caps, mode)
+      : { streams, unplayable: 0 };
+  return {
+    streams: await deduplicate(filtered.streams),
+    unplayable: filtered.unplayable,
+  };
+}
+
+/**
  * The scope the failover chain record is stored under. When "exclude" shapes
  * the list for a device, each device gets its own record, so two devices
  * keeping different streams or variants don't overwrite each other's chain.

@@ -56,6 +56,7 @@ import {
 import type { AddonDispositionMap } from '../streams/fetcher.js';
 import {
   applyDeviceCapabilities,
+  deduplicateForDevice,
   playChainScope,
 } from '../streams/device-capabilities.js';
 import {
@@ -358,29 +359,24 @@ export async function processStreams(
     processedStreams = await ctx.filterer.filterBlocklisted(processedStreams);
   }
 
-  // "Exclude" removes the device's unplayable streams before dedup, so one
-  // can't win a group over a playable duplicate or become a failover variant,
-  // and the limit counts only playable streams. getStreams gives these
+  // "Exclude" drops the device's unplayable streams inside this step, before
+  // dedup picks winners and failover variants. getStreams gives these
   // requests a per-device cache entry.
-  if (
-    ctx.userData.deviceCapabilities === 'exclude' &&
-    context.deviceCapabilities
-  ) {
-    const { streams, unplayable } = applyDeviceCapabilities(
-      processedStreams,
-      context.deviceCapabilities,
-      'exclude'
-    );
-    processedStreams = streams;
+  const dedupStart = Date.now();
+  const deduped = await deduplicateForDevice(
+    processedStreams,
+    (streams) => ctx.deduplicator.deduplicate(streams),
+    context.deviceCapabilities,
+    ctx.userData.deviceCapabilities
+  );
+  processedStreams = deduped.streams;
+  deduplicationMs = Date.now() - dedupStart;
+  if (deduped.unplayable) {
     logger.debug(
-      { unplayable, total: streams.length + unplayable },
+      { unplayable: deduped.unplayable },
       'excluded streams the device cannot play'
     );
   }
-
-  const dedupStart = Date.now();
-  processedStreams = await ctx.deduplicator.deduplicate(processedStreams);
-  deduplicationMs = Date.now() - dedupStart;
 
   if (isMeta || resolvedResults.hasNewStreams) {
     const skipPerStreamIds =
