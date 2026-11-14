@@ -259,8 +259,8 @@ msgstr "{unread, plural, one {Watch party, # new message} other {Watch party, # 
 
 #. Each {name} is written in the player link as it is here.
 #: src/app/settings/playback.tsx
-msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
-msgstr "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
+msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {subtitle} the preferred one alone, as SRT, {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
+msgstr "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {subtitle} the preferred one alone, as SRT, {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
 
 #: src/app/settings/cache.tsx
 msgid "{used} used. Past this, what was used longest ago goes first."
@@ -4967,6 +4967,10 @@ msgstr "The party is watching <0>{title}</0>"
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
 msgstr "the player could not play this version"
+
+#: src/lib/playback/external-return.ts
+msgid "The player lost track of where you stopped, so your place is as it was."
+msgstr "The player lost track of where you stopped, so your place is as it was."
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."

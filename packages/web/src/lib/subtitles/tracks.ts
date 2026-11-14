@@ -75,17 +75,21 @@ export function textSubtitles(source: SourceInfo): MediaStream[] {
 
 /**
  * An absolute address for an external subtitle stream, converted to the
- * WebVTT a `<video>` element reads unless `original` keeps the file's format.
+ * WebVTT a `<video>` element reads, or to `format`, unless `original` keeps
+ * the file's own.
  */
 export function subtitleUrl(
   client: JellyfinClient,
   stream: MediaStream,
-  { original = false } = {}
+  {
+    original = false,
+    format = 'vtt',
+  }: { original?: boolean; format?: 'vtt' | 'srt' } = {}
 ): string | null {
   if (!stream.DeliveryUrl) return null;
   const path = original
     ? stream.DeliveryUrl
-    : stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, 'Stream.vtt');
+    : stream.DeliveryUrl.replace(/Stream\.\w+(?=\?|$)/, `Stream.${format}`);
   return new URL(client.url(path), window.location.href).toString();
 }
 
