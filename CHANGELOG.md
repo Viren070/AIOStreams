@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.38.1](https://github.com/Viren070/AIOStreams/compare/v2.38.0...v2.38.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **watch-state:** keep one row per item in pulled watch state ([74eb37d](https://github.com/Viren070/AIOStreams/commit/74eb37d8a563b6a32b1c43940c7663b26fd5e0cd))
+
 ## [2.38.0](https://github.com/Viren070/AIOStreams/compare/v2.37.0...v2.38.0) (2026-11-14)
 
 
