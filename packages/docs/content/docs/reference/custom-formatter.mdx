@@ -123,9 +123,10 @@ Modifiers are chained with `::`:
 
 #### Media info
 
-| Variable                    | Type   | Description                                                                                                                                                                                                                       |
-| --------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{stream.mediaInfoQuality}` | string | Where the stream's media info came from: `probe` (read from the file: StremThru, stored or looked-up tracks, or this instance's own probes), or `indexer` / `addon` (audio or subtitle languages reported by an indexer or addon) |
+| Variable                    | Type   | Description                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{stream.mediaInfoQuality}` | string | Where the stream's media info came from: `probe` (read from the file: StremThru, stored or looked-up tracks, or this instance's own probes), or `indexer` / `addon` (audio or subtitle languages reported by an indexer or addon)                                                                                                |
+| `{stream.mediaInfoSource}`  | string | Which source a probe's media info came from: `local` (this instance's own probe), `stremthru` (a full per-file probe), `remuxdb`, `remote` (another AIOStreams instance), or `stremthru-addon` (what the StremThru addon's stream description reports, without track lists). Empty when the media info did not come from a probe |
 
 #### Tracks
 

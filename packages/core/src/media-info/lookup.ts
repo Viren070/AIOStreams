@@ -1,4 +1,8 @@
-import type { ParsedStream } from '../db/schemas.js';
+import {
+  MEDIA_INFO_SOURCES,
+  type MediaInfoSource,
+  type ParsedStream,
+} from '../db/schemas.js';
 import {
   LOCAL_ORIGIN,
   MediaInfoRepository,
@@ -21,11 +25,14 @@ import { applyMediaInfo } from './apply.js';
 import { mediaInfoIdentity, type MediaInfoIdentity } from './identity.js';
 import type { MediaInfoRecord, MediaTrack } from './record.js';
 import { REMOTE_ORIGIN_PREFIX, remoteRows } from './remote.js';
-import { noteLookup } from './activity.js';
+import { noteLookup, sourceOf } from './activity.js';
 
 export { mediaInfoIdentity, type MediaInfoIdentity } from './identity.js';
 
 const logger = createLogger('media-info');
+
+const isMediaInfoSource = (s: string): s is MediaInfoSource =>
+  (MEDIA_INFO_SOURCES as readonly string[]).includes(s);
 
 const baseName = (path: string | undefined) => path?.split('/').pop() ?? '';
 
@@ -226,10 +233,20 @@ async function findRecords(
   });
 }
 
+export interface StoredInfo {
+  info: MediaInfoRecord;
+  source?: MediaInfoSource;
+}
+
+const sourceOfOrigin = (origin: string): MediaInfoSource | undefined => {
+  const source = sourceOf(origin);
+  return isMediaInfoSource(source) ? source : undefined;
+};
+
 /** Each listed post's probed files, by NZB content hash then file. */
 export async function storedFilesByPost(
   contentHashes: string[]
-): Promise<Map<string, Map<string, MediaInfoRecord>>> {
+): Promise<Map<string, Map<string, StoredInfo>>> {
   const byKey = new Map<string, MediaInfoRow[]>();
   const keys = contentHashes.flatMap((h) => nzbContentKey(h) ?? []);
   for (const row of await MediaInfoRepository.getByKeys(keys)) {
@@ -237,11 +254,16 @@ export async function storedFilesByPost(
     list.push(row);
     byKey.set(row.releaseKey, list);
   }
-  const posts = new Map<string, Map<string, MediaInfoRecord>>();
+  const posts = new Map<string, Map<string, StoredInfo>>();
   for (const [key, rows] of byKey) {
     posts.set(
       key.slice('nh1:'.length),
-      new Map(byFile(rows).map((row) => [row.file, row.info]))
+      new Map(
+        byFile(rows).map((row) => [
+          row.file,
+          { info: row.info, source: sourceOfOrigin(row.origin) },
+        ])
+      )
     );
   }
   return posts;
@@ -249,9 +271,9 @@ export async function storedFilesByPost(
 
 /** A library file's probe: archive members are stored by path, others by name. */
 export function storedFileInfo(
-  files: Map<string, MediaInfoRecord> | undefined,
+  files: Map<string, StoredInfo> | undefined,
   file: { name?: string; path?: string }
-): MediaInfoRecord | undefined {
+): StoredInfo | undefined {
   if (!files) return undefined;
   return (
     (file.path ? files.get(file.path) : undefined) ??
@@ -288,7 +310,7 @@ export async function resolveStoredMediaInfo(
     for (const [index, [stream]] of eligible.entries()) {
       const hit = found[index];
       if (!hit) continue;
-      applyMediaInfo(stream, hit.record);
+      applyMediaInfo(stream, hit.record, sourceOfOrigin(hit.origin));
       filledFrom.push(hit.origin);
     }
     noteLookup(eligible.length, filledFrom);
