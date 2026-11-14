@@ -4,374 +4,375 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: @lingui/cli\n"
+"X-Generator: Weblate 2026.12.dev0\n"
 "Language: ro\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"Last-Translator: Mr_Rosh <mr-rosh@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Romanian <https://hosted.weblate.org/projects/aiostreams/web-app/ro/>\n"
 "Plural-Forms: nplurals=3; plural=n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2;\n"
+"PO-Revision-Date: 2026-11-14 21:11+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
-msgstr ""
+msgstr "(tu)"
 
 #: src/app/sign-in/page.tsx
 msgid "{address} did not answer. Check that it is running, then try again."
-msgstr ""
+msgstr "{address} nu a răspuns. Verifică dacă funcționează, apoi încearcă iar."
 
 #: src/features/live-tv/live-reminders.tsx
 msgid "{at} on {channelName}"
-msgstr ""
+msgstr "{at} pe {channelName}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
-msgstr ""
+msgstr "{badgeCount, plural, one {# insignă proprie} other {# insigne proprii}}"
 
 #: src/app/history/page.tsx
 msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
-msgstr ""
+msgstr "{cleared, plural, one {S-a eliminat # titlu din istoric} other {S-au eliminat # titluri din istoric}}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{count, plural, one {# badge} other {# badges}}"
-msgstr ""
+msgstr "{count, plural, one {# insignă} other {# insigne}}"
 
 #: src/app/settings/playback.tsx
 msgid "{count, plural, one {# minute} other {# minutes}}"
-msgstr ""
+msgstr "{count, plural, one {# minut} other {# minute}}"
 
 #: src/app/settings/_components/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
-msgstr ""
+msgstr "{count, plural, one {# secundă} other {# secunde}}"
 
 #: src/features/playlists/playlists.tsx
 msgid "{count, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{count, plural, one {# titlu} other {# titluri}}"
 
 #: src/features/party/not-in-party.tsx
 msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
-msgstr ""
+msgstr "{count, plural, one {# urmăresc · pe {on}} other {# urmăresc · pe {on}}}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{count, plural, one {Added # badge} other {Added # badges}}"
-msgstr ""
+msgstr "{count, plural, one {Adăugat # insignă} other {Adăugat # insigne}}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
-msgstr ""
+msgstr "{count, plural, one {S-a adăugat # filtru rapid} other {S-au adăugat # filtre rapide}}"
 
 #: src/lib/downloads/index.ts
 msgid "{count, plural, one {Download added} other {# downloads added}}"
-msgstr ""
+msgstr "{count, plural, one {Descărcare adăugată} other {# descărcări adăugate}}"
 
 #: src/app/item/_components/trailers.tsx
 msgid "{count, plural, one {Trailer} other {Trailers}}"
-msgstr ""
+msgstr "{count, plural, one {Trailer} other {Trailere}}"
 
 #: src/app/downloads/page.tsx
 msgid "{downloaded} downloaded"
-msgstr ""
+msgstr "{downloaded} descărcat"
 
 #: src/app/history/page.tsx
 msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# episod văzut} other {# episoade văzute}}"
 
 #: src/app/downloads/page.tsx
 #: src/app/history/page.tsx
 #: src/app/item/_components/seasons.tsx
 msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
-msgstr ""
+msgstr "{episodeCount, plural, one {# episod} other {# episoade}}"
 
 #: src/app/history/page.tsx
 msgid "{favorites, plural, one {# favourite} other {# favourites}}"
-msgstr ""
+msgstr "{favorites, plural, one {# favorit} other {# favorite}}"
 
 #: src/app/settings/downloads.tsx
 msgid "{folder}. New downloads go here; ones already saved stay where they are."
-msgstr ""
+msgstr "{folder}. Descărcările noi vor fi salvate aici; cele deja salvate își vor păstra locația actuală."
 
 #: src/features/versions/version-list.tsx
 msgid "{found, plural, one {# version} other {# versions}}"
-msgstr ""
+msgstr "{found, plural, one {# versiune} other {# versiuni}}"
 
 #: src/features/versions/version-list.tsx
 msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
-msgstr ""
+msgstr "{found, plural, one {Filtrează versiunea #} other {Filtrează # versiuni}}"
 
 #: src/app/downloads/page.tsx
 msgid "{got} of {size}"
-msgstr ""
+msgstr "{got} de {size}"
 
 #: src/lib/playback/quality.ts
 msgid "{height}, {mbps} Mbps"
-msgstr ""
+msgstr "{height}, {mbps} Megabiți"
 
 #: src/features/player/options.tsx
 msgid "{height}%"
-msgstr ""
+msgstr "{height}%"
 
 #: src/app/settings/cache.tsx
 msgid "{help} {bytes}."
-msgstr ""
+msgstr "{help} {bytes}."
 
 #: src/features/party/not-in-party.tsx
 msgid "{host}'s party"
-msgstr ""
+msgstr "grupul organizat de {host}"
 
 #. Hours, as in 2h
 #: src/lib/format.ts
 msgid "{hours}h"
-msgstr ""
+msgstr "{hours} ore"
 
 #. Hours and minutes, as in 1h 15m
 #: src/lib/format.ts
 msgid "{hours}h {rest}m"
-msgstr ""
+msgstr "{hours} ore {rest} minute"
 
 #: src/app/history/page.tsx
 msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
-msgstr ""
+msgstr "{inProgress, plural, one {# în curs} other {# în curs}}"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "{key} is taken by {taken}"
-msgstr ""
+msgstr "{key} e luat de {taken}"
 
 #: src/app/downloads/page.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/card-preview.tsx
 #: src/components/media/episodes.tsx
 msgid "{left} left"
-msgstr ""
+msgstr "{left} rămas"
 
 #: src/features/party/not-in-party.tsx
 msgid "{members, plural, one {# watching} other {# watching}}"
-msgstr ""
+msgstr "{members, plural, one {# vizionează} other {# vizionează}}"
 
 #. Minutes, as in 45m
 #: src/lib/format.ts
 msgid "{minutes}m"
-msgstr ""
+msgstr "{minutes} minute"
 
 #: src/app/history/page.tsx
 msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# film văzut} other {# filme văzute}}"
 
 #: src/app/history/page.tsx
 msgid "{movieCount, plural, one {# movie} other {# movies}}"
-msgstr ""
+msgstr "{movieCount, plural, one {# film} other {# filme}}"
 
 #: src/app/history/page.tsx
 msgid "{movies} and {episodes} watched"
-msgstr ""
+msgstr "{movies} și {episodes} văzute"
 
 #: src/app/settings/playback.tsx
 msgid "{n, plural, one {After # episode} other {After # episodes}}"
-msgstr ""
+msgstr "{n, plural, one {După # episod} other {După # episoade}}"
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr ""
+msgstr "{name} este programat pentru {day} ({until}). Doriți să descărcați oricum?"
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr ""
+msgstr "{name} este programat pentru {day} ({until}). Doriți să redați oricum?"
 
 #: src/features/party/party-host.tsx
 msgid "{name} joined the party"
-msgstr ""
+msgstr "{name} s-a alăturat grupului"
 
 #: src/features/party/party-host.tsx
 msgid "{name} left the party"
-msgstr ""
+msgstr "{name} a părăsit grupul"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
-msgstr ""
+msgstr "{others, plural, one {Alege versiunea pe care dorești să o descarci. Celălalt episod va folosi aceeași versiune, dacă este disponibilă.} other {Alege versiunea pe care dorești să o descarci. Celelalte # episoade vor folosi aceeași versiune, dacă este disponibilă.}}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{packCount, plural, one {# pack} other {# packs}}"
-msgstr ""
+msgstr "{packCount, plural, one {# pachet} other {# pachete}}"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "{packs} and {own}"
-msgstr ""
+msgstr "{packs} și {own}"
 
 #: src/app/settings/playback.tsx
 msgid "{r}×"
-msgstr ""
+msgstr "{r}×"
 
 #: src/lib/party/party.ts
 msgid "{relay} didn't answer."
-msgstr ""
+msgstr "{relay} nu a răspuns."
 
 #: src/app/history/page.tsx
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
-msgstr ""
+msgstr "{removed, plural, one {S-a eliminat # din istoric} other {S-au eliminat # din istoric}}"
 
 #: src/features/party/not-in-party.tsx
 msgid "{rest, plural, one {# more} other {# more}}"
-msgstr ""
+msgstr "{rest, plural, one {# rămas} other {# rămase}}"
 
 #: src/app/settings/playback.tsx
 msgid "{s}%"
-msgstr ""
+msgstr "{s}%"
 
 #: src/features/party/in-party.tsx
 msgid "{seconds}s ahead"
-msgstr ""
+msgstr "{seconds}s în avans"
 
 #: src/features/party/in-party.tsx
 msgid "{seconds}s behind"
-msgstr ""
+msgstr "{seconds}s în urmă"
 
 #: src/app/history/page.tsx
 msgid "{selected, plural, one {# selected} other {# selected}}"
-msgstr ""
+msgstr "{selected, plural, one {# selectat} other {# selectate}}"
 
 #: src/features/player/keys.ts
 msgid "{shown}×"
-msgstr ""
+msgstr "{shown}×"
 
 #: src/features/player/controls.tsx
 #: src/features/player/picture-in-picture.tsx
 msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Înapoi # secundă} other {Înapoi # secunde}}"
 
 #: src/features/player/controls.tsx
 #: src/features/player/picture-in-picture.tsx
 msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
-msgstr ""
+msgstr "{stepSeconds, plural, one {Înainte # secundă} other {Înainte # secunde}}"
 
 #: src/app/history/page.tsx
 msgid "{time} watched"
-msgstr ""
+msgstr "{time} văzut"
 
 #: src/lib/party/follow.ts
 msgid "{title} isn't on your server."
-msgstr ""
+msgstr "{title} nu se află pe serverul tău."
 
 #: src/app/discover/page.tsx
 msgid "{total, plural, one {# title} other {# titles}}"
-msgstr ""
+msgstr "{total, plural, one {# titlu} other {# titluri}}"
 
 #: src/app/item/_components/seasons.tsx
 msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
-msgstr ""
+msgstr "{unairedCount, plural, one {# episod nelansat} other {# episoade nelansate}}"
 
 #: src/features/player/options.tsx
 msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
-msgstr ""
+msgstr "{unread, plural, one {Watch party, # mesaj nou} other {Watch party, # mesaje noi}}"
 
 #. Each {name} is written in the player link as it is here.
 #: src/app/settings/playback.tsx
 msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
-msgstr ""
+msgstr "{url} este adresa fluxului, {encodedUrl} este aceeași adresă codificată pentru URL, {scheme} este protocolul acesteia, {filename} este numele fișierului, {subtitles} reprezintă fiecare subtitrare externă (parametrul se repetă pentru fiecare fișier), {title} este titlul împreună cu episodul, {position} este secunda de la care începe redarea ({positionMs} în milisecunde), iar {returnUrl} este un link înapoi către această pagină, folosit de un player care transmite poziția la care s-a oprit redarea. Toate valorile, cu excepția lui {url}, sunt codificate pentru URL. După intent://, {url} este inclus fără protocol."
 
 #: src/app/settings/cache.tsx
 msgid "{used} used. Past this, what was used longest ago goes first."
-msgstr ""
+msgstr "{used} utilizate. Dacă se depășește această limită, cele folosite cel mai demult vor fi eliminate primele."
 
 #: src/features/party/party-layer.tsx
 msgid "{who} jumped to {to}"
-msgstr ""
+msgstr "{who} a sărit la {to}"
 
 #: src/features/party/party-layer.tsx
 msgid "{who} paused"
-msgstr ""
+msgstr "{who} a pus pauză"
 
 #: src/features/party/party-layer.tsx
 msgid "{who} resumed"
-msgstr ""
+msgstr "{who} a reluat redarea"
 
 #: src/features/party/party-layer.tsx
 msgid "{who} started {title}"
-msgstr ""
+msgstr "{who} a pornit {title}"
 
 #: src/lib/playback/sound.ts
 msgid "+{amount} ms"
-msgstr ""
+msgstr "+{amount} ms"
 
 #: src/lib/playback/sound.ts
 msgid "+{db} dB"
-msgstr ""
+msgstr "+{db} dB"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{seconds}s"
-msgstr ""
+msgstr "+{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "+{time}"
-msgstr ""
+msgstr "+{time}"
 
 #: src/lib/playback/sound.ts
 msgid "−{amount} ms"
-msgstr ""
+msgstr "−{amount} ms"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{seconds}s"
-msgstr ""
+msgstr "−{seconds}s"
 
 #: src/lib/subtitles/delay.ts
 msgid "−{time}"
-msgstr ""
+msgstr "−{time}"
 
 #: src/lib/input/actions.ts
 msgid "0 to 9"
-msgstr ""
+msgstr "0 până la 9"
 
 #: src/lib/input/actions.ts
 msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
-msgstr ""
+msgstr "1 înseamnă 10% din progres, 5 înseamnă jumătate, iar 0 revine la început."
 
 #: src/app/settings/interface.tsx
 msgid "12-hour ({twelve})"
-msgstr ""
+msgstr "Format de 12 ore ({twelve})"
 
 #: src/app/settings/interface.tsx
 msgid "24-hour ({twentyFour})"
-msgstr ""
+msgstr "Format de 12 ore ({twentyFour})"
 
 #: src/app/settings/audio.tsx
 msgid "5.1 surround"
-msgstr ""
+msgstr "5.1 surround"
 
 #: src/app/settings/audio.tsx
 msgid "7.1 surround"
-msgstr ""
+msgstr "7.1 surround"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
-msgstr ""
+msgstr "Un ecuson este afișat pe fiecare versiune al cărei text corespunde modelului definit: numele și descrierea generate de formatorul tău, numele fișierului și etichetele preluate din acesta."
 
 #: src/features/party/not-in-party.tsx
 msgid "A code is looked up on the relay picked above."
-msgstr ""
+msgstr "Un cod este căutat pe serverul de retransmisie selectat mai sus."
 
 #: src/app/settings/cache.tsx
 msgid "A day"
-msgstr ""
+msgstr "O zi"
 
 #: src/app/settings/cache.tsx
 msgid "A month"
-msgstr ""
+msgstr "O lună"
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "A regular expression. Case never matters."
-msgstr ""
+msgstr "Nu se face diferența între litere mari și mici."
 
 #: src/features/party/not-in-party.tsx
 msgid "A relay someone else runs, for people on other servers."
-msgstr ""
+msgstr "Un server de retransmisie administrat de altcineva, destinat utilizatorilor de pe alte servere."
 
 #: src/components/shell/input-setup.tsx
 msgid "A remote's or gamepad's buttons work too."
-msgstr ""
+msgstr "Butoanele telecomenzii sau ale gamepad-ului funcționează și ele."
 
 #: src/app/settings/playback.tsx
 msgid "A set time before the end."
-msgstr ""
+msgstr "Un interval de timp stabilit înainte de final."
 
 #: src/app/settings/playback.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
-msgstr ""
+msgstr "O fereastră mică în care este afișat playerul, cu subtitrări, comenzi și bara de derulare. Browserul adaugă propria bară în partea de sus."
 
 #: src/app/settings/audio.tsx
 msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
