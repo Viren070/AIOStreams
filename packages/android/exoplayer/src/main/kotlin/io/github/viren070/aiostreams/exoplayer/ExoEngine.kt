@@ -3,6 +3,7 @@ package io.github.viren070.aiostreams.exoplayer
 import android.content.Context
 import android.media.MediaFormat
 import android.net.Uri
+import android.os.Build
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
@@ -74,6 +75,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.json.JsonArray
@@ -139,6 +141,9 @@ class ExoEngine(private val context: Context) : Engine {
 
     /** A load or seek waits for its first frame, which mpv reports as `playback-restart`. */
     private var restarting = false
+
+    /** Where the tunnel's video was last restarted, until the page seeks or picks the sound again. */
+    private var resyncedAtMs: Long? = null
     private var volume = 100.0
     private var muted = false
     private var skips: List<Skip> = emptyList()
@@ -225,20 +230,40 @@ class ExoEngine(private val context: Context) : Engine {
             state(PlayerState(muted = it))
         }
         change.speed?.let { player.playbackParameters = PlaybackParameters(it.toFloat()) }
-        change.audio?.let { selectTrack("audio", it.id?.toIntOrNull()) }
+        change.audio?.let {
+            resyncedAtMs = null
+            selectTrack("audio", it.id?.toIntOrNull())
+        }
         change.subtitle?.let { selectSubtitle(it.id?.toIntOrNull()) }
         change.subtitleDelayMs?.let(subtitles::setDelayMs)
     }
 
     override fun seek(positionMs: Double, snapMs: Double) = post {
         if (url == null) return@post
-        val snapUs = (snapMs * 1000).toLong()
+        resyncedAtMs = null
+        seekTo(positionMs.toLong(), (snapMs * 1000).toLong())
+    }
+
+    private fun seekTo(positionMs: Long, snapUs: Long) {
         player.setSeekParameters(if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
-        player.seekTo(positionMs.toLong().coerceAtLeast(0))
+        player.seekTo(positionMs.coerceAtLeast(0))
         seeking = true
         restarting = true
         state(PlayerState(seeking = true))
         updatePolling()
+    }
+
+    /**
+     * Not twice at one place: a stream whose sound changes format there would be sent back before it for ever.
+     * Nor in a file that can't seek, which Exo would start over.
+     */
+    private fun resync() {
+        if (!player.isCurrentMediaItemSeekable) return
+        val position = player.currentPosition
+        if (resyncedAtMs?.let { abs(position - it) < RESYNC_SPAN_MS } == true) return
+        resyncedAtMs = position
+        // Now, not queued: behind a seek or a load of the page's it would undo that one.
+        seekTo(position - RESYNC_BACK_MS, 0)
     }
 
     override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
@@ -465,6 +490,7 @@ class ExoEngine(private val context: Context) : Engine {
         dolbyVision = null
         audioTrack = null
         decoders.clear()
+        resyncedAtMs = null
         loaded = false
         chosen = false
         restarting = true
@@ -814,6 +840,11 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
             audioTrack = audioTrackConfig
+            // An Amlogic tunnel's video waits for the sound to start again and
+            // never hears that a new audio output did: the picture stands
+            // still while the sound plays on. A seek restarts both; Exo skips
+            // one to where it already is, so it goes back a moment.
+            if (player.isTunnelingEnabled && AMLOGIC && loaded && !restarting && url != null) resync()
             val passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)
             if (passthrough) decoders.remove("audio")
             state(PlayerState(passthrough = passthrough))
@@ -822,6 +853,9 @@ class ExoEngine(private val context: Context) : Engine {
 
     private companion object {
         const val TAG = "exo"
+        const val RESYNC_BACK_MS = 100L
+        const val RESYNC_SPAN_MS = 3000L
+        val AMLOGIC = Build.VERSION.SDK_INT >= 31 && Build.SOC_MANUFACTURER.equals("Amlogic", ignoreCase = true)
         const val POLL_MS = 250L
         const val IDLE_POLL_MS = 1000L
         const val IDLE_POLLS = 10
