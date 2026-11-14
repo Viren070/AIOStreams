@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">التنزيلات</string>
+    <plurals name="downloading_items">
+        <item quantity="zero">جارٍ تنزيل %d عنصر</item>
+        <item quantity="one">جارٍ تنزيل %d عنصر</item>
+        <item quantity="two">جارٍ تنزيل %d عنصرين</item>
+        <item quantity="few">جارٍ تنزيل %d عناصر</item>
+        <item quantity="many">جارٍ تنزيل %d عنصرًا</item>
+        <item quantity="other">جارٍ تنزيل %d عنصر</item>
+    </plurals>
+    <string name="channel_updates">التحديثات</string>
+    <string name="updated_to">تم التحديث إلى %1$s</string>
+    <string name="tap_to_open">اضغط للفتح</string>
+    <string name="update_no_build">لا يوجد إصدار لمعالج هذا الجهاز</string>
+    <string name="update_damaged">التنزيل تالف</string>
+    <string name="update_install_failed">فشل التثبيت: %1$s</string>
+    <string name="update_feed_answered">ردّ المصدر بالرمز %1$d</string>
+    <string name="download_folder_title">اختر مكان حفظ التنزيلات</string>
+    <string name="download_folder_free">%1$s · %2$s متاحة</string>
+    <string name="file_saved">تم حفظ %1$s في التنزيلات</string>
+    <string name="file_not_saved">تعذّر حفظ %1$s</string>
+    <string name="webview_version_unknown">غير معروف</string>
+    <string name="webview_too_old">WebView في هذا الجهاز قديم جدًا للتطبيق: الإصدار %1$s، ويحتاج التطبيق إلى الإصدار %2$d أو أحدث.</string>
+    <string name="webview_update">حدّث Android System WebView أو النظام، ثم افتح التطبيق مرة أخرى.</string>
+</resources>
