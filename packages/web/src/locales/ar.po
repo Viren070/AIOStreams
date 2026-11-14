@@ -9,7 +9,7 @@ msgstr ""
 "Last-Translator: N <0-nj@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Arabic <https://hosted.weblate.org/projects/aiostreams/web-app/ar/>\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
-"PO-Revision-Date: 2026-11-14 21:11+0000\n"
+"PO-Revision-Date: 2026-11-14 21:12+0000\n"
 
 #: src/features/party/in-party.tsx
 msgid "(you)"
@@ -505,7 +505,7 @@ msgstr "AIOStreams مشروع فردي أبنيه وأصونه بنفسي في �
 
 #: src/app/item/_components/details.tsx
 msgid "Airs"
-msgstr "العرض"
+msgstr "موعد العرض"
 
 #: src/lib/format.ts
 msgid "Airs {day} · {until}"
@@ -4480,7 +4480,7 @@ msgstr "الترتيب حسب"
 #: src/app/settings/interface.tsx
 #: src/features/player/options.tsx
 msgid "Sound"
-msgstr "الصوت"
+msgstr "الصوتيات"
 
 #: src/app/history/page.tsx
 msgid "Source"
@@ -5337,7 +5337,7 @@ msgstr "آلة كاتبة"
 #: src/components/media/episodes.tsx
 #: src/lib/format.ts
 msgid "Unaired"
-msgstr "لم يُعرض بعد"
+msgstr "غير معروض"
 
 #: src/app/settings/interface.tsx
 msgid "Under posters"
