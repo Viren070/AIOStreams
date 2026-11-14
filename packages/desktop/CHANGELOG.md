@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.24.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.24.0...desktop-v0.24.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **desktop:** add --device=input to the Flatpak ([c219455](https://github.com/Viren070/AIOStreams/commit/c219455de02bd400799a75b7ee579299176dbdc1)), closes [#1578](https://github.com/Viren070/AIOStreams/issues/1578)
+* **desktop:** load a YouTube trailer's largest H.264 variant and its audio as an EDL ([8eb12ba](https://github.com/Viren070/AIOStreams/commit/8eb12ba680775d546cc2e9bf84c966568326fbcd))
+
 ## [0.24.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.23.0...desktop-v0.24.0) (2026-11-12)
 
 
