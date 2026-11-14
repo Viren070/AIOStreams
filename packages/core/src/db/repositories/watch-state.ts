@@ -127,6 +127,11 @@ interface DbRow {
 
 const CHUNK = 200;
 
+/** Postgres refuses an upsert that writes one row twice; the last copy wins, as on SQLite. */
+function onePerItem<T extends { identity: WatchIdentity }>(rows: T[]): T[] {
+  return [...new Map(rows.map((row) => [row.identity.itemKey, row])).values()];
+}
+
 function optionalNumber(v: number | string | null): number | null {
   return v == null ? null : Number(v);
 }
@@ -317,9 +322,10 @@ export class WatchStateRepository {
    */
   static async upsertImports(
     scope: WatchScope,
-    rows: { identity: WatchIdentity; values: SqlFragment }[],
+    imports: { identity: WatchIdentity; values: SqlFragment }[],
     db: DbDriver = getDb()
   ): Promise<void> {
+    const rows = onePerItem(imports);
     for (let i = 0; i < rows.length; i += CHUNK) {
       const slice = rows.slice(i, i + CHUNK);
       await db.exec(
@@ -866,10 +872,11 @@ export class WatchStateRepository {
   static async upsertWatchlist(
     scope: WatchScope,
     sinkId: string,
-    rows: { identity: WatchIdentity; at: number }[],
+    entries: { identity: WatchIdentity; at: number }[],
     now: number,
     db: DbDriver = getDb()
   ): Promise<void> {
+    const rows = onePerItem(entries);
     for (let i = 0; i < rows.length; i += CHUNK) {
       const values = rows.slice(i, i + CHUNK).map(
         ({ identity, at }) =>
