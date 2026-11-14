@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 21:55+0000\n"
+"PO-Revision-Date: 2026-11-14 20:08+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -702,9 +702,8 @@ msgid "Background"
 msgstr "Hintergrund"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Background from artwork"
-msgstr "Hintergrund"
+msgstr "Titelmotiv als Hintergrund"
 
 #: src/lib/input/keys.ts
 msgid "Backspace"
@@ -1817,11 +1816,11 @@ msgstr "Gib diesen Code an die Person weiter, die das Problem untersucht."
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
-msgstr ""
+msgstr "Glasflächen"
 
 #: src/app/settings/theme.tsx
 msgid "Glass surface"
-msgstr ""
+msgstr "Glasoberfläche"
 
 #: src/app/settings/apps.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
@@ -2340,7 +2339,7 @@ msgstr "Menütaste"
 
 #: src/app/settings/theme.tsx
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
-msgstr ""
+msgstr "Menüs, Listen, Felder und Kacheln über dem Hintergrundbild liegen auf der Glasoberfläche statt auf dessen Farbe. Auf langsameren Geräten kann sich der zusätzliche Renderaufwand bemerkbar machen."
 
 #: src/app/settings/interface.tsx
 msgid "Merge continue watching and next up"
@@ -2804,9 +2803,8 @@ msgid "on {relay}"
 msgstr "auf {relay}"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "Während das Hero-Banner rotiert. Mit der Maus hebt sich eine Kachel immer hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
+msgstr "Auf der Startseite, während das Hero-Banner rotiert, sowie in Rastern. In einem Raster hebt sich eine Kachel unter dem Mauszeiger hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -4692,7 +4690,7 @@ msgstr "Der Player der App und seine Optionen, etwa das Starten von Videos im Qu
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
-msgstr ""
+msgstr "Das weichgezeichnete und abgedunkelte Hintergrundbild des geöffneten Titels hinter den Seiten und der Versionsliste."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5459,9 +5457,8 @@ msgid "What the app did each day, kept for a week."
 msgstr "Tägliche Aktivitäten der App, eine Woche lang gespeichert."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
-msgstr "Hintergrund der Navigation über der Seite: die App-Farbe oder Glas, durch das die Seite sichtbar bleibt. Flüssigglas verzerrt zusätzlich den Inhalt hinter seinen Rändern und beansprucht langsame Geräte stärker."
+msgstr "Hintergrund der Navigation und der Glasflächen über dem Hintergrundbild: die App-Farbe oder Glas, durch das die Seite sichtbar bleibt. Flüssigglas verzerrt zusätzlich den Inhalt hinter den Rändern der Navigation und beansprucht langsame Geräte stärker."
 
 #: src/features/party/chat.tsx
 msgid "What the others say shows here."
