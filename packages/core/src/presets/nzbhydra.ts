@@ -111,6 +111,13 @@ export class NZBHydraPreset extends NewznabPreset {
         ],
       },
       {
+        id: 'proxyAuth',
+        name: 'AIOStreams Proxy Auth',
+        description: `Provide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
+        type: 'password',
+        required: false,
+      },
+      {
         id: 'searchMode',
         name: 'Search Mode',
         description:
@@ -201,6 +208,7 @@ export class NZBHydraPreset extends NewznabPreset {
       // always a base url, since NZBHydra only ever serves its api at /api
       apiPath: '/api',
       apiKey: nzbhydraApiKey,
+      proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? true,
       forceInitialLimit: options.initialLimit ?? 250,
       paginate: options.paginate ?? false,
