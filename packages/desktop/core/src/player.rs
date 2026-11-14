@@ -225,6 +225,8 @@ pub struct Player {
     styled: Mutex<HashMap<&'static str, String>>,
     /// None when the user's mpv.conf sizes the cache.
     auto_cache: Option<u64>,
+    /// What mpv plays for each YouTube address handed to the page.
+    youtube: Arc<Mutex<HashMap<String, String>>>,
     emit: Emit,
 }
 
@@ -307,16 +309,27 @@ impl Player {
             own_font,
             styled: Mutex::default(),
             auto_cache,
+            youtube: Arc::default(),
             emit,
         })
     }
 
     pub fn resolve_youtube(&self, request: String, id: String) {
-        let emit = self.emit.clone();
+        let (emit, youtube) = (self.emit.clone(), self.youtube.clone());
         let spawned = std::thread::Builder::new()
             .name("youtube".into())
             .spawn(move || {
                 let stream = crate::youtube::resolve(&id);
+                if let Some(s) = &stream
+                    && let Some(playable) = &s.playable
+                    && let Ok(mut youtube) = youtube.lock()
+                {
+                    // Its links expire within hours anyway.
+                    if youtube.len() >= 64 {
+                        youtube.clear();
+                    }
+                    youtube.insert(s.url.clone(), playable.clone());
+                }
                 emit(Outbound::YoutubeResolved {
                     request,
                     url: stream.as_ref().map(|s| s.url.clone()),
@@ -365,8 +378,16 @@ impl Player {
 
     /// Errs only on refused requests; mpv's own errors reach the page as a message.
     pub fn load(&self, load: &Load, local: &dyn Fn(&str) -> bool) -> Result<(), String> {
-        let file = Loadfile::new(load, local)?;
+        let mut file = Loadfile::new(load, local)?;
         log::info!("load url={} options={}", file.url, file.options.join(","));
+        if let Some(playable) = self
+            .youtube
+            .lock()
+            .ok()
+            .and_then(|y| y.get(&load.url).cloned())
+        {
+            file.url = playable;
+        }
         if !load.append
             && let Ok(mut reference) = self.reference.lock()
         {

@@ -52,6 +52,8 @@ const CLIENTS: &[Client] = &[
 pub struct Stream {
     pub url: String,
     pub original_language: Option<String>,
+    /// What mpv plays for `url`, which FFmpeg would open every variant of before playing.
+    pub playable: Option<String>,
 }
 
 pub fn resolve(video_id: &str) -> Option<Stream> {
@@ -90,9 +92,13 @@ fn ask(agent: &ureq::Agent, client: &Client, video_id: &str) -> Result<Option<St
                     .as_array()
                     .and_then(|formats| formats.iter().find_map(|f| f["url"].as_str()))
             };
+            let original = original_audio(streaming);
             return Ok(url.map(|url| Stream {
                 url: url.to_string(),
-                original_language: original_language(streaming),
+                original_language: original
+                    .and_then(|id| id.split('.').next())
+                    .map(String::from),
+                playable: client.hls.then(|| playable(agent, url, original)).flatten(),
             }));
         }
         // Without a visitor id YouTube refuses, but hands one out for the next ask.
@@ -104,15 +110,110 @@ fn ask(agent: &ureq::Agent, client: &Client, video_id: &str) -> Result<Option<St
     Ok(None)
 }
 
-/// The original audio's language, which a manifest with dubs doesn't mark.
-fn original_language(streaming: &Value) -> Option<String> {
-    let track = streaming["adaptiveFormats"]
+/// The original audio's id, such as `en-US.4`, which a manifest with dubs doesn't mark.
+fn original_audio(streaming: &Value) -> Option<&str> {
+    streaming["adaptiveFormats"]
         .as_array()?
         .iter()
         .map(|format| &format["audioTrack"])
-        .find(|track| track["audioIsDefault"] == true)?;
-    // Such as `en-US.4`.
-    track["id"].as_str()?.split('.').next().map(String::from)
+        .find(|track| track["audioIsDefault"] == true)?["id"]
+        .as_str()
+}
+
+fn playable(agent: &ureq::Agent, url: &str, original: Option<&str>) -> Option<String> {
+    let master = agent
+        .get(url)
+        .call()
+        .and_then(|mut response| response.body_mut().read_to_string())
+        .inspect_err(|e| log::warn!("youtube playlist: {e}"))
+        .ok()?;
+    one_variant(&master, original)
+}
+
+type Attributes<'a> = Vec<(&'a str, &'a str)>;
+
+fn attributes(mut list: &str) -> Attributes<'_> {
+    let mut all = Vec::new();
+    while let Some((name, rest)) = list.split_once('=') {
+        let (value, rest) = match rest.strip_prefix('"') {
+            Some(quoted) => quoted.split_once('"').unwrap_or((quoted, "")),
+            None => rest.split_once(',').unwrap_or((rest, "")),
+        };
+        all.push((name, value));
+        list = rest.strip_prefix(',').unwrap_or(rest);
+    }
+    all
+}
+
+fn get<'a>(attributes: &Attributes<'a>, name: &str) -> Option<&'a str> {
+    attributes.iter().find(|(n, _)| *n == name).map(|(_, v)| *v)
+}
+
+fn edl_value(value: &str) -> String {
+    format!("%{}%{value}", value.len())
+}
+
+/// The largest H.264 variant of `master` with its group's audio as an EDL, each
+/// audio opened only once mpv picks it by language.
+fn one_variant(master: &str, original: Option<&str>) -> Option<String> {
+    let mut audio = Vec::new();
+    let mut best: Option<((u32, u64), Attributes, &str)> = None;
+    let mut lines = master.lines();
+    while let Some(line) = lines.next() {
+        if let Some(list) = line.strip_prefix("#EXT-X-MEDIA:") {
+            let media = attributes(list);
+            if get(&media, "TYPE") == Some("AUDIO") {
+                audio.push(media);
+            }
+        } else if let Some(list) = line.strip_prefix("#EXT-X-STREAM-INF:") {
+            let variant = attributes(list);
+            let uri = lines.next()?.trim();
+            let height = get(&variant, "RESOLUTION")
+                .and_then(|r| r.split_once('x')?.1.parse().ok())
+                .unwrap_or(0);
+            let bandwidth = get(&variant, "BANDWIDTH")
+                .and_then(|b| b.parse().ok())
+                .unwrap_or(0);
+            let h264 = get(&variant, "CODECS").is_some_and(|c| c.starts_with("avc1"));
+            if h264
+                && best
+                    .as_ref()
+                    .is_none_or(|(size, ..)| (height, bandwidth) > *size)
+            {
+                best = Some(((height, bandwidth), variant, uri));
+            }
+        }
+    }
+    let (_, variant, uri) = best?;
+    let Some(group) = get(&variant, "AUDIO") else {
+        return Some(uri.to_string());
+    };
+    if !get(&variant, "CODECS")?.contains("mp4a") {
+        return None;
+    }
+    let mut tracks: Vec<_> = audio
+        .iter()
+        .filter(|media| get(media, "GROUP-ID") == Some(group) && get(media, "URI").is_some())
+        .collect();
+    if let Some(original) = original {
+        tracks.sort_by_key(|media| get(media, "YT-EXT-AUDIO-CONTENT-ID") != Some(original));
+    }
+    if tracks.is_empty() {
+        return None;
+    }
+    let mut edl = format!("edl://{}", edl_value(uri));
+    for media in tracks {
+        edl.push_str(";!new_stream;!no_clip;!delay_open,media_type=audio,codec=aac");
+        let meta: Vec<_> = [("lang", "LANGUAGE"), ("title", "NAME")]
+            .into_iter()
+            .filter_map(|(key, name)| Some(format!("{key}={}", edl_value(get(media, name)?))))
+            .collect();
+        if !meta.is_empty() {
+            edl.push_str(&format!(";!track_meta,{}", meta.join(",")));
+        }
+        edl.push_str(&format!(";{}", edl_value(get(media, "URI")?)));
+    }
+    Some(edl)
 }
 
 fn player(
