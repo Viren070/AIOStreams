@@ -32,6 +32,9 @@ export const NEWZNAB_INDEXERS: {
   apiKeyUrl?: string;
   // https://remuxdb.1632022.xyz/api/openapi.json - NzbIndexer schema
   remuxDbIndexer?: string;
+  // Info-page host that is neither the API host nor that host without a
+  // leading `api.` label. See remuxDbHostMap. Leave unset otherwise.
+  remuxDbHosts?: readonly string[];
 }[] = [
   {
     label: 'abNZB',
