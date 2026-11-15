@@ -1914,6 +1914,10 @@ msgstr ""
 msgid "Go to show"
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "Goes on with a show you are watching again from the episode you played last, even when you have seen the next one before."
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Green"
 msgstr ""
@@ -3909,6 +3913,10 @@ msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Retry"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Rewatching in next up"
 msgstr ""
 
 #: src/features/remote/remote-sheet.tsx

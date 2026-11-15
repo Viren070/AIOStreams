@@ -1008,6 +1008,8 @@ router.get(
     /* A ParentId that is a library cannot resolve to a series, so it answers empty. */
     const seriesId = qs(req, 'SeriesId') ?? qs(req, 'ParentId');
     const includeResumable = qb(req, 'EnableResumable') ?? true;
+    // Jellyfin's flag: a show watched again goes on from its last play.
+    const rewatching = qb(req, 'EnableRewatching') ?? false;
     refreshWatchState(ctx);
     const provider = getWatchStateProvider();
     const items: JellyfinItem[] = [];
@@ -1033,6 +1035,7 @@ router.get(
         const last = rows.find((r) => r.played || r.positionMs > 0);
         const next = await nextUpForSeries(ctx, d.descriptor, last, {
           includeResumable,
+          rewatching,
         });
         if (next) items.push(withShowWatchedAt(next, last));
       }
@@ -1046,21 +1049,31 @@ router.get(
           i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
         };
         // A part-played anchor can still come back to resume.
-        if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
-          return null;
+        const caughtUp =
+          row.played && (await caughtUpOn(ctx, d).catch(() => false));
+        if (caughtUp && !rewatching) return null;
         const item = await nextUpForSeries(ctx, d, row, {
           includeResumable,
+          rewatching,
         }).catch(() => null);
-        return (
-          item && {
-            item: withShowWatchedAt(item, row),
-            at: availableAt(item, row),
-          }
-        );
+        const rewatch =
+          rewatching &&
+          !!(item?.UserData as { Played?: boolean } | undefined)?.Played;
+        // A show watched to the end only comes back as a rewatch.
+        if (!item || (caughtUp && !rewatch)) return null;
+        return {
+          item: withShowWatchedAt(item, row),
+          at: availableAt(item, row),
+          rewatch,
+        };
       };
       const found: NonNullable<Awaited<ReturnType<typeof check>>>[] = [];
       const take = (next: Awaited<ReturnType<typeof check>>) => {
-        if (!next || (next.item.UserData as { Played: boolean }).Played) return;
+        if (
+          !next ||
+          (!next.rewatch && (next.item.UserData as { Played: boolean }).Played)
+        )
+          return;
         const series = String(next.item.SeriesId ?? next.item.Id);
         if (shown.has(series)) return;
         shown.add(series);

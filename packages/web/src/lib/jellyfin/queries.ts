@@ -105,14 +105,16 @@ export function useResume() {
 
 export function useNextUp() {
   const { client, user } = useSession();
+  const [rewatching] = useSetting(settings.interface.rewatchNextUp);
   return useQuery({
-    queryKey: [...useKey(), 'next-up'],
+    queryKey: [...useKey(), 'next-up', rewatching],
     meta: { cache: 'home' },
     queryFn: () =>
       client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
         userId: user.Id,
         Limit: 24,
         EnableResumable: false,
+        ...(rewatching && { EnableRewatching: true }),
       }),
   });
 }
@@ -508,6 +510,7 @@ export function useItem(itemId: string, opts: { page?: boolean } = {}) {
 function useShowOptions() {
   const { client, user } = useSession();
   const key = useKey();
+  const [rewatching] = useSetting(settings.interface.rewatchNextUp);
   return {
     seasons: (seriesId: string) =>
       queryOptions({
@@ -530,13 +533,14 @@ function useShowOptions() {
       }),
     nextUp: (seriesId: string) =>
       queryOptions({
-        queryKey: [...key, 'next-up', seriesId],
+        queryKey: [...key, 'next-up', seriesId, rewatching],
         meta: { cache: 'titles' },
         queryFn: () =>
           client.get<BaseItemDtoQueryResult>('/Shows/NextUp', {
             userId: user.Id,
             SeriesId: seriesId,
             Limit: 1,
+            ...(rewatching && { EnableRewatching: true }),
           }),
       }),
   };

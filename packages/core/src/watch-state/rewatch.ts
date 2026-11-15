@@ -1,0 +1,36 @@
+/**
+ * Where a rewatch goes on to, for Next Up with Jellyfin's `EnableRewatching`.
+ *
+ * Next Up goes on from the furthest episode watched, so a show watched to the
+ * end has nothing to offer while someone watches it again. A rewatch goes on
+ * from the episode played most recently, found by its own play date as
+ * Jellyfin does: an import can give every row of a show one timestamp, so the
+ * row order says nothing about which was played last. The answer is the first
+ * episode after it that has aired, whether the first watch reached it or not.
+ *
+ * Only a play behind the furthest episode watched is a rewatch. Otherwise, or
+ * with no dated play, this is -1 and the usual Next Up applies.
+ */
+export function rewatchNextIndex(
+  episodes: readonly {
+    played: boolean;
+    aired: boolean;
+    lastPlayedAt?: number | null;
+  }[]
+): number {
+  let anchor = -1;
+  let furthest = -1;
+  episodes.forEach((episode, i) => {
+    if (!episode.played) return;
+    furthest = i;
+    const at = episode.lastPlayedAt ?? 0;
+    // `>=`: plays sharing a date go on from the furthest of them.
+    if (at > 0 && (anchor < 0 || at >= (episodes[anchor].lastPlayedAt ?? 0)))
+      anchor = i;
+  });
+  if (anchor < 0 || anchor >= furthest) return -1;
+  for (let i = anchor + 1; i < episodes.length; i++) {
+    if (episodes[i].aired) return i;
+  }
+  return -1;
+}

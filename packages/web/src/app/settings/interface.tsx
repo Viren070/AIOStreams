@@ -263,6 +263,9 @@ export function InterfaceSection() {
   const [mergeNextUp, setMergeNextUp] = useSetting(
     settings.interface.mergeNextUp
   );
+  const [rewatchNextUp, setRewatchNextUp] = useSetting(
+    settings.interface.rewatchNextUp
+  );
   const [combineSearch, setCombineSearch] = useSetting(
     settings.interface.combineSearch
   );
@@ -370,6 +373,13 @@ export function InterfaceSection() {
           help={t`Shows next episodes in the continue watching row, after what you are partway through.`}
           value={mergeNextUp}
           onValueChange={setMergeNextUp}
+        />
+        <Switch
+          side="right"
+          label={t`Rewatching in next up`}
+          help={t`Goes on with a show you are watching again from the episode you played last, even when you have seen the next one before.`}
+          value={rewatchNextUp}
+          onValueChange={setRewatchNextUp}
         />
         <Switch
           side="right"

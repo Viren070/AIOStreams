@@ -61,6 +61,7 @@ import {
   trackPreferencesFrom,
   msToTicks,
   ratingUserData,
+  rewatchNextIndex,
   seasonAnimeIds,
   filmAnimeIds,
   userDataFromRow,
@@ -861,14 +862,29 @@ async function watchingPosition(
   return { eps, from, build };
 }
 
+/**
+ * The episode to watch next. With `rewatching` (Jellyfin's
+ * `EnableRewatching`), a show being watched again goes on from the episode
+ * played most recently, so the answer can be one already watched.
+ */
 export async function nextUpForSeries(
   ctx: JellyfinRequestContext,
   d: { t: string; i: string },
   last?: WatchStateRow,
-  opts: { includeResumable?: boolean } = {}
+  opts: { includeResumable?: boolean; rewatching?: boolean } = {}
 ): Promise<JellyfinItem | null> {
   const at = await watchingPosition(ctx, d, last);
   if (!at) return null;
+  if (opts.rewatching) {
+    const again = rewatchNextIndex(
+      at.eps.map((e) => ({
+        played: slotPlayed(e),
+        aired: !isUnairedVideo(e.video),
+        lastPlayedAt: e.row?.lastPlayedAt,
+      }))
+    );
+    if (again >= 0) return at.build(at.eps[again]);
+  }
   const pick = at.resume
     ? undefined
     : at.eps
