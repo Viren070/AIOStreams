@@ -1036,7 +1036,13 @@ export async function getStreams(
     data: { streams: finalStreams, statistics },
     errors,
   };
-  if (usePipelineCache) {
+  // Do not cache empty stream responses. The pipeline can produce zero streams
+  // when it is exited early (e.g. dynamic addon fetching before any stream was
+  // cached, or all upstreams timing out). Replaying that empty result verbatim
+  // for the whole TTL would hide streams that the client would otherwise
+  // receive on the next request. This matches the per-addon stream cache,
+  // which also refuses to cache empty results.
+  if (usePipelineCache && finalStreams.length > 0) {
     await pipelineResultCache.set(pipelineCacheKey, response, pipelineTtl);
   }
   return response;

@@ -319,7 +319,7 @@ export const resourcesSchema = {
         default: 0,
         label: 'Pipeline cache TTL (s)',
         description:
-          'TTL for the full-pipeline result cache (seconds). Caches the final processed response (streams, statistics and errors) for a whole request, keyed per user. Unlike the per-addon stream cache, this returns the previous response verbatim, including any partial errors, and does not re-fetch or retry failed addons within the TTL. Set to 0 to disable.',
+          'TTL for the full-pipeline result cache (seconds). Caches the final processed response (streams, statistics and errors) for a whole request, keyed per user. Unlike the per-addon stream cache, this returns the previous response verbatim, including any partial errors, and does not re-fetch or retry failed addons within the TTL. Responses with zero streams are not cached, so an early or failed fetch can recover as soon as the pipeline produces streams again. Set to 0 to disable.',
         env: 'PIPELINE_CACHE_TTL',
         requiresRestart: false,
         secret: false,
