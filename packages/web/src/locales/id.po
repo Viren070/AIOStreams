@@ -180,6 +180,10 @@ msgstr "{name} bergabung ke sesi nonton bersama"
 msgid "{name} left the party"
 msgstr "{name} meninggalkan sesi nonton bersama"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr ""
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {Pilih versi yang akan diunduh. Episode lainnya menggunakan rilis yang sama jika tersedia.} other {Pilih versi yang akan diunduh. # episode lainnya menggunakan rilis yang sama jika tersedia.}}"
@@ -517,6 +521,10 @@ msgstr "Semua episode"
 msgid "All fields"
 msgstr "Semua kolom"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr ""
+
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
 msgstr "Semua daftar putar"
@@ -839,10 +847,6 @@ msgstr "Tidak dapat terhubung ke server"
 #: src/lib/i18n.ts
 msgid "Cancel"
 msgstr "Batal"
-
-#: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1454,12 +1458,17 @@ msgstr "Donasi"
 msgid "Donate to Me"
 msgstr "Beri Donasi kepada Saya"
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx src/features/player/subtitle-sync.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Done"
 msgstr "Selesai"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1816,6 +1825,10 @@ msgstr "Layar penuh"
 msgid "General"
 msgstr "Umum"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Berikan kode ini kepada pihak yang memeriksa masalahnya."
@@ -1913,6 +1926,10 @@ msgstr "Banner utama"
 msgid "Hidden"
 msgstr "Disembunyikan"
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr ""
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "Sembunyikan"
@@ -1930,6 +1947,11 @@ msgstr "Sembunyikan kode QR"
 msgid "Hold"
 msgstr "Tahan"
 
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Hold to speed up"
+msgstr "Kecepatan saat ditahan"
+
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
 msgid "Home"
@@ -1942,6 +1964,10 @@ msgstr "Beranda dan kisi"
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "Beranda dan pustaka"
+
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2022,6 +2048,10 @@ msgstr "Sinkron"
 #: src/app/downloads/page.tsx src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
 msgstr "Di unduhan aplikasi"
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
+msgstr ""
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2727,7 +2757,7 @@ msgstr "Belum ada yang ditandai sebagai favorit."
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "Tidak ada yang cocok."
 
@@ -2771,7 +2801,7 @@ msgstr "Sekarang ketuk Terlihat saat dialog tersebut muncul."
 msgid "Now: {shown}"
 msgstr "Sekarang: {shown}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "Tidak ada apa pun di sini."
@@ -2810,8 +2840,16 @@ msgstr "Item yang lebih lama menunggu respons server. Tanpa koneksi, semua yang 
 msgid "on {relay}"
 msgstr "di {relay}"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr ""
+
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home and in the navigation"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
 #: src/lib/discord.ts
@@ -2912,10 +2950,6 @@ msgstr "Buka daftar putar"
 msgid "Open the app's downloads"
 msgstr "Buka unduhan aplikasi"
 
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
-msgstr ""
-
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Membuka menu item yang dipilih, seperti klik kanan."
@@ -2984,6 +3018,10 @@ msgstr "Aplikasi lain"
 #: src/features/remote/remote-sheet.tsx
 msgid "Other devices"
 msgstr "Perangkat lain"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3178,6 +3216,11 @@ msgstr "PIN"
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
 msgstr "PIN atau kata sandi"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Pinch to fill the screen"
+msgstr "Keluar dari layar penuh"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3385,11 +3428,6 @@ msgstr "Memutar lebih cepat selama tombol ditahan, dengan kecepatan yang ditentu
 msgid "Plays the video."
 msgstr "Memutar video."
 
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Pops out a preview"
-msgstr "Lewati pratinjau"
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr "Posisi"
@@ -3422,6 +3460,10 @@ msgstr ""
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
 msgstr "Pratinjau"
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
+msgstr ""
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -4382,10 +4424,6 @@ msgstr "Statistik"
 msgid "Status"
 msgstr "Status"
 
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
-msgstr ""
-
 #: src/app/settings/audio.tsx
 msgid "Stereo"
 msgstr "Stereo"
@@ -4511,6 +4549,19 @@ msgstr "Matahari"
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "Dukung AIOStreams"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Swipe across to seek"
+msgstr "Ruang yang digunakan"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4707,7 +4758,7 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Pemutar aplikasi dan opsinya, seperti memulai video dalam orientasi lanskap."
 
 #: src/app/settings/theme.tsx
-msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5049,7 +5100,7 @@ msgid "Title"
 msgstr "Judul"
 
 #: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "Halaman judul"
 
@@ -5500,6 +5551,10 @@ msgstr "Pesan dari orang yang menonton bersama Anda ditampilkan selama beberapa 
 msgid "What to save"
 msgstr "Yang disimpan"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr ""
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr "Yang dapat Anda kirim dari obrolan sesi nonton bersama."
@@ -5631,6 +5686,10 @@ msgstr "Win"
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr "Bersama {names}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"

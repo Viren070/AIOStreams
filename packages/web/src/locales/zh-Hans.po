@@ -180,6 +180,10 @@ msgstr "{name} 加入了一起观看"
 msgid "{name} left the party"
 msgstr "{name} 离开了一起观看"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr ""
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {选择要下载的版本。另一集如有相同版本，也会下载该版本。} other {选择要下载的版本。其他 # 集如有相同版本，也会下载该版本。}}"
@@ -519,6 +523,10 @@ msgstr "全部剧集"
 msgid "All fields"
 msgstr "所有字段"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr ""
+
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
 msgstr "所有播放列表"
@@ -842,10 +850,6 @@ msgstr "无法连接到服务器"
 #: src/lib/i18n.ts
 msgid "Cancel"
 msgstr "取消"
-
-#: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1461,12 +1465,17 @@ msgstr "捐赠"
 msgid "Donate to Me"
 msgstr "向我捐赠"
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx src/features/player/subtitle-sync.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Done"
 msgstr "完成"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1827,6 +1836,10 @@ msgstr "全屏"
 msgid "General"
 msgstr "常规"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "将此代码提供给负责排查问题的人。"
@@ -1925,6 +1938,10 @@ msgstr "主视觉"
 msgid "Hidden"
 msgstr "隐藏"
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr ""
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "隐藏"
@@ -1942,6 +1959,11 @@ msgstr "隐藏二维码"
 msgid "Hold"
 msgstr "按住"
 
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Hold to speed up"
+msgstr "按住时的播放速度"
+
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
 msgid "Home"
@@ -1954,6 +1976,10 @@ msgstr "首页与网格"
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "首页与媒体库"
+
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2034,6 +2060,10 @@ msgstr "同步中"
 #: src/app/downloads/page.tsx src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
 msgstr "在应用的下载中"
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
+msgstr ""
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2746,7 +2776,7 @@ msgstr "还没有收藏任何内容。"
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "没有符合条件的内容。"
 
@@ -2790,7 +2820,7 @@ msgstr "现在，请在看到该句台词时点击「已看到」。"
 msgid "Now: {shown}"
 msgstr "当前：{shown}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "这里没有内容。"
@@ -2829,8 +2859,16 @@ msgstr "较旧的内容会等待服务器响应。离线时则显示所有已保
 msgid "on {relay}"
 msgstr "位于 {relay}"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr ""
+
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home and in the navigation"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
 #: src/lib/discord.ts
@@ -2931,10 +2969,6 @@ msgstr "打开播放列表"
 msgid "Open the app's downloads"
 msgstr "打开应用的下载"
 
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
-msgstr ""
-
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "打开当前选中项目的菜单，效果与右键单击相同。"
@@ -3004,6 +3038,10 @@ msgstr "其他应用"
 #: src/features/remote/remote-sheet.tsx
 msgid "Other devices"
 msgstr "其他设备"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3198,6 +3236,11 @@ msgstr "PIN 码"
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
 msgstr "PIN 码或密码"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Pinch to fill the screen"
+msgstr "退出全屏"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3408,11 +3451,6 @@ msgstr "按住按键期间会以「播放」设置中指定的速度加速播放
 msgid "Plays the video."
 msgstr "播放视频。"
 
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Pops out a preview"
-msgstr "跳过预览"
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr "位置"
@@ -3445,6 +3483,10 @@ msgstr ""
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
 msgstr "预览"
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
+msgstr ""
 
 #: src/app/settings/playback.tsx
 #, fuzzy
@@ -4416,10 +4458,6 @@ msgstr "统计"
 msgid "Status"
 msgstr "状态"
 
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
-msgstr ""
-
 #: src/app/settings/audio.tsx
 msgid "Stereo"
 msgstr "立体声"
@@ -4546,6 +4584,19 @@ msgstr "太阳"
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "支持 AIOStreams"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Swipe across to seek"
+msgstr "可用空间"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4743,7 +4794,7 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "应用自带的播放器及其选项，例如以横屏启动视频。"
 
 #: src/app/settings/theme.tsx
-msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5085,7 +5136,7 @@ msgid "Title"
 msgstr "标题"
 
 #: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "内容详情页"
 
@@ -5538,6 +5589,10 @@ msgstr "一起看的成员所发送的消息会显示几秒钟，并始终保留
 msgid "What to save"
 msgstr "要保存的内容"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr ""
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr "你可以从一起观看的聊天中发送的内容。"
@@ -5671,6 +5726,10 @@ msgstr "Win 键"
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr "使用 {names}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
