@@ -221,7 +221,8 @@ function takesHold(e: KeyboardEvent, input: string): boolean {
 
 function onKeyUp(e: KeyboardEvent): void {
   down.delete(e.key);
-  if (holding?.key !== e.key) return;
+  // An autofill's keyup is a plain event with no key.
+  if (!holding || holding.key !== e.key) return;
   swallow(e);
   const { release } = holding;
   holding = null;
