@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-13 23:04+0000\n"
+"PO-Revision-Date: 2026-11-16 22:40+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -182,7 +182,7 @@ msgstr "{name} saiu da sessão"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "{off} off"
-msgstr ""
+msgstr "Desativados: {off}"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -522,7 +522,7 @@ msgstr "Todos os campos"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Todos ativados"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -1464,7 +1464,7 @@ msgstr "Pronto"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Double tap to skip"
-msgstr ""
+msgstr "Toque duplo para avançar ou voltar"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1821,7 +1821,7 @@ msgstr "Geral"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Gestures"
-msgstr ""
+msgstr "Gestos"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
@@ -1921,7 +1921,7 @@ msgstr "Ocultos"
 
 #: src/app/settings/interface.tsx
 msgid "Hidden, channels also leave search and favourites."
-msgstr ""
+msgstr "Ao ocultar, os canais também deixam de aparecer na busca e nos favoritos."
 
 #: src/features/player/next-episode.tsx
 msgid "Hide"
@@ -1941,9 +1941,8 @@ msgid "Hold"
 msgstr "Segurar"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Hold to speed up"
-msgstr "Velocidade ao segurar"
+msgstr "Segure para acelerar"
 
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
@@ -1960,7 +1959,7 @@ msgstr "Início e bibliotecas"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
-msgstr ""
+msgstr "Início, busca e catálogos"
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2044,7 +2043,7 @@ msgstr "Na pasta de downloads do app"
 
 #: src/app/settings/interface.tsx
 msgid "In the navigation only"
-msgstr ""
+msgstr "Somente na navegação"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2834,16 +2833,15 @@ msgstr "em {relay}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "On either side of the video, by the skip length."
-msgstr ""
+msgstr "À esquerda para voltar, à direita para avançar, pelo intervalo definido."
 
 #: src/app/settings/interface.tsx
 msgid "On home and in the navigation"
-msgstr ""
+msgstr "No início e na navegação"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
-msgstr "Funciona na página inicial enquanto os destaques se alternam e nas grades. Ao manter o mouse sobre um card na grade, uma prévia aparece sobreposta, sem deslocar os demais."
+msgstr "Na página inicial com destaque rotativo, na busca e nas grades. Com o mouse, o card exibe uma prévia flutuante; com teclado ou controle remoto, ele se expande para mostrar detalhes."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3013,7 +3011,7 @@ msgstr "Outros dispositivos"
 
 #: src/app/settings/theme.tsx
 msgid "Other pages, such as settings"
-msgstr ""
+msgstr "Outras páginas, como configurações"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3210,9 +3208,8 @@ msgid "PIN or password"
 msgstr "PIN ou senha"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Pinch to fill the screen"
-msgstr "Sair da tela cheia"
+msgstr "Afaste os dedos para preencher a tela"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3450,9 +3447,8 @@ msgid "Preview"
 msgstr "Prévia"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Preview the card you rest on"
-msgstr "Ao focar em um card"
+msgstr "Mostrar prévia do card em foco"
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
