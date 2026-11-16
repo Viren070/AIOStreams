@@ -109,6 +109,10 @@ export function programmesOf(
   return videos;
 }
 
+/** A search's words, a few at most, as each is looked for in every name. */
+export const searchWords = (term: string) =>
+  [...new Set(term.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, 8);
+
 export function parseExtras(extras?: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const part of extras?.split('&') ?? []) {

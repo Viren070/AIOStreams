@@ -6,7 +6,7 @@ import type {
   XtreamClient,
   XtreamStream,
 } from './api.js';
-import { TieredStore, deltas, sums } from '../livetv/index.js';
+import { TieredStore, deltas, searchWords, sums } from '../livetv/index.js';
 
 const logger = createLogger('xtream');
 
@@ -55,7 +55,7 @@ export function searchLineup(
   term: string,
   limit: number
 ): number[] {
-  const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = searchWords(term);
   const found: number[] = [];
   if (!words.length) return found;
   const count = channelCount(lineup);
