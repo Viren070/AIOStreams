@@ -22,7 +22,6 @@ import {
   type TvNavigation,
   HERO_SECONDS,
   TRAILER_SPOTS,
-  type CardPreview,
   type HeroMode,
   type PosterLine,
   type PosterSize,
@@ -402,16 +401,12 @@ export function InterfaceSection() {
       </SettingsCard>
       {!touch && (
         <SettingsCard name="cards" title={t`Cards`} description={onDevice()}>
-          <Select
-            label={t`Card you rest on`}
-            help={t`On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put.`}
-            options={[
-              { value: 'open', label: t`Opens out to its details` },
-              { value: 'pop', label: t`Pops out a preview` },
-              { value: 'off', label: t`Stays as it is` },
-            ]}
+          <Switch
+            side="right"
+            label={t`Preview the card you rest on`}
+            help={t`On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details.`}
             value={cardPreview}
-            onValueChange={(value) => setCardPreview(value as CardPreview)}
+            onValueChange={setCardPreview}
           />
         </SettingsCard>
       )}

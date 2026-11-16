@@ -363,7 +363,8 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   background: transparent;
   box-shadow: none;
 }
-[data-ui='media-row-item'][data-opening] [data-focus-frame] {
+[data-ui='media-row-item'][data-opening] [data-focus-frame],
+[data-previewed] [data-focus-frame] {
   outline-color: transparent !important;
 }
 

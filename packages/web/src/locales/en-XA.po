@@ -869,10 +869,6 @@ msgid "Cancel"
 msgstr ""
 
 #: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr ""
-
-#: src/app/settings/interface.tsx
 msgid "Cards"
 msgstr ""
 
@@ -2920,7 +2916,7 @@ msgid "on {relay}"
 msgstr ""
 
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
 #: src/lib/discord.ts
@@ -3023,10 +3019,6 @@ msgstr ""
 
 #: src/app/downloads/page.tsx
 msgid "Open the app's downloads"
-msgstr ""
-
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -3510,10 +3502,6 @@ msgstr ""
 msgid "Plays the video."
 msgstr ""
 
-#: src/app/settings/interface.tsx
-msgid "Pops out a preview"
-msgstr ""
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr ""
@@ -3545,6 +3533,10 @@ msgstr ""
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
 msgstr ""
 
 #: src/app/settings/playback.tsx
@@ -4542,10 +4534,6 @@ msgstr ""
 #: src/app/history/page.tsx
 #: src/app/settings/apps.tsx
 msgid "Status"
-msgstr ""
-
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
 msgstr ""
 
 #: src/app/settings/audio.tsx

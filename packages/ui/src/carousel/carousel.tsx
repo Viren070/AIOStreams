@@ -104,6 +104,9 @@ function useKeepPositionOnReInit(api: CarouselApi) {
 /** How long a row glides to a focused slide. */
 const GLIDE_MS = 300;
 
+/** Sent by a slide whose width changed, so the row measures it at once and keeps focus in view. */
+export const SLIDE_RESIZE = 'slide-resize';
+
 /**
  * Scrolls a focused slide just into view. Focus would otherwise scroll the
  * clipped viewport itself, which Embla can't see. The row jumps and a CSS
@@ -158,13 +161,19 @@ function useFollowFocus(api: CarouselApi, anchor?: () => boolean) {
     const onScroll = () => {
       if (viewport.scrollLeft) follow();
     };
+    const resized = () => {
+      api.reInit();
+      follow();
+    };
     viewport.addEventListener('focusin', follow);
     viewport.addEventListener('scroll', onScroll);
+    viewport.addEventListener(SLIDE_RESIZE, resized);
     api.on('pointerDown', still);
     return () => {
       still();
       viewport.removeEventListener('focusin', follow);
       viewport.removeEventListener('scroll', onScroll);
+      viewport.removeEventListener(SLIDE_RESIZE, resized);
       api.off('pointerDown', still);
     };
   }, [api]);

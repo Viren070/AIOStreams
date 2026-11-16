@@ -869,10 +869,6 @@ msgid "Cancel"
 msgstr "Cancel"
 
 #: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr "Card you rest on"
-
-#: src/app/settings/interface.tsx
 msgid "Cards"
 msgstr "Cards"
 
@@ -2920,8 +2916,8 @@ msgid "on {relay}"
 msgstr "on {relay}"
 
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
-msgstr "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
+msgstr "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3024,10 +3020,6 @@ msgstr "Open playlist"
 #: src/app/downloads/page.tsx
 msgid "Open the app's downloads"
 msgstr "Open the app's downloads"
-
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
-msgstr "Opens out to its details"
 
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
@@ -3510,10 +3502,6 @@ msgstr "Plays faster for as long as the key is held, at the speed set in Playbac
 msgid "Plays the video."
 msgstr "Plays the video."
 
-#: src/app/settings/interface.tsx
-msgid "Pops out a preview"
-msgstr "Pops out a preview"
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr "Position"
@@ -3546,6 +3534,10 @@ msgstr "Press Up for playback controls"
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
 msgstr "Preview"
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
+msgstr "Preview the card you rest on"
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -4543,10 +4535,6 @@ msgstr "Statistics"
 #: src/app/settings/apps.tsx
 msgid "Status"
 msgstr "Status"
-
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
-msgstr "Stays as it is"
 
 #: src/app/settings/audio.tsx
 msgid "Stereo"

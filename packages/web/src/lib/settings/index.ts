@@ -45,9 +45,6 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
-export const CARD_PREVIEWS = ['open', 'pop', 'off'] as const;
-export type CardPreview = (typeof CARD_PREVIEWS)[number];
-
 export const TRAILER_SPOTS = ['cards', 'hero', 'item'] as const;
 export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
 
@@ -402,14 +399,14 @@ export const settings = {
       EPISODE_LAYOUTS,
       ['aiostreams-web-episode-layout']
     ),
-    cardPreview: device<CardPreview>(
-      'aiostreams-web-interface-card-preview',
-      'open',
-      CARD_PREVIEWS,
+    cardPreview: device<boolean>(
+      'aiostreams-web-interface-card-previews',
+      true,
+      undefined,
       [
         {
-          key: 'aiostreams-web-interface-card-previews',
-          read: (old) => (old === false ? 'off' : undefined),
+          key: 'aiostreams-web-interface-card-preview',
+          read: (old) => (old === 'off' ? false : undefined),
         },
       ]
     ),

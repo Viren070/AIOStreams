@@ -32,6 +32,7 @@ import { href, itemPath, navigate, to } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PageBody } from '@/components/shell/page';
 import { MixedGrid } from '@/components/media/mixed-grid';
+import { CardPreviewHost } from '@/components/media/card-preview';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import { BATCH } from '@/features/live-tv/channel-list';
 import { MediaRow } from '@/components/media/media-row';
@@ -253,56 +254,58 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
             if ((e.target as HTMLElement).closest('a')) history.add(query);
           }}
         >
-          {peopleFirst && peopleRow}
-          {combine ? (
-            <MixedGrid
-              items={mixed.data?.Items ?? []}
-              client={client}
-              loading={mixed.isLoading}
-            />
-          ) : (
-            <>
+          <CardPreviewHost>
+            {peopleFirst && peopleRow}
+            {combine ? (
+              <MixedGrid
+                items={mixed.data?.Items ?? []}
+                client={client}
+                loading={mixed.isLoading}
+              />
+            ) : (
+              <>
+                <ResultRow
+                  id="search:movies"
+                  title={t`Movies`}
+                  items={movieItems}
+                  loading={moviesLoading}
+                  client={client}
+                />
+                <ResultRow
+                  id="search:shows"
+                  title={t`Shows`}
+                  items={showItems}
+                  loading={showsLoading}
+                  client={client}
+                />
+              </>
+            )}
+            {!!collectionItems.length && (
               <ResultRow
-                id="search:movies"
-                title={t`Movies`}
-                items={movieItems}
-                loading={moviesLoading}
+                id="search:collections"
+                title={t`Collections`}
+                items={collectionItems}
+                loading={false}
                 client={client}
               />
+            )}
+            {!!episodeItems.length && (
               <ResultRow
-                id="search:shows"
-                title={t`Shows`}
-                items={showItems}
-                loading={showsLoading}
+                id="search:episodes"
+                title={t`Episodes`}
+                items={episodeItems}
+                loading={false}
                 client={client}
               />
-            </>
-          )}
-          {!!collectionItems.length && (
-            <ResultRow
-              id="search:collections"
-              title={t`Collections`}
-              items={collectionItems}
-              loading={false}
-              client={client}
-            />
-          )}
-          {!!episodeItems.length && (
-            <ResultRow
-              id="search:episodes"
-              title={t`Episodes`}
-              items={episodeItems}
-              loading={false}
-              client={client}
-            />
-          )}
-          {!peopleFirst && peopleRow}
-          {live && (
-            <ChannelRow
-              items={channelItems}
-              loading={channels.isLoading || channels.isPlaceholderData}
-            />
-          )}
+            )}
+            {!peopleFirst && peopleRow}
+            {live && (
+              <ChannelRow
+                items={channelItems}
+                loading={channels.isLoading || channels.isPlaceholderData}
+              />
+            )}
+          </CardPreviewHost>
         </div>
       )}
       {searching && !loading && !found && (
