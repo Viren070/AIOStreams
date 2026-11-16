@@ -4,7 +4,7 @@ import type { JellyfinClient } from '@/lib/jellyfin/client';
 import { useSession } from '@/lib/jellyfin/session';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { usePageShown } from '@/lib/page-shown';
-import { settings, useSetting } from '@/lib/settings';
+import { settings, useSetting, type ArtPage } from '@/lib/settings';
 import { imageAccept } from './reads';
 import { washArtwork } from './shrink';
 import { backdropUrls, posterUrl } from './urls';
@@ -112,12 +112,41 @@ let paused = false;
 let making: string | undefined;
 
 let frame: WashFrame | null = null;
+/** False on a page the user keeps it from. */
+let visible = true;
 const listeners = new Set<() => void>();
 export const subscribeWash = (listener: () => void) => {
   listeners.add(listener);
   return () => void listeners.delete(listener);
 };
 export const currentWash = () => frame;
+
+function markRoot() {
+  document.documentElement.toggleAttribute('data-art-wash', visible && !!frame);
+}
+
+export function setWashVisible(on: boolean) {
+  if (visible === on) return;
+  visible = on;
+  markRoot();
+  for (const listener of listeners) listener();
+}
+
+const BROWSING = new Set([
+  '',
+  'discover',
+  'library',
+  'search',
+  'favourites',
+  'person',
+  'live',
+]);
+
+export function artPageOf(pathname: string): ArtPage {
+  const page = pathname.split('/')[1] ?? '';
+  if (page === 'item') return 'item';
+  return BROWSING.has(page) ? 'browse' : 'other';
+}
 
 export function washCopy(): HTMLElement | null {
   if (!frame) return null;
@@ -136,7 +165,7 @@ export function washCopy(): HTMLElement | null {
   return layer;
 }
 export const useWashShown = () =>
-  React.useSyncExternalStore(subscribeWash, () => frame !== null);
+  React.useSyncExternalStore(subscribeWash, () => visible && frame !== null);
 
 const newest = (over: boolean) =>
   shown.filter((entry) => entry.over === over).pop()?.src;
@@ -157,7 +186,7 @@ function apply() {
     }
     const was = frame;
     frame = next;
-    document.documentElement.setAttribute('data-art-wash', '');
+    markRoot();
     paintPanels(next.panel);
     // The layers draw it as they hear of it, so the last can go.
     for (const listener of listeners) listener();
@@ -182,7 +211,7 @@ export function releaseArtSelection() {
 export function clearArtBackground() {
   if (frame?.image instanceof ImageBitmap) frame.image.close();
   frame = null;
-  document.documentElement.removeAttribute('data-art-wash');
+  markRoot();
   paintPanels(null);
   for (const listener of listeners) listener();
 }
@@ -198,9 +227,10 @@ export function useArtBackground(
   over = false
 ) {
   const { client } = useSession();
-  const [on] = useSetting(settings.theme.artBackground);
+  const [pages] = useSetting(settings.theme.artBackground);
   const pageShown = usePageShown();
-  const src = on && pageShown && item ? artSrc(client, item) : undefined;
+  const src =
+    pages.length && pageShown && item ? artSrc(client, item) : undefined;
   const last = React.useRef<string>(undefined);
   React.useEffect(() => {
     const arriving = !last.current;
@@ -220,11 +250,11 @@ export function useArtBackground(
 /** A card's handlers that put its artwork behind the pages once it is rested on. */
 export function useArtTarget(item: BaseItemDto) {
   const { client } = useSession();
-  const [on] = useSetting(settings.theme.artBackground);
-  const src = on ? artSrc(client, item) : undefined;
+  const [pages] = useSetting(settings.theme.artBackground);
+  const src = pages.length ? artSrc(client, item) : undefined;
   if (!src) return undefined;
   const rest = () => {
-    if (selectedSrc === src || restingOn === src) return;
+    if (!visible || selectedSrc === src || restingOn === src) return;
     clearTimeout(restTimer);
     restingOn = src;
     restTimer = setTimeout(() => {

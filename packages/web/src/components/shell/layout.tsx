@@ -5,6 +5,7 @@ import {
   Outlet,
   useChildMatches,
   useRouterState,
+  type AnyRouter,
 } from '@tanstack/react-router';
 import {
   BiCalendar,
@@ -71,7 +72,11 @@ import { useParty } from '@/lib/party/party';
 import { useTrailerCovers } from '@/features/trailers/preview';
 import { PageScroll } from './page-scroll';
 import { ArtWash } from './art-wash';
-import { setWashPaused } from '@/lib/artwork/background';
+import {
+  artPageOf,
+  setWashPaused,
+  setWashVisible,
+} from '@/lib/artwork/background';
 import { HistoryButtons } from './history-buttons';
 import { ConnectionNote } from './unreachable';
 import { Logo, onBar } from './nav/common';
@@ -95,12 +100,18 @@ const PAGE_FADE = {
  * The backdrop as one element that never fades with the screens, so a
  * transparent page shows nothing beneath it; the player hides it.
  */
-export function PageBackground() {
-  const [wash] = useSetting(settings.theme.artBackground);
+export function PageBackground({ router }: { router: AnyRouter }) {
+  const [pages] = useSetting(settings.theme.artBackground);
   const [glass] = useSetting(settings.theme.artGlass);
   const [surface] = useSetting(settings.theme.glassSurface);
+  const pathname = useRouterState({
+    router,
+    select: (s) => s.location.pathname,
+  });
+  const shown = pages.includes(artPageOf(pathname));
   const playing = !!usePlayback();
   React.useEffect(() => setWashPaused(playing), [playing]);
+  React.useLayoutEffect(() => setWashVisible(shown), [shown]);
   React.useEffect(() => {
     const root = document.documentElement;
     if (glass && surface !== 'solid') root.dataset.artGlass = surface;
@@ -112,7 +123,7 @@ export function PageBackground() {
       data-ui="page-background"
       className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
     >
-      {wash && <ArtWash />}
+      {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
     </div>
   );
 }

@@ -12,12 +12,14 @@ import {
 import { Button } from '@aiostreams/ui/button';
 import { Switch } from '@aiostreams/ui/switch';
 import { Select } from '@aiostreams/ui/select';
+import { Combobox } from '@aiostreams/ui/combobox';
 import { cn } from '@aiostreams/ui/core/styling';
 import {
   settings,
   useSetting,
   CUSTOM_CSS_OFF,
   MAX_CUSTOM_CSS,
+  type ArtPage,
   type GlassSurface,
 } from '@/lib/settings';
 import { canRefract } from '@/components/shell/glass-surface';
@@ -176,14 +178,21 @@ export function ThemeSection() {
         value={surface === 'liquid' && !canRefract ? 'frosted' : surface}
         onValueChange={(value) => setSurface(value as GlassSurface)}
       />
-      <Switch
-        side="right"
+      <Combobox
+        multiple
         label={t`Background from artwork`}
-        help={t`The artwork of the title you're on, blurred and darkened, behind the pages and the version list.`}
+        help={t`The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages.`}
+        placeholder={t`Nowhere`}
+        emptyMessage={t`Nothing matches.`}
+        options={[
+          { value: 'item', label: t`Title pages` },
+          { value: 'browse', label: t`Home, search and catalogs` },
+          { value: 'other', label: t`Other pages, such as settings` },
+        ].map((o) => ({ ...o, textValue: o.label }))}
         value={artBackground}
-        onValueChange={setArtBackground}
+        onValueChange={(value) => setArtBackground(value as ArtPage[])}
       />
-      {artBackground && surface !== 'solid' && (
+      {artBackground.length > 0 && surface !== 'solid' && (
         <Switch
           side="right"
           label={t`Glass panels`}

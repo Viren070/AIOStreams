@@ -2013,6 +2013,10 @@ msgstr "Home and grids"
 msgid "Home and libraries"
 msgstr "Home and libraries"
 
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr "Home, search and catalogs"
+
 #: src/features/party/in-party.tsx
 msgid "Host"
 msgstr "Host"
@@ -2832,6 +2836,7 @@ msgstr "Nothing marked as a favourite yet."
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/audio.tsx
 #: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "Nothing matches."
 
@@ -2876,6 +2881,7 @@ msgid "Now: {shown}"
 msgstr "Now: {shown}"
 
 #: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Nowhere"
 msgstr "Nowhere"
 
@@ -3088,6 +3094,10 @@ msgstr "Other app"
 #: src/features/remote/remote-sheet.tsx
 msgid "Other devices"
 msgstr "Other devices"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr "Other pages, such as settings"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -4864,8 +4874,8 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "The app's player and its options, such as starting videos in landscape."
 
 #: src/app/settings/theme.tsx
-msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
-msgstr "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5205,6 +5215,7 @@ msgstr "Title"
 #: src/app/settings/apps.tsx
 #: src/app/settings/cache.tsx
 #: src/app/settings/interface.tsx
+#: src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "Title pages"
 

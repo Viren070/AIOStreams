@@ -78,7 +78,7 @@ export default function JellyfinWebApp() {
             offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
             mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
           />
-          <PageBackground />
+          <PageBackground router={webRouter} />
           <ThemeStyles />
           <InputSetup router={webRouter} />
           {shellHost() && <ShellSetup />}

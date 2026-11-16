@@ -45,6 +45,10 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
+/** Title pages, pages that list titles, and the rest. */
+export const ART_PAGES = ['item', 'browse', 'other'] as const;
+export type ArtPage = (typeof ART_PAGES)[number];
+
 export const TRAILER_SPOTS = ['cards', 'hero', 'item'] as const;
 export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
 
@@ -493,7 +497,18 @@ export const settings = {
         'aiostreams-web-bar-background',
       ]
     ),
-    artBackground: syncedFlag('artBackground'),
+    artBackground: synced<ArtPage[]>(
+      'artBackground',
+      (raw = 'item') =>
+        raw === '1'
+          ? [...ART_PAGES]
+          : ART_PAGES.filter((page) => raw.split(',').includes(page)),
+      (value) => {
+        const pages = ART_PAGES.filter((page) => value.includes(page));
+        if (pages.join() === 'item') return undefined;
+        return pages.length ? pages.join(',') : 'none';
+      }
+    ),
     artGlass: device<boolean>('aiostreams-web-theme-art-glass', false),
   },
   playback: {
