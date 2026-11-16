@@ -2888,6 +2888,7 @@ msgid "Ocean"
 msgstr ""
 
 #: src/app/settings/audio.tsx
+#: src/app/settings/playback.tsx
 #: src/app/settings/subtitles.tsx
 #: src/features/player/options.tsx
 #: src/features/remote/remote-sheet.tsx

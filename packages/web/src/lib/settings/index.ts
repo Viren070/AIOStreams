@@ -125,7 +125,7 @@ export const SEEK_STEPS = [5, 10, 15, 30] as const;
 /** Percentages. */
 export const VOLUME_STEPS = [1, 2, 5, 10] as const;
 
-export const HOLD_RATES = [1.5, 2, 3] as const;
+export const HOLD_RATES = [1, 1.5, 2, 3] as const;
 
 /* eslint-disable lingui/no-unlocalized-strings -- Jellyfin's segment kinds */
 export const SEGMENT_TYPES = [
@@ -570,7 +570,7 @@ export const settings = {
       VOLUME_STEPS,
       ['aiostreams-web-volume-step']
     ),
-    /** The speed while a long press or a held key speeds playback up. */
+    /** The speed while a long press or a held key speeds playback up; 1 is off. */
     holdRate: device<number>(
       'aiostreams-web-controls-hold-rate',
       2,

@@ -3,7 +3,7 @@ import { settings, useSetting } from '@/lib/settings';
 import { useLatest } from '@/hooks/use-latest';
 import type { PlayerController } from '@/lib/playback/controller';
 
-/** `start` gives the function that lets go, or false when the speed can't change. */
+/** `start` gives the function that lets go, or false when the setting is off or the speed can't change. */
 export function useHeldSpeed(player: PlayerController) {
   const [rate] = useSetting(settings.controls.holdRate);
   const latest = useLatest({ player, rate });
@@ -19,7 +19,12 @@ export function useHeldSpeed(player: PlayerController) {
 
   const start = React.useCallback((): (() => void) | false => {
     const { player, rate } = latest.current;
-    if (!player.setRate || player.state.paused || before.current !== null)
+    if (
+      rate === 1 ||
+      !player.setRate ||
+      player.state.paused ||
+      before.current !== null
+    )
       return false;
     before.current = player.state.rate;
     player.setRate(rate);

@@ -374,7 +374,7 @@ export function PlaybackSection() {
           help={t`How fast playback runs while you press and hold the video, or hold Space or Select.`}
           options={HOLD_RATES.map((r) => ({
             value: String(r),
-            label: t`${r}×`,
+            label: r === 1 ? t`Off` : t`${r}×`,
           }))}
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
