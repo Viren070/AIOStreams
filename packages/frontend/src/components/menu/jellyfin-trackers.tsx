@@ -12,6 +12,8 @@ import type { TrackerExchange, WatchStateTracker } from '@/lib/api';
 
 const RESOURCE_DOCS_URL = `${DOCS_BASE_URL}/reference/addon-protocol/watch-state`;
 
+const NAME_LIST = new Intl.ListFormat('en', { type: 'conjunction' });
+
 function EmptyState({
   title,
   children,
@@ -120,7 +122,12 @@ function TrackerRow({
   );
 }
 
-export function JellyfinTrackers() {
+export function JellyfinTrackers({
+  onChooseTrackers,
+}: {
+  /** Opens the tab where each user's trackers are picked. */
+  onChooseTrackers: () => void;
+}) {
   const { uuid, password, userData } = useUserData();
   const credentials = React.useMemo(
     () => (uuid ? { uuid, password } : null),
@@ -176,6 +183,29 @@ export function JellyfinTrackers() {
   }
 
   if (!data.trackers.length) {
+    const names = [...new Set(data.available.map((option) => option.addon))];
+    if (names.length) {
+      return (
+        <EmptyState
+          title="No user syncs with a tracker"
+          action={
+            <Button
+              intent="gray-outline"
+              size="sm"
+              rounded
+              onClick={onChooseTrackers}
+            >
+              Choose trackers
+            </Button>
+          }
+        >
+          {NAME_LIST.format(names)} can record what you play in the apps and
+          bring in what you watched elsewhere, but no user syncs with{' '}
+          {names.length === 1 ? 'it' : 'them'}. Pick trackers for your users,
+          then save.
+        </EmptyState>
+      );
+    }
     return (
       <EmptyState
         title="No tracker addons"

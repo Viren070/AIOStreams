@@ -3,6 +3,7 @@ import React from 'react';
 import { currentHost } from '@/lib/hosts';
 import type { PlayerController } from '@/lib/playback/controller';
 import { useLatest } from '@/hooks/use-latest';
+import { settings, useSetting } from '@/lib/settings';
 
 const DOUBLE_TAP_MS = 300;
 /** Once seeking, each tap this soon after the last seeks again. */
@@ -71,6 +72,8 @@ export interface Gestures {
 
 export function usePlayerGestures(gestures: Gestures) {
   const latest = useLatest(gestures);
+  const [enabled] = useSetting(settings.controls.gestures);
+  const on = useLatest(enabled);
   const press = React.useRef<Press | null>(null);
   const points = React.useRef(new Map<number, Point>());
   const pinch = React.useRef<{ from: number; done: boolean } | null>(null);
@@ -127,10 +130,11 @@ export function usePlayerGestures(gestures: Gestures) {
 
   const startSwipe = (side: -1 | 1, y: number, height: number) => {
     const levels = currentHost().levels;
+    const level = side < 0 ? 'brightness' : 'volume';
     // Only the app can set the brightness.
-    if (side < 0 && !levels) return null;
+    if ((side < 0 && !levels) || !on.current[level]) return null;
     const swipe: Swipe = {
-      level: side < 0 ? 'brightness' : 'volume',
+      level,
       height,
       startY: y,
       y,
@@ -147,6 +151,7 @@ export function usePlayerGestures(gestures: Gestures) {
   };
 
   const tap = (side: -1 | 1) => {
+    if (!on.current.seek) return latest.current.onTap();
     const now = performance.now();
     const prev = lastTap.current;
     const again =
@@ -187,7 +192,7 @@ export function usePlayerGestures(gestures: Gestures) {
       scrubX: 0,
       timer: setTimeout(() => {
         if (press.current !== p || p.kind !== 'pending') return;
-        const release = latest.current.hold();
+        const release = on.current.hold && latest.current.hold();
         p.kind = release ? 'held' : 'none';
         if (release) p.release = release;
       }, HOLD_MS),
@@ -206,7 +211,7 @@ export function usePlayerGestures(gestures: Gestures) {
       const ratio = distance(a, b) / spread.from;
       if (ratio > PINCH_RATIO || ratio < 1 / PINCH_RATIO) {
         spread.done = true;
-        latest.current.onPinch?.(ratio > 1);
+        if (on.current.pinch) latest.current.onPinch?.(ratio > 1);
       }
       return;
     }
@@ -223,7 +228,7 @@ export function usePlayerGestures(gestures: Gestures) {
         p.swipe = startSwipe(p.side, e.clientY, e.currentTarget.clientHeight);
         p.kind = p.swipe ? 'levels' : 'none';
       } else {
-        p.kind = p.sideEdge ? 'none' : 'scrub';
+        p.kind = p.sideEdge || !on.current.scrub ? 'none' : 'scrub';
         p.scrubX = e.clientX;
       }
     }
@@ -272,7 +277,7 @@ export function usePlayerGestures(gestures: Gestures) {
       const m: NonNullable<typeof mouse.current> = {
         timer: setTimeout(() => {
           if (mouse.current !== m) return;
-          m.release = latest.current.hold() || undefined;
+          m.release = (on.current.hold && latest.current.hold()) || undefined;
         }, HOLD_MS),
       };
       mouse.current = m;

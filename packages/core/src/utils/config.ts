@@ -570,6 +570,17 @@ function removeInvalidPresetReferences(config: UserData) {
       existingPresetIds?.includes(preset)
     );
   }
+  // An emptied list stays None: automatic could take trackers others picked.
+  for (const user of [
+    config.jellyfin?.primary,
+    ...(config.jellyfin?.personas ?? []),
+  ]) {
+    if (user?.trackers) {
+      user.trackers = user.trackers.filter((id) =>
+        existingPresetIds?.includes(id)
+      );
+    }
+  }
   return config;
 }
 
@@ -898,6 +909,16 @@ export function applyMigrations(config: any): UserData {
         api.apiKey = apiKey;
       }
       return { ...preset, options: { ...rest, api } };
+    });
+
+    config.presets = config.presets.map((preset: any) => {
+      if (preset.type !== 'xtream' || !preset.options) return preset;
+      const { server, username, password, ...rest } = preset.options;
+      if (rest.login !== undefined || server === undefined) return preset;
+      return {
+        ...preset,
+        options: { ...rest, login: { server, username, password } },
+      };
     });
   }
 
@@ -1245,7 +1266,11 @@ export function validateOption(
     }
     return value;
   }
-  if (option.type === 'subsection' || option.type === 'nab-endpoint') {
+  if (
+    option.type === 'subsection' ||
+    option.type === 'nab-endpoint' ||
+    option.type === 'endpoint'
+  ) {
     for (const subOption of option.subOptions ?? []) {
       // for subsection, the value must be an object
       if (typeof value !== 'object' || Array.isArray(value)) {

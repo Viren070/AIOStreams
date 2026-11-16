@@ -52,6 +52,10 @@ export function AddonModal({
     if (opt.type === 'boolean') return typeof val === 'boolean';
     // object-valued field, so an empty url would otherwise pass as truthy
     if (opt.type === 'nab-endpoint') return !!val?.url;
+    if (opt.type === 'endpoint')
+      return (opt.subOptions ?? []).every(
+        (sub: any) => !sub.required || !!val?.[sub.id]
+      );
     return val !== undefined && val !== null && val !== '';
   });
 

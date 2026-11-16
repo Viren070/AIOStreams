@@ -326,6 +326,16 @@ export function applyMigrations(config: any): UserData {
       }
       return { ...preset, options: { ...rest, api } };
     });
+
+    config.presets = config.presets.map((preset: any) => {
+      if (preset.type !== 'xtream' || !preset.options) return preset;
+      const { server, username, password, ...rest } = preset.options;
+      if (rest.login !== undefined || server === undefined) return preset;
+      return {
+        ...preset,
+        options: { ...rest, login: { server, username, password } },
+      };
+    });
   }
 
   if (config.formatter && config.formatter.definition) {
@@ -381,6 +391,17 @@ export function removeInvalidPresetReferences(config: UserData) {
     config.serviceWrap.presets = config.serviceWrap.presets.filter((preset) =>
       existingPresetIds?.includes(preset)
     );
+  }
+  // An emptied list stays None: automatic could take trackers others picked.
+  // A child config's own presets leave out its parent's.
+  for (const user of config.parentConfig?.uuid
+    ? []
+    : [config.jellyfin?.primary, ...(config.jellyfin?.personas ?? [])]) {
+    if (user?.trackers) {
+      user.trackers = user.trackers.filter((id) =>
+        existingPresetIds?.includes(id)
+      );
+    }
   }
   return config;
 }

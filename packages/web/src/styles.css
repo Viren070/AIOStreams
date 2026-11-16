@@ -171,7 +171,8 @@ html[data-art-wash][data-art-glass]:not(.playing) [data-ui='settings-panel'] {
   }
 }
 /* A list's own paper would hide its panel's glass. */
-html[data-art-wash][data-art-glass]:not(.playing) .UI-Command__root {
+html[data-art-wash][data-art-glass]:not(.playing)
+  :is(.UI-Command__root, .UI-Select__scrollButton) {
   background-color: transparent;
 }
 /* Background from artwork: title art fades out into its own blur. */
@@ -363,7 +364,8 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   background: transparent;
   box-shadow: none;
 }
-[data-ui='media-row-item'][data-opening] [data-focus-frame] {
+[data-ui='media-row-item'][data-opening] [data-focus-frame],
+[data-previewed] [data-focus-frame] {
   outline-color: transparent !important;
 }
 

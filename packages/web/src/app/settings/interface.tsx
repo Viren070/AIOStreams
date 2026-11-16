@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
-import { useViews } from '@/lib/jellyfin/queries';
+import { useLiveTvView, useViews } from '@/lib/jellyfin/queries';
 import { dateFormat, libraryLabel } from '@/lib/format';
 import { currentHost } from '@/lib/hosts';
 import { HIDDEN_LOCALES, LOCALES, localeName, systemLocale } from '@/lib/i18n';
@@ -22,8 +22,8 @@ import {
   type TvNavigation,
   HERO_SECONDS,
   TRAILER_SPOTS,
-  type CardPreview,
   type HeroMode,
+  type LiveTvPlace,
   type PosterLine,
   type PosterSize,
 } from '@/lib/settings';
@@ -266,6 +266,8 @@ export function InterfaceSection() {
   const [rewatchNextUp, setRewatchNextUp] = useSetting(
     settings.interface.rewatchNextUp
   );
+  const [liveTv, setLiveTv] = useSetting(settings.interface.liveTv);
+  const hasLiveTv = !!useLiveTvView().data;
   const [combineSearch, setCombineSearch] = useSetting(
     settings.interface.combineSearch
   );
@@ -367,6 +369,19 @@ export function InterfaceSection() {
           value={String(heroSeconds)}
           onValueChange={(v) => setHeroSeconds(Number(v))}
         />
+        {hasLiveTv && (
+          <Select
+            label={t`Live TV`}
+            help={t`Hidden, channels also leave search and favourites.`}
+            options={[
+              { value: 'home', label: t`On home and in the navigation` },
+              { value: 'nav', label: t`In the navigation only` },
+              { value: 'off', label: t`Hidden` },
+            ]}
+            value={liveTv}
+            onValueChange={(value) => setLiveTv(value as LiveTvPlace)}
+          />
+        )}
         <Switch
           side="right"
           label={t`Merge continue watching and next up`}
@@ -412,16 +427,12 @@ export function InterfaceSection() {
       </SettingsCard>
       {!touch && (
         <SettingsCard name="cards" title={t`Cards`} description={onDevice()}>
-          <Select
-            label={t`Card you rest on`}
-            help={t`On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put.`}
-            options={[
-              { value: 'open', label: t`Opens out to its details` },
-              { value: 'pop', label: t`Pops out a preview` },
-              { value: 'off', label: t`Stays as it is` },
-            ]}
+          <Switch
+            side="right"
+            label={t`Preview the card you rest on`}
+            help={t`On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details.`}
             value={cardPreview}
-            onValueChange={(value) => setCardPreview(value as CardPreview)}
+            onValueChange={setCardPreview}
           />
         </SettingsCard>
       )}

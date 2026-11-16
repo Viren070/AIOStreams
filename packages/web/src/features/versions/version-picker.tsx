@@ -332,7 +332,8 @@ export function VersionPickerProvider({
   }, []);
   const item = request?.item;
   useArtBackground(item, true);
-  const [wash] = useSetting(settings.theme.artBackground);
+  const [artPages] = useSetting(settings.theme.artBackground);
+  const wash = artPages.includes('item');
   const open = !!request;
   // A sheet over the player, or where a short screen leaves a dialog no room.
   const short = useMediaQuery('(max-height: 500px)');

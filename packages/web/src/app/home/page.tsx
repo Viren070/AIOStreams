@@ -16,7 +16,6 @@ import {
   useLibraryHeads,
   useNextUp,
   useResume,
-  useLiveTvView,
   useUpcoming,
   useViews,
 } from '@/lib/jellyfin/queries';
@@ -49,6 +48,7 @@ import {
   FAVOURITES,
   RECENT,
   useChannelPages,
+  useLiveTvShown,
   useNow,
   useSchedules,
 } from '@/features/live-tv/live-tv';
@@ -333,8 +333,7 @@ const ROW_PAGE = 20;
 
 /** Favourite channels, then those played here lately, with what is on. */
 function LiveRow() {
-  const view = useLiveTvView();
-  const enabled = !!view.data;
+  const enabled = useLiveTvShown(true);
   const favourites = useChannelPages(FAVOURITES, {
     pageSize: ROW_PAGE,
     enabled,

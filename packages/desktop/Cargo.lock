@@ -53,6 +53,7 @@ dependencies = [
  "tao",
  "velopack",
  "webkit6",
+ "webview2-com",
  "windows",
  "windows-sys 0.61.2",
  "winresource",

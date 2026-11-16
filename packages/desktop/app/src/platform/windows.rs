@@ -496,6 +496,20 @@ impl VideoSurface {
     }
 }
 
+/// Page pixels to the window's, which the user's text size scales along with the screen's.
+pub fn page_scale(webview: &wry::WebView) -> Option<f64> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Controller3;
+    use windows::core::Interface;
+    use wry::WebViewExtWindows;
+    let controller = webview
+        .controller()
+        .cast::<ICoreWebView2Controller3>()
+        .ok()?;
+    let mut scale = 0.0;
+    unsafe { controller.RasterizationScale(&mut scale) }.ok()?;
+    (scale > 0.0).then_some(scale)
+}
+
 /// The screen the window is on, less the taskbar, in physical pixels.
 pub fn work_area(window: &Window) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
     // SAFETY: MONITORINFO is plain data, which the call fills.

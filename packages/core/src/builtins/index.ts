@@ -1,3 +1,4 @@
+export * from './test-result.js';
 export * from './base/nab/test.js';
 export * from './gdrive/index.js';
 export * from './torbox-search/index.js';

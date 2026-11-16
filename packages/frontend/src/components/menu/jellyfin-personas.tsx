@@ -460,6 +460,17 @@ export function JellyfinPersonas() {
     trackerOptions.filter((o) => o.viewers).map((o) => o.presetId)
   );
 
+  // Presets inherited from a parent config are only known from the server's list.
+  const knownTrackers = trackersLoading
+    ? null
+    : new Set([
+        ...userData.presets.map((p) => p.instanceId),
+        ...trackerOptions.map((o) => o.presetId),
+      ]);
+  /** Picks of removed addons sync with nothing; a save drops them. */
+  const live = (ids: string[]) =>
+    knownTrackers ? ids.filter((id) => knownTrackers.has(id)) : ids;
+
   /** Other users' trackers; `automatic` adds an automatic primary user's. */
   const takenFor = (index: number | null, automatic: boolean) => {
     const taken = new Map<string, string>();
@@ -677,7 +688,7 @@ export function JellyfinPersonas() {
                 'Primary user',
                 variantsLabel(primary?.variants),
                 primary?.trackers
-                  ? trackersLabel(primary.trackers)
+                  ? trackersLabel(live(primary.trackers))
                   : 'all trackers',
                 primary?.hidden ? 'hidden from the picker' : null,
                 primary?.lock ? 'PIN' : null,
@@ -703,7 +714,7 @@ export function JellyfinPersonas() {
                     ? "shares the primary user's history"
                     : 'own history',
                   persona.history !== 'shared' && persona.trackers
-                    ? trackersLabel(persona.trackers)
+                    ? trackersLabel(live(persona.trackers))
                     : null,
                   persona.history !== 'shared' &&
                   persona.id !== slugOf(persona.name)
@@ -786,7 +797,7 @@ export function JellyfinPersonas() {
             {trackerSync && (
               <TrackersField
                 choices={choicesFor('', takenFor(null, true))}
-                value={primaryDraft.trackers}
+                value={primaryDraft.trackers && live(primaryDraft.trackers)}
                 onChange={(trackers) =>
                   setPrimaryDraft({ ...primaryDraft, trackers })
                 }
@@ -876,7 +887,7 @@ export function JellyfinPersonas() {
             {trackerSync && draft.history !== 'shared' && (
               <TrackersField
                 choices={choicesFor(draft.id, takenFor(editing, true))}
-                value={draft.trackers}
+                value={draft.trackers && live(draft.trackers)}
                 onChange={(trackers) => setDraft({ ...draft, trackers })}
                 automatic="Syncs with a tracker addon its variants add, and with any that keeps each user apart."
                 note={

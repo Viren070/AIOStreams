@@ -474,6 +474,7 @@ const OptionDefinition = z.looseObject({
     'subsection',
     'custom-nntp-servers',
     'nab-endpoint',
+    'endpoint',
   ]),
   nab: z
     .object({
@@ -481,6 +482,8 @@ const OptionDefinition = z.looseObject({
       preset: z.string().min(1),
     })
     .optional(),
+  /** For 'endpoint': the builtin whose `/test` checks the sub-options' values. */
+  test: z.object({ builtin: z.string().min(1) }).optional(),
   oauth: z
     .object({
       authorisationUrl: z.string().url(),

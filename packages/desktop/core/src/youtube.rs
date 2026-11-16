@@ -201,7 +201,8 @@ fn one_variant(master: &str, original: Option<&str>) -> Option<String> {
     if tracks.is_empty() {
         return None;
     }
-    let mut edl = format!("edl://{}", edl_value(uri));
+    // Otherwise each segment becomes a chapter titled with its URL.
+    let mut edl = format!("edl://!no_chapters;{}", edl_value(uri));
     for media in tracks {
         edl.push_str(";!new_stream;!no_clip;!delay_open,media_type=audio,codec=aac");
         let meta: Vec<_> = [("lang", "LANGUAGE"), ("title", "NAME")]

@@ -626,19 +626,17 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
             title={name}
           >
             <div className="space-y-4">
-              {subOptions.map(
-                (subOption: Option): React.JSX.Element => (
-                  <TemplateOption
-                    key={subOption.id}
-                    option={subOption}
-                    value={localValue[subOption.id]}
-                    onChange={(subValue) =>
-                      handleLocalChange(subOption.id, subValue)
-                    }
-                    disabled={isDisabled}
-                  />
-                )
-              )}
+              {subOptions.map((subOption: Option): React.JSX.Element => (
+                <TemplateOption
+                  key={subOption.id}
+                  option={subOption}
+                  value={localValue[subOption.id]}
+                  onChange={(subValue) =>
+                    handleLocalChange(subOption.id, subValue)
+                  }
+                  disabled={isDisabled}
+                />
+              ))}
               <Button
                 type="button"
                 intent="primary"
@@ -663,9 +661,10 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
         />
       );
     }
-    case 'nab-endpoint': {
+    case 'nab-endpoint':
+    case 'endpoint': {
       return (
-        <NabEndpointInput
+        <EndpointInput
           option={option}
           value={forcedValue ?? value ?? defaultValue}
           onChange={onChange}
@@ -678,114 +677,67 @@ const TemplateOption: React.FC<TemplateOptionProps> = ({
   }
 };
 
-interface NabEndpointValue {
-  url?: string;
-  apiKey?: string;
-}
+type EndpointValue = Record<string, string | undefined>;
 
-interface NabTestResult {
+interface EndpointTestResult {
   ok: boolean;
-  stage?: 'caps' | 'auth' | 'search';
-  server?: { title?: string };
-  limits?: {
-    default?: number | string | boolean;
-    max?: number | string | boolean;
-  };
-  searchModes?: string[];
-  idSearchParams?: { movie: string[]; series: string[] };
-  resultCount?: number;
-  missingInfoHash?: boolean;
-  error?: { code?: number; message: string };
+  title: string;
+  description?: string;
+  warning?: { title: string; description: string };
 }
 
-const NAB_TEST_STAGE_HINTS: Record<string, string> = {
-  caps: 'Could not reach a Newznab API here. Check the URL, including its path.',
-  auth: 'The endpoint is reachable, but the API key was rejected.',
-  search: 'The endpoint is reachable, but the search request failed.',
-};
-
-function describeIdSearch(
-  idSearchParams: NabTestResult['idSearchParams']
-): string {
-  const movie = idSearchParams?.movie ?? [];
-  const series = idSearchParams?.series ?? [];
-  if (movie.length === 0 && series.length === 0) {
-    return 'No ID search, results are matched by title only';
-  }
-  const sameForBoth =
-    movie.length === series.length && movie.every((p) => series.includes(p));
-  if (sameForBoth) {
-    return `ID search: ${movie.join(', ')}`;
-  }
-  return `ID search: ${movie.length ? movie.join(', ') : 'none'} (movies), ${series.length ? series.join(', ') : 'none'} (series)`;
-}
-
-export interface NabEndpointInputProps {
+export interface EndpointInputProps {
   option: Option;
-  value: NabEndpointValue | undefined;
-  onChange: (value: NabEndpointValue) => void;
+  value: EndpointValue | undefined;
+  onChange: (value: EndpointValue) => void;
   disabled?: boolean;
 }
 
 /**
- * The url + API key pair for a newznab/torznab indexer, with a button that
- * probes the endpoint.
+ * Fields that reach a service together, such as an indexer's url and API key,
+ * with a button that asks the server to try them.
  */
-export function NabEndpointInput({
+export function EndpointInput({
   option,
   value,
   onChange,
   disabled,
-}: NabEndpointInputProps) {
+}: EndpointInputProps) {
   const subOptions = (option.subOptions ?? []) as Option[];
-  const urlOption = subOptions.find((sub) => sub.id === 'url');
-  const apiKeyOption = subOptions.find((sub) => sub.id === 'apiKey');
   const current = value ?? {};
 
   const [testing, setTesting] = useState(false);
-  const [result, setResult] = useState<NabTestResult | null>(null);
+  const [result, setResult] = useState<EndpointTestResult | null>(null);
 
-  const update = (patch: NabEndpointValue) => {
+  const update = (id: string, next: string | undefined) => {
     // any edit invalidates the previous verdict
     setResult(null);
-    onChange({ ...current, ...patch });
+    onChange({ ...current, [id]: next });
   };
 
   // only point at a key page for indexers we have a confirmed link for
-  const apiKeyUrl = urlOption?.options?.find(
-    (entry) => entry.value === current.url
-  )?.apiKeyUrl;
-  const apiKeyDescription = [
-    apiKeyOption?.description,
-    apiKeyUrl && `[Find your API key](${apiKeyUrl})`,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const apiKeyUrl = subOptions
+    .find((sub) => sub.id === 'url')
+    ?.options?.find((entry) => entry.value === current.url)?.apiKeyUrl;
 
   const runTest = async () => {
     setTesting(true);
     setResult(null);
+    const builtin = option.test?.builtin ?? option.nab?.namespace ?? 'newznab';
     try {
-      const response = await fetch(
-        `/builtins/${option.nab?.namespace ?? 'newznab'}/test`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: current.url,
-            apiKey: current.apiKey,
-            preset: option.nab?.preset,
-          }),
-        }
-      );
+      const response = await fetch(`/builtins/${builtin}/test`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...current, preset: option.nab?.preset }),
+      });
       const json = await response.json();
       if (!json.success) {
         throw new Error(
           json.detail || json.error?.message || 'Could not run the test'
         );
       }
-      setResult(json.data as NabTestResult);
+      setResult(json.data as EndpointTestResult);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Could not run the test'
@@ -795,113 +747,109 @@ export function NabEndpointInput({
     }
   };
 
+  const field = (sub: Option) => {
+    if (sub.type === 'password') {
+      return (
+        <PasswordInput
+          label={sub.name}
+          value={current[sub.id] ?? ''}
+          onValueChange={(next: string) => update(sub.id, next)}
+          required={sub.required}
+          disabled={disabled}
+          autoComplete="new-password"
+        />
+      );
+    }
+    if (sub.options?.length) {
+      return (
+        <SelectWithCustom
+          label={sub.name}
+          value={current[sub.id]}
+          onChange={(next) => update(sub.id, next)}
+          options={sub.options}
+          required={sub.required}
+          disabled={disabled}
+        />
+      );
+    }
+    return (
+      <TextInput
+        label={sub.name}
+        value={current[sub.id] ?? ''}
+        onValueChange={(next: string) => update(sub.id, next)}
+        type={sub.type === 'url' ? 'url' : 'text'}
+        required={sub.required}
+        disabled={disabled}
+      />
+    );
+  };
+
+  const testButton = (
+    <Tooltip
+      trigger={
+        <IconButton
+          intent="gray-subtle"
+          icon={<BiTestTube />}
+          onClick={runTest}
+          loading={testing}
+          disabled={disabled || testing}
+          aria-label="Test connection"
+          className="shrink-0"
+        />
+      }
+    >
+      Test connection
+    </Tooltip>
+  );
+
   return (
     <div className="space-y-2">
-      <div className="flex items-end gap-2">
-        <div className="flex-1 min-w-0 space-y-2">
-          {urlOption?.options?.length ? (
-            <SelectWithCustom
-              label={urlOption.name}
-              value={current.url}
-              onChange={(url) => update({ url })}
-              options={urlOption.options}
-              required={urlOption.required}
-              disabled={disabled}
-            />
-          ) : (
-            <TextInput
-              label={urlOption?.name ?? 'URL'}
-              value={current.url ?? ''}
-              onValueChange={(url: string) => update({ url })}
-              type="url"
-              required={urlOption?.required}
-              disabled={disabled}
-            />
-          )}
-        </div>
-        <Tooltip
-          trigger={
-            <IconButton
-              intent="gray-subtle"
-              icon={<BiTestTube />}
-              onClick={runTest}
-              loading={testing}
-              disabled={disabled || testing}
-              aria-label="Test endpoint"
-              className="shrink-0"
-            />
-          }
-        >
-          Test connection
-        </Tooltip>
-      </div>
+      {subOptions.map((sub, i) => {
+        const description = [
+          sub.description,
+          sub.id === 'apiKey' &&
+            apiKeyUrl &&
+            `[Find your API key](${apiKeyUrl})`,
+        ]
+          .filter(Boolean)
+          .join(' ');
+        return (
+          <div key={sub.id}>
+            {i === 0 ? (
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">{field(sub)}</div>
+                {testButton}
+              </div>
+            ) : (
+              field(sub)
+            )}
+            {description && (
+              <div className="text-xs text-[--muted] mt-1">
+                <MarkdownLite>{description}</MarkdownLite>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
-      {urlOption?.description && (
-        <div className="text-xs text-[--muted]">
-          <MarkdownLite>{urlOption.description}</MarkdownLite>
-        </div>
-      )}
-
-      {apiKeyOption && (
-        <div>
-          <PasswordInput
-            label={apiKeyOption.name}
-            value={current.apiKey ?? ''}
-            onValueChange={(apiKey: string) => update({ apiKey })}
-            required={apiKeyOption.required}
-            disabled={disabled}
-            autoComplete="new-password"
-          />
-          {apiKeyDescription && (
-            <div className="text-xs text-[--muted] mt-1">
-              <MarkdownLite>{apiKeyDescription}</MarkdownLite>
-            </div>
-          )}
-        </div>
-      )}
-
-      {result && <NabTestSummary result={result} />}
+      {result && <EndpointTestSummary result={result} />}
     </div>
   );
 }
 
-function NabTestSummary({ result }: { result: NabTestResult }) {
-  if (!result.ok) {
-    const hint = result.stage ? NAB_TEST_STAGE_HINTS[result.stage] : undefined;
-    return (
-      <Alert
-        intent="alert-basic"
-        title="Test failed"
-        description={
-          <span>
-            {hint ? `${hint} ` : ''}
-            {result.error?.message}
-            {result.error?.code !== undefined && ` (${result.error.code})`}
-          </span>
-        }
-      />
-    );
-  }
-
-  const details = [
-    describeIdSearch(result.idSearchParams),
-    result.resultCount !== undefined && `${result.resultCount} results`,
-    result.limits?.max !== undefined && `max ${result.limits.max} per request`,
-    result.searchModes?.length && `supports ${result.searchModes.join(', ')}`,
-  ].filter(Boolean);
-
+function EndpointTestSummary({ result }: { result: EndpointTestResult }) {
   return (
     <div className="space-y-2">
       <Alert
-        intent={'success-basic'}
-        title={`Connected to ${result.server?.title || 'the indexer'}`}
-        description={details.join(' · ')}
+        intent={result.ok ? 'success-basic' : 'alert-basic'}
+        title={result.title}
+        description={result.description}
       />
-      {result.missingInfoHash && (
+      {result.warning && (
         <Alert
           intent="warning-basic"
-          title="No hash in the sample result"
-          description="This indexer may need to download the torrent file for every result, which can affect performance or hit request limits. Consider lowering the results limit if you notice issues."
+          title={result.warning.title}
+          description={result.warning.description}
         />
       )}
     </div>

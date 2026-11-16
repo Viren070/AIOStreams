@@ -45,8 +45,23 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
-export const CARD_PREVIEWS = ['open', 'pop', 'off'] as const;
-export type CardPreview = (typeof CARD_PREVIEWS)[number];
+/** What a touch, or a mouse's hold, on the video does. */
+export const GESTURES = [
+  'seek',
+  'scrub',
+  'volume',
+  'brightness',
+  'hold',
+  'pinch',
+] as const;
+export type Gesture = (typeof GESTURES)[number];
+
+export const LIVE_TV_PLACES = ['home', 'nav', 'off'] as const;
+export type LiveTvPlace = (typeof LIVE_TV_PLACES)[number];
+
+/** Title pages, pages that list titles, and the rest. */
+export const ART_PAGES = ['item', 'browse', 'other'] as const;
+export type ArtPage = (typeof ART_PAGES)[number];
 
 export const TRAILER_SPOTS = ['cards', 'hero', 'item'] as const;
 export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
@@ -324,6 +339,10 @@ const trailer = record(TRAILER_SPOTS, (spot) =>
   )
 );
 
+const gesture = record(GESTURES, (name) =>
+  device<boolean>(`aiostreams-web-controls-gesture-${name}`, true)
+);
+
 const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
   device<boolean>(
     `aiostreams-web-audio-passthrough-${format}`,
@@ -397,20 +416,21 @@ export const settings = {
     blurSpoilers: syncedFlag('blurSpoilers'),
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
     heroSeconds: syncedChoice<number>('heroSeconds', HERO_SECONDS, 9),
+    liveTv: syncedChoice<LiveTvPlace>('liveTv', LIVE_TV_PLACES, 'home'),
     episodeLayout: device<EpisodeLayout>(
       'aiostreams-web-interface-episode-layout',
       'auto',
       EPISODE_LAYOUTS,
       ['aiostreams-web-episode-layout']
     ),
-    cardPreview: device<CardPreview>(
-      'aiostreams-web-interface-card-preview',
-      'open',
-      CARD_PREVIEWS,
+    cardPreview: device<boolean>(
+      'aiostreams-web-interface-card-previews',
+      true,
+      undefined,
       [
         {
-          key: 'aiostreams-web-interface-card-previews',
-          read: (old) => (old === false ? 'off' : undefined),
+          key: 'aiostreams-web-interface-card-preview',
+          read: (old) => (old === 'off' ? false : undefined),
         },
       ]
     ),
@@ -497,7 +517,18 @@ export const settings = {
         'aiostreams-web-bar-background',
       ]
     ),
-    artBackground: syncedFlag('artBackground'),
+    artBackground: synced<ArtPage[]>(
+      'artBackground',
+      (raw = 'item') =>
+        raw === '1'
+          ? [...ART_PAGES]
+          : ART_PAGES.filter((page) => raw.split(',').includes(page)),
+      (value) => {
+        const pages = ART_PAGES.filter((page) => value.includes(page));
+        if (pages.join() === 'item') return undefined;
+        return pages.length ? pages.join(',') : 'none';
+      }
+    ),
     artGlass: device<boolean>('aiostreams-web-theme-art-glass', false),
   },
   playback: {
@@ -578,6 +609,8 @@ export const settings = {
       HOLD_RATES,
       ['aiostreams-web-hold-rate']
     ),
+    gesture,
+    gestures: group(gesture),
     /** Keys changed from the defaults, by action. */
     shortcuts: deviceLists('aiostreams-web-controls-shortcuts', [
       'aiostreams-web-shortcuts',
