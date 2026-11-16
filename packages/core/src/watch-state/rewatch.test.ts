@@ -38,6 +38,29 @@ describe('rewatchNextIndex', () => {
     assert.equal(rewatchNextIndex(show), 2);
   });
 
+  it('offers an unfinished episode started after the last completed one', () => {
+    // E2 completed on day 11, E3 never played, E4 started on day 12.
+    const started = {
+      played: false,
+      aired: true,
+      lastPlayedAt: 12,
+      inProgress: true,
+    };
+    const show = [ep(10), ep(11), ep(), started, ep(5)];
+    assert.equal(rewatchNextIndex(show), 3);
+  });
+
+  it('passes over a saved position older than the rewatch', () => {
+    const stale = {
+      played: false,
+      aired: true,
+      lastPlayedAt: 2,
+      inProgress: true,
+    };
+    const show = [ep(10), ep(11), ep(), stale, ep(5)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
   it('passes over episodes that have not aired', () => {
     const show = [ep(10), ep(11), ep(undefined, false), ep(4)];
     assert.equal(rewatchNextIndex(show), 3);

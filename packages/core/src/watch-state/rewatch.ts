@@ -7,7 +7,8 @@
  * Jellyfin does: an import can give every row of a show one timestamp, so the
  * row order says nothing about which was played last. The answer is the first
  * episode after it that has aired, whether the first watch reached it or not,
- * or that episode itself while it was stopped part-way through.
+ * or that episode itself while it was stopped part-way through. An episode
+ * started and left unfinished counts as a play from the date it was left.
  *
  * Only a play behind the furthest episode watched is a rewatch. Otherwise, or
  * with no dated play, this is -1 and the usual Next Up applies.
@@ -23,8 +24,8 @@ export function rewatchNextIndex(
   let anchor = -1;
   let furthest = -1;
   episodes.forEach((episode, i) => {
-    if (!episode.played) return;
-    furthest = i;
+    if (episode.played) furthest = i;
+    else if (!episode.inProgress) return;
     const at = episode.lastPlayedAt ?? 0;
     // `>=`: plays sharing a date go on from the furthest of them.
     if (at > 0 && (anchor < 0 || at >= (episodes[anchor].lastPlayedAt ?? 0)))
