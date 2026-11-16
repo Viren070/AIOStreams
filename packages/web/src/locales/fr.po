@@ -180,6 +180,10 @@ msgstr "{name} a rejoint la session"
 msgid "{name} left the party"
 msgstr "{name} a quitté la session"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr ""
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {Choisissez la version à télécharger. L'autre épisode utilisera la même version si disponible.} other {Choisissez la version à télécharger. Les # autres épisodes utiliseront la même version si disponible.}}"
@@ -519,6 +523,10 @@ msgstr "Tous les épisodes"
 msgid "All fields"
 msgstr "Tous les champs"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr ""
+
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
 msgstr "Toutes les playlists"
@@ -842,10 +850,6 @@ msgstr "Impossible de joindre le serveur"
 #: src/lib/i18n.ts
 msgid "Cancel"
 msgstr "Annuler"
-
-#: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1462,12 +1466,17 @@ msgstr "Faire un don"
 msgid "Donate to Me"
 msgstr "Me faire un don"
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx src/features/player/subtitle-sync.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Done"
 msgstr "Terminé"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1828,6 +1837,10 @@ msgstr "Plein écran"
 msgid "General"
 msgstr "Général"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Donnez ce code à la personne chargée d'examiner le problème."
@@ -1927,6 +1940,10 @@ msgstr "Bannière à la une"
 msgid "Hidden"
 msgstr "Masqué"
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr ""
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "Masquer"
@@ -1944,6 +1961,11 @@ msgstr "Masquer le code QR"
 msgid "Hold"
 msgstr "Maintenir"
 
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Hold to speed up"
+msgstr "Vitesse maintenue"
+
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
 msgid "Home"
@@ -1956,6 +1978,10 @@ msgstr "Accueil et grilles"
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "Accueil et bibliothèques"
+
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2036,6 +2062,10 @@ msgstr "Synchronisé"
 #: src/app/downloads/page.tsx src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
 msgstr "Dans les téléchargements de l'application"
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
+msgstr ""
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2749,7 +2779,7 @@ msgstr "Aucun favori enregistré pour le moment."
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "Aucun résultat correspondant."
 
@@ -2793,7 +2823,7 @@ msgstr "Appuyez maintenant sur Vu lorsque cette ligne apparaît."
 msgid "Now: {shown}"
 msgstr "Actuel : {shown}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "Rien ici."
@@ -2832,8 +2862,16 @@ msgstr "Les données plus anciennes attendent la réponse du serveur. Sans conne
 msgid "on {relay}"
 msgstr "sur {relay}"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr ""
+
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home and in the navigation"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
 #: src/lib/discord.ts
@@ -2934,10 +2972,6 @@ msgstr "Ouvrir la playlist"
 msgid "Open the app's downloads"
 msgstr "Ouvrir les téléchargements de l'application"
 
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
-msgstr ""
-
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Ouvre le menu contextuel de la sélection, comme un clic droit."
@@ -3007,6 +3041,10 @@ msgstr "Autre application"
 #: src/features/remote/remote-sheet.tsx
 msgid "Other devices"
 msgstr "Autres appareils"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3201,6 +3239,11 @@ msgstr "Code PIN"
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
 msgstr "Code PIN ou mot de passe"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Pinch to fill the screen"
+msgstr "Quitter le plein écran"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3411,11 +3454,6 @@ msgstr "Accélère la lecture tant que la touche reste enfoncée, à la vitesse 
 msgid "Plays the video."
 msgstr "Lit la vidéo."
 
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Pops out a preview"
-msgstr "Passer l'aperçu"
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr "Position"
@@ -3448,6 +3486,10 @@ msgstr ""
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
 msgstr "Aperçu"
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
+msgstr ""
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -4415,10 +4457,6 @@ msgstr "Statistiques"
 msgid "Status"
 msgstr "Statut"
 
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
-msgstr ""
-
 #: src/app/settings/audio.tsx
 msgid "Stereo"
 msgstr "Stéréo"
@@ -4545,6 +4583,19 @@ msgstr "Soleil"
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "Soutenir AIOStreams"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Swipe across to seek"
+msgstr "Espace à allouer"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4741,7 +4792,7 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Le lecteur de l'application et ses options, comme le lancement des vidéos en mode paysage."
 
 #: src/app/settings/theme.tsx
-msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5082,7 +5133,7 @@ msgid "Title"
 msgstr "Titre"
 
 #: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "Pages des titres"
 
@@ -5535,6 +5586,10 @@ msgstr "Les messages de vos compagnons de visionnage s'affichent quelques second
 msgid "What to save"
 msgstr "Éléments à enregistrer"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr ""
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr "Ce que vous pouvez envoyer dans le chat d'une session."
@@ -5666,6 +5721,10 @@ msgstr "Win"
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr "Avec {names}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"

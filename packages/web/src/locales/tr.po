@@ -180,6 +180,10 @@ msgstr "{name} etkinliğe katıldı"
 msgid "{name} left the party"
 msgstr "{name} etkinlikten ayrıldı"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr ""
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {İndirilecek sürümü seçin. Diğer bölüm için de bulunabiliyorsa aynı sürüm kullanılır.} other {İndirilecek sürümü seçin. Diğer # bölüm için de bulunabiliyorsa aynı sürüm kullanılır.}}"
@@ -519,6 +523,10 @@ msgstr "Tüm bölümler"
 msgid "All fields"
 msgstr "Tüm alanlar"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr ""
+
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
 msgstr "Tüm oynatma listeleri"
@@ -842,10 +850,6 @@ msgstr "Sunucuya ulaşılamıyor"
 #: src/lib/i18n.ts
 msgid "Cancel"
 msgstr "İptal et"
-
-#: src/app/settings/interface.tsx
-msgid "Card you rest on"
-msgstr ""
 
 #: src/app/settings/interface.tsx
 msgid "Cards"
@@ -1461,12 +1465,17 @@ msgstr "Bağış yap"
 msgid "Donate to Me"
 msgstr "Bana bağış yap"
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx src/features/player/subtitle-sync.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Done"
 msgstr "Bitti"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr ""
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1826,6 +1835,10 @@ msgstr "Tam ekran"
 msgid "General"
 msgstr "Genel"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Sorunu inceleyecek kişiye bu kodu ilet."
@@ -1924,6 +1937,10 @@ msgstr "Vitrin"
 msgid "Hidden"
 msgstr "Gizli"
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr ""
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "Gizle"
@@ -1941,6 +1958,11 @@ msgstr "QR kodunu gizle"
 msgid "Hold"
 msgstr "Basılı tut"
 
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Hold to speed up"
+msgstr "Basılı tutma hızı"
+
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
 msgid "Home"
@@ -1953,6 +1975,10 @@ msgstr "Ana sayfa ve ızgaralar"
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "Ana sayfa ve kitaplıklar"
+
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2033,6 +2059,10 @@ msgstr "Eşitlenmiş"
 #: src/app/downloads/page.tsx src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
 msgstr "Uygulamanın indirmelerinde"
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
+msgstr ""
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2745,7 +2775,7 @@ msgstr "Henüz favorilere eklenen içerik yok."
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "Eşleşme yok."
 
@@ -2789,7 +2819,7 @@ msgstr "Şimdi replik göründüğünde Gördüm düğmesine dokun."
 msgid "Now: {shown}"
 msgstr "Şimdi: {shown}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "Burada içerik yok."
@@ -2828,8 +2858,16 @@ msgstr "Daha eski içerikler için sunucunun yanıtı beklenir. Bağlantı yoksa
 msgid "on {relay}"
 msgstr "{relay} üzerinde"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr ""
+
 #: src/app/settings/interface.tsx
-msgid "On home while the hero rotates, and in grids. In a grid, and under a mouse, a card pops out, so the cards beside it stay put."
+msgid "On home and in the navigation"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
 #: src/lib/discord.ts
@@ -2930,10 +2968,6 @@ msgstr "Oynatma listesini aç"
 msgid "Open the app's downloads"
 msgstr "Uygulamanın indirmelerini aç"
 
-#: src/app/settings/interface.tsx
-msgid "Opens out to its details"
-msgstr ""
-
 #: src/lib/input/actions.ts
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Sağ tıklama gibi, seçili öğenin menüsünü açar."
@@ -3003,6 +3037,10 @@ msgstr "Başka uygulama"
 #: src/features/remote/remote-sheet.tsx
 msgid "Other devices"
 msgstr "Diğer cihazlar"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3197,6 +3235,11 @@ msgstr "PIN"
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
 msgstr "PIN veya parola"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Pinch to fill the screen"
+msgstr "Tam ekrandan çık"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3407,11 +3450,6 @@ msgstr "Tuşa basılı tutulduğu sürece Oynatma ayarlarındaki hızla daha hı
 msgid "Plays the video."
 msgstr "Videoyu oynatır."
 
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Pops out a preview"
-msgstr "Önizlemeyi atla"
-
 #: src/features/remote/remote-sheet.tsx
 msgid "Position"
 msgstr "Konum"
@@ -3444,6 +3482,10 @@ msgstr ""
 #: src/app/settings/subtitles.tsx
 msgid "Preview"
 msgstr "Önizleme"
+
+#: src/app/settings/interface.tsx
+msgid "Preview the card you rest on"
+msgstr ""
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -4411,10 +4453,6 @@ msgstr "İstatistikler"
 msgid "Status"
 msgstr "Durum"
 
-#: src/app/settings/interface.tsx
-msgid "Stays as it is"
-msgstr ""
-
 #: src/app/settings/audio.tsx
 msgid "Stereo"
 msgstr "Stereo"
@@ -4541,6 +4579,19 @@ msgstr "Güneş"
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "AIOStreams'i destekle"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#, fuzzy
+msgid "Swipe across to seek"
+msgstr "Kullanılacak alan"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4737,7 +4788,7 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Uygulamanın oynatıcısı ve videoları yatay başlatma gibi seçenekleri."
 
 #: src/app/settings/theme.tsx
-msgid "The artwork of the title you're on, blurred and darkened, behind the pages and the version list."
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5078,7 +5129,7 @@ msgid "Title"
 msgstr "Başlık"
 
 #: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx
+#: src/app/settings/interface.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "İçerik sayfaları"
 
@@ -5531,6 +5582,10 @@ msgstr "Birlikte izlediğin kişilerin mesajları birkaç saniyeliğine görün�
 msgid "What to save"
 msgstr "Kaydedilecekler"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr ""
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr "Birlikte izleme sohbetinden gönderebileceğin tepkiler."
@@ -5662,6 +5717,10 @@ msgstr "Win"
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr "{names} ile"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
