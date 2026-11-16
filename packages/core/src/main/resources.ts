@@ -891,8 +891,12 @@ export async function getStreams(
 
   if (ctx.userData.preloadStreams?.enabled && !preCaching) {
     let shouldPreload = true;
+    // Hoisted so the cooldown is only armed once streams are actually
+    // selected for preloading. An empty pipeline run must not consume the
+    // cooldown, or a good response produced right after it would skip
+    // preloading within the window.
+    const preloadCooldownKey = `preload-${type}-${id}-${userScopeKey(ctx.userData)}`;
     if (appConfig.resources.preload.minInterval > 0) {
-      const preloadCooldownKey = `preload-${type}-${id}-${userScopeKey(ctx.userData)}`;
       const recentlyPreloaded = await precacheCache.get(
         preloadCooldownKey,
         false
@@ -903,12 +907,6 @@ export async function getStreams(
           'preload skipped, within cooldown'
         );
         shouldPreload = false;
-      } else {
-        await precacheCache.set(
-          preloadCooldownKey,
-          true,
-          appConfig.resources.preload.minInterval
-        );
       }
     }
 
@@ -940,6 +938,13 @@ export async function getStreams(
         streamsToPreload = [];
       }
       if (streamsToPreload.length > 0) {
+        if (appConfig.resources.preload.minInterval > 0) {
+          await precacheCache.set(
+            preloadCooldownKey,
+            true,
+            appConfig.resources.preload.minInterval
+          );
+        }
         // mark streams as preloading for formatter
         for (const s of streamsToPreload) {
           // cant mutate as select returns copys via zod parsing, so we need to find the original stream via ID.
