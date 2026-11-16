@@ -710,6 +710,11 @@ export class TMDBMetadata {
     ) {
       titles.push({ title: episodeData.name });
     }
+    // English first, as EpisodeDetails.titles says: formatters show the
+    // first entry as {metadata.episodeTitle}
+    titles.sort(
+      (a, b) => Number(b.language === 'en') - Number(a.language === 'en')
+    );
     const details: EpisodeDetails = {
       airDate: episodeData.air_date ?? undefined,
       runtime: episodeData.runtime ?? undefined,
