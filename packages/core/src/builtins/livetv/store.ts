@@ -68,6 +68,7 @@ export class TieredStore<V, S> {
     return [decoded, left];
   }
 
+  /** Written through, as replicas waiting on {@link load} read it next. */
   async set(key: string, value: V, ttl: number): Promise<void> {
     await this.memory.set(key, value, ttl);
     try {
@@ -77,7 +78,8 @@ export class TieredStore<V, S> {
       await this.shared.set(
         key,
         { until: Date.now() + ttl * 1000, data: packed.toString('base64') },
-        ttl
+        ttl,
+        true
       );
     } catch (err) {
       logger.warn(
