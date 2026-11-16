@@ -1,5 +1,5 @@
 # The libmpv the macOS app ships, with FFmpeg's and MoltenVK's dylibs: a
 # github.com/AIOStreams/libs release and the SHA-256 of each architecture's libs-macos zip.
-libs=20261106-7552cab
-libs_arm64=42336fe818d7774220dd3b84eb31a4ca59cf445c5c618372af964dd6c5b92aa0
-libs_x86_64=e202eaf0f35c5260016115fb27062bb4732f008072ecb923b2ede6a4a4fe95be
+libs=20261116-5e82784
+libs_arm64=f49c214ed87210ab082aee504ecd767bcfe4ab52e12b9fcdd197e55f36acf9d4
+libs_x86_64=465e4fc5707ceb0db8599341011c75051b2ba26918815264526c5e453a98b115
