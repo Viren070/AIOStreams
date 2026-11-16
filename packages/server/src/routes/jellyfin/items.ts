@@ -875,15 +875,16 @@ export async function nextUpForSeries(
 ): Promise<JellyfinItem | null> {
   const at = await watchingPosition(ctx, d, last);
   if (!at) return null;
-  const again = opts.rewatching
-    ? rewatchNextIndex(
-        at.eps.map((e) => ({
-          played: slotPlayed(e),
-          aired: !isUnairedVideo(e.video),
-          lastPlayedAt: e.row?.lastPlayedAt,
-        }))
-      )
-    : -1;
+  const again =
+    opts.rewatching && !at.resume
+      ? rewatchNextIndex(
+          at.eps.map((e) => ({
+            played: slotPlayed(e),
+            aired: !isUnairedVideo(e.video),
+            lastPlayedAt: e.row?.lastPlayedAt,
+          }))
+        )
+      : -1;
   let next: JellyfinItem | null;
   if (again >= 0) {
     next = at.build(at.eps[again]);
