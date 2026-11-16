@@ -17,7 +17,7 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   },
   radarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
-    'User-Agent': 'Radarr/6.4.4.10685 (alpine 3.24.4)',
+    'User-Agent': 'Radarr/7.0.3.10918 (alpine 3.24.4)',
   },
   prowlarr: {
     Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
@@ -26,7 +26,7 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
   nzbhydra2: {
     Accept: 'application/xml',
     'Content-Type': 'application/xml',
-    'User-Agent': 'NZBHydra2 9.3.0',
+    'User-Agent': 'NZBHydra2 9.3.1',
   },
   chrome: {
     'User-Agent':
