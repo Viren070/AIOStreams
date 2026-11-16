@@ -782,7 +782,14 @@ export class MetadataService {
                   }
                 }
               }
-              if (names.length) episodeTitles = deduplicateTitles(names);
+              // English first: formatters show the first title as
+              // {metadata.episodeTitle}, whichever source it came from
+              if (names.length) {
+                episodeTitles = deduplicateTitles(names).sort(
+                  (a, b) =>
+                    Number(b.language === 'en') - Number(a.language === 'en')
+                );
+              }
             }
 
             // Left empty unless a season or episode year resolved: the
