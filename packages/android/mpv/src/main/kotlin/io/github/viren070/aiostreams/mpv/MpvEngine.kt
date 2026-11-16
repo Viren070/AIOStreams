@@ -58,6 +58,10 @@ class MpvEngine(private val context: Context) : Engine {
     private val calls = Executors.newSingleThreadScheduledExecutor { Thread(it, "mpv-calls") }
     private var listener: Engine.Listener? = null
 
+    // mpv aborts on a call made while, or after, it closes.
+    private val closing = Any()
+    private var closed = false
+
     @Volatile
     private var cause: String? = null
 
@@ -155,7 +159,11 @@ class MpvEngine(private val context: Context) : Engine {
 
     private fun set(name: String, value: String) = mpv.setPropertyString(name, value)
 
-    override fun property(name: String): String? = if (name in versions) versions[name] else mpv.getPropertyString(name)
+    override fun property(name: String): String? = if (name in versions) {
+        versions[name]
+    } else {
+        synchronized(closing) { if (closed) null else mpv.getPropertyString(name) }
+    }
 
     /** libass here finds fonts only in mpv's fonts folder. */
     private fun copyFonts() {
@@ -407,6 +415,10 @@ class MpvEngine(private val context: Context) : Engine {
 
         // The surface is gone once this returns, so mpv has to let go of it first.
         override fun surfaceDestroyed(holder: SurfaceHolder) {
+            if (calls.isShutdown) {
+                calls.awaitTermination(2, TimeUnit.SECONDS)
+                return
+            }
             val done = CountDownLatch(1)
             calls.execute {
                 mpv.setPropertyString("vo", "null")
@@ -421,9 +433,12 @@ class MpvEngine(private val context: Context) : Engine {
     override fun release() {
         mpv.removeObserver(observer)
         mpv.removeLogObserver(logs)
+        // After every queued call, and off the main thread, as closing waits on a core that may never answer.
+        calls.execute {
+            synchronized(closing) { closed = true }
+            mpv.close()
+        }
         calls.shutdown()
-        // Closing waits for mpv's core, which may never answer.
-        Thread(mpv::close, "mpv-close").start()
     }
 
     private val observer = object : MPV.EventObserver {
