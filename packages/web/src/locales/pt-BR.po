@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-16 22:40+0000\n"
+"PO-Revision-Date: 2026-11-16 23:20+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -4532,17 +4532,16 @@ msgid "Support AIOStreams"
 msgstr "Apoiar o AIOStreams"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Swipe across to seek"
-msgstr "Espaço a usar"
+msgstr "Deslize para os lados para avançar ou voltar"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the left for brightness"
-msgstr ""
+msgstr "Deslize para cima ou para baixo à esquerda para ajustar o brilho"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the right for volume"
-msgstr ""
+msgstr "Deslize para cima ou para baixo à direita para ajustar o volume"
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4739,9 +4738,8 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "O Player do app e suas opções, como iniciar vídeos em paisagem."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
-msgstr "A imagem do título selecionado aparece desfocada e escurecida ao fundo das páginas e da lista de versões."
+msgstr "A imagem do título selecionado aparece desfocada e escurecida ao fundo destas páginas. Na lista de versões, só aparece com \"Páginas dos títulos\" ativado."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5525,7 +5523,7 @@ msgstr "O que salvar"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "What touching or holding the video does."
-msgstr ""
+msgstr "O que acontece ao tocar ou segurar o vídeo."
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
@@ -5661,7 +5659,7 @@ msgstr "Com {names}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "With a finger or the mouse button, at the held speed."
-msgstr ""
+msgstr "Com o dedo ou botão do mouse, na velocidade configurada."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
