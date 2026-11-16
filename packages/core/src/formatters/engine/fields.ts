@@ -10,6 +10,8 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
   stream: [
     'filename',
     'folderName',
+    'url',
+    'urlHost',
     'size',
     'bitrate',
     'folderSize',
