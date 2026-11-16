@@ -326,6 +326,16 @@ export function applyMigrations(config: any): UserData {
       }
       return { ...preset, options: { ...rest, api } };
     });
+
+    config.presets = config.presets.map((preset: any) => {
+      if (preset.type !== 'xtream' || !preset.options) return preset;
+      const { server, username, password, ...rest } = preset.options;
+      if (rest.login !== undefined || server === undefined) return preset;
+      return {
+        ...preset,
+        options: { ...rest, login: { server, username, password } },
+      };
+    });
   }
 
   if (config.formatter && config.formatter.definition) {

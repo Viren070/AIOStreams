@@ -51,26 +51,36 @@ export class XtreamPreset extends Preset {
         appConfig.presets.defaultTimeout
       ).filter((option) => option.id !== 'url'),
       {
-        id: 'server',
-        name: 'Server',
-        description:
-          'The address your provider gave for its Xtream login, such as `http://example.com:8080`.',
-        type: 'url',
+        id: 'login',
+        name: 'Xtream Login',
+        description: '',
+        type: 'endpoint',
+        test: { builtin: 'xtream' },
         required: true,
-      },
-      {
-        id: 'username',
-        name: 'Username',
-        description: 'Your Xtream username.',
-        type: 'string',
-        required: true,
-      },
-      {
-        id: 'password',
-        name: 'Password',
-        description: 'Your Xtream password.',
-        type: 'password',
-        required: true,
+        subOptions: [
+          {
+            id: 'server',
+            name: 'Server',
+            description:
+              'The address your provider gave for its Xtream login, such as `http://example.com:8080`.',
+            type: 'url',
+            required: true,
+          },
+          {
+            id: 'username',
+            name: 'Username',
+            description: 'Your Xtream username.',
+            type: 'string',
+            required: true,
+          },
+          {
+            id: 'password',
+            name: 'Password',
+            description: 'Your Xtream password.',
+            type: 'password',
+            required: true,
+          },
+        ],
       },
     ];
 
@@ -94,23 +104,20 @@ export class XtreamPreset extends Preset {
     userData: UserData,
     options: Record<string, any>
   ): Promise<Addon[]> {
-    if (!options.server || !options.username || !options.password)
+    const { server, username, password } = options.login ?? {};
+    if (!server || !username || !password)
       throw new Error(
         `${this.METADATA.NAME} needs the server, username and password of your Xtream login.`
       );
     try {
-      serverBase(options.server);
+      serverBase(server);
     } catch {
       throw new Error(
         `${this.METADATA.NAME} needs an http or https server address.`
       );
     }
     const config = this.base64EncodeJSON(
-      {
-        server: options.server,
-        username: options.username,
-        password: options.password,
-      },
+      { server, username, password },
       'urlSafe'
     );
     return [
