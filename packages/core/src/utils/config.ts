@@ -570,6 +570,17 @@ function removeInvalidPresetReferences(config: UserData) {
       existingPresetIds?.includes(preset)
     );
   }
+  // An emptied list stays None: automatic could take trackers others picked.
+  for (const user of [
+    config.jellyfin?.primary,
+    ...(config.jellyfin?.personas ?? []),
+  ]) {
+    if (user?.trackers) {
+      user.trackers = user.trackers.filter((id) =>
+        existingPresetIds?.includes(id)
+      );
+    }
+  }
   return config;
 }
 
