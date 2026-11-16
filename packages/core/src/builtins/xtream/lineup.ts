@@ -6,7 +6,7 @@ import type {
   XtreamClient,
   XtreamStream,
 } from './api.js';
-import { TieredStore, deltas, sums } from './store.js';
+import { TieredStore, deltas, sums } from '../livetv/index.js';
 
 const logger = createLogger('xtream');
 

@@ -7,7 +7,7 @@ import {
   requestLockType,
 } from '../../utils/index.js';
 
-const logger = createLogger('xtream');
+const logger = createLogger('livetv');
 const compress = promisify(zstdCompress);
 const decompress = promisify(zstdDecompress);
 
@@ -82,7 +82,7 @@ export class TieredStore<V, S> {
     } catch (err) {
       logger.warn(
         { cache: this.name, err: err instanceof Error ? err.message : err },
-        'xtream shared store write failed'
+        'live TV shared store write failed'
       );
     }
   }
