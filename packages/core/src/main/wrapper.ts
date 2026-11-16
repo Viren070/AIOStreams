@@ -141,7 +141,7 @@ function resolveTtl(
  * Builtins that keep their own caches, under any configured TTLs: caching
  * their answers again only holds copies and serves them stale.
  */
-const SELF_CACHED: Record<string, number> = { xtream: -1 };
+const SELF_CACHED: Record<string, number> = { xtream: -1, m3u: -1 };
 
 type ResourceParams = {
   type: string;

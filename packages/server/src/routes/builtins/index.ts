@@ -13,3 +13,4 @@ export { default as seadex } from './seadex.js';
 export { default as easynews } from './easynews.js';
 export { default as library } from './library.js';
 export { default as xtream } from './xtream.js';
+export { default as m3u } from './m3u.js';
