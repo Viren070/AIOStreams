@@ -86,7 +86,8 @@ thread_local! {
     static OWN_BEHAVIOR: Cell<Option<NSWindowCollectionBehavior>> = const { Cell::new(None) };
 }
 
-/// Hides the traffic lights and the window's own full screen: the page's controls stand in for both.
+/// Hides the traffic lights and the window's own full screen, as the page's controls stand in
+/// for both, and shows the window on every Space.
 pub fn set_pip(window: &Window, on: bool) {
     set_window_buttons(window, !on);
     let ns_window = ns_window(window);
@@ -96,9 +97,13 @@ pub fn set_pip(window: &Window, on: bool) {
         let mut small = own;
         small.remove(
             NSWindowCollectionBehavior::FullScreenPrimary
-                | NSWindowCollectionBehavior::FullScreenAuxiliary,
+                | NSWindowCollectionBehavior::FullScreenAuxiliary
+                | NSWindowCollectionBehavior::MoveToActiveSpace,
         );
-        small.insert(NSWindowCollectionBehavior::FullScreenNone);
+        small.insert(
+            NSWindowCollectionBehavior::FullScreenNone
+                | NSWindowCollectionBehavior::CanJoinAllSpaces,
+        );
         Some(small)
     } else {
         OWN_BEHAVIOR.take()
