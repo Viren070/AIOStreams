@@ -7,13 +7,18 @@ export interface XtreamLogin {
   password: string;
 }
 
-export class XtreamLoginError extends Error {}
+/** The provider's server failed us, rather than the request it was given. */
+export class XtreamError extends Error {}
+
+export class XtreamLoginError extends XtreamError {}
 
 export interface XtreamAccount {
   user_info?: {
     auth?: number | string;
     status?: string;
     allowed_output_formats?: unknown;
+    exp_date?: unknown;
+    max_connections?: unknown;
   };
   server_info?: { timezone?: string };
 }
@@ -150,23 +155,30 @@ export class XtreamClient {
     for (const [key, value] of Object.entries(params))
       url.searchParams.set(key, value);
     return queueFor(this.base).run(lane, async () => {
-      const res = await makeRequest(url.toString(), {
-        timeout: appConfig.builtins.xtream.timeout,
-        headers: {
-          'User-Agent':
-            appConfig.builtins.xtream.userAgent ??
-            appConfig.http.defaultUserAgent,
-          Accept: 'application/json',
-        },
-      });
+      let res;
+      try {
+        res = await makeRequest(url.toString(), {
+          timeout: appConfig.builtins.xtream.timeout,
+          headers: {
+            'User-Agent':
+              appConfig.builtins.xtream.userAgent ??
+              appConfig.http.defaultUserAgent,
+            Accept: 'application/json',
+          },
+        });
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new XtreamError(`Could not reach the Xtream server: ${reason}`);
+      }
       if (res.status === 401 || res.status === 403)
         throw new XtreamLoginError('The Xtream server refused the login');
-      if (!res.ok) throw new Error(`The Xtream server answered ${res.status}`);
+      if (!res.ok)
+        throw new XtreamError(`The Xtream server answered ${res.status}`);
       try {
         return (await res.json()) as T;
       } catch (err) {
         if (!(err instanceof SyntaxError)) throw err;
-        throw new Error('The Xtream server did not answer with JSON');
+        throw new XtreamError('The Xtream server did not answer with JSON');
       }
     });
   }
