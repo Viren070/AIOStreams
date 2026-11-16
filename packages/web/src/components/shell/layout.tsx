@@ -31,7 +31,7 @@ import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
-import { useLiveTvView } from '@/lib/jellyfin/queries';
+import { useLiveTvShown } from '@/features/live-tv/live-tv';
 import { usePickableUsers } from '@/lib/jellyfin/history';
 import { pageOpening } from '@/lib/page-open';
 import { navigate, to } from '@/lib/paths';
@@ -214,7 +214,7 @@ export function WebLayout() {
   React.useEffect(() => {
     document.documentElement.dataset.nav = nav;
   }, [nav]);
-  const live: SidebarItem | null = useLiveTvView().data
+  const live: SidebarItem | null = useLiveTvShown()
     ? {
         id: 'live',
         name: t`Live TV`,

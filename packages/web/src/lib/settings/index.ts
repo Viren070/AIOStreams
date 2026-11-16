@@ -45,6 +45,9 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
+export const LIVE_TV_PLACES = ['home', 'nav', 'off'] as const;
+export type LiveTvPlace = (typeof LIVE_TV_PLACES)[number];
+
 /** Title pages, pages that list titles, and the rest. */
 export const ART_PAGES = ['item', 'browse', 'other'] as const;
 export type ArtPage = (typeof ART_PAGES)[number];
@@ -397,6 +400,7 @@ export const settings = {
     blurSpoilers: syncedFlag('blurSpoilers'),
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
     heroSeconds: syncedChoice<number>('heroSeconds', HERO_SECONDS, 9),
+    liveTv: syncedChoice<LiveTvPlace>('liveTv', LIVE_TV_PLACES, 'home'),
     episodeLayout: device<EpisodeLayout>(
       'aiostreams-web-interface-episode-layout',
       'auto',

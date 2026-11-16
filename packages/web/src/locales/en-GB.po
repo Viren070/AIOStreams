@@ -1981,6 +1981,10 @@ msgstr "Hero"
 msgid "Hidden"
 msgstr "Hidden"
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr "Hidden, channels also leave search and favourites."
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "Hide"
@@ -2098,6 +2102,10 @@ msgstr "In sync"
 #: src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
 msgstr "In the app's downloads"
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
+msgstr "In the navigation only"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2920,6 +2928,10 @@ msgstr "Older ones wait for the server instead. Without a connection, everything
 #: src/features/party/in-party.tsx
 msgid "on {relay}"
 msgstr "on {relay}"
+
+#: src/app/settings/interface.tsx
+msgid "On home and in the navigation"
+msgstr "On home and in the navigation"
 
 #: src/app/settings/interface.tsx
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."

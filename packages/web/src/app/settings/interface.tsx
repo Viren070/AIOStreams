@@ -2,7 +2,7 @@ import { t } from '@lingui/core/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Switch } from '@aiostreams/ui/switch';
-import { useViews } from '@/lib/jellyfin/queries';
+import { useLiveTvView, useViews } from '@/lib/jellyfin/queries';
 import { dateFormat, libraryLabel } from '@/lib/format';
 import { currentHost } from '@/lib/hosts';
 import { HIDDEN_LOCALES, LOCALES, localeName, systemLocale } from '@/lib/i18n';
@@ -23,6 +23,7 @@ import {
   HERO_SECONDS,
   TRAILER_SPOTS,
   type HeroMode,
+  type LiveTvPlace,
   type PosterLine,
   type PosterSize,
 } from '@/lib/settings';
@@ -262,6 +263,8 @@ export function InterfaceSection() {
   const [mergeNextUp, setMergeNextUp] = useSetting(
     settings.interface.mergeNextUp
   );
+  const [liveTv, setLiveTv] = useSetting(settings.interface.liveTv);
+  const hasLiveTv = !!useLiveTvView().data;
   const [combineSearch, setCombineSearch] = useSetting(
     settings.interface.combineSearch
   );
@@ -363,6 +366,19 @@ export function InterfaceSection() {
           value={String(heroSeconds)}
           onValueChange={(v) => setHeroSeconds(Number(v))}
         />
+        {hasLiveTv && (
+          <Select
+            label={t`Live TV`}
+            help={t`Hidden, channels also leave search and favourites.`}
+            options={[
+              { value: 'home', label: t`On home and in the navigation` },
+              { value: 'nav', label: t`In the navigation only` },
+              { value: 'off', label: t`Hidden` },
+            ]}
+            value={liveTv}
+            onValueChange={(value) => setLiveTv(value as LiveTvPlace)}
+          />
+        )}
         <Switch
           side="right"
           label={t`Merge continue watching and next up`}

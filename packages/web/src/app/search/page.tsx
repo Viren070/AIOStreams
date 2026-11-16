@@ -18,12 +18,12 @@ import { useAction } from '@/lib/input';
 import { useSession } from '@/lib/jellyfin/session';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { useSearch, useSearchSuggestions } from '@/lib/jellyfin/queries';
 import {
-  useLiveTvView,
-  useSearch,
-  useSearchSuggestions,
-} from '@/lib/jellyfin/queries';
-import { useNow, useSchedules } from '@/features/live-tv/live-tv';
+  useLiveTvShown,
+  useNow,
+  useSchedules,
+} from '@/features/live-tv/live-tv';
 import { settings, useSetting } from '@/lib/settings';
 import { useSearchHistory } from './search-history';
 import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/urls';
@@ -66,7 +66,7 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const movies = useSearch(query, 'Movie', !combine);
   const shows = useSearch(query, 'Series', !combine);
   const people = useSearch(query, 'Person');
-  const live = !!useLiveTvView().data;
+  const live = useLiveTvShown();
   const channels = useSearch(query, 'TvChannel', live);
   // A server's own library also finds these, where catalogs list none.
   const { stock } = useServerInfo();

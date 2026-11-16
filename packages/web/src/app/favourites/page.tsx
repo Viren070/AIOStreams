@@ -6,10 +6,11 @@ import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
-import { useItemPages, useLiveTvView } from '@/lib/jellyfin/queries';
+import { useItemPages } from '@/lib/jellyfin/queries';
 import {
   FAVOURITES,
   useChannelPages,
+  useLiveTvShown,
   useNow,
   useSchedules,
 } from '@/features/live-tv/live-tv';
@@ -57,7 +58,7 @@ const FAVOURITE_SORTS: SortKey[] = ['added', 'name', 'released', 'rating'];
 
 export function FavouritesPage({ kind }: { kind?: string }) {
   const { client } = useSession();
-  const live = !!useLiveTvView().data;
+  const live = useLiveTvShown();
   const kinds = live
     ? [...KINDS, { value: CHANNELS, label: t`Channels` }]
     : KINDS;

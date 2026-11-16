@@ -1981,6 +1981,10 @@ msgstr ""
 msgid "Hidden"
 msgstr ""
 
+#: src/app/settings/interface.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr ""
+
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr ""
@@ -2097,6 +2101,10 @@ msgstr ""
 #: src/app/downloads/page.tsx
 #: src/features/downloads/download-button.tsx
 msgid "In the app's downloads"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "In the navigation only"
 msgstr ""
 
 #: src/app/item/_components/collection.tsx
@@ -2919,6 +2927,10 @@ msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "on {relay}"
+msgstr ""
+
+#: src/app/settings/interface.tsx
+msgid "On home and in the navigation"
 msgstr ""
 
 #: src/app/settings/interface.tsx
