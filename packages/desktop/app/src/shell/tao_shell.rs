@@ -478,7 +478,11 @@ pub fn run(app: App) {
             }
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
             Event::UserEvent(UserEvent::VideoFrame(frame)) => {
-                video.frame(frame, window.scale_factor());
+                #[cfg(windows)]
+                let scale = platform::page_scale(&webview).unwrap_or(window.scale_factor());
+                #[cfg(not(windows))]
+                let scale = window.scale_factor();
+                video.frame(frame, scale);
             }
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = window.drag_window();
