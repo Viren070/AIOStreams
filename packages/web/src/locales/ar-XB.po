@@ -179,6 +179,10 @@ msgstr ""
 msgid "{name} left the party"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr ""
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr ""
@@ -525,6 +529,10 @@ msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "All fields"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
 msgstr ""
 
 #: src/features/playlists/playlists.tsx
@@ -1505,12 +1513,17 @@ msgstr ""
 msgid "Donate to Me"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx
 #: src/features/player/subtitle-sync.tsx
 #: src/features/playlists/playlists.tsx
 msgid "Done"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
 msgstr ""
 
 #: src/lib/input/actions.ts
@@ -1883,6 +1896,10 @@ msgstr ""
 msgid "General"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr ""
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr ""
@@ -2000,6 +2017,10 @@ msgstr ""
 #. Holding the next key down, as in Hold + Enter
 #: src/lib/input/keys.ts
 msgid "Hold"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Hold to speed up"
 msgstr ""
 
 #: src/app/settings/apps.tsx
@@ -2929,6 +2950,10 @@ msgstr ""
 msgid "on {relay}"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr ""
+
 #: src/app/settings/interface.tsx
 msgid "On home and in the navigation"
 msgstr ""
@@ -3306,6 +3331,10 @@ msgstr ""
 
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Pinch to fill the screen"
 msgstr ""
 
 #: src/app/settings/theme.tsx
@@ -4689,6 +4718,18 @@ msgstr ""
 msgid "Support AIOStreams"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe across to seek"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr ""
+
 #: src/app/settings/account.tsx
 msgid "Switch"
 msgstr ""
@@ -5691,6 +5732,10 @@ msgstr ""
 msgid "What to save"
 msgstr ""
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr ""
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr ""
@@ -5821,6 +5866,10 @@ msgstr ""
 
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
+msgstr ""
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
 msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx

@@ -179,6 +179,10 @@ msgstr "{name} joined the party"
 msgid "{name} left the party"
 msgstr "{name} left the party"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr "{off} off"
+
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
 msgstr "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -526,6 +530,10 @@ msgstr "All episodes"
 #: src/app/settings/_components/version-settings.tsx
 msgid "All fields"
 msgstr "All fields"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr "All on"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -1505,6 +1513,7 @@ msgstr "Donate"
 msgid "Donate to Me"
 msgstr "Donate to Me"
 
+#: src/app/settings/_components/gesture-settings.tsx
 #: src/app/settings/_components/reaction-setting.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/components/send-report.tsx
@@ -1512,6 +1521,10 @@ msgstr "Donate to Me"
 #: src/features/playlists/playlists.tsx
 msgid "Done"
 msgstr "Done"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr "Double tap to skip"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1883,6 +1896,10 @@ msgstr "Full screen"
 msgid "General"
 msgstr "General"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr "Gestures"
+
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
 msgstr "Give this code to whoever looks into it."
@@ -2001,6 +2018,10 @@ msgstr "Hide QR code"
 #: src/lib/input/keys.ts
 msgid "Hold"
 msgstr "Hold"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Hold to speed up"
+msgstr "Hold to speed up"
 
 #: src/app/settings/apps.tsx
 #: src/app/settings/interface.tsx
@@ -2929,6 +2950,10 @@ msgstr "Older ones wait for the server instead. Without a connection, everything
 msgid "on {relay}"
 msgstr "on {relay}"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr "On either side of the video, by the skip length."
+
 #: src/app/settings/interface.tsx
 msgid "On home and in the navigation"
 msgstr "On home and in the navigation"
@@ -3307,6 +3332,10 @@ msgstr "PIN"
 #: src/app/sign-in/page.tsx
 msgid "PIN or password"
 msgstr "PIN or password"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Pinch to fill the screen"
+msgstr "Pinch to fill the screen"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -4689,6 +4718,18 @@ msgstr "Sun"
 msgid "Support AIOStreams"
 msgstr "Support AIOStreams"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe across to seek"
+msgstr "Swipe across to seek"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr "Swipe up or down on the left for brightness"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr "Swipe up or down on the right for volume"
+
 #: src/app/settings/account.tsx
 msgid "Switch"
 msgstr "Switch"
@@ -5691,6 +5732,10 @@ msgstr "What the people you watch with say shows for a few seconds. It always st
 msgid "What to save"
 msgstr "What to save"
 
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr "What touching or holding the video does."
+
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
 msgstr "What you can send from a party's chat."
@@ -5822,6 +5867,10 @@ msgstr "Win"
 #: src/features/party/not-in-party.tsx
 msgid "With {names}"
 msgstr "With {names}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr "With a finger or the mouse button, at the held speed."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"

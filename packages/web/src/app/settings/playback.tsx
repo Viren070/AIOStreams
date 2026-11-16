@@ -48,6 +48,7 @@ import { useSession } from '@/lib/jellyfin/session';
 import { mayConvert, qualityOptions } from '@/lib/playback/quality';
 import { canMinimise } from '@/lib/playback/session';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
+import { GestureSettings } from './_components/gesture-settings';
 import { BadgesRow, QuickFiltersRow } from './_components/version-settings';
 import {
   onDevice,
@@ -379,6 +380,7 @@ export function PlaybackSection() {
           value={String(holdRate)}
           onValueChange={(v) => setHoldRate(Number(v))}
         />
+        {!currentHost().tv && <GestureSettings />}
         <Switch
           side="right"
           label={t`Show the controls on pause and skip`}

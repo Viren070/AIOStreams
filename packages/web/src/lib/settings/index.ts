@@ -45,6 +45,17 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
+/** What a touch, or a mouse's hold, on the video does. */
+export const GESTURES = [
+  'seek',
+  'scrub',
+  'volume',
+  'brightness',
+  'hold',
+  'pinch',
+] as const;
+export type Gesture = (typeof GESTURES)[number];
+
 export const LIVE_TV_PLACES = ['home', 'nav', 'off'] as const;
 export type LiveTvPlace = (typeof LIVE_TV_PLACES)[number];
 
@@ -328,6 +339,10 @@ const trailer = record(TRAILER_SPOTS, (spot) =>
   )
 );
 
+const gesture = record(GESTURES, (name) =>
+  device<boolean>(`aiostreams-web-controls-gesture-${name}`, true)
+);
+
 const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
   device<boolean>(
     `aiostreams-web-audio-passthrough-${format}`,
@@ -593,6 +608,8 @@ export const settings = {
       HOLD_RATES,
       ['aiostreams-web-hold-rate']
     ),
+    gesture,
+    gestures: group(gesture),
     /** Keys changed from the defaults, by action. */
     shortcuts: deviceLists('aiostreams-web-controls-shortcuts', [
       'aiostreams-web-shortcuts',
