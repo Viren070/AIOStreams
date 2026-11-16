@@ -882,6 +882,7 @@ export async function nextUpForSeries(
             played: slotPlayed(e),
             aired: !isUnairedVideo(e.video),
             lastPlayedAt: e.row?.lastPlayedAt,
+            inProgress: (e.row?.positionMs ?? 0) > 0,
           }))
         )
       : -1;

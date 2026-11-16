@@ -27,6 +27,17 @@ describe('rewatchNextIndex', () => {
     assert.equal(rewatchNextIndex(show), 2);
   });
 
+  it('stays on an episode stopped part-way through the rewatch', () => {
+    const show = [
+      ep(10),
+      ep(11),
+      { ...ep(12), inProgress: true },
+      ep(4),
+      ep(5),
+    ];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
   it('passes over episodes that have not aired', () => {
     const show = [ep(10), ep(11), ep(undefined, false), ep(4)];
     assert.equal(rewatchNextIndex(show), 3);
