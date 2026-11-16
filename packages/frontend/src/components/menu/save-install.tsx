@@ -3297,7 +3297,11 @@ function Content() {
               {
                 value: 'trackers',
                 label: 'Trackers',
-                content: <JellyfinTrackers />,
+                content: (
+                  <JellyfinTrackers
+                    onChooseTrackers={() => setJellyfinTab('users')}
+                  />
+                ),
               },
               {
                 value: 'playback',
