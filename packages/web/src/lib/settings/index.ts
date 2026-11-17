@@ -366,9 +366,8 @@ const discord = record(DISCORD_EVENTS, (event) =>
 );
 
 /*
- * Grouped as the settings page lists them. How the user likes to watch
- * follows their account; what suits this device's screen, input, sound or
- * hardware stays on it.
+ * How the user likes to watch follows their account; what suits this device's
+ * screen, input, sound or hardware stays on it.
  */
 export const settings = {
   interface: {
