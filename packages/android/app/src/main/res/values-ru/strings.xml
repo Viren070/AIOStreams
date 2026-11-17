@@ -1,20 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
-    <string name="channel_downloads"></string>
-    <plurals name="downloading_items">
-    </plurals>
-    <string name="channel_updates"></string>
-    <string name="updated_to"></string>
-    <string name="tap_to_open"></string>
-    <string name="update_no_build"></string>
-    <string name="update_damaged"></string>
-    <string name="update_install_failed"></string>
-    <string name="update_feed_answered"></string>
-    <string name="download_folder_title"></string>
-    <string name="download_folder_free"></string>
-    <string name="file_saved"></string>
-    <string name="file_not_saved"></string>
-    <string name="webview_version_unknown"></string>
-    <string name="webview_too_old"></string>
-    <string name="webview_update"></string>
-</resources>
+    </resources>
