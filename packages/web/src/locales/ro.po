@@ -741,6 +741,14 @@ msgstr "Subtitrări mai mari"
 msgid "Black"
 msgstr "Negru"
 
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Blue"
 msgstr "Albastru"
@@ -1522,6 +1530,10 @@ msgstr "Descărcări simultane"
 #: src/app/settings/downloads.tsx
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
 msgstr "Descărcările așteaptă Wi-Fi sau o altă rețea fără limită de date, în loc să folosească datele mobile."
+
+#: src/app/settings/playback.tsx
+msgid "Draw subtitles on the graphics card"
+msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Drawer"

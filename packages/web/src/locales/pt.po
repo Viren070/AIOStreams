@@ -747,6 +747,14 @@ msgstr "Legendas maiores"
 msgid "Black"
 msgstr "Preto"
 
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Blue"
 msgstr "Azul"
@@ -1534,6 +1542,10 @@ msgstr "Transferências em simultâneo"
 #: src/app/settings/downloads.tsx
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
 msgstr "As transferências esperam por Wi-Fi ou outra rede sem limite de dados, em vez de usar dados móveis."
+
+#: src/app/settings/playback.tsx
+msgid "Draw subtitles on the graphics card"
+msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Drawer"

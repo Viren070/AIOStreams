@@ -741,6 +741,14 @@ msgstr "Μεγαλύτεροι υπότιτλοι"
 msgid "Black"
 msgstr "Μαύρο"
 
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
+msgstr ""
+
+#: src/app/settings/playback.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Blue"
 msgstr "Μπλε"
@@ -1522,6 +1530,10 @@ msgstr "Ταυτόχρονες λήψεις"
 #: src/app/settings/downloads.tsx
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
 msgstr "Οι λήψεις περιμένουν σύνδεση Wi-Fi ή άλλο δίκτυο χωρίς χρέωση βάσει χρήσης, αντί να χρησιμοποιούν δεδομένα κινητής."
+
+#: src/app/settings/playback.tsx
+msgid "Draw subtitles on the graphics card"
+msgstr ""
 
 #: src/lib/i18n.ts
 msgid "Drawer"
