@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.11.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.10.0...smart-tv-v0.11.0) (2026-11-17)
+
+
+### Features
+
+* **android:** blend subtitles on the GPU ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **desktop:** add graphics card super resolution ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** add a Live TV setting that takes channels off home or hides them ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** add switches for each player gesture ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** make the card preview one switch that opens by keys and pops out by mouse ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** pick the pages the artwork background shows behind ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** regroup the settings and add a search ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+
+
+### Bug Fixes
+
+* **ui:** scroll carousels with sideways wheel gestures in place of the wheel drag plugin ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **ui:** stop sideways wheel scrolling from flickering carousels ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** bring up the controls on OK during a live stream ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** clear the paper behind a select's scroll arrows on glass panels ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** clip a card grid while its preview pushes cards aside ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** ignore a keyup with no key while nothing is held ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** save a found server at the address it answered at after redirects ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+* **web:** skip the browser's position state for live streams ([050ed61](https://github.com/Viren070/AIOStreams/commit/050ed617655edfbb3eb1825d98e00502609b2af1))
+
 ## [0.10.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.9.0...smart-tv-v0.10.0) (2026-11-14)
 
 
