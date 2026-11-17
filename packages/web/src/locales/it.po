@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-14 14:45+0000\n"
+"PO-Revision-Date: 2026-11-17 14:17+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -182,7 +182,7 @@ msgstr "{name} ha lasciato il watch party"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "{off} off"
-msgstr ""
+msgstr "{off} disattivato"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -522,7 +522,7 @@ msgstr "Tutti i campi"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Tutto attivo"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -1472,7 +1472,7 @@ msgstr "Fatto"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Double tap to skip"
-msgstr ""
+msgstr "Doppio tocco per saltare"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1533,7 +1533,7 @@ msgstr "I download attendono una rete Wi-Fi o un'altra rete non a consumo, invec
 
 #: src/app/settings/playback.tsx
 msgid "Draw subtitles on the graphics card"
-msgstr ""
+msgstr "Visualizza i sottotitoli tramite la scheda grafica"
 
 #: src/lib/i18n.ts
 msgid "Drawer"
@@ -1833,7 +1833,7 @@ msgstr "Generale"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Gestures"
-msgstr ""
+msgstr "Gesti"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
@@ -1933,7 +1933,7 @@ msgstr "Nascosto"
 
 #: src/app/settings/interface.tsx
 msgid "Hidden, channels also leave search and favourites."
-msgstr ""
+msgstr "Se nascosti, i canali escono anche dalla ricerca e dai preferiti."
 
 #: src/features/player/next-episode.tsx
 msgid "Hide"
@@ -1972,7 +1972,7 @@ msgstr "Home e librerie"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
-msgstr ""
+msgstr "Home, ricerca e cataloghi"
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2056,7 +2056,7 @@ msgstr "Nei download dell'app"
 
 #: src/app/settings/interface.tsx
 msgid "In the navigation only"
-msgstr ""
+msgstr "Solo nella navigazione"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2846,16 +2846,15 @@ msgstr "su {relay}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "On either side of the video, by the skip length."
-msgstr ""
+msgstr "Su entrambi i lati del video, in base alla durata del salto."
 
 #: src/app/settings/interface.tsx
 msgid "On home and in the navigation"
-msgstr ""
+msgstr "Sulla schermata home nella navigazione"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
-msgstr "Nella schermata home mentre il banner in evidenza ruota, e nelle griglie. In una griglia, e con il mouse, una scheda si ingrandisce in primo piano, quindi le schede accanto restano ferme."
+msgstr "Nella schermata home mentre il banner in evidenza ruota, nella ricerca e nelle griglie. Con il mouse la scheda si ingrandisce in primo piano; con la tastiera o il telecomando si espande mostrando i dettagli."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3025,7 +3024,7 @@ msgstr "Altri dispositivi"
 
 #: src/app/settings/theme.tsx
 msgid "Other pages, such as settings"
-msgstr ""
+msgstr "Altre pagine, come le impostazioni"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3222,9 +3221,8 @@ msgid "PIN or password"
 msgstr "PIN o password"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Pinch to fill the screen"
-msgstr "Esci dalla modalità a schermo intero"
+msgstr "Pizzica per riempire lo schermo"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -4554,11 +4552,11 @@ msgstr "Spazio da utilizzare"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the left for brightness"
-msgstr ""
+msgstr "Scorri verso l'alto o il basso a sinistra per la luminosità"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the right for volume"
-msgstr ""
+msgstr "Scorri verso l'alto o il basso a destra per il volume"
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -5541,7 +5539,7 @@ msgstr "Cosa salvare"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "What touching or holding the video does."
-msgstr ""
+msgstr "Comportamento del tocco o della pressione prolungata sul video."
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
