@@ -46,7 +46,7 @@ void blend(const Placed *placed, uint32_t *bits, int stride, int left, int top) 
     uint32x4_t solid = vdupq_n_u32(r | g << 8 | b << 16 | 0xffu << 24);
 #endif
     for (int y = 0; y < mask->h; y++) {
-        const uint8_t *src = mask->pixels + y * mask->w;
+        const uint8_t *src = mask->pixels + y * mask->span;
         uint32_t *dst = bits + (placed->y - top + y) * stride + placed->x - left;
         int x = 0;
 #if defined(__aarch64__)
@@ -75,7 +75,7 @@ void blend(const Placed *placed, uint32_t *bits, int stride, int left, int top) 
     uint32_t r = placed->color >> 24, g = (placed->color >> 16) & 0xff, b = (placed->color >> 8) & 0xff;
     uint32_t opacity = 255 - (placed->color & 0xff);
     for (int y = 0; y < mask->h; y++) {
-        blend_row(mask->pixels + y * mask->w, bits + (placed->y - top + y) * stride + placed->x - left,
+        blend_row(mask->pixels + y * mask->span, bits + (placed->y - top + y) * stride + placed->x - left,
                   0, mask->w, r, g, b, opacity);
     }
 }

@@ -560,7 +560,7 @@ static int draw_window(Surface *surface, const Picture *picture, ARect next) {
 JNIEXPORT jboolean JNICALL METHOD(draw)(JNIEnv *env, jclass clazz, jlong handle) {
     Surface *surface = (Surface *) handle;
     if (!surface->window) return JNI_FALSE;
-    const Picture *picture = surface->shown;
+    Picture *picture = surface->shown;
     ARect next = {0, 0, 0, 0};
     for (int i = 0; picture && i < picture->count; i++) {
         const Placed *placed = &picture->placed[i];
