@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.16.0](https://github.com/Viren070/AIOStreams/compare/android-v0.15.0...android-v0.16.0) (2026-11-17)
+
+
+### Features
+
+* **android:** blend subtitles on the GPU ([38d423e](https://github.com/Viren070/AIOStreams/commit/38d423e5eae6c0cf8329ebde8950036e9f4dbae1))
+* **desktop:** add graphics card super resolution ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** add a Live TV setting that takes channels off home or hides them ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** add switches for each player gesture ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** make the card preview one switch that opens by keys and pops out by mouse ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** pick the pages the artwork background shows behind ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** regroup the settings and add a search ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+
+
+### Bug Fixes
+
+* **android:** close mpv on its calls thread after the queued calls ([017279f](https://github.com/Viren070/AIOStreams/commit/017279fa3bb6051c8647b87c901b302f2a59647b))
+* **android:** match the frame rate only while the video fills the window ([ebd8033](https://github.com/Viren070/AIOStreams/commit/ebd8033ba074aa0a0e08ad557b1c909559f9d78d))
+* **ui:** scroll carousels with sideways wheel gestures in place of the wheel drag plugin ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **ui:** stop sideways wheel scrolling from flickering carousels ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** bring up the controls on OK during a live stream ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** clear the paper behind a select's scroll arrows on glass panels ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** clip a card grid while its preview pushes cards aside ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** ignore a keyup with no key while nothing is held ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** save a found server at the address it answered at after redirects ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+* **web:** skip the browser's position state for live streams ([58c0d8e](https://github.com/Viren070/AIOStreams/commit/58c0d8ee7e761cde39bba4b0c303a0d765a6d6bf))
+
+
+### Performance Improvements
+
+* **android:** upload a picture's new subtitle masks as one block ([a1b6a57](https://github.com/Viren070/AIOStreams/commit/a1b6a57b4c2d5860118b4da7c3ba50fa93a3cf5c))
+
 ## [0.15.0](https://github.com/Viren070/AIOStreams/compare/android-v0.14.0...android-v0.15.0) (2026-11-14)
 
 
