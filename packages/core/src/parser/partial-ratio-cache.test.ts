@@ -4,6 +4,7 @@ import { extract, partial_ratio } from 'fuzzball';
 import {
   normaliseTitle,
   preprocessTitle,
+  titleMatch,
   titleMatchWithLang,
 } from './utils.js';
 
@@ -167,7 +168,7 @@ test('partial-ratio cache path preserves title decisions and language selection'
 test('partial-ratio preserves the first matching title when scores tie', () => {
   const titles: Title[] = [
     { title: 'Avengers: Endgame', language: 'en' },
-    { title: 'Avengers Endgame: Encore', language: 'en' },
+    { title: 'Avengers Endgame: Encore', language: 'fr' },
     { title: 'Vengadores: Endgame', language: 'es' },
   ];
   const query = prepareQuery('Avengers Endgame', [], titles);
@@ -179,6 +180,23 @@ test('partial-ratio preserves the first matching title when scores tie', () => {
   });
   assert.deepEqual(actual, baseline);
   assert.equal(actual.language, 'en');
+  const tiedScores = extract(
+    query,
+    titles.map(({ title }) => normaliseTitle(title)),
+    {
+      scorer: partial_ratio,
+      returnObjects: true,
+    }
+  ) as { score: number; key: number }[];
+  assert.equal(tiedScores.find(({ key }) => key === 0)?.score, 100);
+  assert.equal(tiedScores.find(({ key }) => key === 1)?.score, 100);
+  assert.equal(
+    titleMatchWithLang(query, [titles[1], titles[0]], {
+      threshold: 0.75,
+      scorer: partial_ratio,
+    }).language,
+    'fr'
+  );
 });
 
 test('partial-ratio retains the 100-title cap and original matched index', () => {
@@ -300,4 +318,30 @@ test('additional scorer options retain extract behavior', () => {
       );
     }
   }
+});
+
+// Caller-owned lists have no immutability contract, including after a warm match.
+test('partial-ratio titleMatch observes mutations to caller-owned arrays', () => {
+  const titles = ['Dune'];
+  const options = { threshold: 1, scorer: partial_ratio };
+  const check = (query: string) => {
+    assert.equal(
+      titleMatch(query, titles, options),
+      extract(query, titles, { scorer: partial_ratio }).some(
+        ([, score]) => score === 100
+      ),
+      `${query}: ${titles.join(', ')}`
+    );
+  };
+  check('Dune');
+  titles[0] = 'Jaws';
+  check('Jaws');
+  check('Dune');
+  titles.push('Alien');
+  check('Alien');
+  titles.splice(0, 1);
+  check('Jaws');
+  check('Alien');
+  titles.length = 0;
+  check('Alien');
 });

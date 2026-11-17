@@ -163,7 +163,8 @@ function bestDefaultScorerMatch(
 function _titleMatchInner(
   parsedTitle: string,
   titles: string[],
-  options: TitleMatchOptions
+  options: TitleMatchOptions,
+  cachePartialRatio = false
 ): TitleMatchInnerResult {
   const { threshold, limitTitles, ...extractOptions } = options;
 
@@ -183,8 +184,9 @@ function _titleMatchInner(
     return bestDefaultScorerMatch(parsedTitle, titles, threshold);
   }
 
-  // Reuse default preprocessing only when no scorer options can change it.
+  // Only internally owned normalized lists are safe to cache by identity.
   const results =
+    cachePartialRatio &&
     extractOptions.scorer === partial_ratio &&
     Object.keys(extractOptions).length === 1
       ? (extract(
@@ -237,7 +239,8 @@ export function titleMatchWithLang(
     normalisedTitles = titles.map((t) => normaliseTitle(t.title));
     normalisedTitleLists.set(titles, normalisedTitles);
   }
-  const result = _titleMatchInner(parsedTitle, normalisedTitles, options);
+  // The normalized list is an internal snapshot, never exposed to callers.
+  const result = _titleMatchInner(parsedTitle, normalisedTitles, options, true);
   return {
     matched: result.matched,
     language:
