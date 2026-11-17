@@ -196,7 +196,7 @@ msgstr "{packCount, plural, one {# 个合集} other {# 个合集}}"
 msgid "{packs} and {own}"
 msgstr "{packs} 和 {own}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{r}×"
 msgstr "{r}×"
 
@@ -212,7 +212,7 @@ msgstr "{removed, plural, one {已从观看历史中移除 # 项} other {已从�
 msgid "{rest, plural, one {# more} other {# more}}"
 msgstr "{rest, plural, one {还有 # 项} other {还有 # 项}}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{s}%"
 msgstr "{s}%"
 
@@ -262,7 +262,7 @@ msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # n
 msgstr "{unread, plural, one {房间：# 条新消息} other {房间：# 条新消息}}"
 
 #. Each {name} is written in the player link as it is here.
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
 msgstr "{url} 是串流地址，{encodedUrl} 是该地址经过 URL 编码后的形式，{scheme} 是协议，{filename} 是文件名，{subtitles} 是每个外部字幕（每个文件都会重复此参数），{title} 是包含集数的标题，{position} 是开始播放的秒数（{positionMs} 为毫秒），{returnUrl} 是返回此处的链接，供能够报告停止位置的播放器使用。除 {url} 外，所有值都会进行 URL 编码。在 intent:// 后，{url} 不包含协议部分。"
 
@@ -370,7 +370,7 @@ msgstr "遥控器或游戏手柄上的按键也可使用。"
 msgid "A set time before the end."
 msgstr "在结束前指定的时间。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
 msgstr ""
 
@@ -569,11 +569,11 @@ msgstr "观看剧集时手动选择的音轨语言会应用于该剧的其他集
 msgid "Android app"
 msgstr "Android 应用"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
 msgstr "Android 系统播放器，耗电更少：设备会按视频帧率解码并在屏幕上显示画面。只能播放设备能够解码的视频。样式化字幕的显示效果与 mpv 中相同。"
 
-#: src/app/settings/playback.tsx src/lib/input/actions.ts
+#: src/app/settings/player.tsx src/lib/input/actions.ts
 msgid "Anime upscaling"
 msgstr ""
 
@@ -683,20 +683,21 @@ msgstr "音频：{label}"
 msgid "Auto-play the first version"
 msgstr "自动播放第一个版本"
 
-#: src/app/settings/audio.tsx src/app/settings/interface.tsx
-#: src/app/settings/playback.tsx
+#: src/app/settings/audio.tsx src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx src/app/settings/player.tsx
 msgid "Automatic"
 msgstr "自动"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "在窄屏上自动以列表显示剧集，在宽屏上则将剧集横向排列。"
 
 #: src/app/player/page.tsx src/app/servers/page.tsx
 #: src/app/settings/_components/licenses.tsx src/app/sign-in/page.tsx
-#: src/app/trailer/page.tsx src/components/shell/history-buttons.tsx
-#: src/features/party/not-in-party.tsx src/features/player/controls.tsx
-#: src/features/player/next-episode.tsx src/lib/input/actions.ts
+#: src/app/trailer/page.tsx src/components/back-button.tsx
+#: src/components/shell/history-buttons.tsx src/features/party/not-in-party.tsx
+#: src/features/player/controls.tsx src/features/player/next-episode.tsx
+#: src/lib/input/actions.ts
 msgid "Back"
 msgstr "返回"
 
@@ -704,7 +705,7 @@ msgstr "返回"
 msgid "Back button"
 msgstr "返回按钮"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Back in the player"
 msgstr "内置播放器"
@@ -747,11 +748,11 @@ msgstr "更大的字幕"
 msgid "Black"
 msgstr "黑色"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
 msgstr ""
 
@@ -759,11 +760,11 @@ msgstr ""
 msgid "Blue"
 msgstr "蓝色"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Blur episodes you haven't started"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
 msgstr ""
 
@@ -811,7 +812,7 @@ msgstr "浏览器主页"
 msgid "Browser Search"
 msgstr "浏览器搜索"
 
-#: src/lib/discord.ts
+#: src/app/settings/page.tsx src/lib/discord.ts
 msgid "Browsing"
 msgstr "浏览中"
 
@@ -831,7 +832,7 @@ msgstr "按钮、进度条和高亮效果。"
 msgid "Cache"
 msgstr "缓存"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Cache size"
 msgstr "缓存大小"
 
@@ -859,7 +860,7 @@ msgstr "无法连接到服务器"
 msgid "Cancel"
 msgstr "取消"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Cards"
 msgstr ""
 
@@ -948,7 +949,7 @@ msgstr "立即检查"
 msgid "Checking…"
 msgstr "正在检查…"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Choose"
 msgstr "选择"
 
@@ -1007,11 +1008,17 @@ msgstr "合集"
 msgid "Colour"
 msgstr "颜色"
 
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "Colours"
+msgstr "颜色"
+
 #: src/app/settings/page.tsx
-msgid "Colours and custom CSS"
+#, fuzzy
+msgid "Colours, glass and custom CSS"
 msgstr "颜色和自定义 CSS"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Combine movie and show results"
 msgstr "合并电影和剧集的搜索结果"
 
@@ -1019,7 +1026,7 @@ msgstr "合并电影和剧集的搜索结果"
 msgid "Commentary"
 msgstr "评论音轨"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Compatibility"
 msgstr "兼容性"
 
@@ -1063,12 +1070,12 @@ msgstr "连接已断开"
 msgid "Continue"
 msgstr "继续"
 
-#: src/app/home/page.tsx src/app/settings/interface.tsx
+#: src/app/home/page.tsx src/app/settings/browsing.tsx
 #: src/features/player/next-episode.tsx
 msgid "Continue watching"
 msgstr "继续观看"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Controls"
 msgstr "控制项"
 
@@ -1320,11 +1327,12 @@ msgstr "日期未知"
 msgid "Day"
 msgstr "延迟"
 
-#: src/app/settings/playback.tsx
-msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
+#: src/app/settings/player.tsx
+#, fuzzy
+msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf, under mpv below."
 msgstr "当设备无法解码视频时，通过软件解码几乎所有格式的视频。Android 应用会读取你的 mpv.conf。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
 msgstr "使用显卡进行解码。如果画面出现异常或一直黑屏，请关闭此选项。"
 
@@ -1461,7 +1469,7 @@ msgstr "文档"
 msgid "Doesn't match the video's own subtitles"
 msgstr "与视频自带的字幕不匹配"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Dolby Vision"
 msgstr "杜比视界"
 
@@ -1543,7 +1551,7 @@ msgstr "同时下载数"
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
 msgstr "下载任务会等待 Wi-Fi 或其他不按流量计费的网络，不会使用移动数据。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Draw subtitles on the graphics card"
 msgstr ""
 
@@ -1581,7 +1589,7 @@ msgstr "编辑"
 msgid "Ends at {endsAt}"
 msgstr "结束时间：{endsAt}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Engine"
 msgstr "引擎"
 
@@ -1626,12 +1634,12 @@ msgstr "第 {number} 集"
 msgid "Episode details"
 msgstr "剧集详情"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Episode layout"
 msgstr "剧集布局"
 
 #: src/app/item/_components/seasons.tsx src/app/search/page.tsx
-#: src/app/settings/interface.tsx src/features/player/episodes.tsx
+#: src/app/settings/browsing.tsx src/features/player/episodes.tsx
 #: src/features/player/options.tsx
 msgid "Episodes"
 msgstr "剧集"
@@ -1640,7 +1648,7 @@ msgstr "剧集"
 msgid "Episodes end without offering the next one."
 msgstr "剧集结束后不会提示播放下一集。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/browsing.tsx
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
 msgstr ""
 
@@ -1681,7 +1689,7 @@ msgstr "退出全屏"
 msgid "Exit picture-in-picture"
 msgstr "画中画"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
 msgstr "使用更省电的 ExoPlayer；对于设备无法解码的视频，则使用 mpv。"
 
@@ -1716,7 +1724,7 @@ msgstr "收藏"
 msgid "Favourites"
 msgstr "收藏"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Featured on home"
 msgstr "在首页精选展示"
 
@@ -1782,15 +1790,15 @@ msgstr "浮动胶囊标签"
 msgid "Folder"
 msgstr "文件夹"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
 msgstr "启用跟随后，卡片会固定显示在内容行上方，并展示鼠标指针、键盘或遥控器当前选中的内容；可从精选内容开始，显示在整个页面后方或页面顶部角落。触摸屏和窄窗口仍会使用轮播布局。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Follows the selected card"
 msgstr "跟随当前选中的卡片"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Follows the selected card, in the corner"
 msgstr "在角落跟随当前选中的卡片"
 
@@ -1857,6 +1865,10 @@ msgid "Give this code to whoever looks into it."
 msgstr "将此代码提供给负责排查问题的人。"
 
 #: src/app/settings/theme.tsx
+msgid "Glass"
+msgstr ""
+
+#: src/app/settings/theme.tsx
 msgid "Glass panels"
 msgstr ""
 
@@ -1864,7 +1876,7 @@ msgstr ""
 msgid "Glass surface"
 msgstr ""
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
 msgstr ""
 
@@ -1905,7 +1917,7 @@ msgstr "分组"
 msgid "Guide"
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Hardware decoding"
 msgstr "硬件解码"
 
@@ -1913,7 +1925,11 @@ msgstr "硬件解码"
 msgid "Has a PIN"
 msgstr "已设置 PIN 码"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
+msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
+msgstr ""
+
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "HDR output"
 msgstr "视频输出"
@@ -1934,7 +1950,7 @@ msgstr "高度"
 msgid "Height: {position}%"
 msgstr "高度：{position}%"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Held speed"
 msgstr "按住时的播放速度"
 
@@ -1942,15 +1958,15 @@ msgstr "按住时的播放速度"
 msgid "Here"
 msgstr "此处"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Hero"
 msgstr "主视觉"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx src/app/settings/interface.tsx
 msgid "Hidden"
 msgstr "隐藏"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Hidden, channels also leave search and favourites."
 msgstr ""
 
@@ -1976,18 +1992,20 @@ msgstr "按住"
 msgid "Hold to speed up"
 msgstr "按住时的播放速度"
 
-#: src/app/settings/apps.tsx src/app/settings/interface.tsx
-#: src/components/shell/layout.tsx src/lib/input/actions.ts
+#: src/app/settings/apps.tsx src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx src/components/shell/layout.tsx
+#: src/lib/input/actions.ts
 msgid "Home"
 msgstr "首页"
-
-#: src/app/settings/interface.tsx
-msgid "Home and grids"
-msgstr "首页与网格"
 
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "首页与媒体库"
+
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Home, posters, trailers and episodes"
+msgstr "语言、首页、网格和剧集"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
@@ -2001,27 +2019,27 @@ msgstr "主持人"
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
 msgstr "设置字幕相对于底部常规位置向上移动的距离，也可向下移动至屏幕边缘。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
 msgstr "设置跳过按钮、双击和方向键每次跳转的时间。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How fast playback runs while you press and hold the video, or hold Space or Select."
 msgstr "设置按住视频画面、空格键或 Select 键时的播放速度。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "How large cards are in a grid."
 msgstr "设置网格中卡片的大小。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "How long the hero stays on a featured title while it rotates."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
 msgstr "设置播放器在内存中缓存的视频量：前方缓存可应对网络缓慢，后方缓存可便于立即回退。自动模式会根据此设备的内存调整大小。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
 msgstr "设置音量键和滚轮每次调整音量的幅度。"
 
@@ -2073,7 +2091,7 @@ msgstr "同步中"
 msgid "In the app's downloads"
 msgstr "在应用的下载中"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "In the navigation only"
 msgstr ""
 
@@ -2174,15 +2192,15 @@ msgstr "通过调整播放速度保持同步"
 msgid "Keeping in step"
 msgstr "正在保持同步"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
 msgstr "关闭屏幕或离开应用后仍继续播放声音。"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
 msgstr "关闭屏幕或离开应用（未使用画中画）后仍继续播放声音。"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "离开应用后，视频会在小窗口中继续播放。"
 
@@ -2216,14 +2234,15 @@ msgid "Language and how subtitles look"
 msgstr "语言与字幕外观"
 
 #: src/app/settings/page.tsx
-msgid "Language and output"
+#, fuzzy
+msgid "Language and navigation"
 msgstr "语言与输出"
 
 #: src/app/settings/page.tsx
-msgid "Language, home, grids and episodes"
-msgstr "语言、首页、网格和剧集"
+msgid "Language and output"
+msgstr "语言与输出"
 
-#: src/app/settings/interface.tsx src/lib/subtitles/style.ts
+#: src/app/settings/browsing.tsx src/lib/subtitles/style.ts
 msgid "Large"
 msgstr "大"
 
@@ -2248,7 +2267,7 @@ msgstr "离开一起观看"
 msgid "Leave this server to add {adding}?"
 msgstr "离开此服务器以添加 {adding}？"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Leaving the app"
 msgstr "离开应用"
 
@@ -2256,7 +2275,7 @@ msgstr "离开应用"
 msgid "Left"
 msgstr "向左"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
 msgstr "留空时，海报会独立显示。即使没有封面图，海报仍会显示标题。"
 
@@ -2268,11 +2287,11 @@ msgstr "降低对白增强"
 msgid "Let new people join"
 msgstr "允许新用户加入"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
 msgstr "让电视的解码器自行同步画面和声音，在部分电视上可更流畅地播放 4K 和 HDR。仅适用于由 ExoPlayer 播放的视频。如果画面卡顿或黑屏，请关闭此选项。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "让电视的解码器自行同步画面和声音，在部分电视上可更流畅地播放 4K 和 HDR。如果画面卡顿或黑屏，请关闭此选项。"
 
@@ -2288,7 +2307,7 @@ msgstr "导入他人分享的配置包，支持本应用格式以及 Fusion 和 
 msgid "Liquid glass"
 msgstr "液态玻璃"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "List"
 msgstr "列表"
 
@@ -2304,7 +2323,7 @@ msgstr "正在聆听…"
 msgid "Live"
 msgstr ""
 
-#: src/app/home/page.tsx src/app/live-tv/page.tsx
+#: src/app/home/page.tsx src/app/live-tv/page.tsx src/app/settings/browsing.tsx
 #: src/app/settings/interface.tsx src/components/shell/layout.tsx
 #: src/lib/input/actions.ts
 msgid "Live TV"
@@ -2326,6 +2345,10 @@ msgstr "锁定屏幕"
 msgid "Logs"
 msgstr "日志"
 
+#: src/app/settings/page.tsx
+msgid "Look and feel"
+msgstr ""
+
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
 msgstr "正在查找房间…"
@@ -2342,7 +2365,7 @@ msgstr "与 {relay} 的连接已断开，正在重新连接…播放器会继续
 msgid "Lower subtitles"
 msgstr "降低字幕"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
 msgstr "由 macOS 负责渲染视频，耗电更少，并直接显示杜比视界效果。着色器和 mpv 的画面选项不会生效。"
 
@@ -2358,7 +2381,7 @@ msgstr "主要"
 msgid "Mark as watched"
 msgstr "标记为已观看"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Mark unaired episodes"
 msgstr "跳过剧情回顾集"
@@ -2384,7 +2407,7 @@ msgstr "已标记为已观看"
 msgid "Marked unwatched"
 msgstr "已标记为未观看"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Match the video's frame rate"
 msgstr "匹配视频帧率"
 
@@ -2392,7 +2415,7 @@ msgstr "匹配视频帧率"
 msgid "Maximise"
 msgstr "最大化"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Medium"
 msgstr "中"
 
@@ -2404,7 +2427,7 @@ msgstr "菜单键"
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Merge continue watching and next up"
 msgstr "合并「继续观看」和「接下来播放」"
 
@@ -2499,19 +2522,20 @@ msgstr "电影、剧集和人物"
 msgid "Moving around"
 msgstr "导航"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv configuration"
 msgstr "mpv 配置"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr "由 mpv 渲染视频，并使用你的 mpv.conf 和着色器。"
 
-#: src/app/settings/playback.tsx
-msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
+#: src/app/settings/player.tsx
+#, fuzzy
+msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
 msgstr "在此窗口中使用 mpv 播放视频，并使用本应用的控制项和播放设置。你自己的 mpv.conf、脚本和着色器也可使用：将它们放入桌面应用目录下的 mpv 文件夹。"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr "此文件夹中的 mpv.conf、input.conf、脚本和着色器会应用于内置 mpv。"
 
@@ -2577,10 +2601,6 @@ msgstr "下一章"
 msgid "Next episode"
 msgstr "下一集"
 
-#: src/app/settings/page.tsx
-msgid "Next episode, controls and players"
-msgstr "下一集、控制项和播放器"
-
 #: src/features/player/next-episode.tsx
 msgid "Next in {playlistName}"
 msgstr "{playlistName} 中的下一项"
@@ -2601,7 +2621,7 @@ msgstr "下一条音轨"
 msgid "Next trailer"
 msgstr "下一个预告片"
 
-#: src/app/home/page.tsx src/app/settings/interface.tsx
+#: src/app/home/page.tsx src/app/settings/browsing.tsx
 msgid "Next up"
 msgstr "接下来播放"
 
@@ -2686,6 +2706,11 @@ msgstr "还没有播放列表。你可以在这里新建播放列表，也可以
 msgid "No server answered at that address."
 msgstr "该地址上的服务器没有响应。"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "No setting matches."
+msgstr "没有符合条件的内容。"
+
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
 msgstr "该文件中未找到字幕"
@@ -2737,7 +2762,7 @@ msgstr "尚未检查。"
 msgid "not found"
 msgstr "未找到"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Not found on this computer. Choose where {name} is installed."
 msgstr "此电脑上未找到。请选择 {name} 的安装位置。"
 
@@ -2749,7 +2774,7 @@ msgstr "暂不"
 msgid "Not sent. Try again"
 msgstr "发送失败，请重试"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Nothing"
 msgstr "无"
 
@@ -2788,7 +2813,7 @@ msgstr "还没有收藏任何内容。"
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/browsing.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "没有符合条件的内容。"
 
@@ -2832,7 +2857,7 @@ msgstr "现在，请在看到该句台词时点击「已看到」。"
 msgid "Now: {shown}"
 msgstr "当前：{shown}"
 
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/browsing.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "这里没有内容。"
@@ -2851,7 +2876,7 @@ msgstr "关闭"
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
 msgstr "由于地址以 <0>?safe</0> 结尾，此次访问已停用该功能。请在此修正或清除该地址，然后不带此参数重新打开应用。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Off, a trailer still plays with sound once you open it whole."
 msgstr ""
 
@@ -2875,11 +2900,11 @@ msgstr "位于 {relay}"
 msgid "On either side of the video, by the skip length."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "On home and in the navigation"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
@@ -2907,7 +2932,7 @@ msgstr ""
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
 msgstr "选中其中一个控件后，方向键会改为在各控件之间移动。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Once you rest on a title for a moment. In the hero, only one you went to."
 msgstr ""
 
@@ -2958,6 +2983,7 @@ msgid "Open"
 msgstr "打开"
 
 #: src/app/downloads/page.tsx src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Open folder"
 msgstr "打开文件夹"
 
@@ -2985,16 +3011,16 @@ msgstr "打开应用的下载"
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "打开当前选中项目的菜单，效果与右键单击相同。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Opens the mini player"
 msgstr "在首页"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "在 {target} 中打开版本，并保存播放位置以便返回此处继续。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Opens versions in {target}. It can't tell this app where you stopped, so you mark what you watched yourself."
 msgstr "在 {target} 中打开版本。该应用无法将停止位置反馈给本应用，因此需要你手动标记已观看的内容。"
 
@@ -3022,7 +3048,7 @@ msgstr "选项"
 msgid "Options for {name}"
 msgstr "{name} 的选项"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Options for the built-in mpv, one per line, as mpv's manual lists them."
 msgstr "内置 mpv 的选项，每行一项，格式请参照 mpv 手册。"
 
@@ -3180,7 +3206,7 @@ msgstr "已在 {name} 处暂停，播放至 {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "连续播放达到此集数且期间没有按键、点击或按下按钮后，会暂停并在播放下一集前询问。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
 msgstr ""
 
@@ -3220,8 +3246,7 @@ msgstr "选择你在 {heardAt} 听到的台词。"
 msgid "Pick the version to download."
 msgstr "选择要下载的版本。"
 
-#: src/app/settings/apps.tsx src/app/settings/playback.tsx
-#: src/features/player/options.tsx
+#: src/app/settings/player.tsx src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "画中画"
 
@@ -3278,7 +3303,7 @@ msgstr "播放 {code}"
 msgid "Play anyway"
 msgstr "立即播放"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Play by themselves"
 msgstr "播放第一个版本"
@@ -3291,7 +3316,7 @@ msgstr "从头播放"
 msgid "Play in {seconds}s"
 msgstr "在 {seconds} 秒后播放"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Play in the background"
 msgstr "后台播放"
 
@@ -3353,7 +3378,7 @@ msgstr "让声音延后播放"
 msgid "Play the version's default track first"
 msgstr "优先播放该版本的默认音轨"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Play versions in"
 msgstr "在以下位置播放版本"
 
@@ -3392,16 +3417,16 @@ msgstr "播放失败：{failure}"
 msgid "Played here"
 msgstr "在此处播放"
 
-#: src/app/settings/about.tsx src/app/settings/playback.tsx
-#: src/lib/input/actions.ts
+#: src/app/settings/about.tsx src/app/settings/page.tsx
+#: src/app/settings/player.tsx src/lib/input/actions.ts
 msgid "Player"
 msgstr "播放器"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Player link"
 msgstr "播放器链接"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Player window"
 msgstr "立即播放"
@@ -3451,7 +3476,7 @@ msgstr "为所有加入者播放 <0>{title}</0>。"
 msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
 msgstr "通过稍微加快或减慢播放速度来与一起观看同步。关闭后则会直接跳转视频进度。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
 msgstr "当屏幕支持时播放杜比视界。如果杜比视界画面偏暗或闪烁，可关闭此选项，改播多数此类视频同时包含的 HDR10 画面。没有 HDR10 画面的视频仍会以杜比视界播放。"
 
@@ -3467,9 +3492,14 @@ msgstr "播放视频。"
 msgid "Position"
 msgstr "位置"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Poster size"
 msgstr "海报大小"
+
+#: src/app/settings/browsing.tsx
+#, fuzzy
+msgid "Posters and grids"
+msgstr "首页与网格"
 
 #: src/app/settings/cache.tsx
 msgid "Posters, backdrops, logos and photos."
@@ -3496,7 +3526,7 @@ msgstr ""
 msgid "Preview"
 msgstr "预览"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Preview the card you rest on"
 msgstr ""
 
@@ -3549,7 +3579,7 @@ msgstr "将所有按键恢复为原始设置。"
 msgid "QR code"
 msgstr "二维码"
 
-#: src/app/settings/playback.tsx src/features/player/options.tsx
+#: src/app/settings/player.tsx src/features/player/options.tsx
 msgid "Quality"
 msgstr ""
 
@@ -3622,7 +3652,7 @@ msgstr "用 {emoji} 回应"
 msgid "Reactions"
 msgstr "回应"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
 msgstr ""
 
@@ -3806,7 +3836,7 @@ msgstr "重置观看历史"
 msgid "Reset theme"
 msgstr "重置主题"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Restart"
 msgstr "重新启动"
 
@@ -3814,7 +3844,7 @@ msgstr "重新启动"
 msgid "Restart now"
 msgstr "立即重新启动"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Restart to switch"
 msgstr "重新启动以切换"
 
@@ -3860,7 +3890,7 @@ msgstr "快退"
 msgid "Right"
 msgstr "向右"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Rotates through featured titles"
 msgstr "轮播精选内容"
 
@@ -3868,7 +3898,7 @@ msgstr "轮播精选内容"
 msgid "Rotten Tomatoes audience"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Row"
 msgstr "行"
 
@@ -3893,8 +3923,8 @@ msgstr "第 {s} 季第 {e} 集"
 msgid "Sans serif"
 msgstr "无衬线体"
 
-#: src/app/settings/_components/version-settings.tsx src/app/settings/apps.tsx
-#: src/features/playlists/playlists.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/player.tsx src/features/playlists/playlists.tsx
 msgid "Save"
 msgstr "保存"
 
@@ -3934,7 +3964,7 @@ msgstr "保存内容页面"
 msgid "Save what you browse"
 msgstr "保存浏览内容"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Saved"
 msgstr "已保存"
 
@@ -3989,6 +4019,11 @@ msgstr "再次搜索"
 msgid "Search by voice"
 msgstr "语音搜索"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Search settings"
+msgstr "正在搜索"
+
 #: src/features/player/subtitle-sync.tsx
 msgid "Search the lines"
 msgstr "搜索台词"
@@ -4014,7 +4049,7 @@ msgstr "查看下载"
 msgid "Seek"
 msgstr "跳转"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Seek bar previews"
 msgstr "进度条预览"
 
@@ -4091,7 +4126,7 @@ msgstr "手动设置"
 msgid "Settings"
 msgstr "设置"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
 
@@ -4108,7 +4143,7 @@ msgstr "阴影"
 msgid "Share the invite"
 msgstr "分享邀请"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
@@ -4157,7 +4192,7 @@ msgstr "提前显示字幕"
 msgid "Show subtitles later"
 msgstr "延后显示字幕"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Show the controls on pause and skip"
 msgstr "显示控制项"
@@ -4166,7 +4201,7 @@ msgstr "显示控制项"
 msgid "Show the prompt"
 msgstr "显示提示"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Show the time"
 msgstr "显示提示"
@@ -4193,20 +4228,20 @@ msgstr "已显示"
 msgid "Shows"
 msgstr "剧集"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 msgstr "在进度条上显示鼠标指向、拖动到或跳转到位置的视频预览图。每张预览图都会读取少量文件数据，关闭此功能可节省流量。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
 msgstr "在「继续观看」内容行中，显示你正在观看内容之后的下一集。"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Shows search results in one grid instead of a row each for movies and shows."
 msgstr "将搜索结果合并到一个网格中，而不是分别为电影和剧集显示内容行。"
 
@@ -4214,7 +4249,7 @@ msgstr "将搜索结果合并到一个网格中，而不是分别为电影和剧
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "除非音频本身已是你的语言，否则显示对应语言的字幕。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shows the time of day at the top of the player with the controls."
 msgstr ""
 
@@ -4311,7 +4346,7 @@ msgstr "向前跳过"
 msgid "Skip intro"
 msgstr "跳过片头"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Skip length"
 msgstr "跳过时长"
 
@@ -4367,7 +4402,7 @@ msgstr "位置 {n}：{emoji}"
 msgid "Slower"
 msgstr "更慢"
 
-#: src/app/settings/interface.tsx src/lib/subtitles/style.ts
+#: src/app/settings/browsing.tsx src/lib/subtitles/style.ts
 msgid "Small"
 msgstr "小"
 
@@ -4399,7 +4434,7 @@ msgstr "此设备无法读取的内容"
 msgid "Sort by"
 msgstr ""
 
-#: src/app/settings/audio.tsx src/app/settings/interface.tsx
+#: src/app/settings/audio.tsx src/app/settings/browsing.tsx
 #: src/features/player/options.tsx
 msgid "Sound"
 msgstr "声音"
@@ -4435,11 +4470,6 @@ msgstr "速度 {shown}×"
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
 msgstr "按住时加速播放"
-
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Spoilers"
-msgstr "预告片"
 
 #: src/app/settings/apps.tsx
 msgid "Stable"
@@ -4483,7 +4513,7 @@ msgstr "停止"
 msgid "Stop listening"
 msgstr "停止聆听"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Stops playing"
 msgstr "正在播放"
@@ -4593,6 +4623,10 @@ msgstr "字幕：{label}"
 msgid "Sun"
 msgstr "太阳"
 
+#: src/app/settings/player.tsx
+msgid "Super resolution"
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "支持 AIOStreams"
@@ -4623,7 +4657,7 @@ msgstr "切换服务器"
 msgid "Switch user"
 msgstr "切换用户"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
 msgstr "根据视频切换电视的刷新率，以获得更流畅的动态画面；停止播放时会切回原来的刷新率。切换过程中屏幕可能会短暂黑屏。"
 
@@ -4655,7 +4689,7 @@ msgstr "已自动同步"
 msgid "Syncing subtitles…"
 msgstr "正在同步字幕…"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "System"
 msgstr "系统"
 
@@ -4757,7 +4791,7 @@ msgstr "无法打开该内容"
 msgid "That you are searching, not what for."
 msgstr "搜索的是你要找的内容，而不是搜索条件。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The {name} installed on this computer, in a window of its own with its own controls and configuration. This app still saves your place, marks what you watched and plays the next episode. Compared with the built-in player, you lose:<0><1>The controls, skip buttons and next episode card over the video. They stay in this window, which works as a remote.</1><2>This app's subtitle style, video fit, hardware decoding and audio output settings.</2></0>"
 msgstr "此电脑上安装的 {name}，会在独立窗口中运行，并使用自己的控制项和配置。本应用仍会保存播放位置、标记已观看内容并播放下一集。与内置播放器相比，你将无法使用：<0><1>覆盖在视频上的控制项、跳过按钮和下一集卡片。这些功能会留在此窗口中，可将此窗口用作遥控器。</1><2>本应用的字幕样式、视频适配、硬件解码和音频输出设置。</2></0>"
 
@@ -4847,11 +4881,11 @@ msgstr "链接返回的内容不是视频"
 msgid "the live stream stopped"
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
 msgstr ""
 
@@ -4859,7 +4893,7 @@ msgstr ""
 msgid "The movie or show whose page is open."
 msgstr "当前打开页面的电影或剧集。"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "mpv 的旧式渲染方式，适用于其他方式无法正常工作的 Mac。部分杜比视界视频可能会显示错误的颜色。"
 
@@ -4895,9 +4929,17 @@ msgstr "房间已满"
 msgid "The party is watching <0>{title}</0>"
 msgstr "该房间正在播放 <0>{title}</0>"
 
+#: src/app/settings/page.tsx
+msgid "The player and its controls"
+msgstr ""
+
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
 msgstr "播放器无法播放此版本"
+
+#: src/app/settings/page.tsx
+msgid "The player, its controls and video"
+msgstr ""
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
@@ -4956,7 +4998,7 @@ msgstr "电视播放器出错（{code}）"
 msgid "the video app Android picks"
 msgstr "Android 选择的视频应用"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "The video output changes when the app opens again."
 msgstr "下次打开应用时，视频输出设置会生效。"
 
@@ -4964,7 +5006,7 @@ msgstr "下次打开应用时，视频输出设置会生效。"
 msgid "The whole show"
 msgstr "整部剧集"
 
-#: src/app/settings/page.tsx src/app/settings/theme.tsx
+#: src/app/settings/page.tsx
 msgid "Theme"
 msgstr "主题"
 
@@ -5004,7 +5046,7 @@ msgstr "细"
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "本应用会自行解码 Dolby 和 DTS 音频，因此会失去 Atmos 效果。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "This browser"
 msgstr "此服务器"
@@ -5018,11 +5060,11 @@ msgstr "此浏览器无法播放该版本。服务器不会转换视频格式，
 msgid "This browser keeps no files for this site."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
 msgstr ""
 
@@ -5135,7 +5177,7 @@ msgstr "三天"
 msgid "Time format"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Time on each title"
 msgstr ""
 
@@ -5143,12 +5185,12 @@ msgstr ""
 msgid "Timing"
 msgstr "时间设置"
 
-#: src/app/history/page.tsx src/app/settings/interface.tsx
+#: src/app/history/page.tsx src/app/settings/browsing.tsx
 msgid "Title"
 msgstr "标题"
 
-#: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/apps.tsx src/app/settings/browsing.tsx
+#: src/app/settings/cache.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "内容详情页"
 
@@ -5198,7 +5240,7 @@ msgstr "音轨"
 msgid "Trailer"
 msgstr "预告片"
 
-#: src/app/item/_components/trailers.tsx src/app/settings/interface.tsx
+#: src/app/item/_components/trailers.tsx src/app/settings/browsing.tsx
 msgid "Trailers"
 msgstr "预告片"
 
@@ -5225,7 +5267,7 @@ msgstr "请尝试重新开始一起观看。"
 msgid "Try them"
 msgstr "尝试这些选项"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Tunneled playback"
 msgstr "隧道式播放"
 
@@ -5261,7 +5303,7 @@ msgstr "打字机"
 msgid "Unaired"
 msgstr "尚未播出"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Under posters"
 msgstr "海报下方"
 
@@ -5310,7 +5352,7 @@ msgstr "接下来播放"
 msgid "Up next: {upNext}"
 msgstr "接下来播放：{upNext}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 msgstr "最多显示 {MAX_FEATURED} 项，并混合排列。留空时，会精选你的第一个电影目录和剧集目录。"
@@ -5332,16 +5374,14 @@ msgid "Updates"
 msgstr "更新"
 
 #: src/app/settings/page.tsx
-msgid "Updates, Discord, mpv and troubleshooting"
-msgstr "更新、Discord、mpv 和故障排查"
-
-#: src/app/settings/page.tsx
-msgid "Updates, mpv and troubleshooting"
+#, fuzzy
+msgid "Updates and troubleshooting"
 msgstr "更新、mpv 和故障排查"
 
 #: src/app/settings/page.tsx
-msgid "Updates, picture-in-picture, mpv and troubleshooting"
-msgstr "更新、画中画、mpv 和故障排查"
+#, fuzzy
+msgid "Updates, Discord and troubleshooting"
+msgstr "更新、Discord、mpv 和故障排查"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
 #, fuzzy
@@ -5433,24 +5473,28 @@ msgstr "版本信息和近期日志，可复制到错误报告中。"
 msgid "Versions are found for this many episodes at a time when a season or show is added."
 msgstr "添加整季或整部剧集时，每次查找版本的剧集数量。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead."
 msgstr "版本会在应用内播放，并使用应用的控制项和播放设置。选择其他播放器即可改用该播放器打开。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Versions play in this browser. Choose another player to open them in it instead."
 msgstr "版本会在此浏览器中播放。选择其他播放器即可改用该播放器打开。"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/page.tsx
+msgid "Versions, next episode and skipping"
+msgstr ""
+
+#: src/app/settings/player.tsx
 msgid "Video"
 msgstr "视频"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Video only"
 msgstr "视频"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Video output"
 msgstr "视频输出"
 
@@ -5482,7 +5526,7 @@ msgstr "降低音量"
 msgid "Volume down key"
 msgstr "音量减小键"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Volume step"
 msgstr "音量调节幅度"
 
@@ -5751,7 +5795,7 @@ msgstr "关键词或 /正则表达式/"
 msgid "Writer"
 msgstr "编剧"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Year"
 msgstr "年份"
 
@@ -5782,7 +5826,7 @@ msgstr "你已离开一起观看。"
 msgid "You'll be reminded at {time}"
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Your {name}"
 msgstr "你的 {name}"
 

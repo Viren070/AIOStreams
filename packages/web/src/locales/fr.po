@@ -196,7 +196,7 @@ msgstr "{packCount, plural, one {# pack} other {# packs}}"
 msgid "{packs} and {own}"
 msgstr "{packs} et {own}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{r}×"
 msgstr "{r}×"
 
@@ -212,7 +212,7 @@ msgstr "{removed, plural, one {# élément retiré de l'historique} other {# él
 msgid "{rest, plural, one {# more} other {# more}}"
 msgstr "{rest, plural, one {# de plus} other {# de plus}}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{s}%"
 msgstr "{s}%"
 
@@ -262,7 +262,7 @@ msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # n
 msgstr "{unread, plural, one {Session de visionnage, # nouveau message} other {Session de visionnage, # nouveaux messages}}"
 
 #. Each {name} is written in the player link as it is here.
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
 msgstr "{url} est l'adresse du flux, {encodedUrl} la même adresse encodée au format URL, {scheme} son protocole, {filename} le nom du fichier, {subtitles} chaque sous-titre externe (son paramètre est répété par fichier), {title} le titre avec l'épisode, {position} la seconde de départ ({positionMs} en millisecondes), et {returnUrl} un lien de retour ici pour un lecteur indiquant où il s'est arrêté. Les valeurs autres que {url} sont encodées au format URL. Après intent://, {url} est inséré sans son protocole."
 
@@ -370,7 +370,7 @@ msgstr "Les boutons d'une télécommande ou d'une manette fonctionnent aussi."
 msgid "A set time before the end."
 msgstr "Un délai défini avant la fin."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
 msgstr ""
 
@@ -569,11 +569,11 @@ msgstr "La piste audio choisie pendant le visionnage d'une série définit la la
 msgid "Android app"
 msgstr "Application Android"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
 msgstr "Le lecteur natif d'Android, plus économe en batterie : l'écran affiche la vidéo telle que l'appareil la décode, à sa fréquence d'images native. Lit les vidéos que l'appareil peut décoder. Les sous-titres stylisés s'affichent comme dans mpv."
 
-#: src/app/settings/playback.tsx src/lib/input/actions.ts
+#: src/app/settings/player.tsx src/lib/input/actions.ts
 msgid "Anime upscaling"
 msgstr ""
 
@@ -683,20 +683,21 @@ msgstr "Audio : {label}"
 msgid "Auto-play the first version"
 msgstr "Lancer automatiquement la première version"
 
-#: src/app/settings/audio.tsx src/app/settings/interface.tsx
-#: src/app/settings/playback.tsx
+#: src/app/settings/audio.tsx src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx src/app/settings/player.tsx
 msgid "Automatic"
 msgstr "Automatique"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "Automatique liste les épisodes sur les écrans étroits et les affiche en ligne sur les écrans larges."
 
 #: src/app/player/page.tsx src/app/servers/page.tsx
 #: src/app/settings/_components/licenses.tsx src/app/sign-in/page.tsx
-#: src/app/trailer/page.tsx src/components/shell/history-buttons.tsx
-#: src/features/party/not-in-party.tsx src/features/player/controls.tsx
-#: src/features/player/next-episode.tsx src/lib/input/actions.ts
+#: src/app/trailer/page.tsx src/components/back-button.tsx
+#: src/components/shell/history-buttons.tsx src/features/party/not-in-party.tsx
+#: src/features/player/controls.tsx src/features/player/next-episode.tsx
+#: src/lib/input/actions.ts
 msgid "Back"
 msgstr "Retour"
 
@@ -704,7 +705,7 @@ msgstr "Retour"
 msgid "Back button"
 msgstr "Bouton Retour"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Back in the player"
 msgstr "Lecteur intégré"
@@ -747,11 +748,11 @@ msgstr "Sous-titres plus grands"
 msgid "Black"
 msgstr "Noir"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
 msgstr ""
 
@@ -759,11 +760,11 @@ msgstr ""
 msgid "Blue"
 msgstr "Bleu"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Blur episodes you haven't started"
 msgstr "Masquer les épisodes que vous n'avez pas commencés"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
 msgstr "Floutez leurs images, titres et descriptions jusqu’à ce que le pointeur, le clavier ou la télécommande soit placé sur l’un d’entre eux."
 
@@ -811,7 +812,7 @@ msgstr "Accueil navigateur"
 msgid "Browser Search"
 msgstr "Recherche navigateur"
 
-#: src/lib/discord.ts
+#: src/app/settings/page.tsx src/lib/discord.ts
 msgid "Browsing"
 msgstr "Navigation"
 
@@ -831,7 +832,7 @@ msgstr "Boutons, barres de progression et mises en surbrillance."
 msgid "Cache"
 msgstr "Cache"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Cache size"
 msgstr "Taille du cache"
 
@@ -859,7 +860,7 @@ msgstr "Impossible de joindre le serveur"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Cards"
 msgstr "Cartes"
 
@@ -949,7 +950,7 @@ msgstr "Vérifier maintenant"
 msgid "Checking…"
 msgstr "Vérification…"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Choose"
 msgstr "Choisir"
 
@@ -1008,11 +1009,17 @@ msgstr "Collections"
 msgid "Colour"
 msgstr "Couleur"
 
+#: src/app/settings/theme.tsx
+#, fuzzy
+msgid "Colours"
+msgstr "Couleur"
+
 #: src/app/settings/page.tsx
-msgid "Colours and custom CSS"
+#, fuzzy
+msgid "Colours, glass and custom CSS"
 msgstr "Couleurs et CSS personnalisé"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Combine movie and show results"
 msgstr "Combiner les résultats de films et séries"
 
@@ -1020,7 +1027,7 @@ msgstr "Combiner les résultats de films et séries"
 msgid "Commentary"
 msgstr "Commentaires"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Compatibility"
 msgstr "Compatibilité"
 
@@ -1064,12 +1071,12 @@ msgstr "Connexion perdue"
 msgid "Continue"
 msgstr "Continuer"
 
-#: src/app/home/page.tsx src/app/settings/interface.tsx
+#: src/app/home/page.tsx src/app/settings/browsing.tsx
 #: src/features/player/next-episode.tsx
 msgid "Continue watching"
 msgstr "Reprendre la lecture"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Controls"
 msgstr "Contrôles"
 
@@ -1321,11 +1328,12 @@ msgstr "Date inconnue"
 msgid "Day"
 msgstr "Délai"
 
-#: src/app/settings/playback.tsx
-msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app."
+#: src/app/settings/player.tsx
+#, fuzzy
+msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf, under mpv below."
 msgstr "Décode presque toutes les vidéos, de manière logicielle si l'appareil n'a pas de décodeur. Utilise votre fichier mpv.conf sous l'application Android."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
 msgstr "Décode sur la carte graphique. Désactivez cette option si la vidéo présente des artefacts ou reste noire."
 
@@ -1462,7 +1470,7 @@ msgstr "Documentation"
 msgid "Doesn't match the video's own subtitles"
 msgstr "Ne correspond pas aux sous-titres intégrés de la vidéo"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Dolby Vision"
 msgstr "Dolby Vision"
 
@@ -1543,7 +1551,7 @@ msgstr "Téléchargements simultanés"
 msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
 msgstr "Les téléchargements attendent une connexion Wi-Fi ou un réseau non mesuré au lieu d'utiliser les données mobiles."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Draw subtitles on the graphics card"
 msgstr ""
 
@@ -1581,7 +1589,7 @@ msgstr "Modifier"
 msgid "Ends at {endsAt}"
 msgstr "Se termine à {endsAt}"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Engine"
 msgstr "Moteur"
 
@@ -1626,12 +1634,12 @@ msgstr "Épisode {number}"
 msgid "Episode details"
 msgstr "Détails de l'épisode"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Episode layout"
 msgstr "Disposition des épisodes"
 
 #: src/app/item/_components/seasons.tsx src/app/search/page.tsx
-#: src/app/settings/interface.tsx src/features/player/episodes.tsx
+#: src/app/settings/browsing.tsx src/features/player/episodes.tsx
 #: src/features/player/options.tsx
 msgid "Episodes"
 msgstr "Épisodes"
@@ -1640,7 +1648,7 @@ msgstr "Épisodes"
 msgid "Episodes end without offering the next one."
 msgstr "Les épisodes se terminent sans proposer le suivant."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
 msgstr "Les épisodes non encore diffusés s'affichent comme \"non diffusés\", requièrent une confirmation avant lecture, et sont ignorés lors de la lecture ou du téléchargement d'une saison. Désactivez cette fonction si les dates de diffusion sont souvent erronées."
@@ -1682,7 +1690,7 @@ msgstr "Quitter le plein écran"
 msgid "Exit picture-in-picture"
 msgstr "Image dans l'image"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
 msgstr "ExoPlayer, plus économe en batterie, et mpv pour les vidéos sans décodeur sur cet appareil."
 
@@ -1717,7 +1725,7 @@ msgstr "Favoris"
 msgid "Favourites"
 msgstr "Favoris"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Featured on home"
 msgstr "À la une sur l'accueil"
 
@@ -1782,15 +1790,15 @@ msgstr "Pastilles flottantes"
 msgid "Folder"
 msgstr "Dossier"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
 msgstr "Suivi l'épingle au-dessus des lignes et affiche la carte survolée par le pointeur, le clavier ou la télécommande, en commençant par un titre à la une, derrière toute la page ou dans son coin supérieur. Les écrans tactiles et fenêtres étroites le font défiler continuellement."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Follows the selected card"
 msgstr "Suit la carte sélectionnée"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Follows the selected card, in the corner"
 msgstr "Suit la carte sélectionnée, dans le coin"
 
@@ -1858,6 +1866,10 @@ msgid "Give this code to whoever looks into it."
 msgstr "Donnez ce code à la personne chargée d'examiner le problème."
 
 #: src/app/settings/theme.tsx
+msgid "Glass"
+msgstr ""
+
+#: src/app/settings/theme.tsx
 msgid "Glass panels"
 msgstr ""
 
@@ -1865,7 +1877,7 @@ msgstr ""
 msgid "Glass surface"
 msgstr ""
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
 msgstr ""
 
@@ -1907,7 +1919,7 @@ msgstr "Groupe"
 msgid "Guide"
 msgstr "Guide"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Hardware decoding"
 msgstr "Décodage matériel"
 
@@ -1915,7 +1927,11 @@ msgstr "Décodage matériel"
 msgid "Has a PIN"
 msgstr "A un code PIN"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
+msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
+msgstr ""
+
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "HDR output"
 msgstr "Sortie vidéo"
@@ -1936,7 +1952,7 @@ msgstr "Hauteur"
 msgid "Height: {position}%"
 msgstr "Hauteur : {position} %"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Held speed"
 msgstr "Vitesse maintenue"
 
@@ -1944,15 +1960,15 @@ msgstr "Vitesse maintenue"
 msgid "Here"
 msgstr "Ici"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Hero"
 msgstr "Bannière à la une"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx src/app/settings/interface.tsx
 msgid "Hidden"
 msgstr "Masqué"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Hidden, channels also leave search and favourites."
 msgstr ""
 
@@ -1978,18 +1994,20 @@ msgstr "Maintenir"
 msgid "Hold to speed up"
 msgstr "Vitesse maintenue"
 
-#: src/app/settings/apps.tsx src/app/settings/interface.tsx
-#: src/components/shell/layout.tsx src/lib/input/actions.ts
+#: src/app/settings/apps.tsx src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx src/components/shell/layout.tsx
+#: src/lib/input/actions.ts
 msgid "Home"
 msgstr "Accueil"
-
-#: src/app/settings/interface.tsx
-msgid "Home and grids"
-msgstr "Accueil et grilles"
 
 #: src/app/settings/cache.tsx
 msgid "Home and libraries"
 msgstr "Accueil et bibliothèques"
+
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Home, posters, trailers and episodes"
+msgstr "Langue, accueil, grilles et épisodes"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
@@ -2003,27 +2021,27 @@ msgstr "Hôte"
 msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
 msgstr "Décalage des sous-titres par rapport à leur position habituelle en bas, ou vers le bord de l'écran."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How far the skip buttons, double taps and the arrow keys jump."
 msgstr "Intervalle de saut des boutons, des doubles pressions et des touches fléchées."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How fast playback runs while you press and hold the video, or hold Space or Select."
 msgstr "Vitesse de lecture lorsque vous maintenez appuyé sur la vidéo, ou maintenez Espace ou Sélection."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "How large cards are in a grid."
 msgstr "Taille des vignettes dans une grille."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "How long the hero stays on a featured title while it rotates."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
 msgstr "Quantité de vidéo gardée en mémoire par le lecteur : en avant pour pallier les connexions lentes, et en arrière pour reculer instantanément. Automatique l'adapte à la mémoire de l'appareil."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "How much the volume keys and the scroll wheel change the volume."
 msgstr "Variation du volume avec les touches de volume et la molette de la souris."
 
@@ -2075,7 +2093,7 @@ msgstr "Synchronisé"
 msgid "In the app's downloads"
 msgstr "Dans les téléchargements de l'application"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "In the navigation only"
 msgstr ""
 
@@ -2176,15 +2194,15 @@ msgstr "Synchroniser en modifiant la vitesse"
 msgid "Keeping in step"
 msgstr "Synchronisation en cours"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the sound going with the screen off, or when you leave the app."
 msgstr "Poursuit la lecture audio avec l'écran éteint ou lorsque vous quittez l'application."
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
 msgstr "Poursuit la lecture audio avec l'écran éteint ou lorsque vous quittez sans image dans l'image."
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "Poursuit la lecture vidéo dans une petite fenêtre lorsque vous quittez l'application."
 
@@ -2218,14 +2236,15 @@ msgid "Language and how subtitles look"
 msgstr "Langue et apparence des sous-titres"
 
 #: src/app/settings/page.tsx
-msgid "Language and output"
+#, fuzzy
+msgid "Language and navigation"
 msgstr "Langue et sortie"
 
 #: src/app/settings/page.tsx
-msgid "Language, home, grids and episodes"
-msgstr "Langue, accueil, grilles et épisodes"
+msgid "Language and output"
+msgstr "Langue et sortie"
 
-#: src/app/settings/interface.tsx src/lib/subtitles/style.ts
+#: src/app/settings/browsing.tsx src/lib/subtitles/style.ts
 msgid "Large"
 msgstr "Grand"
 
@@ -2250,7 +2269,7 @@ msgstr "Quitter la session"
 msgid "Leave this server to add {adding}?"
 msgstr "Quitter ce serveur pour ajouter {adding} ?"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Leaving the app"
 msgstr "En quittant l'application"
 
@@ -2258,7 +2277,7 @@ msgstr "En quittant l'application"
 msgid "Left"
 msgstr "Gauche"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
 msgstr "Si laissé vide, les affiches apparaissent seules. Une affiche sans image montre tout de même son titre."
 
@@ -2270,11 +2289,11 @@ msgstr "Moins d'amplification des dialogues"
 msgid "Let new people join"
 msgstr "Autoriser de nouvelles personnes à rejoindre"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
 msgstr "Permet au décodeur du téléviseur de synchroniser lui-même l'image et le son, pour une lecture 4K et HDR plus fluide sur certains téléviseurs. Uniquement pour ExoPlayer. Désactivez si la vidéo saccade ou reste noire."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
 msgstr "Permet au décodeur du téléviseur de synchroniser lui-même l'image et le son, pour une lecture 4K et HDR plus fluide sur certains téléviseurs. Désactivez si la vidéo saccade ou reste noire."
 
@@ -2290,7 +2309,7 @@ msgstr "Liez un pack partagé, au format de cette application ou à celui de Fus
 msgid "Liquid glass"
 msgstr "Verre liquide"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "List"
 msgstr "Liste"
 
@@ -2306,7 +2325,7 @@ msgstr "Écoute en cours…"
 msgid "Live"
 msgstr ""
 
-#: src/app/home/page.tsx src/app/live-tv/page.tsx
+#: src/app/home/page.tsx src/app/live-tv/page.tsx src/app/settings/browsing.tsx
 #: src/app/settings/interface.tsx src/components/shell/layout.tsx
 #: src/lib/input/actions.ts
 #, fuzzy
@@ -2329,6 +2348,10 @@ msgstr "Verrouiller l'écran"
 msgid "Logs"
 msgstr "Journaux"
 
+#: src/app/settings/page.tsx
+msgid "Look and feel"
+msgstr ""
+
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
 msgstr "Recherche de la session…"
@@ -2345,7 +2368,7 @@ msgstr "Connexion à {relay} perdue. Reconnexion… Votre lecteur continue et se
 msgid "Lower subtitles"
 msgstr "Abaisser les sous-titres"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
 msgstr "macOS effectue le rendu vidéo en consommant moins d'énergie et gère Dolby Vision nativement. Les shaders et options d'image de mpv ne s'appliquent pas."
 
@@ -2361,7 +2384,7 @@ msgstr "Principal"
 msgid "Mark as watched"
 msgstr "Marquer comme vu"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Mark unaired episodes"
 msgstr "Passer les épisodes récapitulatifs"
@@ -2387,7 +2410,7 @@ msgstr "Marqué comme vu"
 msgid "Marked unwatched"
 msgstr "Marqué comme non vu"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Match the video's frame rate"
 msgstr "Adapter à la fréquence d'images de la vidéo"
 
@@ -2395,7 +2418,7 @@ msgstr "Adapter à la fréquence d'images de la vidéo"
 msgid "Maximise"
 msgstr "Agrandir"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Medium"
 msgstr "Moyen"
 
@@ -2407,7 +2430,7 @@ msgstr "Touche Menu"
 msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Merge continue watching and next up"
 msgstr "Fusionner Reprendre la lecture et À suivre"
 
@@ -2502,19 +2525,20 @@ msgstr "Films, séries et personnalités"
 msgid "Moving around"
 msgstr "Navigation"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv configuration"
 msgstr "Configuration de mpv"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr "mpv effectue le rendu vidéo avec vos réglages mpv.conf et vos shaders."
 
-#: src/app/settings/playback.tsx
-msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app."
+#: src/app/settings/player.tsx
+#, fuzzy
+msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
 msgstr "mpv dans cette fenêtre, avec les contrôles et paramètres de lecture de cette application. Vos propres mpv.conf, scripts et shaders fonctionnent aussi : placez-les dans son dossier mpv sous Application de bureau."
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr "Les fichiers mpv.conf, input.conf, scripts et shaders de ce dossier s'appliquent au mpv intégré."
 
@@ -2580,10 +2604,6 @@ msgstr "Chapitre suivant"
 msgid "Next episode"
 msgstr "Épisode suivant"
 
-#: src/app/settings/page.tsx
-msgid "Next episode, controls and players"
-msgstr "Épisode suivant, contrôles et lecteurs"
-
 #: src/features/player/next-episode.tsx
 msgid "Next in {playlistName}"
 msgstr "Suivant dans {playlistName}"
@@ -2604,7 +2624,7 @@ msgstr "Piste suivante"
 msgid "Next trailer"
 msgstr "Bande-annonce suivante"
 
-#: src/app/home/page.tsx src/app/settings/interface.tsx
+#: src/app/home/page.tsx src/app/settings/browsing.tsx
 msgid "Next up"
 msgstr "À suivre"
 
@@ -2689,6 +2709,11 @@ msgstr "Aucune playlist pour l'instant. Créez-en une ici ou ajoutez un titre de
 msgid "No server answered at that address."
 msgstr "Aucun serveur n'a répondu à cette adresse."
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "No setting matches."
+msgstr "Aucun résultat correspondant."
+
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
 msgstr "Aucun sous-titre trouvé dans ce fichier"
@@ -2740,7 +2765,7 @@ msgstr "Pas encore vérifié."
 msgid "not found"
 msgstr "introuvable"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Not found on this computer. Choose where {name} is installed."
 msgstr "Introuvable sur cet ordinateur. Indiquez l'emplacement où {name} est installé."
 
@@ -2752,7 +2777,7 @@ msgstr "Pas maintenant"
 msgid "Not sent. Try again"
 msgstr "Non envoyé. Réessayez"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Nothing"
 msgstr "Rien"
 
@@ -2791,7 +2816,7 @@ msgstr "Aucun favori enregistré pour le moment."
 #: src/app/discover/page.tsx src/app/live-tv/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx src/app/settings/audio.tsx
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/browsing.tsx src/app/settings/theme.tsx
 msgid "Nothing matches."
 msgstr "Aucun résultat correspondant."
 
@@ -2835,7 +2860,7 @@ msgstr "Appuyez maintenant sur Vu lorsque cette ligne apparaît."
 msgid "Now: {shown}"
 msgstr "Actuel : {shown}"
 
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/browsing.tsx src/app/settings/theme.tsx
 #, fuzzy
 msgid "Nowhere"
 msgstr "Rien ici."
@@ -2854,7 +2879,7 @@ msgstr "Désactivé"
 msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
 msgstr "Désactivé pour cette session car l'adresse se termine par <0>?safe</0>. Corrigez ou effacez-le ici, puis rouvrez l'application sans ce paramètre."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Off, a trailer still plays with sound once you open it whole."
 msgstr ""
 
@@ -2878,11 +2903,11 @@ msgstr "sur {relay}"
 msgid "On either side of the video, by the skip length."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "On home and in the navigation"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
 msgstr ""
 
@@ -2910,7 +2935,7 @@ msgstr ""
 msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
 msgstr "Dès qu'un contrôle est sélectionné, les touches fléchées naviguent entre les contrôles."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Once you rest on a title for a moment. In the hero, only one you went to."
 msgstr ""
 
@@ -2961,6 +2986,7 @@ msgid "Open"
 msgstr "Ouvrir"
 
 #: src/app/downloads/page.tsx src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Open folder"
 msgstr "Ouvrir le dossier"
 
@@ -2988,16 +3014,16 @@ msgstr "Ouvrir les téléchargements de l'application"
 msgid "Opens the menu of what is selected, as a right click does."
 msgstr "Ouvre le menu contextuel de la sélection, comme un clic droit."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Opens the mini player"
 msgstr "Sur la page d'accueil"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Opens versions in {target}, which brings you back here with your place saved."
 msgstr "Ouvre les versions dans {target}, puis vous ramène ici en conservant votre progression."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Opens versions in {target}. It can't tell this app where you stopped, so you mark what you watched yourself."
 msgstr "Ouvre les versions dans {target}. L'application ne peut pas savoir où vous vous êtes arrêté, vous marquez donc vous-même ce que vous avez vu."
 
@@ -3025,7 +3051,7 @@ msgstr "Options"
 msgid "Options for {name}"
 msgstr "Options pour {name}"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Options for the built-in mpv, one per line, as mpv's manual lists them."
 msgstr "Options pour le lecteur mpv intégré, une par ligne, comme répertoriées dans le manuel de mpv."
 
@@ -3183,7 +3209,7 @@ msgstr "En pause sur {name}, à {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Met en pause et demande confirmation avant l'épisode suivant après ce nombre d'épisodes consécutifs sans interaction."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
 msgstr ""
 
@@ -3223,8 +3249,7 @@ msgstr "Sélectionnez la réplique que vous avez entendue à {heardAt}."
 msgid "Pick the version to download."
 msgstr "Choisissez la version à télécharger."
 
-#: src/app/settings/apps.tsx src/app/settings/playback.tsx
-#: src/features/player/options.tsx
+#: src/app/settings/player.tsx src/features/player/options.tsx
 msgid "Picture-in-picture"
 msgstr "Image dans l'image"
 
@@ -3281,7 +3306,7 @@ msgstr "Lire {code}"
 msgid "Play anyway"
 msgstr "Lire maintenant"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Play by themselves"
 msgstr "Lire la première version"
@@ -3294,7 +3319,7 @@ msgstr "Lire depuis le début"
 msgid "Play in {seconds}s"
 msgstr "Lecture dans {seconds} s"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Play in the background"
 msgstr "Lecture en arrière-plan"
 
@@ -3356,7 +3381,7 @@ msgstr "Retarder le son"
 msgid "Play the version's default track first"
 msgstr "Lire d'abord la piste par défaut de la version"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Play versions in"
 msgstr "Lire les versions dans"
 
@@ -3395,16 +3420,16 @@ msgstr "Échec de la lecture : {failure}"
 msgid "Played here"
 msgstr "Lu ici"
 
-#: src/app/settings/about.tsx src/app/settings/playback.tsx
-#: src/lib/input/actions.ts
+#: src/app/settings/about.tsx src/app/settings/page.tsx
+#: src/app/settings/player.tsx src/lib/input/actions.ts
 msgid "Player"
 msgstr "Lecteur"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Player link"
 msgstr "Lien du lecteur"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Player window"
 msgstr "Lire maintenant"
@@ -3454,7 +3479,7 @@ msgstr "Lit <0>{title}</0> pour tous ceux qui rejoignent."
 msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
 msgstr "Accélère ou ralentit légèrement la lecture pour rattraper la session. Si désactivé, la vidéo saute directement."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
 msgstr "Lit en Dolby Vision lorsque l'écran le gère. Désactivez cette option pour lire en HDR10 (disponible sur la plupart de ces vidéos) si Dolby Vision semble sombre ou scintille. Les vidéos sans flux HDR10 restent lues en Dolby Vision."
 
@@ -3470,9 +3495,14 @@ msgstr "Lit la vidéo."
 msgid "Position"
 msgstr "Position"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Poster size"
 msgstr "Taille des affiches"
+
+#: src/app/settings/browsing.tsx
+#, fuzzy
+msgid "Posters and grids"
+msgstr "Accueil et grilles"
 
 #: src/app/settings/cache.tsx
 msgid "Posters, backdrops, logos and photos."
@@ -3499,7 +3529,7 @@ msgstr ""
 msgid "Preview"
 msgstr "Aperçu"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Preview the card you rest on"
 msgstr ""
 
@@ -3551,7 +3581,7 @@ msgstr "Rétablit toutes les touches par défaut."
 msgid "QR code"
 msgstr "Code QR"
 
-#: src/app/settings/playback.tsx src/features/player/options.tsx
+#: src/app/settings/player.tsx src/features/player/options.tsx
 msgid "Quality"
 msgstr ""
 
@@ -3623,7 +3653,7 @@ msgstr "Réagir avec {emoji}"
 msgid "Reactions"
 msgstr "Réactions"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
 msgstr ""
 
@@ -3807,7 +3837,7 @@ msgstr "Réinitialiser l'historique"
 msgid "Reset theme"
 msgstr "Réinitialiser le thème"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Restart"
 msgstr "Redémarrer"
 
@@ -3815,7 +3845,7 @@ msgstr "Redémarrer"
 msgid "Restart now"
 msgstr "Redémarrer maintenant"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Restart to switch"
 msgstr "Redémarrer pour changer"
 
@@ -3861,7 +3891,7 @@ msgstr "Retour rapide"
 msgid "Right"
 msgstr "Droite"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Rotates through featured titles"
 msgstr "Fait défiler les titres à la une"
 
@@ -3869,7 +3899,7 @@ msgstr "Fait défiler les titres à la une"
 msgid "Rotten Tomatoes audience"
 msgstr "Rotten Tomatoes public"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Row"
 msgstr "Ligne"
 
@@ -3894,8 +3924,8 @@ msgstr "S{s}E{e}"
 msgid "Sans serif"
 msgstr "Sans-serif"
 
-#: src/app/settings/_components/version-settings.tsx src/app/settings/apps.tsx
-#: src/features/playlists/playlists.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/player.tsx src/features/playlists/playlists.tsx
 msgid "Save"
 msgstr "Enregistrer"
 
@@ -3935,7 +3965,7 @@ msgstr "Enregistrer les pages de titres"
 msgid "Save what you browse"
 msgstr "Enregistrer ce que vous consultez"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Saved"
 msgstr "Enregistré"
 
@@ -3990,6 +4020,11 @@ msgstr "Rechercher à nouveau"
 msgid "Search by voice"
 msgstr "Recherche vocale"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Search settings"
+msgstr "Recherche en cours"
+
 #: src/features/player/subtitle-sync.tsx
 msgid "Search the lines"
 msgstr "Rechercher dans les répliques"
@@ -4014,7 +4049,7 @@ msgstr "Voir le téléchargement"
 msgid "Seek"
 msgstr "Rechercher une position"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Seek bar previews"
 msgstr "Aperçus de la barre de lecture"
 
@@ -4091,7 +4126,7 @@ msgstr "Défini manuellement"
 msgid "Settings"
 msgstr "Paramètres"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
 
@@ -4108,7 +4143,7 @@ msgstr "Ombre"
 msgid "Share the invite"
 msgstr "Partager l'invitation"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
 msgstr ""
 
@@ -4157,7 +4192,7 @@ msgstr "Afficher les sous-titres plus tôt"
 msgid "Show subtitles later"
 msgstr "Afficher les sous-titres plus tard"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Show the controls on pause and skip"
 msgstr "Afficher les contrôles"
@@ -4166,7 +4201,7 @@ msgstr "Afficher les contrôles"
 msgid "Show the prompt"
 msgstr "Afficher l'invite"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Show the time"
 msgstr "Afficher l'invite"
@@ -4193,20 +4228,20 @@ msgstr "Affiché"
 msgid "Shows"
 msgstr "Séries"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
 msgstr "Affiche une image de la vidéo à l'endroit pointé, glissé ou sauté sur la barre de lecture. Chaque aperçu lit une portion du fichier ; désactivez-les pour économiser des données."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Shows next episodes in the continue watching row, after what you are partway through."
 msgstr "Affiche les épisodes suivants dans la rangée Reprendre la lecture, après les contenus commencés."
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Shows search results in one grid instead of a row each for movies and shows."
 msgstr "Affiche les résultats de recherche dans une grille unique au lieu d'une ligne distincte pour les films et les séries."
 
@@ -4214,7 +4249,7 @@ msgstr "Affiche les résultats de recherche dans une grille unique au lieu d'une
 msgid "Shows subtitles in your language unless the audio already is."
 msgstr "Affiche les sous-titres dans votre langue sauf si l'audio y est déjà."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Shows the time of day at the top of the player with the controls."
 msgstr ""
 
@@ -4310,7 +4345,7 @@ msgstr "Saut avant"
 msgid "Skip intro"
 msgstr "Passer l'intro"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Skip length"
 msgstr "Durée du saut"
 
@@ -4366,7 +4401,7 @@ msgstr "Emplacement {n} : {emoji}"
 msgid "Slower"
 msgstr "Plus lent"
 
-#: src/app/settings/interface.tsx src/lib/subtitles/style.ts
+#: src/app/settings/browsing.tsx src/lib/subtitles/style.ts
 msgid "Small"
 msgstr "Petit"
 
@@ -4398,7 +4433,7 @@ msgstr "Quelque chose que cet appareil ne peut pas lire"
 msgid "Sort by"
 msgstr ""
 
-#: src/app/settings/audio.tsx src/app/settings/interface.tsx
+#: src/app/settings/audio.tsx src/app/settings/browsing.tsx
 #: src/features/player/options.tsx
 msgid "Sound"
 msgstr "Son"
@@ -4434,11 +4469,6 @@ msgstr "Vitesse {shown}×"
 #: src/lib/input/actions.ts
 msgid "Speed up while held"
 msgstr "Accélérer pendant la pression"
-
-#: src/app/settings/interface.tsx
-#, fuzzy
-msgid "Spoilers"
-msgstr "Bandes-annonces"
 
 #: src/app/settings/apps.tsx
 msgid "Stable"
@@ -4482,7 +4512,7 @@ msgstr "Arrêter"
 msgid "Stop listening"
 msgstr "Arrêter l'écoute"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Stops playing"
 msgstr "En cours de lecture"
@@ -4592,6 +4622,10 @@ msgstr "Sous-titres : {label}"
 msgid "Sun"
 msgstr "Soleil"
 
+#: src/app/settings/player.tsx
+msgid "Super resolution"
+msgstr ""
+
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "Soutenir AIOStreams"
@@ -4622,7 +4656,7 @@ msgstr "Changer de serveur"
 msgid "Switch user"
 msgstr "Changer d'utilisateur"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
 msgstr "Bascule le téléviseur vers la fréquence de rafraîchissement adaptée à chaque vidéo pour des mouvements fluides, puis revient à l'arrêt. L'écran devient noir un instant pendant le changement."
 
@@ -4654,7 +4688,7 @@ msgstr "Synchronisé automatiquement"
 msgid "Syncing subtitles…"
 msgstr "Synchronisation des sous-titres…"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "System"
 msgstr "Système"
 
@@ -4755,7 +4789,7 @@ msgstr "Impossible d'ouvrir ce titre"
 msgid "That you are searching, not what for."
 msgstr "Indique que vous cherchez, sans préciser quoi."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The {name} installed on this computer, in a window of its own with its own controls and configuration. This app still saves your place, marks what you watched and plays the next episode. Compared with the built-in player, you lose:<0><1>The controls, skip buttons and next episode card over the video. They stay in this window, which works as a remote.</1><2>This app's subtitle style, video fit, hardware decoding and audio output settings.</2></0>"
 msgstr "Le lecteur {name} installé sur cet ordinateur, dans sa propre fenêtre avec ses propres contrôles et sa configuration. Cette application continue d'enregistrer votre progression, de marquer les contenus vus et de lancer l'épisode suivant. Par rapport au lecteur intégré, vous perdez :<0><1>Les contrôles, les boutons de saut et la carte de l'épisode suivant sur la vidéo. Ils restent dans cette fenêtre qui fait office de télécommande.</1><2>Le style des sous-titres, l'ajustement vidéo, le décodage matériel et les paramètres de sortie audio de cette application.</2></0>"
 
@@ -4844,11 +4878,11 @@ msgstr "le lien a renvoyé autre chose qu'une vidéo"
 msgid "the live stream stopped"
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
 msgstr ""
 
@@ -4856,7 +4890,7 @@ msgstr ""
 msgid "The movie or show whose page is open."
 msgstr "Le film ou la série dont la page est ouverte."
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
 msgstr "L'ancienne méthode de rendu de mpv, pour les Mac où les autres échouent. Certaines vidéos Dolby Vision affichent des couleurs incorrectes."
 
@@ -4892,9 +4926,17 @@ msgstr "La session est complète"
 msgid "The party is watching <0>{title}</0>"
 msgstr "La session regarde <0>{title}</0>"
 
+#: src/app/settings/page.tsx
+msgid "The player and its controls"
+msgstr ""
+
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
 msgstr "le lecteur n'a pas pu lire cette version"
+
+#: src/app/settings/page.tsx
+msgid "The player, its controls and video"
+msgstr ""
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
@@ -4953,7 +4995,7 @@ msgstr "le lecteur du téléviseur a échoué ({code})"
 msgid "the video app Android picks"
 msgstr "l'application vidéo choisie par Android"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "The video output changes when the app opens again."
 msgstr "La sortie vidéo changera au prochain redémarrage de l'application."
 
@@ -4961,7 +5003,7 @@ msgstr "La sortie vidéo changera au prochain redémarrage de l'application."
 msgid "The whole show"
 msgstr "Toute la série"
 
-#: src/app/settings/page.tsx src/app/settings/theme.tsx
+#: src/app/settings/page.tsx
 msgid "Theme"
 msgstr "Thème"
 
@@ -5001,7 +5043,7 @@ msgstr "Fin"
 msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
 msgstr "Cette application décode elle-même l'audio Dolby et DTS, ce qui fait perdre l'Atmos."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "This browser"
 msgstr "Ce serveur"
@@ -5015,11 +5057,11 @@ msgstr "ce navigateur ne peut pas lire cette version. Rien n'étant converti sur
 msgid "This browser keeps no files for this site."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "This browser's own player, which plays the formats this browser supports."
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
 msgstr ""
 
@@ -5132,7 +5174,7 @@ msgstr "Trois jours"
 msgid "Time format"
 msgstr ""
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Time on each title"
 msgstr ""
 
@@ -5140,12 +5182,12 @@ msgstr ""
 msgid "Timing"
 msgstr "Synchronisation"
 
-#: src/app/history/page.tsx src/app/settings/interface.tsx
+#: src/app/history/page.tsx src/app/settings/browsing.tsx
 msgid "Title"
 msgstr "Titre"
 
-#: src/app/settings/apps.tsx src/app/settings/cache.tsx
-#: src/app/settings/interface.tsx src/app/settings/theme.tsx
+#: src/app/settings/apps.tsx src/app/settings/browsing.tsx
+#: src/app/settings/cache.tsx src/app/settings/theme.tsx
 msgid "Title pages"
 msgstr "Pages des titres"
 
@@ -5195,7 +5237,7 @@ msgstr "Pistes"
 msgid "Trailer"
 msgstr "Bande-annonce"
 
-#: src/app/item/_components/trailers.tsx src/app/settings/interface.tsx
+#: src/app/item/_components/trailers.tsx src/app/settings/browsing.tsx
 msgid "Trailers"
 msgstr "Bandes-annonces"
 
@@ -5222,7 +5264,7 @@ msgstr "Essayez de relancer la session."
 msgid "Try them"
 msgstr "Les tester"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Tunneled playback"
 msgstr "Lecture en tunnel"
 
@@ -5258,7 +5300,7 @@ msgstr "Machine à écrire"
 msgid "Unaired"
 msgstr "Non diffusé"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Under posters"
 msgstr "Sous les affiches"
 
@@ -5307,7 +5349,7 @@ msgstr "À suivre"
 msgid "Up next: {upNext}"
 msgstr "À suivre : {upNext}"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 #, fuzzy
 msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
 msgstr "Jusqu'à {MAX_FEATURED}, combinés ensemble. Si laissé vide, vos premiers catalogues de films et séries seront mis en avant."
@@ -5329,16 +5371,14 @@ msgid "Updates"
 msgstr "Mises à jour"
 
 #: src/app/settings/page.tsx
-msgid "Updates, Discord, mpv and troubleshooting"
-msgstr "Mises à jour, Discord, mpv et dépannage"
-
-#: src/app/settings/page.tsx
-msgid "Updates, mpv and troubleshooting"
+#, fuzzy
+msgid "Updates and troubleshooting"
 msgstr "Mises à jour, mpv et dépannage"
 
 #: src/app/settings/page.tsx
-msgid "Updates, picture-in-picture, mpv and troubleshooting"
-msgstr "Mises à jour, image dans l'image, mpv et dépannage"
+#, fuzzy
+msgid "Updates, Discord and troubleshooting"
+msgstr "Mises à jour, Discord, mpv et dépannage"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
 #, fuzzy
@@ -5430,24 +5470,28 @@ msgstr "Versions et journal récent, à coller dans un rapport d'anomalie."
 msgid "Versions are found for this many episodes at a time when a season or show is added."
 msgstr "Nombre d'épisodes traités simultanément lors de la recherche de versions à l'ajout d'une saison ou série."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead."
 msgstr "Les versions sont lues dans l'application avec ses contrôles et paramètres de lecture. Choisissez un autre lecteur pour les ouvrir dedans."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Versions play in this browser. Choose another player to open them in it instead."
 msgstr "Les versions sont lues dans ce navigateur. Choisissez un autre lecteur pour les ouvrir dedans."
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/page.tsx
+msgid "Versions, next episode and skipping"
+msgstr ""
+
+#: src/app/settings/player.tsx
 msgid "Video"
 msgstr "Vidéo"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 #, fuzzy
 msgid "Video only"
 msgstr "Vidéo"
 
-#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
 msgid "Video output"
 msgstr "Sortie vidéo"
 
@@ -5479,7 +5523,7 @@ msgstr "Baisser le volume"
 msgid "Volume down key"
 msgstr "Touche Volume bas"
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Volume step"
 msgstr "Palier de volume"
 
@@ -5746,7 +5790,7 @@ msgstr "Mots ou /motif/"
 msgid "Writer"
 msgstr "Scénariste"
 
-#: src/app/settings/interface.tsx
+#: src/app/settings/browsing.tsx
 msgid "Year"
 msgstr "Année"
 
@@ -5777,7 +5821,7 @@ msgstr "Vous avez quitté la session."
 msgid "You'll be reminded at {time}"
 msgstr ""
 
-#: src/app/settings/playback.tsx
+#: src/app/settings/player.tsx
 msgid "Your {name}"
 msgstr "Votre {name}"
 
