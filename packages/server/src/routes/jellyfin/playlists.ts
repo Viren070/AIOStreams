@@ -71,19 +71,18 @@ function idsOf(req: Request, name: string): string[] {
 async function playableIds(
   ctx: JellyfinRequestContext,
   ids: string[],
-  opts: { cap?: number; needMeta?: boolean } = {}
+  opts: { cap?: number } = {}
 ): Promise<string[]> {
   const cap = opts.cap ?? PLAYLIST_LIMITS.items;
   const found = await mapLimited(ids.slice(0, cap), ROW_CONCURRENCY, (raw) =>
-    titlesOf(ctx, raw, opts.needMeta).catch(() => [])
+    titlesOf(ctx, raw).catch(() => [])
   );
   return found.flat().slice(0, cap);
 }
 
 async function titlesOf(
   ctx: JellyfinRequestContext,
-  raw: string,
-  needMeta = false
+  raw: string
 ): Promise<string[]> {
   let itemId = hyphenless(raw);
   let decoded = await decodeForRequest(ctx, itemId);
@@ -102,13 +101,6 @@ async function titlesOf(
       d.k === 'movie'
         ? await itemFromDescriptor(ctx, d, { bare: true }).catch(() => null)
         : null;
-    // A film no meta addon knows is only a placeholder named by its id.
-    if (
-      needMeta &&
-      d.k === 'movie' &&
-      (!item || (item.aiostreams as { noMeta?: boolean } | undefined)?.noMeta)
-    )
-      return [];
     if (d.k === 'movie' && item?.Type !== 'BoxSet') return [itemId];
     const r = await boxSetChildren(ctx, d);
     return (r?.children ?? [])
@@ -252,10 +244,7 @@ router.post(
     while (next < ids.length && found.length < PLAYLIST_LIMITS.items) {
       const chunk = ids.slice(next, (next += ROW_CONCURRENCY * 4));
       // Uncapped, so a show longer than a playlist is seen to overflow it.
-      const playable = await playableIds(ctx, chunk, {
-        cap: Infinity,
-        needMeta: true,
-      });
+      const playable = await playableIds(ctx, chunk, { cap: Infinity });
       found.push(...withoutRepeats(playable, found));
     }
     const items = found.slice(0, PLAYLIST_LIMITS.items);
