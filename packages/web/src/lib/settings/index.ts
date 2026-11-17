@@ -684,6 +684,10 @@ export const settings = {
     ),
     gpuSubtitles: device<boolean>('aiostreams-web-video-gpu-subtitles', true),
     upscaling: device<boolean>('aiostreams-web-video-upscaling', false),
+    superResolution: device<boolean>(
+      'aiostreams-web-video-super-resolution',
+      false
+    ),
     hdrOutput: device<boolean>('aiostreams-web-video-hdr-output', false),
   },
   audio: {

@@ -29,6 +29,10 @@ windows = { version = "0.62", features = [
   "Media",
   "Storage_Streams",
   "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
   "Win32_System_Com",
   "Win32_System_WinRT",
   "Win32_UI_Shell",
@@ -36,6 +40,7 @@ windows = { version = "0.62", features = [
 ] }
 webview2-com = "0.39"
 windows-sys = { workspace = true, features = [
+  "Win32_Devices_Display",
   "Win32_Foundation",
   "Win32_Globalization",
   "Win32_Graphics_Gdi",

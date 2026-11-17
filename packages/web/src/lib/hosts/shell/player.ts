@@ -540,6 +540,9 @@ export function playerSettings() {
           tunneling: video.tunneling.read(),
           gpuSubtitles: video.gpuSubtitles.read(),
         }
-      : { audioDevice: audio.device.read() }),
+      : {
+          audioDevice: audio.device.read(),
+          superResolution: video.superResolution.read(),
+        }),
   };
 }

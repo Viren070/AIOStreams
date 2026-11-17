@@ -1985,6 +1985,10 @@ msgid "Has a PIN"
 msgstr ""
 
 #: src/app/settings/player.tsx
+msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
+msgstr ""
+
+#: src/app/settings/player.tsx
 msgid "HDR output"
 msgstr ""
 
@@ -4746,6 +4750,10 @@ msgstr ""
 
 #: src/app/settings/theme.tsx
 msgid "Sun"
+msgstr ""
+
+#: src/app/settings/player.tsx
+msgid "Super resolution"
 msgstr ""
 
 #: src/lib/i18n.ts

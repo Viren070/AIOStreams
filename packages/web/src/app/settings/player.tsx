@@ -13,6 +13,7 @@ import {
   shellHost,
   chooseExternalPlayer,
   useExternalPlayers,
+  useShellInfo,
 } from '@/lib/hosts/shell';
 import {
   openMpvConfig,
@@ -430,6 +431,10 @@ function VideoCard() {
   );
   const [dolbyVision, setDolbyVision] = useSetting(settings.video.dolbyVision);
   const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
+  const [superResolution, setSuperResolution] = useSetting(
+    settings.video.superResolution
+  );
+  const info = useShellInfo();
   const [hdrOutput, setHdrOutput] = useSetting(settings.video.hdrOutput);
   const [frameRate, setFrameRate] = useSetting(settings.video.frameRate);
   const [tunneling, setTunneling] = useSetting(settings.video.tunneling);
@@ -471,6 +476,15 @@ function VideoCard() {
           help={t`Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are.`}
           value={upscaling}
           onValueChange={setUpscaling}
+        />
+      )}
+      {info?.superResolution && (
+        <Switch
+          side="right"
+          label={t`Super resolution`}
+          help={t`Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with.`}
+          value={superResolution}
+          onValueChange={setSuperResolution}
         />
       )}
       {webGpu && (
