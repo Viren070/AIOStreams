@@ -36,7 +36,12 @@ export function parseMdbListUrl(input: string): MdbListRef | null {
   const parts = url.pathname.split('/').filter(Boolean);
   if (parts[parts.length - 1] === 'json') parts.pop();
   if (parts.length !== 3 || parts[0] !== 'lists') return null;
-  const [, user, slug] = parts.map(decodeURIComponent);
+  let user: string, slug: string;
+  try {
+    [, user, slug] = parts.map(decodeURIComponent);
+  } catch {
+    return null;
+  }
   if (!NAME.test(user) || !NAME.test(slug)) return null;
   return { user, slug };
 }

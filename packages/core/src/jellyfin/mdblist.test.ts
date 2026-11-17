@@ -31,6 +31,13 @@ describe('parseMdbListUrl', () => {
     }
   });
 
+  it('decodes a correctly encoded name', () => {
+    assert.deepEqual(parseMdbListUrl('https://mdblist.com/lists/hd%6Cists/x'), {
+      user: 'hdlists',
+      slug: 'x',
+    });
+  });
+
   it('keeps names with dots, underscores and capitals', () => {
     assert.deepEqual(
       parseMdbListUrl('https://mdblist.com/lists/leo.ninja_Monkey/Kids-2'),
@@ -52,6 +59,8 @@ describe('parseMdbListUrl', () => {
       'https://user@mdblist.com/lists/a/b',
       'https://mdblist.com:8443/lists/a/b',
       'ftp://mdblist.com/lists/a/b',
+      'https://mdblist.com/lists/%E0%A4%A/b',
+      'https://mdblist.com/lists/a/%zz',
     ]) {
       assert.equal(parseMdbListUrl(link), null, link);
     }
