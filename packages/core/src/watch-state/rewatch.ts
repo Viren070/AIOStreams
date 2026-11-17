@@ -40,3 +40,16 @@ export function rewatchNextIndex(
   }
   return -1;
 }
+
+/**
+ * Whether an aired episode was played after the last aired one, given each
+ * one's last play date in order: a show watched to the end can only be
+ * rewatched from such a play, so without one Next Up needn't look further.
+ */
+export function playedBackSince(
+  lastPlayedAt: readonly (number | null | undefined)[]
+): boolean {
+  if (!lastPlayedAt.length) return false;
+  const last = lastPlayedAt[lastPlayedAt.length - 1] ?? 0;
+  return lastPlayedAt.slice(0, -1).some((at) => (at ?? 0) > last);
+}

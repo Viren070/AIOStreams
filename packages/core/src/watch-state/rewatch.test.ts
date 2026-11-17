@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { rewatchNextIndex } from './rewatch.js';
+import { playedBackSince, rewatchNextIndex } from './rewatch.js';
 
 /** An episode played at `at` (a day number), or never played. */
 const ep = (at?: number, aired = true) => ({
@@ -87,5 +87,25 @@ describe('rewatchNextIndex', () => {
     assert.equal(rewatchNextIndex([ep(), ep()]), -1);
     const undated = { played: true, aired: true, lastPlayedAt: null };
     assert.equal(rewatchNextIndex([undated, undated, ep()]), -1);
+  });
+});
+
+describe('playedBackSince', () => {
+  it('is false for a show watched in order', () => {
+    assert.equal(playedBackSince([1, 2, 3]), false);
+  });
+
+  it('is true when an earlier episode was played after the last one', () => {
+    assert.equal(playedBackSince([1, 5, 3]), true);
+  });
+
+  it('is false when plays share a date', () => {
+    assert.equal(playedBackSince([4, 4, 4]), false);
+  });
+
+  it('counts a missing date as never', () => {
+    assert.equal(playedBackSince([2, null, null]), true);
+    assert.equal(playedBackSince([null, null, 2]), false);
+    assert.equal(playedBackSince([]), false);
   });
 });

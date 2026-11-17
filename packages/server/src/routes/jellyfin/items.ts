@@ -61,6 +61,7 @@ import {
   trackPreferencesFrom,
   msToTicks,
   ratingUserData,
+  playedBackSince,
   rewatchNextIndex,
   seasonAnimeIds,
   filmAnimeIds,
@@ -147,15 +148,25 @@ async function airedEpisodesOf(
   return show ? airedEpisodeRefs(show, now) : undefined;
 }
 
-/** Whether every aired episode is played, from an episode list that can lag the meta. */
-export async function caughtUpOn(
+/**
+ * Whether every aired episode is played, from an episode list that can lag
+ * the meta, and whether one was played after the last: only then can a show
+ * watched to the end be a rewatch.
+ */
+export async function caughtUpState(
   ctx: JellyfinRequestContext,
   d: { t: string; i: string }
-): Promise<boolean> {
+): Promise<{ caughtUp: boolean; playedBack: boolean }> {
   const aired = await airedEpisodesOf(ctx, d, Date.now());
-  if (!aired?.length) return false;
+  if (!aired?.length) return { caughtUp: false, playedBack: false };
   const rows = await watchRowsFor(ctx.watch, aired);
-  return aired.every((ref) => rows.get(itemKeyFor(ref))?.played);
+  const found = aired.map((ref) => rows.get(itemKeyFor(ref)));
+  const caughtUp = found.every((row) => row?.played);
+  return {
+    caughtUp,
+    playedBack:
+      caughtUp && playedBackSince(found.map((row) => row?.lastPlayedAt)),
+  };
 }
 
 /** A channel with its number and what airs on it now, from its own schedule or its guide page. */
@@ -879,12 +890,16 @@ export async function nextUpForSeries(
   const again =
     opts.rewatching && !at.resume
       ? rewatchNextIndex(
-          at.eps.map((e) => ({
-            played: slotPlayed(e),
-            aired: !isUnairedVideo(e.video),
-            lastPlayedAt: e.row?.lastPlayedAt,
-            inProgress: (e.row?.positionMs ?? 0) > 0,
-          }))
+          at.eps.map((e, i) => {
+            // The furthest play can be a row under another of the show's ids.
+            const elsewhere = i === at.from && !slotPlayed(e) && !!last?.played;
+            return {
+              played: slotPlayed(e) || elsewhere,
+              aired: !isUnairedVideo(e.video),
+              lastPlayedAt: elsewhere ? last.lastPlayedAt : e.row?.lastPlayedAt,
+              inProgress: (e.row?.positionMs ?? 0) > 0,
+            };
+          })
         )
       : -1;
   let next: JellyfinItem | null;
@@ -898,7 +913,13 @@ export async function nextUpForSeries(
           .find((e) => !isUnairedVideo(e.video) && !slotPlayed(e));
     next = at.resume ?? (pick ? at.build(pick) : null);
   }
-  if (next && opts.includeResumable === false && isResumable(next)) return null;
+  // A rewatched episode stopped part-way is played and has a position: it
+  // resumes from Continue watching like any other.
+  const resumable =
+    !!next &&
+    (isResumable(next) ||
+      (again >= 0 && (at.eps[again].row?.positionMs ?? 0) > 0));
+  if (opts.includeResumable === false && resumable) return null;
   return next;
 }
 

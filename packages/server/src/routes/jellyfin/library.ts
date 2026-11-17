@@ -60,7 +60,7 @@ import {
   attachUserData,
   boxSetChildren,
   channelListItems,
-  caughtUpOn,
+  caughtUpState,
   decodeForRequest,
   decodeItemForRequest,
   isBoxsetCatalog,
@@ -1049,9 +1049,12 @@ router.get(
           i: seriesIdOf(row.baseId, row.videoId, row.mediaType),
         };
         // A part-played anchor can still come back to resume.
-        const caughtUp =
-          row.played && (await caughtUpOn(ctx, d).catch(() => false));
-        if (caughtUp && !rewatching) return null;
+        const state = row.played
+          ? await caughtUpState(ctx, d).catch(() => null)
+          : null;
+        const caughtUp = !!state?.caughtUp;
+        // Without a play since the last episode there is nothing to rewatch.
+        if (caughtUp && !(rewatching && state?.playedBack)) return null;
         const item = await nextUpForSeries(ctx, d, row, {
           includeResumable,
           rewatching,

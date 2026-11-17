@@ -7,7 +7,7 @@ export * from './lookup.js';
 export * from './handoff/index.js';
 export * from './sessions.js';
 export { LocalWatchStateProvider, playedThrough } from './local-provider.js';
-export { rewatchNextIndex } from './rewatch.js';
+export { playedBackSince, rewatchNextIndex } from './rewatch.js';
 
 let provider: WatchStateProvider | null = null;
 
