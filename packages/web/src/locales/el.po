@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-15 22:54+0000\n"
+"PO-Revision-Date: 2026-11-17 14:17+0000\n"
 "Last-Translator: Nasos Vasileiadis <nosvasedis@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Greek <https://hosted.weblate.org/projects/aiostreams/web-app/el/>\n"
 "Language: el\n"
@@ -182,7 +182,7 @@ msgstr "Αποχώρησε από την ομαδική προβολή: {name}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "{off} off"
-msgstr ""
+msgstr "{off} ανενεργές"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -522,7 +522,7 @@ msgstr "Όλα τα πεδία"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Όλες ενεργές"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -743,11 +743,11 @@ msgstr "Μαύρο"
 
 #: src/app/settings/playback.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Συνθέτει τους υπότιτλους πάνω στο βίντεο μέσω της κάρτας γραφικών, μειώνοντας τον φόρτο του επεξεργαστή. Ισχύει μόνο για βίντεο που αναπαράγει το ExoPlayer. Απενεργοποίησέ το αν οι υπότιτλοι δεν εμφανίζονται σωστά."
 
 #: src/app/settings/playback.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Συνθέτει τους υπότιτλους πάνω στο βίντεο μέσω της κάρτας γραφικών, μειώνοντας τον φόρτο του επεξεργαστή. Απενεργοποίησέ το αν οι υπότιτλοι δεν εμφανίζονται σωστά."
 
 #: src/lib/i18n.ts
 msgid "Blue"
@@ -1472,7 +1472,7 @@ msgstr "Τέλος"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Double tap to skip"
-msgstr ""
+msgstr "Διπλό πάτημα για μετακίνηση"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1533,7 +1533,7 @@ msgstr "Οι λήψεις περιμένουν σύνδεση Wi-Fi ή άλλο 
 
 #: src/app/settings/playback.tsx
 msgid "Draw subtitles on the graphics card"
-msgstr ""
+msgstr "Απόδοση υποτίτλων μέσω κάρτας γραφικών"
 
 #: src/lib/i18n.ts
 msgid "Drawer"
@@ -1833,7 +1833,7 @@ msgstr "Γενικά"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Gestures"
-msgstr ""
+msgstr "Χειρονομίες"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
@@ -1933,7 +1933,7 @@ msgstr "Κρυφό"
 
 #: src/app/settings/interface.tsx
 msgid "Hidden, channels also leave search and favourites."
-msgstr ""
+msgstr "Αν κρύψεις τα κανάλια, δεν εμφανίζονται ούτε στην αναζήτηση ούτε στα αγαπημένα."
 
 #: src/features/player/next-episode.tsx
 msgid "Hide"
@@ -1953,9 +1953,8 @@ msgid "Hold"
 msgstr "Παρατεταμένο πάτημα"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Hold to speed up"
-msgstr "Ταχύτητα παρατεταμένου πατήματος"
+msgstr "Παρατεταμένο πάτημα για επιτάχυνση"
 
 #: src/app/settings/apps.tsx src/app/settings/interface.tsx
 #: src/components/shell/layout.tsx src/lib/input/actions.ts
@@ -1972,7 +1971,7 @@ msgstr "Αρχική και βιβλιοθήκες"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
-msgstr ""
+msgstr "Αρχική, αναζήτηση και κατάλογοι"
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2056,7 +2055,7 @@ msgstr "Στις λήψεις της εφαρμογής"
 
 #: src/app/settings/interface.tsx
 msgid "In the navigation only"
-msgstr ""
+msgstr "Μόνο στην πλοήγηση"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2846,16 +2845,15 @@ msgstr "στον διακομιστή αναμετάδοσης {relay}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "On either side of the video, by the skip length."
-msgstr ""
+msgstr "Στη μία ή την άλλη πλευρά του βίντεο, κατά το καθορισμένο διάστημα μετακίνησης."
 
 #: src/app/settings/interface.tsx
 msgid "On home and in the navigation"
-msgstr ""
+msgstr "Στην αρχική και στην πλοήγηση"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
-msgstr "Στην αρχική όσο εναλλάσσεται το κεντρικό πλαίσιο και στα πλέγματα. Στο πλέγμα ή με το ποντίκι, η κάρτα ανοίγει πάνω από τις διπλανές, που μένουν στη θέση τους."
+msgstr "Στην αρχική κατά την εναλλαγή του κεντρικού πλαισίου, στην αναζήτηση και στα πλέγματα. Με το ποντίκι, η κάρτα ανοίγει πάνω από τις διπλανές. Με πληκτρολόγιο ή τηλεχειριστήριο, μεγαλώνει και δείχνει λεπτομέρειες."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3025,7 +3023,7 @@ msgstr "Άλλες συσκευές"
 
 #: src/app/settings/theme.tsx
 msgid "Other pages, such as settings"
-msgstr ""
+msgstr "Άλλες σελίδες, όπως οι ρυθμίσεις"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3222,9 +3220,8 @@ msgid "PIN or password"
 msgstr "PIN ή κωδικός πρόσβασης"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Pinch to fill the screen"
-msgstr "Έξοδος από πλήρη οθόνη"
+msgstr "Ζουμ με δύο δάχτυλα για γέμισμα της οθόνης"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3462,9 +3459,8 @@ msgid "Preview"
 msgstr "Προεπισκόπηση"
 
 #: src/app/settings/interface.tsx
-#, fuzzy
 msgid "Preview the card you rest on"
-msgstr "Κάρτα σε εστίαση"
+msgstr "Προεπισκόπηση κάρτας σε εστίαση"
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -4548,17 +4544,16 @@ msgid "Support AIOStreams"
 msgstr "Στήριξε το AIOStreams"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Swipe across to seek"
-msgstr "Όριο χρήσης χώρου"
+msgstr "Οριζόντια σάρωση για μετακίνηση στο βίντεο"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the left for brightness"
-msgstr ""
+msgstr "Σύρε πάνω ή κάτω αριστερά για τη φωτεινότητα"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the right for volume"
-msgstr ""
+msgstr "Σύρε πάνω ή κάτω δεξιά για την ένταση"
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4755,9 +4750,8 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Το πρόγραμμα αναπαραγωγής της εφαρμογής και οι επιλογές του, όπως η έναρξη βίντεο σε οριζόντιο προσανατολισμό."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
-msgstr "Η εικόνα του τρέχοντος τίτλου, θολή και σκοτεινή, πίσω από τις σελίδες και τη λίστα εκδόσεων."
+msgstr "Η εικόνα του τρέχοντος τίτλου εμφανίζεται θολή και σκοτεινή πίσω από αυτές τις σελίδες. Εμφανίζεται και στη λίστα εκδόσεων όταν είναι ενεργή για τις σελίδες τίτλων."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5541,7 +5535,7 @@ msgstr "Τι θα αποθηκεύεται"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "What touching or holding the video does."
-msgstr ""
+msgstr "Τι γίνεται όταν αγγίζεις ή κρατάς πατημένο το βίντεο."
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
@@ -5677,7 +5671,7 @@ msgstr "Με {names}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "With a finger or the mouse button, at the held speed."
-msgstr ""
+msgstr "Κράτησε πατημένο με το δάχτυλο ή το κουμπί του ποντικιού για αναπαραγωγή στην καθορισμένη ταχύτητα."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
