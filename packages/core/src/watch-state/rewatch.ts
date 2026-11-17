@@ -1,17 +1,19 @@
 /**
- * Where a rewatch goes on to, for Next Up with Jellyfin's `EnableRewatching`.
+ * Where Next Up goes on to with Jellyfin's `EnableRewatching`: from the
+ * episode played most recently rather than the furthest one watched.
  *
- * Next Up goes on from the furthest episode watched, so a show watched to the
- * end has nothing to offer while someone watches it again. A rewatch goes on
- * from the episode played most recently, found by its own play date as
- * Jellyfin does: an import can give every row of a show one timestamp, so the
- * row order says nothing about which was played last. The answer is the first
- * episode after it that has aired, whether the first watch reached it or not,
- * or that episode itself while it was stopped part-way through. An episode
- * started and left unfinished counts as a play from the date it was left.
+ * Next Up goes on from the furthest episode watched, so a show watched up to
+ * its newest episode has nothing to offer while someone watches it again, or
+ * goes back to earlier episodes they never saw. Either way it goes on from the
+ * episode played most recently, found by its own play date as Jellyfin does:
+ * an import can give every row of a show one timestamp, so the row order says
+ * nothing about which was played last. The answer is the first episode after
+ * it that has aired, whether it was watched before or not, or that episode
+ * itself while it was stopped part-way through. An episode started and left
+ * unfinished counts as a play from the date it was left.
  *
- * Only a play behind the furthest episode watched is a rewatch. Otherwise, or
- * with no dated play, this is -1 and the usual Next Up applies.
+ * Only a play behind the furthest episode watched changes anything. Otherwise,
+ * or with no dated play, this is -1 and the usual Next Up applies.
  */
 export function rewatchNextIndex(
   episodes: readonly {

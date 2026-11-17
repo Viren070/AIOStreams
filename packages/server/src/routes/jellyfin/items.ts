@@ -864,8 +864,9 @@ async function watchingPosition(
 
 /**
  * The episode to watch next. With `rewatching` (Jellyfin's
- * `EnableRewatching`), a show being watched again goes on from the episode
- * played most recently, so the answer can be one already watched.
+ * `EnableRewatching`), a show goes on from the episode played most recently,
+ * not the furthest one: a rewatch, or earlier episodes someone went back to,
+ * so the answer can be before the furthest episode and one already watched.
  */
 export async function nextUpForSeries(
   ctx: JellyfinRequestContext,

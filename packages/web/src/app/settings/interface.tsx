@@ -391,8 +391,8 @@ export function InterfaceSection() {
         />
         <Switch
           side="right"
-          label={t`Rewatching in next up`}
-          help={t`Goes on with a show you are watching again from the episode you played last, even when you have seen the next one before.`}
+          label={t`Next up from the last episode played`}
+          help={t`Goes on from the episode you played last instead of the furthest one, when you watch a show again or go back to earlier episodes.`}
           value={rewatchNextUp}
           onValueChange={setRewatchNextUp}
         />

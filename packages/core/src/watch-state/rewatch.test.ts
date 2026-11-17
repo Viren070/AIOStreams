@@ -22,6 +22,13 @@ describe('rewatchNextIndex', () => {
     assert.equal(rewatchNextIndex(show), 2);
   });
 
+  it('goes on from an earlier episode watched for the first time', () => {
+    // Caught up with the newest episodes on days 1-3, then went back to the
+    // start of the show on days 10-11: next is the third episode, never seen.
+    const show = [ep(10), ep(11), ep(), ep(), ep(1), ep(2), ep(3)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
   it('offers an episode the first watch skipped', () => {
     const show = [ep(10), ep(11), ep(), ep(4)];
     assert.equal(rewatchNextIndex(show), 2);
