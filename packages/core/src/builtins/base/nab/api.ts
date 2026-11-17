@@ -81,7 +81,6 @@ const NEWZNAB_PROFILE: NabScanProfile = {
   indexers: new Set(['prowlarrindexer'] as const),
   enclosureLength: true,
   attrs: new Map<string, NabAttrType>([
-    ['zyclopsHealth', 'string'],
     ['usenetdate', 'string'],
     ['language', 'string'],
     ['subs', 'string'],

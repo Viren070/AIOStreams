@@ -76,8 +76,6 @@ export const runtimeSchemas = {
 } as const;
 
 export const runtimeKeyAliases: Record<string, string> = {
-  'nzbProxy.zyclopsHealthProxyEndpoint':
-    'builtins.nab.zyclopsHealthProxyEndpoint',
   'userLimits.maxNzbFailoverCount': 'userLimits.maxFailoverAttempts',
   'usenet.maxDownloadConnections': 'usenet.maxConcurrentDownloads',
   'jellyfin.maxPersonas': 'jellyfin.maxProfiles',
