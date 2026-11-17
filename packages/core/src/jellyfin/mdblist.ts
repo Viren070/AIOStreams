@@ -113,7 +113,12 @@ export async function fetchMdbList(list: MdbListRef): Promise<MdbListTitle[]> {
       `MDBList answered ${response.status}`,
       'unavailable'
     );
-  const body: unknown = await response.json().catch(() => null);
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new MdbListError('MDBList sent an unreadable answer', 'unavailable');
+  }
   if (!Array.isArray(body))
     throw new MdbListError('No public MDBList list at that link', 'not-found');
   return mdbListTitles(body);
