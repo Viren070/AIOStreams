@@ -603,8 +603,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@aiostreams/jassub':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@aiostreams/ui':
         specifier: workspace:*
         version: link:../ui
@@ -727,8 +727,8 @@ packages:
     resolution: {integrity: sha512-bgt7dSU1HufSKO7hqE7SuyGJ7BPOXUx6/S2lH4UMkwTlHHiRlGtOWFaXLlUOYi7iLJRcEnGvdxKu5kwO+Qu8Yw==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
 
-  '@aiostreams/jassub@0.1.0':
-    resolution: {integrity: sha512-Lmcom4pKcFlfMjL2a824AXyNte9xRNvWtXiLV/jasQNqgU3Ubc3NM8r+bGdu6R7OJPJWCGS+7bi4ZchSLwz5UA==}
+  '@aiostreams/jassub@0.1.1':
+    resolution: {integrity: sha512-/TPOm8xzbbJre/Jnl1peHxv1VwFdhDi96hQaxz7nv9CfTj1++KRq3/n0it/D9Cnifa7CuhdKjbX137S5ipnglw==}
 
   '@aiostreams/release-parser@1.0.1':
     resolution: {integrity: sha512-gWkU+TOtOCHa28lR7pYUtEpi5XLAVzedfotrehdLjaAUnYFwRewG10DwdPWjAmY1Xn5i2+VNXxa5C/eWZhhREQ==}
@@ -8157,7 +8157,7 @@ snapshots:
 
   '@aiostreams/fsmux@0.3.1': {}
 
-  '@aiostreams/jassub@0.1.0':
+  '@aiostreams/jassub@0.1.1':
     dependencies:
       abslink: 1.3.1
       lfa-ponyfill: 1.1.1
