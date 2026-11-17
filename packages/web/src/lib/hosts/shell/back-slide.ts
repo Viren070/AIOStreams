@@ -40,6 +40,8 @@ let slide: Slide | null = null;
 /** Unknown where no host notes it, so Home can't be shown where it was left. */
 let homeY: number | null = null;
 
+const backSide = (): 1 | -1 => (pageRtl() ? -1 : 1);
+
 const pathOf = (hash: string) => hash.slice(1).split('?')[0] || '/';
 const pagePath = () => pathOf(location.hash);
 
@@ -213,7 +215,7 @@ export function backGesture(
     | { event: 'cancel' }
 ): void {
   if (m.event === 'start') {
-    begin(m.fromRight ? -1 : 1);
+    begin(backSide());
     return;
   }
   if (!slide) return;
@@ -250,7 +252,7 @@ export function slideBack(): boolean {
     document.documentElement.hasAttribute('data-tv') ||
     !matchMedia('(pointer: coarse)').matches ||
     matchMedia('(prefers-reduced-motion: reduce)').matches ||
-    !begin(pageRtl() ? -1 : 1)
+    !begin(backSide())
   )
     return false;
   backPressed();
