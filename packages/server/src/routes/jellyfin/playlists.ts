@@ -1,11 +1,17 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  contentDescriptor,
   decodeItemId,
+  encodeItemId,
+  fetchMdbList,
   hyphenless,
   isUnairedEpisode,
   JellyfinPlaylistRepository,
   listResult,
+  MdbListError,
+  mdbListName,
   newPlaylistId,
+  parseMdbListUrl,
   PLAYLIST_LIMITS,
   resolveByMediaSource,
   stripInternal,
@@ -186,6 +192,61 @@ router.post(
       return;
     }
     res.json({ Id: playlist.id });
+  })
+);
+
+/**
+ * A playlist made from a public MDBList list: its titles in the list's order,
+ * a show adding its aired episodes as anywhere else. A copy, not a link; the
+ * list is read once, from mdblist.com only.
+ */
+router.post(
+  '/AIOStreams/Playlists/FromMdbList',
+  jf(async (req, res, ctx) => {
+    const link = bodyField(req, 'Url') ?? qs(req, 'Url');
+    const list = typeof link === 'string' ? parseMdbListUrl(link) : null;
+    if (!list) {
+      res
+        .status(400)
+        .json({ Message: 'Paste the link of a public MDBList list' });
+      return;
+    }
+    let titles;
+    try {
+      titles = await fetchMdbList(list);
+    } catch (error) {
+      const missing =
+        error instanceof MdbListError && error.reason === 'not-found';
+      // Not 502, which a client reads as this server being down.
+      res.status(missing ? 404 : 424).json({
+        Message:
+          error instanceof Error ? error.message : 'MDBList could not be read',
+      });
+      return;
+    }
+    const ids = titles.map((title) =>
+      encodeItemId(contentDescriptor({ id: title.id, type: title.type }))
+    );
+    const items = withoutRepeats(await playableIds(ctx, ids));
+    if (!items.length) {
+      res.status(422).json({ Message: 'Nothing in that list can be played' });
+      return;
+    }
+    const playlist = await JellyfinPlaylistRepository.create(
+      playlistOwner(ctx),
+      {
+        id: newPlaylistId(),
+        name: nameOf(bodyField(req, 'Name')) || mdbListName(list),
+        items,
+      }
+    );
+    if (!playlist) {
+      res.status(400).json({
+        Message: `You can have up to ${PLAYLIST_LIMITS.perUser} playlists`,
+      });
+      return;
+    }
+    res.json({ Id: playlist.id, Count: items.length });
   })
 );
 

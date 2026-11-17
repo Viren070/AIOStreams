@@ -335,6 +335,13 @@ function PlaylistIndex({
           action={t`Create`}
           onSave={(name) => edits.create(name, []).then(onOpen)}
         />
+        <div className="mt-2">
+          <NameForm
+            placeholder={t`MDBList list link`}
+            action={t`Import`}
+            onSave={(url) => edits.importMdbList(url).then(onOpen)}
+          />
+        </div>
       </div>
       {playlists.isLoading ? (
         <ListSkeleton />

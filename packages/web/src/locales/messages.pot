@@ -2123,6 +2123,7 @@ msgid "Image"
 msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
+#: src/features/playlists/playlists.tsx
 msgid "Import"
 msgstr ""
 
@@ -2482,6 +2483,10 @@ msgstr ""
 
 #: src/components/shell/window-controls.tsx
 msgid "Maximise"
+msgstr ""
+
+#: src/features/playlists/playlists.tsx
+msgid "MDBList list link"
 msgstr ""
 
 #: src/app/settings/browsing.tsx

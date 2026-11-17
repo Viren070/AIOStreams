@@ -192,6 +192,16 @@ export function usePlaylistEdits() {
         void queryClient.invalidateQueries({ queryKey: all });
         return Id;
       },
+      /** A new playlist with the titles of a public MDBList list, read once. */
+      importMdbList: async (url: string) => {
+        const { Id } = await client.post<{ Id: string; Count: number }>(
+          '/AIOStreams/Playlists/FromMdbList',
+          { Url: url }
+        );
+        lastPlaylist.set(user.Id!, Id);
+        void queryClient.invalidateQueries({ queryKey: all });
+        return Id;
+      },
       /** Adds what isn't there yet, after `after` or at the end; false when all of it was. */
       add: (playlist: string, ids: string[], after?: string) =>
         send(playlist, async () => {
