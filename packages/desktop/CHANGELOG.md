@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.26.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.25.0...desktop-v0.26.0) (2026-11-17)
+
+
+### Features
+
+* **android:** blend subtitles on the GPU ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **desktop:** add graphics card super resolution ([5a8ed53](https://github.com/Viren070/AIOStreams/commit/5a8ed536a8aa343034ec8dcb111fb95ca998c66b))
+* **web:** add a Live TV setting that takes channels off home or hides them ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** add switches for each player gesture ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** make the card preview one switch that opens by keys and pops out by mouse ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** pick the pages the artwork background shows behind ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** regroup the settings and add a search ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+
+
+### Bug Fixes
+
+* **desktop:** leave chapters out of the trailer EDL ([1ac57d7](https://github.com/Viren070/AIOStreams/commit/1ac57d77c92a30e2dd709a43844b729f52814e53))
+* **desktop:** place the video frame by the web view's rasterization scale on Windows ([e5e404c](https://github.com/Viren070/AIOStreams/commit/e5e404cd3f4f764920ab3e0c6f2586acac763ab9))
+* **desktop:** set tls-verify in the Flatpak ([e953181](https://github.com/Viren070/AIOStreams/commit/e9531811f75f52cf95d9c312940c1e810cd4d400))
+* **desktop:** show the picture-in-picture window on every Space on macOS ([44e31fc](https://github.com/Viren070/AIOStreams/commit/44e31fc88602876b0571b73ffc4c4c099ab77cb7)), closes [#1818](https://github.com/Viren070/AIOStreams/issues/1818)
+* **ui:** scroll carousels with sideways wheel gestures in place of the wheel drag plugin ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **ui:** stop sideways wheel scrolling from flickering carousels ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** bring up the controls on OK during a live stream ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** clear the paper behind a select's scroll arrows on glass panels ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** clip a card grid while its preview pushes cards aside ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** ignore a keyup with no key while nothing is held ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** save a found server at the address it answered at after redirects ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** skip the browser's position state for live streams ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+
 ## [0.25.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.24.0...desktop-v0.25.0) (2026-11-14)
 
 
