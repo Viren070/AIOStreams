@@ -122,6 +122,8 @@ internal class Subtitles(
         view?.visibility = visibility
     }
 
+    fun setGpu(on: Boolean) = ass.setGpu(on)
+
     fun firstFrameShown() {
         started = true
     }

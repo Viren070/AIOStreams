@@ -683,6 +683,7 @@ export const settings = {
       undefined,
       ['aiostreams-android-tunneling']
     ),
+    gpuSubtitles: device<boolean>('aiostreams-web-video-gpu-subtitles', true),
     upscaling: device<boolean>('aiostreams-web-video-upscaling', false),
     hdrOutput: device<boolean>('aiostreams-web-video-hdr-output', false),
   },

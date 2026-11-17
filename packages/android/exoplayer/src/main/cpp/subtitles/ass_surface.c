@@ -1,8 +1,9 @@
 // libass, owned by one thread, which renders moments ahead of the video into
-// a queue: each moment's images are copied, as libass keeps them only until it
-// renders again. Another thread takes the moment each video frame shows and
-// blends its images into one premultiplied picture, which the compositor lays
-// over the video as a single layer. The picture goes to the window through GL,
+// a queue: each moment's images become a picture of masks copied into a store,
+// as libass keeps them only until it renders again. Another thread takes the
+// moment each video frame shows and draws it into a surface of its own, which
+// the compositor lays over the video as a single layer: blended on the CPU into
+// one premultiplied picture, or by the GPU from the masks. It draws through GL,
 // so each buffer carries the time its video frame shows at, as MediaCodec gives
 // the video's; without GL, the window's buffers are drawn directly.
 
@@ -20,7 +21,11 @@
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include "ass/ass.h"
+#include "../ass/ass.h"
+#include "blend.h"
+#include "gl.h"
+#include "gl_masks.h"
+#include "masks.h"
 
 // The libs AAR's libass.so.
 #define LIBASS(X) \
@@ -46,13 +51,6 @@ static int load_libass(void) {
     return 1;
 }
 
-// A rendered moment's images, copied, which consecutive moments share while nothing changes.
-typedef struct {
-    int refs;
-    size_t bytes;
-    ASS_Image *images;
-} Picture;
-
 typedef struct {
     long long time_ms;
     Picture *picture;
@@ -76,12 +74,13 @@ typedef struct {
     int window_width;
     int window_height;
     Picture *shown;
+    int gpu;        // draws with GlMasks rather than blending on the CPU
     // What the picture holds images on, which the next one has to clear.
     ARect drawn;
     ANativeWindow_Buffer buffer;
     int pending;  // drawn, not yet posted
     // With GL: the rectangle the picture's images cover, blended into `scratch` and drawn from a
-    // texture that grows to the largest yet.
+    // texture that grows to the largest yet; or the masks, drawn by `masks_gl`.
     EGLDisplay display;
     EGLContext context;
     EGLSurface surface;
@@ -93,6 +92,9 @@ typedef struct {
     int texture_height;
     uint32_t *scratch;
     size_t scratch_pixels;
+    GlMasks *masks_gl;
+
+    MaskStore *masks;
 
     // Shared, under the lock: the moments rendered ahead, oldest first.
     pthread_mutex_t lock;
@@ -100,46 +102,12 @@ typedef struct {
     Moment queue[QUEUE_SIZE];
     int first;
     int count;
-    size_t bytes;   // of all pictures alive
 } Surface;
-
-static Picture *copy_images(Surface *surface, const ASS_Image *images) {
-    int count = 0;
-    size_t pixels = 0;
-    for (const ASS_Image *image = images; image; image = image->next) {
-        if (image->w <= 0 || image->h <= 0) continue;
-        count++;
-        pixels += (size_t) image->w * image->h;
-    }
-    size_t bytes = sizeof(Picture) + count * sizeof(ASS_Image) + pixels;
-    Picture *picture = malloc(bytes);
-    if (!picture) return NULL;
-    picture->refs = 1;
-    picture->bytes = bytes;
-    picture->images = count ? (ASS_Image *) (picture + 1) : NULL;
-    uint8_t *data = (uint8_t *) (picture->images + count);
-    ASS_Image *copy = picture->images;
-    for (const ASS_Image *image = images; image; image = image->next) {
-        if (image->w <= 0 || image->h <= 0) continue;
-        *copy = *image;
-        copy->bitmap = data;
-        copy->stride = image->w;
-        for (int y = 0; y < image->h; y++) memcpy(data + y * image->w, image->bitmap + y * image->stride, image->w);
-        data += (size_t) image->w * image->h;
-        copy->next = --count ? copy + 1 : NULL;
-        copy++;
-    }
-    pthread_mutex_lock(&surface->lock);
-    surface->bytes += bytes;
-    pthread_mutex_unlock(&surface->lock);
-    return picture;
-}
 
 // Under the lock.
 static void release(Surface *surface, Picture *picture) {
     if (!picture || --picture->refs) return;
-    surface->bytes -= picture->bytes;
-    free(picture);
+    masks_release(surface->masks, picture);
 }
 
 // Under the lock: drops the queued moments from `time_ms` on.
@@ -155,85 +123,6 @@ static void drop_from(Surface *surface, long long time_ms) {
 static void message(int level, const char *format, va_list args, void *data) {
     if (level <= 1) __android_log_vprint(ANDROID_LOG_WARN, "libass", format, args);
 }
-
-static inline uint32_t div255(uint32_t x) { return (x + 128 + ((x + 128) >> 8)) >> 8; }
-
-// One image's colour over the picture so far, premultiplied, from pixel `x` of a row on.
-static void blend_row(const uint8_t *src, uint32_t *dst, int x, int width,
-                      uint32_t r, uint32_t g, uint32_t b, uint32_t opacity) {
-    for (; x < width; x++) {
-        uint32_t k = div255(src[x] * opacity);
-        if (!k) continue;
-        uint32_t d = dst[x], keep = 255 - k;
-        uint32_t dr = d & 0xff, dg = (d >> 8) & 0xff, db = (d >> 16) & 0xff, da = d >> 24;
-        dst[x] = (div255(r * k + dr * keep)) |
-                 (div255(g * k + dg * keep) << 8) |
-                 (div255(b * k + db * keep) << 16) |
-                 ((k + div255(da * keep)) << 24);
-    }
-}
-
-#if defined(__ARM_NEON)
-#include <arm_neon.h>
-
-static inline uint8x8_t div255x8(uint16x8_t x) { return vraddhn_u16(x, vrshrq_n_u16(x, 8)); }
-
-// Eight pixels of mask, the same sums as blend_row.
-static inline void blend8(uint8x8_t mask, uint32_t *dst, uint8x8_t vr, uint8x8_t vg, uint8x8_t vb, uint8x8_t vo) {
-    uint8x8_t k = div255x8(vmull_u8(mask, vo));
-#if defined(__aarch64__)
-    if (!vmaxv_u8(k)) return;
-#endif
-    uint8x8_t keep = vmvn_u8(k);
-    uint8x8x4_t d = vld4_u8((uint8_t *) dst);
-    d.val[0] = div255x8(vmlal_u8(vmull_u8(vr, k), d.val[0], keep));
-    d.val[1] = div255x8(vmlal_u8(vmull_u8(vg, k), d.val[1], keep));
-    d.val[2] = div255x8(vmlal_u8(vmull_u8(vb, k), d.val[2], keep));
-    d.val[3] = vadd_u8(k, div255x8(vmull_u8(d.val[3], keep)));
-    vst4_u8((uint8_t *) dst, d);
-}
-
-static void blend(const ASS_Image *image, uint32_t *bits, int stride) {
-    uint32_t r = image->color >> 24, g = (image->color >> 16) & 0xff, b = (image->color >> 8) & 0xff;
-    uint32_t opacity = 255 - (image->color & 0xff);
-    uint8x8_t vr = vdup_n_u8(r), vg = vdup_n_u8(g), vb = vdup_n_u8(b), vo = vdup_n_u8(opacity);
-#if defined(__aarch64__)
-    uint32x4_t solid = vdupq_n_u32(r | g << 8 | b << 16 | 0xffu << 24);
-#endif
-    for (int y = 0; y < image->h; y++) {
-        const uint8_t *src = image->bitmap + y * image->stride;
-        uint32_t *dst = bits + (image->dst_y + y) * stride + image->dst_x;
-        int x = 0;
-#if defined(__aarch64__)
-        // Most of a mask is empty, and full coverage by an opaque colour is just the colour.
-        for (; x + 16 <= image->w; x += 16) {
-            uint8x16_t mask = vld1q_u8(src + x);
-            if (!vmaxvq_u8(mask)) continue;
-            if (opacity == 255 && vminvq_u8(mask) == 255) {
-                vst1q_u32(dst + x, solid);
-                vst1q_u32(dst + x + 4, solid);
-                vst1q_u32(dst + x + 8, solid);
-                vst1q_u32(dst + x + 12, solid);
-                continue;
-            }
-            blend8(vget_low_u8(mask), dst + x, vr, vg, vb, vo);
-            blend8(vget_high_u8(mask), dst + x + 8, vr, vg, vb, vo);
-        }
-#endif
-        for (; x + 8 <= image->w; x += 8) blend8(vld1_u8(src + x), dst + x, vr, vg, vb, vo);
-        blend_row(src, dst, x, image->w, r, g, b, opacity);
-    }
-}
-#else
-static void blend(const ASS_Image *image, uint32_t *bits, int stride) {
-    uint32_t r = image->color >> 24, g = (image->color >> 16) & 0xff, b = (image->color >> 8) & 0xff;
-    uint32_t opacity = 255 - (image->color & 0xff);
-    for (int y = 0; y < image->h; y++) {
-        blend_row(image->bitmap + y * image->stride, bits + (image->dst_y + y) * stride + image->dst_x,
-                  0, image->w, r, g, b, opacity);
-    }
-}
-#endif
 
 static int empty(const ARect *rect) { return rect->right <= rect->left || rect->bottom <= rect->top; }
 
@@ -261,6 +150,7 @@ static void start_renderer(Surface *surface) {
 JNIEXPORT jlong JNICALL METHOD(create)(JNIEnv *env, jclass clazz, jstring font) {
     if (!load_libass()) return 0;
     Surface *surface = calloc(1, sizeof(Surface));
+    surface->masks = masks_new();
     pthread_mutex_init(&surface->lock, NULL);
     pthread_cond_init(&surface->queued, NULL);
     surface->library = libass.library_init();
@@ -364,20 +254,10 @@ static const char *FRAGMENT =
     "    gl_FragColor = texture2D(picture, at);\n"
     "}\n";
 
-static GLuint compile(GLenum type, const char *source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    GLint compiled = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-    if (compiled) return shader;
-    glDeleteShader(shader);
-    return 0;
-}
-
 static void stop_gl(Surface *surface) {
     if (surface->display == EGL_NO_DISPLAY) return;
     if (surface->context != EGL_NO_CONTEXT && eglGetCurrentContext() == surface->context) {
+        gl_masks_free(surface->masks_gl);
         glDeleteTextures(1, &surface->texture);
         glDeleteProgram(surface->program);
     }
@@ -389,6 +269,7 @@ static void stop_gl(Surface *surface) {
     surface->surface = EGL_NO_SURFACE;
     surface->context = EGL_NO_CONTEXT;
     surface->presentation_time = NULL;
+    surface->masks_gl = NULL;
     surface->program = surface->texture = 0;
     surface->texture_width = surface->texture_height = 0;
     free(surface->scratch);
@@ -421,33 +302,12 @@ static int start_gl(Surface *surface, int width, int height) {
         surface->presentation_time = (PFNEGLPRESENTATIONTIMEANDROIDPROC) eglGetProcAddress("eglPresentationTimeANDROID");
     }
 
-    GLuint vertex = compile(GL_VERTEX_SHADER, VERTEX), fragment = compile(GL_FRAGMENT_SHADER, FRAGMENT);
-    surface->program = glCreateProgram();
-    if (vertex) glAttachShader(surface->program, vertex);
-    if (fragment) glAttachShader(surface->program, fragment);
-    glBindAttribLocation(surface->program, 0, "corner");
-    glLinkProgram(surface->program);
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-    GLint linked = 0;
-    glGetProgramiv(surface->program, GL_LINK_STATUS, &linked);
-    if (!vertex || !fragment || !linked) return stop_gl(surface), 0;
-    glUseProgram(surface->program);
+    static const char *const corner[] = {"corner"};
+    surface->program = gl_program(VERTEX, FRAGMENT, corner, 1);
+    if (!surface->program) return stop_gl(surface), 0;
     surface->extent = glGetUniformLocation(surface->program, "extent");
-    static const GLfloat corners[] = {-1, -1, 1, -1, -1, 1, 1, 1};
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, corners);
-    glEnableVertexAttribArray(0);
-
-    glGenTextures(1, &surface->texture);
-    glBindTexture(GL_TEXTURE_2D, surface->texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    surface->texture = gl_texture(GL_RGBA, 0, 0);
     glDisable(GL_DITHER);
-    glDisable(GL_BLEND);
-    glClearColor(0, 0, 0, 0);
     if (glGetError() != GL_NO_ERROR) return stop_gl(surface), 0;
     return 1;
 }
@@ -467,6 +327,15 @@ JNIEXPORT void JNICALL METHOD(setWindow)(
     if (start_gl(surface, width, height)) return;
     __android_log_print(ANDROID_LOG_WARN, "libass", "drawing subtitles without GL");
     ANativeWindow_setBuffersGeometry(surface->window, width, height, WINDOW_FORMAT_RGBA_8888);
+}
+
+// The showing thread's: whether the GPU draws the masks, where there's GL.
+JNIEXPORT void JNICALL METHOD(setGpu)(JNIEnv *env, jclass clazz, jlong handle, jboolean on) {
+    Surface *surface = (Surface *) handle;
+    surface->gpu = on;
+    if (on) return;
+    gl_masks_free(surface->masks_gl);
+    surface->masks_gl = NULL;
 }
 
 // Whether a posted picture carries the time its video frame shows at.
@@ -551,7 +420,7 @@ JNIEXPORT void JNICALL METHOD(queue)(JNIEnv *env, jclass clazz, jlong handle, jl
     ASS_Image *images = track ? libass.render_frame(surface->renderer, (ASS_Track *) track, timeMs, &changed) : NULL;
     Picture *picture = NULL;
     if (changed || !surface->last) {
-        picture = copy_images(surface, images);
+        picture = masks_picture(surface->masks, images);
         if (!picture) return;
     }
     pthread_mutex_lock(&surface->lock);
@@ -570,9 +439,9 @@ JNIEXPORT void JNICALL METHOD(queue)(JNIEnv *env, jclass clazz, jlong handle, jl
 JNIEXPORT jboolean JNICALL METHOD(room)(JNIEnv *env, jclass clazz, jlong handle, jint moments, jlong bytes) {
     Surface *surface = (Surface *) handle;
     pthread_mutex_lock(&surface->lock);
-    int room = surface->count < moments && surface->count < QUEUE_SIZE && surface->bytes < (size_t) bytes;
+    int room = surface->count < moments && surface->count < QUEUE_SIZE;
     pthread_mutex_unlock(&surface->lock);
-    return room;
+    return room && masks_bytes(surface->masks) < (size_t) bytes;
 }
 
 // Drops the queued moments from `timeMs` on, whose subtitles changed.
@@ -617,67 +486,60 @@ JNIEXPORT jint JNICALL METHOD(take)(JNIEnv *env, jclass clazz, jlong handle, jlo
     return taken;
 }
 
-// Whether an image is drawn: libass places them within the frame, which is the window's size but for a moment
+// Whether a mask is drawn: libass places them within the frame, which is the window's size but for a moment
 // after it changes.
-static int drawn_image(const Surface *surface, const ASS_Image *image) {
-    return image->w > 0 && image->h > 0 && image->dst_x + image->w <= surface->window_width &&
-           image->dst_y + image->h <= surface->window_height;
+static int drawn_mask(const Surface *surface, const Placed *placed) {
+    return placed->x + placed->mask->w <= surface->window_width && placed->y + placed->mask->h <= surface->window_height;
 }
 
-// Blends the shown moment's images into the next buffer: with GL only their rectangle, otherwise
-// clearing only what changed.
-JNIEXPORT jboolean JNICALL METHOD(draw)(JNIEnv *env, jclass clazz, jlong handle) {
-    Surface *surface = (Surface *) handle;
-    if (!surface->window) return JNI_FALSE;
-    ASS_Image *images = surface->shown ? surface->shown->images : NULL;
-    ARect next = {0, 0, 0, 0};
-    for (ASS_Image *image = images; image; image = image->next) {
-        if (drawn_image(surface, image)) {
-            include(&next, image->dst_x, image->dst_y, image->dst_x + image->w, image->dst_y + image->h);
-        }
+// Blends the picture's masks into the rectangle they cover, which a texture brings to the window.
+static void draw_blended(Surface *surface, const Picture *picture, ARect next) {
+    glViewport(0, 0, surface->window_width, surface->window_height);
+    // A clear costs a tiled GPU nothing.
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (empty(&next)) return;
+    int width = next.right - next.left, height = next.bottom - next.top;
+    size_t pixels = (size_t) width * height;
+    if (pixels > surface->scratch_pixels) {
+        uint32_t *scratch = realloc(surface->scratch, pixels * 4);
+        if (!scratch) return;
+        surface->scratch = scratch;
+        surface->scratch_pixels = pixels;
     }
-    if (empty(&next) && empty(&surface->drawn)) return JNI_FALSE;
-    if (surface->context != EGL_NO_CONTEXT) {
-        // A clear costs a tiled GPU nothing.
-        glClear(GL_COLOR_BUFFER_BIT);
-        if (!empty(&next)) {
-            int width = next.right - next.left, height = next.bottom - next.top;
-            size_t pixels = (size_t) width * height;
-            if (pixels > surface->scratch_pixels) {
-                uint32_t *scratch = realloc(surface->scratch, pixels * 4);
-                if (!scratch) return JNI_FALSE;
-                surface->scratch = scratch;
-                surface->scratch_pixels = pixels;
-            }
-            memset(surface->scratch, 0, pixels * 4);
-            for (ASS_Image *image = images; image; image = image->next) {
-                if (!drawn_image(surface, image)) continue;
-                ASS_Image moved = *image;
-                moved.dst_x -= next.left;
-                moved.dst_y -= next.top;
-                blend(&moved, surface->scratch, width);
-            }
-            if (width > surface->texture_width || height > surface->texture_height) {
-                if (width > surface->texture_width) surface->texture_width = width;
-                if (height > surface->texture_height) surface->texture_height = height;
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->texture_width, surface->texture_height, 0, GL_RGBA,
-                             GL_UNSIGNED_BYTE, NULL);
-            }
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, surface->scratch);
-            glUniform2f(surface->extent, (float) width / surface->texture_width,
-                        (float) height / surface->texture_height);
-            // GL counts rows from the bottom.
-            glViewport(next.left, surface->window_height - next.bottom, width, height);
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        }
-        surface->drawn = next;
-        surface->pending = 1;
-        return JNI_TRUE;
+    memset(surface->scratch, 0, pixels * 4);
+    for (int i = 0; i < picture->count; i++) {
+        if (drawn_mask(surface, &picture->placed[i])) blend(&picture->placed[i], surface->scratch, width, next.left, next.top);
     }
+    static const GLfloat corners[] = {-1, -1, 1, -1, -1, 1, 1, 1};
+    glUseProgram(surface->program);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, corners);
+    glEnableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glDisable(GL_BLEND);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glBindTexture(GL_TEXTURE_2D, surface->texture);
+    if (width > surface->texture_width || height > surface->texture_height) {
+        if (width > surface->texture_width) surface->texture_width = width;
+        if (height > surface->texture_height) surface->texture_height = height;
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->texture_width, surface->texture_height, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, NULL);
+    }
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, surface->scratch);
+    glUniform2f(surface->extent, (float) width / surface->texture_width, (float) height / surface->texture_height);
+    // GL counts rows from the bottom.
+    glViewport(next.left, surface->window_height - next.bottom, width, height);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+// Without GL: blends into the window's next buffer, clearing only what changed.
+static int draw_window(Surface *surface, const Picture *picture, ARect next) {
     ARect dirty = surface->drawn;
     if (!empty(&next)) include(&dirty, next.left, next.top, next.right, next.bottom);
     // The window copies the rest from the buffer before, and may widen the rectangle.
-    if (ANativeWindow_lock(surface->window, &surface->buffer, &dirty) != 0) return JNI_FALSE;
+    if (ANativeWindow_lock(surface->window, &surface->buffer, &dirty) != 0) return 0;
     ANativeWindow_Buffer *buffer = &surface->buffer;
     if (dirty.right > buffer->width) dirty.right = buffer->width;
     if (dirty.bottom > buffer->height) dirty.bottom = buffer->height;
@@ -685,11 +547,37 @@ JNIEXPORT jboolean JNICALL METHOD(draw)(JNIEnv *env, jclass clazz, jlong handle)
     for (int y = dirty.top; y < dirty.bottom; y++) {
         memset(bits + y * buffer->stride + dirty.left, 0, (dirty.right - dirty.left) * 4);
     }
-    for (ASS_Image *image = images; image; image = image->next) {
-        if (image->w > 0 && image->h > 0 &&
-            image->dst_x + image->w <= buffer->width && image->dst_y + image->h <= buffer->height) {
-            blend(image, bits, buffer->stride);
+    for (int i = 0; picture && i < picture->count; i++) {
+        const Placed *placed = &picture->placed[i];
+        if (placed->x + placed->mask->w <= buffer->width && placed->y + placed->mask->h <= buffer->height) {
+            blend(placed, bits, buffer->stride, 0, 0);
         }
+    }
+    return 1;
+}
+
+// Draws the shown moment into the next buffer.
+JNIEXPORT jboolean JNICALL METHOD(draw)(JNIEnv *env, jclass clazz, jlong handle) {
+    Surface *surface = (Surface *) handle;
+    if (!surface->window) return JNI_FALSE;
+    const Picture *picture = surface->shown;
+    ARect next = {0, 0, 0, 0};
+    for (int i = 0; picture && i < picture->count; i++) {
+        const Placed *placed = &picture->placed[i];
+        if (drawn_mask(surface, placed)) include(&next, placed->x, placed->y, placed->x + placed->mask->w, placed->y + placed->mask->h);
+    }
+    if (empty(&next) && empty(&surface->drawn)) return JNI_FALSE;
+    if (surface->gpu && surface->context != EGL_NO_CONTEXT && !surface->masks_gl) {
+        // The app limits libass's cache where memory is short.
+        surface->masks_gl = gl_masks_new(surface->masks, surface->cache_mb != 0);
+        if (!surface->masks_gl) surface->gpu = 0;
+    }
+    if (surface->context == EGL_NO_CONTEXT) {
+        if (!draw_window(surface, picture, next)) return JNI_FALSE;
+    } else if (surface->gpu) {
+        gl_masks_draw(surface->masks_gl, picture, surface->window_width, surface->window_height);
+    } else {
+        draw_blended(surface, picture, next);
     }
     surface->drawn = next;
     surface->pending = 1;
@@ -729,6 +617,7 @@ JNIEXPORT void JNICALL METHOD(release)(JNIEnv *env, jclass clazz, jlong handle) 
     pthread_mutex_destroy(&surface->lock);
     libass.renderer_done(surface->renderer);
     libass.library_done(surface->library);
+    masks_free(surface->masks);
     free(surface->bundled);
     free(surface->font);
     free(surface);

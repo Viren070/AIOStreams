@@ -42,6 +42,9 @@ internal object AssNative {
     external fun setWindow(handle: Long, surface: Surface?, width: Int, height: Int)
 
     @JvmStatic
+    external fun setGpu(handle: Long, on: Boolean)
+
+    @JvmStatic
     external fun setFrameSize(handle: Long, width: Int, height: Int)
 
     @JvmStatic

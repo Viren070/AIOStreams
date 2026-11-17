@@ -538,6 +538,7 @@ export function playerSettings() {
       ? {
           frameRate: video.frameRate.read(),
           tunneling: video.tunneling.read(),
+          gpuSubtitles: video.gpuSubtitles.read(),
         }
       : { audioDevice: audio.device.read() }),
   };
