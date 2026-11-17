@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.1](https://github.com/Viren070/AIOStreams/compare/android-v0.16.0...android-v0.16.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **web:** don't retrace the jump out of a navigation box ([514a5a9](https://github.com/Viren070/AIOStreams/commit/514a5a9732dc62879e655da9707f7b461b6a0733))
+* **web:** hide the pages' wash under a back slide to a page without it ([514a5a9](https://github.com/Viren070/AIOStreams/commit/514a5a9732dc62879e655da9707f7b461b6a0733))
+* **web:** slide a page back the same way from either edge ([514a5a9](https://github.com/Viren070/AIOStreams/commit/514a5a9732dc62879e655da9707f7b461b6a0733))
+
 ## [0.16.0](https://github.com/Viren070/AIOStreams/compare/android-v0.15.0...android-v0.16.0) (2026-11-17)
 
 
