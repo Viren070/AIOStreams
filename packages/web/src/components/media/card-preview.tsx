@@ -219,7 +219,7 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
   const [shown, setShown] = React.useState<Shown | null>(null);
   const shownRef = React.useRef(shown);
   shownRef.current = shown;
-  const [ready, setReady] = React.useState<Target | null>(null);
+  const [ready, setReady] = React.useState<Shown | null>(null);
   const pending = React.useRef<Target | null>(null);
   const timers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const previews = React.useMemo<Previews>(() => {
@@ -254,8 +254,10 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
           flushSync(() => setShown(next));
           openSlide(target.card);
         };
-        if (inPlace)
-          timers.current.push(setTimeout(() => setReady(target), READY_MS));
+        if (target.byFocus)
+          timers.current.push(
+            setTimeout(() => setReady({ ...target, inPlace }), READY_MS)
+          );
         timers.current.push(
           setTimeout(show, target.byFocus ? FOCUS_REST_MS : POINTER_REST_MS)
         );
@@ -298,14 +300,20 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
     };
   }, [popped, previews]);
 
-  const frame = on && ready && frameOf(ready.card);
+  const frame = on && ready?.inPlace && frameOf(ready.card);
+  // A focused grid card's preview is drawn unseen first too.
+  const preview = popped ?? (on && ready && !ready.inPlace ? ready : null);
   return (
     <PreviewContext.Provider value={on ? previews : null}>
       {children}
       {on &&
-        popped &&
+        preview &&
         createPortal(
-          <Preview target={popped} onClose={() => setShown(null)} />,
+          <Preview
+            target={preview}
+            opened={preview === popped}
+            onClose={() => setShown(null)}
+          />,
           document.body
         )}
       {ready &&
@@ -415,6 +423,8 @@ function pushAside(
     ? ''
     : // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
       `transform ${GLIDE_MS}ms ${EASE}, opacity ${GLIDE_MS}ms ${EASE}`;
+  // Cards slid past its edge would widen the page, which a TV's web view zooms out to fit.
+  grid.style.overflowX = 'clip';
   for (const { el, dx, out } of moved) {
     el.style.transition = transition;
     el.style.transform = `translateX(${dx}px)`;
@@ -428,6 +438,11 @@ function pushAside(
     setTimeout(() => {
       for (const { el } of moved)
         if (!el.style.transform) el.style.transition = '';
+      // Another card's preview may have pushed since.
+      const pushed = [...grid.children].some(
+        (el) => el instanceof HTMLElement && el.style.transform
+      );
+      if (!pushed) grid.style.overflowX = '';
     }, GLIDE_MS);
   };
 }
@@ -451,25 +466,37 @@ function useCardTrailer(on: boolean) {
 
 const PREVIEW_RADIUS = 12;
 
-function Preview({ target, onClose }: { target: Target; onClose(): void }) {
+function Preview({
+  target,
+  opened = true,
+  onClose,
+}: {
+  target: Target;
+  /** False while it is drawn unseen ahead of opening. */
+  opened?: boolean;
+  onClose(): void;
+}) {
+  const { client } = useSession();
   const [at] = React.useState(() =>
     target.byFocus ? beside(target.card) : place(target.card)
   );
   const tv = !!currentHost().tv;
   const [spot, setSpot] = React.useState<HTMLDivElement | null>(null);
   const box = React.useRef<HTMLDivElement>(null);
+  const poster = React.useRef<HTMLDivElement>(null);
   React.useLayoutEffect(() => {
-    if (!at.past) return;
+    if (!opened || !at.past) return;
     const unpush = pushAside(target.card, at.past);
     target.card.setAttribute('data-previewed', '');
     return () => {
       unpush();
       target.card.removeAttribute('data-previewed');
     };
-  }, [at, target.card]);
+  }, [at, opened, target.card]);
   React.useLayoutEffect(() => {
     const { past } = at;
-    if (!past || still()) return;
+    if (!opened || !past || still()) return;
+    const timing = { duration: GLIDE_MS, easing: EASE };
     // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
     const round = `round ${PREVIEW_RADIUS}px`;
     box.current?.animate(
@@ -477,10 +504,14 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
         { clipPath: `inset(0 ${past.right}px 0 ${past.left}px ${round})` },
         { clipPath: `inset(0 ${round})` },
       ],
-      { duration: GLIDE_MS, easing: EASE }
+      timing
     );
-  }, [at]);
-  const trailer = useCardTrailer(true);
+    poster.current?.animate([{ opacity: 1 }, { opacity: 0 }], {
+      ...timing,
+      fill: 'forwards',
+    });
+  }, [at, opened]);
+  const trailer = useCardTrailer(opened);
   const open = () => {
     target.card.querySelector<HTMLElement>('a[href], button')?.click();
     onClose();
@@ -525,7 +556,8 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
           'duration-200 ease-out animate-in fade-in-0 zoom-in-90 motion-reduce:animate-none',
         target.byFocus &&
           'outline outline-[3px] outline-offset-2 outline-[var(--ring)]',
-        tv && 'pointer-events-none'
+        tv && 'pointer-events-none',
+        !opened && 'invisible'
       )}
       onPointerLeave={(e) => e.pointerType === 'mouse' && !lifted && onClose()}
       onClick={open}
@@ -549,6 +581,24 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
           fill={!!at.height}
         />
       </div>
+      {at.past && !still() && (
+        // The card's poster over its own spot, fading as the preview opens out of it.
+        <div
+          ref={poster}
+          className="absolute inset-y-0"
+          style={{
+            left: at.past.left,
+            width: at.width - at.past.left - at.past.right,
+          }}
+        >
+          <Artwork
+            src={(width) =>
+              cardImages(client, target.item, 'poster', { maxWidth: width })
+            }
+            alt=""
+          />
+        </div>
+      )}
       {trailer.started && spot && (
         <TrailerPreview
           item={target.item}
