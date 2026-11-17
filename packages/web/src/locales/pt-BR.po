@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-17 15:57+0000\n"
-"Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-18 02:59+0000\n"
+"Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
@@ -1574,7 +1574,7 @@ msgstr "Editar"
 
 #: src/features/player/controls.tsx
 msgid "Ends at {endsAt}"
-msgstr "Termina em {endsAt}"
+msgstr "Termina às {endsAt}"
 
 #: src/app/settings/player.tsx
 msgid "Engine"
