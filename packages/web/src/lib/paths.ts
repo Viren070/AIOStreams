@@ -67,6 +67,15 @@ export function itemPath(
   return to.item(item.Id!);
 }
 
+/** A film's page, or an episode's show opening on its Play; nothing else has one. */
+export function titlePath(
+  item: Pick<BaseItemDto, 'Id' | 'Type' | 'SeriesId'>
+): string | undefined {
+  if (item.Type === 'Movie') return to.item(item.Id!);
+  if (item.Type === 'Episode' && item.SeriesId) return to.item(item.SeriesId);
+  return undefined;
+}
+
 /** The item's page, opening on its version list. */
 export function versionsPath(
   item: Pick<BaseItemDto, 'Id' | 'Type' | 'SeriesId' | 'SeasonId'>,
@@ -108,11 +117,22 @@ export function setNavigator(fn: Push, fresh: Restart): void {
   restart = fresh;
 }
 
+const PLAYER = '/play/';
+
+/** The page the player's page opened over; null where it took that page's place. */
+let opener: string | null = null;
+
+export const playerOpener = (): string | null => opener;
+
 export function navigate(path: string, opts: NavigateOptions = {}) {
   const pathname = path.split('?')[0];
+  const here = location.hash.slice(1).split('?')[0];
+  // Another version or episode in the player keeps the page it opened over.
+  if (pathname.startsWith(PLAYER) && !here.startsWith(PLAYER))
+    opener = opts.replace ? null : here;
   const opensTitle =
     pathname.startsWith(to.item('')) &&
-    pathname !== location.hash.slice(1).split('?')[0] &&
+    pathname !== here &&
     !opts.replace &&
     !opts.keepScroll;
   if (opensTitle) openPage(() => push(path, opts), opts.fromHero);

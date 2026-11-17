@@ -87,7 +87,7 @@ import {
   type PlaybackPrefs,
 } from '@/lib/jellyfin/user-config';
 import { fullTitle } from '@/lib/format';
-import { navigate, to, versionsPath } from '@/lib/paths';
+import { navigate, titlePath, to, versionsPath } from '@/lib/paths';
 import {
   canMinimise,
   closePlayback,
@@ -374,11 +374,12 @@ function useEnded(item: BaseItemDto, mini: boolean, close?: () => void) {
   latestClose.current = close;
   const small = React.useRef(mini);
   small.current = mini;
+  const title = titlePath(item);
   const stop = React.useCallback(() => {
     latestClose.current?.();
     if (small.current) closePlayback();
-    else stopPlayback(to.item(item.Id!));
-  }, [item.Id]);
+    else stopPlayback(to.item(item.Id!), title);
+  }, [item.Id, title]);
   const ended = React.useRef(stop);
   const onEnded = React.useCallback(() => ended.current(), []);
   const connect = (next: ReturnType<typeof useUpNextPrompt>) => {
@@ -552,7 +553,8 @@ function Failure({
 }) {
   const { client } = useSession();
   const step = zap?.step;
-  const leave = () => stopPlayback(to.item(itemId));
+  const leave = () =>
+    stopPlayback(to.item(itemId), item ? titlePath(item) : undefined);
   // A TV's Back would look for the navigation, which the player covers.
   useAction('back', leave);
   useAction('live.channelUp', () => step?.(1) ?? false, !!step);

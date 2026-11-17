@@ -1,7 +1,7 @@
 import React from 'react';
 import { currentHost } from '@/lib/hosts';
 import { appBridge } from '@/lib/hosts/shell/bridge';
-import { goBack, goBackInApp, navigate, to } from '@/lib/paths';
+import { goBack, goBackInApp, navigate, playerOpener, to } from '@/lib/paths';
 import { settings } from '@/lib/settings';
 import { chosenPlayer } from './player-choice';
 
@@ -96,10 +96,15 @@ export function minimisePlayback(fallback: string): void {
   goBackInApp(fallback);
 }
 
-/** Leaves the player's page and stops, whatever Back does. */
-export function stopPlayback(fallback: string): void {
+/**
+ * Leaves the player's page and stops, whatever Back does. Opened over any
+ * page but its title's, as a row or the hero plays straight, the player gives
+ * way to the title's page, and Back from there goes on to the page before.
+ */
+export function stopPlayback(fallback: string, title?: string): void {
   leaving = 'stop';
-  goBack(fallback);
+  if (title && playerOpener() !== title) navigate(title, { replace: true });
+  else goBack(fallback);
 }
 
 export function closePlayback(): void {
