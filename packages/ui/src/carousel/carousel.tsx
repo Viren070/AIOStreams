@@ -184,7 +184,6 @@ const GESTURE_GAP_MS = 150;
 const DECIDE_PX = 4;
 /** How much more sideways than upright a gesture starts to move the row. */
 const SIDEWAYS = 2;
-const WHEEL_GLIDE_MS = 150;
 
 /**
  * Scrolls the row step for step with a sideways wheel or swipe, as a page
@@ -200,14 +199,10 @@ function useWheelScroll(api: CarouselApi) {
     let axis: 'x' | 'y' | null = null;
     let travel = 0;
     let across = 0;
-    let settle = 0;
-    const still = () => {
-      window.clearTimeout(settle);
-      container.style.transition = '';
-    };
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return;
-      if (e.timeStamp - last > GESTURE_GAP_MS) {
+      const starts = e.timeStamp - last > GESTURE_GAP_MS;
+      if (starts) {
         axis = null;
         travel = across = 0;
       }
@@ -222,25 +217,22 @@ function useWheelScroll(api: CarouselApi) {
       if (!axis) {
         travel += Math.abs(dx);
         across += Math.abs(e.deltaY * unit);
-        if (travel + across < DECIDE_PX) return;
-        axis = travel > across * SIDEWAYS ? 'x' : 'y';
+        // A browser only lets a gesture's later events be cancelled when its
+        // first one was, so the row holds any start that isn't plainly upright.
+        if (starts && across > travel * SIDEWAYS) axis = 'y';
+        else if (travel + across < DECIDE_PX) return e.preventDefault();
+        else axis = travel > across * SIDEWAYS ? 'x' : 'y';
       }
       if (axis !== 'x') return;
       e.preventDefault();
-      window.clearTimeout(settle);
-      container.style.transition = `transform ${WHEEL_GLIDE_MS}ms ease-out`;
-      settle = window.setTimeout(still, WHEEL_GLIDE_MS + 50);
+      // No easing: a transition restarted by every event flickers.
+      container.style.transition = '';
       const sign = rtl() ? -1 : 1;
       jumpTo(api, api.internalEngine().target.get() - sign * dx);
       api.emit('scroll');
     };
     viewport.addEventListener('wheel', onWheel, { passive: false });
-    api.on('pointerDown', still);
-    return () => {
-      still();
-      viewport.removeEventListener('wheel', onWheel);
-      api.off('pointerDown', still);
-    };
+    return () => viewport.removeEventListener('wheel', onWheel);
   }, [api]);
 }
 
