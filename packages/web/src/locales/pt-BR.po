@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-17 14:17+0000\n"
-"Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-17 15:57+0000\n"
+"Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
@@ -743,11 +743,11 @@ msgstr "Preto"
 
 #: src/app/settings/playback.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Usa a placa de vídeo para sobrepor as legendas, reduzindo o uso do processador. Funciona apenas com o ExoPlayer. Desative se as legendas apresentarem problemas."
 
 #: src/app/settings/playback.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Renderiza as legendas pela placa de vídeo, reduzindo o uso do processador. Desative se elas aparecerem incorretamente."
 
 #: src/lib/i18n.ts
 msgid "Blue"
@@ -1533,7 +1533,7 @@ msgstr "Os downloads aguardam uma conexão Wi-Fi ou outra rede sem limite de dad
 
 #: src/app/settings/playback.tsx
 msgid "Draw subtitles on the graphics card"
-msgstr ""
+msgstr "Renderizar legendas pela placa de vídeo"
 
 #: src/lib/i18n.ts
 msgid "Drawer"
