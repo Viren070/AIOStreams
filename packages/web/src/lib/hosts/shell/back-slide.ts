@@ -5,7 +5,7 @@ import {
   runAction,
 } from '@/lib/input';
 import { UNDER_OPACITY, UNDER_SHIFT } from '@/lib/page-open';
-import { washCopy } from '@/lib/artwork/background';
+import { washCopy, washShownOn } from '@/lib/artwork/background';
 import { pageRtl } from '@/lib/direction';
 
 const GLIDE = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
@@ -23,6 +23,7 @@ interface NavigationEntries {
 /** What Back leads to, still mounted beneath the page to show. */
 interface Under {
   el: HTMLElement;
+  path: string;
   /** How far down it was scrolled when left. */
   y: number;
   home: boolean;
@@ -76,13 +77,20 @@ function behind(page: HTMLElement): Under | null {
   if (layer && address === hash.slice(1))
     return {
       el: layer,
+      path: pathOf(hash),
       y: Number(layer.dataset.backY) || 0,
       home: false,
       landed: () => location.hash.slice(1) === address,
     };
   const home = document.querySelector<HTMLElement>("[data-page='home']");
   if (!home || homeY === null || pathOf(hash) !== '/') return null;
-  return { el: home, y: homeY, home: true, landed: () => pagePath() === '/' };
+  return {
+    el: home,
+    path: '/',
+    y: homeY,
+    home: true,
+    landed: () => pagePath() === '/',
+  };
 }
 
 function show({ el, y, home }: Under) {
@@ -116,6 +124,15 @@ function hide(el: HTMLElement) {
   el.removeAttribute('data-peek');
   el.style.transform = '';
   el.style.opacity = '';
+  holdWash(false);
+}
+
+function holdWash(off: boolean) {
+  const wash = document.querySelector<HTMLElement>(
+    "[data-ui='page-background'] > [data-ui='art-wash']"
+  );
+  // Not visibility, which its canvases set for themselves.
+  if (wash) wash.style.display = off ? 'none' : '';
 }
 
 /** The artwork behind the pages, which the page's own background hides while it slides. */
@@ -180,6 +197,8 @@ function begin(side: 1 | -1): boolean {
   if (under) {
     move(under.el, side, 0);
     show(under);
+    // The pages' wash follows the route, which stays this page's until Back lands.
+    holdWash(!washShownOn(under.path));
   }
   page.toggleAttribute('data-sliding', true);
   carryWash(page);

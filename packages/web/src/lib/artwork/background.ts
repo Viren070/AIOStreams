@@ -148,6 +148,9 @@ export function artPageOf(pathname: string): ArtPage {
   return BROWSING.has(page) ? 'browse' : 'other';
 }
 
+export const washShownOn = (pathname: string) =>
+  settings.theme.artBackground.read().includes(artPageOf(pathname));
+
 export function washCopy(): HTMLElement | null {
   if (!frame) return null;
   const layer = document.createElement('div');
