@@ -18,6 +18,7 @@ export const onAccount = (locked?: boolean) =>
     : t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
 export const followsYou = () =>
   t`Saved to your account, so it follows you to every device.`;
+export const deviceOnly = (help: string) => `${help} ${onDevice()}`;
 
 export const DOCS_URL = 'https://aiostreams.org';
 

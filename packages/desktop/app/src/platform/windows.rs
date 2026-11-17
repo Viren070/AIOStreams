@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use super::small::{Small, event};
 use aiostreams_desktop_core::bridge::{Outbound, VideoFrame};
 use aiostreams_desktop_core::mpv::Mpv;
+use aiostreams_desktop_core::upscale::DisplayProbe;
 use tao::dpi::{PhysicalPosition, PhysicalSize};
 use tao::platform::windows::{IconExtWindows, WindowExtWindows};
 use tao::window::{Icon, Window};
@@ -48,6 +49,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     WM_SIZING, WM_TIMER, WMSZ_BOTTOM, WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WNDCLASSW, WS_CHILD,
     WS_VISIBLE,
 };
+
+mod super_resolution;
+pub use super_resolution::{check_super_resolution, super_resolution};
 
 /// The id on the Start menu shortcut Velopack makes, which gives the system's
 /// media controls the app's name and icon.
@@ -615,6 +619,10 @@ pub fn mpv_options(video: &VideoSurface) -> Vec<(&'static str, String)> {
         ("hwdec", "auto-safe".into()),
         ("tone-mapping", "bt.2390".into()),
     ]
+}
+
+pub fn display_probe(video: &VideoSurface) -> Option<DisplayProbe> {
+    super_resolution::display_probe(video.hwnd)
 }
 
 /// mpv keeps the display on itself, as the video is its own window.

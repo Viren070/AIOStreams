@@ -28,7 +28,7 @@ import { currentHost } from '@/lib/hosts';
 import { focusOn, keyboardFocus } from '@/lib/input';
 import { SettingsCard } from './_components/settings-card';
 import { Anchor } from '@/components/anchor';
-import { followsYou, DOCS_URL } from './_components/common';
+import { followsYou, onDevice, DOCS_URL } from './_components/common';
 
 const KEEP_CSS_MS = 15_000;
 
@@ -107,172 +107,184 @@ export function ThemeSection() {
     pending.current = { id, previous };
   };
   return (
-    <SettingsCard name="theme" title={t`Theme`} description={followsYou()}>
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">
-          <Trans>Presets</Trans>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {THEME_PRESETS.map((preset) => {
-            const selected =
-              preset.accent === accent && preset.background === background;
-            return (
-              <button
-                key={preset.name}
-                type="button"
-                data-ui="theme-preset"
-                aria-pressed={selected}
-                onClick={() => pick(preset)}
-                className={cn(
-                  'flex items-center gap-2 rounded-full border py-1 ps-1 pe-3 text-sm transition-colors hover:bg-white/5',
-                  selected
-                    ? 'border-[--brand] ring-1 ring-[--brand]'
-                    : 'border-white/10'
-                )}
-              >
-                <span
-                  className="flex size-6 items-center justify-center rounded-full ring-1 ring-white/15"
-                  style={{ backgroundColor: preset.background }}
+    <>
+      <SettingsCard
+        name="colours"
+        title={t`Colours`}
+        description={followsYou()}
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">
+            <Trans>Presets</Trans>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {THEME_PRESETS.map((preset) => {
+              const selected =
+                preset.accent === accent && preset.background === background;
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  data-ui="theme-preset"
+                  aria-pressed={selected}
+                  onClick={() => pick(preset)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full border py-1 ps-1 pe-3 text-sm transition-colors hover:bg-white/5',
+                    selected
+                      ? 'border-[--brand] ring-1 ring-[--brand]'
+                      : 'border-white/10'
+                  )}
                 >
                   <span
-                    className="size-3 rounded-full"
-                    style={{ backgroundColor: preset.accent }}
-                  />
-                </span>
-                {presetName(preset.name)}
-              </button>
-            );
-          })}
+                    className="flex size-6 items-center justify-center rounded-full ring-1 ring-white/15"
+                    style={{ backgroundColor: preset.background }}
+                  >
+                    <span
+                      className="size-3 rounded-full"
+                      style={{ backgroundColor: preset.accent }}
+                    />
+                  </span>
+                  {presetName(preset.name)}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <ColorInput
-        picker={!currentHost().tv}
-        swatches={THEME_PRESETS.map((p) => ({
-          value: p.accent,
-          name: presetName(p.name),
-        }))}
-        label={t`Accent`}
-        help={t`Buttons, progress bars and highlights.`}
-        value={accent}
-        onValueChange={(value) => pick({ accent: value, background })}
-      />
-      <ColorInput
-        picker={!currentHost().tv}
-        swatches={THEME_PRESETS.map((p) => ({
-          value: p.background,
-          name: presetName(p.name),
-        }))}
-        label={t`Background`}
-        help={t`Pages and panels take their shades from it. Dark colours read best.`}
-        value={background}
-        onValueChange={(value) => pick({ accent, background: value })}
-      />
-      <Select
-        label={t`Glass surface`}
-        help={t`What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device.`}
-        options={[
-          { value: 'solid', label: t`Solid` },
-          { value: 'frosted', label: t`Frosted glass` },
-          ...(canRefract ? [{ value: 'liquid', label: t`Liquid glass` }] : []),
-        ]}
-        value={surface === 'liquid' && !canRefract ? 'frosted' : surface}
-        onValueChange={(value) => setSurface(value as GlassSurface)}
-      />
-      <Combobox
-        multiple
-        label={t`Background from artwork`}
-        help={t`The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages.`}
-        placeholder={t`Nowhere`}
-        emptyMessage={t`Nothing matches.`}
-        options={[
-          { value: 'item', label: t`Title pages` },
-          { value: 'browse', label: t`Home, search and catalogs` },
-          { value: 'other', label: t`Other pages, such as settings` },
-        ].map((o) => ({ ...o, textValue: o.label }))}
-        value={artBackground}
-        onValueChange={(value) => setArtBackground(value as ArtPage[])}
-      />
-      {artBackground.length > 0 && surface !== 'solid' && (
-        <Switch
-          side="right"
-          label={t`Glass panels`}
-          help={t`Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing.`}
-          value={artGlass}
-          onValueChange={setArtGlass}
+        <ColorInput
+          picker={!currentHost().tv}
+          swatches={THEME_PRESETS.map((p) => ({
+            value: p.accent,
+            name: presetName(p.name),
+          }))}
+          label={t`Accent`}
+          help={t`Buttons, progress bars and highlights.`}
+          value={accent}
+          onValueChange={(value) => pick({ accent: value, background })}
         />
-      )}
-      {server.css && (
-        <Switch
-          side="right"
-          label={t`Use this server's CSS`}
-          help={t`This server styles the app for everyone. Your own CSS applies on top of it.`}
-          value={serverCss}
-          onValueChange={setServerCss}
+        <ColorInput
+          picker={!currentHost().tv}
+          swatches={THEME_PRESETS.map((p) => ({
+            value: p.background,
+            name: presetName(p.name),
+          }))}
+          label={t`Background`}
+          help={t`Pages and panels take their shades from it. Dark colours read best.`}
+          value={background}
+          onValueChange={(value) => pick({ accent, background: value })}
         />
-      )}
-      <Textarea
-        data-ui="custom-css-editor"
-        label={t`Custom CSS`}
-        help={
-          CUSTOM_CSS_OFF ? (
-            <Trans>
-              Off for this visit, since the address ends in <code>?safe</code>.
-              Fix or clear it here, then open the app without it.
-            </Trans>
-          ) : (
-            <Trans>
-              Applied on top of the theme. Parts of the app carry a{' '}
-              <code>data-ui</code> attribute to style them by, such as{' '}
-              <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever hides
-              the page, add <code>?safe</code> to the address to turn it off.
-              See the{' '}
-              <Anchor
-                href={CSS_DOCS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[--brand] hover:underline"
-              >
-                guide
-              </Anchor>{' '}
-              for every selector and examples.
-            </Trans>
-          )
-        }
-        value={draft}
-        onValueChange={setDraft}
-        maxLength={MAX_CUSTOM_CSS}
-        spellCheck={false}
-        placeholder={
-          // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
-          '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
-        }
-        className="min-h-60 font-mono text-xs"
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          intent="white"
-          className="rounded-full max-sm:w-full"
-          disabled={draft.trim() === css.trim()}
-          onClick={apply}
-        >
-          <Trans>Apply CSS</Trans>
-        </Button>
-        {(colors.accent || colors.background || css) && (
+        <Combobox
+          multiple
+          label={t`Background from artwork`}
+          help={t`The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages.`}
+          placeholder={t`Nowhere`}
+          emptyMessage={t`Nothing matches.`}
+          options={[
+            { value: 'item', label: t`Title pages` },
+            { value: 'browse', label: t`Home, search and catalogs` },
+            { value: 'other', label: t`Other pages, such as settings` },
+          ].map((o) => ({ ...o, textValue: o.label }))}
+          value={artBackground}
+          onValueChange={(value) => setArtBackground(value as ArtPage[])}
+        />
+      </SettingsCard>
+      <SettingsCard name="glass" title={t`Glass`} description={onDevice()}>
+        <Select
+          label={t`Glass surface`}
+          help={t`What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device.`}
+          options={[
+            { value: 'solid', label: t`Solid` },
+            { value: 'frosted', label: t`Frosted glass` },
+            ...(canRefract
+              ? [{ value: 'liquid', label: t`Liquid glass` }]
+              : []),
+          ]}
+          value={surface === 'liquid' && !canRefract ? 'frosted' : surface}
+          onValueChange={(value) => setSurface(value as GlassSurface)}
+        />
+        {artBackground.length > 0 && surface !== 'solid' && (
+          <Switch
+            side="right"
+            label={t`Glass panels`}
+            help={t`Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing.`}
+            value={artGlass}
+            onValueChange={setArtGlass}
+          />
+        )}
+      </SettingsCard>
+      <SettingsCard name="css" title="CSS" description={followsYou()}>
+        {server.css && (
+          <Switch
+            side="right"
+            label={t`Use this server's CSS`}
+            help={t`This server styles the app for everyone. Your own CSS applies on top of it.`}
+            value={serverCss}
+            onValueChange={setServerCss}
+          />
+        )}
+        <Textarea
+          data-ui="custom-css-editor"
+          label={t`Custom CSS`}
+          help={
+            CUSTOM_CSS_OFF ? (
+              <Trans>
+                Off for this visit, since the address ends in <code>?safe</code>
+                . Fix or clear it here, then open the app without it.
+              </Trans>
+            ) : (
+              <Trans>
+                Applied on top of the theme. Parts of the app carry a{' '}
+                <code>data-ui</code> attribute to style them by, such as{' '}
+                <code>[data-ui=&quot;progress-bar&quot;]</code>. If it ever
+                hides the page, add <code>?safe</code> to the address to turn it
+                off. See the{' '}
+                <Anchor
+                  href={CSS_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  guide
+                </Anchor>{' '}
+                for every selector and examples.
+              </Trans>
+            )
+          }
+          value={draft}
+          onValueChange={setDraft}
+          maxLength={MAX_CUSTOM_CSS}
+          spellCheck={false}
+          placeholder={
+            // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
+            '[data-ui="progress-bar-fill"] {\n  background: hotpink;\n}'
+          }
+          className="min-h-60 font-mono text-xs"
+        />
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
-            intent="gray-outline"
+            intent="white"
             className="rounded-full max-sm:w-full"
-            onClick={() => {
-              setColors({});
-              setCss('');
-              setDraft('');
-            }}
+            disabled={draft.trim() === css.trim()}
+            onClick={apply}
           >
-            <Trans>Reset theme</Trans>
+            <Trans>Apply CSS</Trans>
           </Button>
-        )}
-      </div>
-    </SettingsCard>
+          {(colors.accent || colors.background || css) && (
+            <Button
+              size="sm"
+              intent="gray-outline"
+              className="rounded-full max-sm:w-full"
+              onClick={() => {
+                setColors({});
+                setCss('');
+                setDraft('');
+              }}
+            >
+              <Trans>Reset theme</Trans>
+            </Button>
+          )}
+        </div>
+      </SettingsCard>
+    </>
   );
 }

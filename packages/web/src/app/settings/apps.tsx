@@ -4,7 +4,6 @@ import { Trans } from '@lingui/react/macro';
 import { toast } from 'sonner';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
-import { Textarea } from '@aiostreams/ui/textarea';
 import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import {
@@ -24,20 +23,10 @@ import {
 } from '@/lib/hosts/shell';
 import {
   checkDiscord,
-  openMpvConfig,
-  restartApp,
   useDiscordStatus,
-  useVideoOutput,
   type DiscordStatus,
 } from '@/lib/hosts/shell/desktop';
-import {
-  addMpvShader,
-  readMpvConfig,
-  readMpvShaders,
-  removeMpvShader,
-  saveMpvConfig,
-} from '@/lib/hosts/shell/android';
-import { appBridge, type VideoOutput } from '@/lib/hosts/shell/bridge';
+import { appBridge } from '@/lib/hosts/shell/bridge';
 import {
   settings,
   useSetting,
@@ -46,7 +35,7 @@ import {
 } from '@/lib/settings';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { onDevice, ShaderFilesRow } from './_components/common';
+import { onDevice } from './_components/common';
 
 function UpdatesCard() {
   const [setting, setSetting] = useSetting(settings.app.updateChannel);
@@ -190,75 +179,11 @@ export function AppSection() {
   );
 }
 
-const videoOutputs = (output: VideoOutput): { label: string; help: string } =>
-  ({
-    mpv: {
-      label: 'mpv',
-      help: t`mpv draws the video, with your mpv.conf and shaders.`,
-    },
-    system: {
-      label: t`System`,
-      help: t`macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply.`,
-    },
-    compatibility: {
-      label: t`Compatibility`,
-      help: t`The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours.`,
-    },
-  })[output];
-
-function VideoOutputRows() {
-  const [state, choose] = useVideoOutput();
-  if (!state?.outputs.length) return null;
-  return (
-    <>
-      <Select
-        label={t`Video output`}
-        help={videoOutputs(state.chosen).help}
-        options={state.outputs.map((value) => ({
-          value,
-          label: videoOutputs(value).label,
-        }))}
-        value={state.chosen}
-        onValueChange={(v) => choose(v as VideoOutput)}
-      />
-      {state.chosen !== state.running && (
-        <SettingsRow
-          label={t`Restart to switch`}
-          help={t`The video output changes when the app opens again.`}
-        >
-          <Button
-            intent="white"
-            className="w-full rounded-full sm:w-auto"
-            onClick={restartApp}
-          >
-            <Trans>Restart</Trans>
-          </Button>
-        </SettingsRow>
-      )}
-    </>
-  );
-}
-
 export function DesktopSection() {
   return (
     <>
       <UpdatesCard />
       <DiscordCard />
-      <SettingsCard name="mpv" title="mpv">
-        <VideoOutputRows />
-        <SettingsRow
-          label={t`mpv configuration`}
-          help={t`mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv.`}
-        >
-          <Button
-            intent="gray-outline"
-            className="w-full rounded-full sm:w-auto"
-            onClick={openMpvConfig}
-          >
-            <Trans>Open folder</Trans>
-          </Button>
-        </SettingsRow>
-      </SettingsCard>
       <SettingsCard name="troubleshooting" title={t`Troubleshooting`}>
         <SettingsRow
           label={t`Logs`}
@@ -334,90 +259,12 @@ function DiagnosticsRow() {
 }
 
 export function AndroidSection() {
-  const [engine] = useSetting(settings.player.engine);
-  const [pip, setPip] = useSetting(settings.app.pip);
-  const [background, setBackground] = useSetting(settings.app.background);
-  const canPip = appBridge()?.pip !== false;
   return (
     <>
       <UpdatesCard />
-      <SettingsCard
-        name="leaving-the-app"
-        title={t`Leaving the app`}
-        description={onDevice()}
-      >
-        {canPip && (
-          <Switch
-            side="right"
-            label={t`Picture-in-picture`}
-            help={t`Keeps the video playing in a small window when you leave the app.`}
-            value={pip}
-            onValueChange={setPip}
-          />
-        )}
-        <Switch
-          side="right"
-          label={t`Play in the background`}
-          help={
-            canPip
-              ? t`Keeps the sound going with the screen off, or when you leave without picture-in-picture.`
-              : t`Keeps the sound going with the screen off, or when you leave the app.`
-          }
-          value={background}
-          onValueChange={setBackground}
-        />
-      </SettingsCard>
-      {engine !== 'exoplayer' && <MpvConfigCard />}
       <SettingsCard name="troubleshooting" title={t`Troubleshooting`}>
         <DiagnosticsRow />
       </SettingsCard>
     </>
-  );
-}
-
-/** mpv.conf, written by the app and applied to what plays next. */
-function MpvConfigCard() {
-  const [text, setText] = React.useState<string | null>(null);
-  const [saving, setSaving] = React.useState(false);
-  React.useEffect(() => {
-    readMpvConfig().then(setText, () => setText(''));
-  }, []);
-  return (
-    <SettingsCard name="mpv" title="mpv">
-      <Textarea
-        label="mpv.conf"
-        help={t`Options for the built-in mpv, one per line, as mpv's manual lists them.`}
-        value={text ?? ''}
-        disabled={text === null}
-        onValueChange={setText}
-        rows={8}
-        spellCheck={false}
-        className="font-mono text-sm"
-      />
-      <Button
-        intent="gray-outline"
-        className="w-full rounded-full sm:w-auto"
-        loading={saving}
-        disabled={text === null}
-        onClick={() => {
-          setSaving(true);
-          saveMpvConfig(text ?? '')
-            .then(
-              () => toast.success(t`Saved`),
-              (e: Error) => toast.error(e.message)
-            )
-            .finally(() => setSaving(false));
-        }}
-      >
-        <Trans>Save</Trans>
-      </Button>
-      <ShaderFilesRow
-        help={t`GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter.`}
-        accept=".glsl,.hook"
-        read={readMpvShaders}
-        add={addMpvShader}
-        remove={removeMpvShader}
-      />
-    </SettingsCard>
   );
 }

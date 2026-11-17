@@ -58,14 +58,15 @@
   }
 }
 /* Only while inert, so it ends in the same frame Home returns to its place. */
-[data-page='home'][inert][data-peek] {
+[data-page='home'][inert][data-peek],
+[data-back-under][inert][data-peek] {
   visibility: visible;
   content-visibility: visible;
-  margin-top: var(--home-top);
+  margin-top: var(--peek-top);
   will-change: transform, opacity;
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-page='home'][data-peek] {
+  [data-peek] {
     transform: none !important;
   }
 }

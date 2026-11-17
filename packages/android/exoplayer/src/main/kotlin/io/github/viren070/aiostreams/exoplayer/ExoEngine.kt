@@ -280,6 +280,7 @@ class ExoEngine(private val context: Context) : Engine {
     override fun setSettings(settings: PlayerSettings) = post {
         audio.setSettings(settings)
         cache.limitMb = settings.cacheMb
+        subtitles.setGpu(settings.gpuSubtitles)
     }
 
     override val checksOutput = true

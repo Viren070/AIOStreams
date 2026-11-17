@@ -6,6 +6,7 @@ import {
 } from '@/lib/input';
 import { UNDER_OPACITY, UNDER_SHIFT } from '@/lib/page-open';
 import { washCopy } from '@/lib/artwork/background';
+import { pageRtl } from '@/lib/direction';
 
 const GLIDE = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
 /** Longer than `history.back` takes to land. */
@@ -19,20 +20,31 @@ interface NavigationEntries {
   entries(): { url: string | null }[];
 }
 
+/** What Back leads to, still mounted beneath the page to show. */
+interface Under {
+  el: HTMLElement;
+  /** How far down it was scrolled when left. */
+  y: number;
+  home: boolean;
+  landed(): boolean;
+}
+
 interface Slide {
   page: HTMLElement;
   side: 1 | -1;
-  home: HTMLElement | null;
+  under: Under | null;
 }
 
 let slide: Slide | null = null;
-let homeY = 0;
+/** Unknown where no host notes it, so Home can't be shown where it was left. */
+let homeY: number | null = null;
 
 const pathOf = (hash: string) => hash.slice(1).split('?')[0] || '/';
 const pagePath = () => pathOf(location.hash);
 
 /** The document's scroll follows other pages once Home is left. */
 export function noteHomeScroll(): () => void {
+  homeY = 0;
   const note = () => {
     if (pagePath() === '/') homeY = window.scrollY;
   };
@@ -50,44 +62,60 @@ function pageBackLeaves(): HTMLElement | null {
   );
 }
 
-/** Home when Back leads to it, the only page that stays mounted to show. */
-function homeBehind(): HTMLElement | null {
+/**
+ * Home, or the page's own layer marked `data-back-under` with the address it
+ * shows and `data-back-y`, when Back leads to it.
+ */
+function behind(page: HTMLElement): Under | null {
   const nav = (window as { navigation?: NavigationEntries }).navigation;
   const url = nav?.entries()[(nav.currentEntry?.index ?? 0) - 1]?.url;
-  if (!url || pathOf(new URL(url).hash) !== '/') return null;
-  return document.querySelector<HTMLElement>("[data-page='home']");
+  if (!url) return null;
+  const { hash } = new URL(url);
+  const layer = page.querySelector<HTMLElement>('[data-back-under][inert]');
+  const address = layer?.dataset.backUnder;
+  if (layer && address === hash.slice(1))
+    return {
+      el: layer,
+      y: Number(layer.dataset.backY) || 0,
+      home: false,
+      landed: () => location.hash.slice(1) === address,
+    };
+  const home = document.querySelector<HTMLElement>("[data-page='home']");
+  if (!home || homeY === null || pathOf(hash) !== '/') return null;
+  return { el: home, y: homeY, home: true, landed: () => pagePath() === '/' };
 }
 
-function showHome(home: HTMLElement) {
-  const left = (FADE_TO - homeY / innerHeight) / (FADE_TO - FADE_FROM);
-  const fade = Math.min(1, Math.max(0, left));
-  home.style.setProperty('--home-top', `${window.scrollY - homeY}px`);
-  home.style.setProperty('--home-y', `${homeY}px`);
-  home.style.setProperty('--home-fade', String(fade));
-  home.toggleAttribute('data-peek', true);
+function show({ el, y, home }: Under) {
+  el.style.setProperty('--peek-top', `${window.scrollY - y}px`);
+  if (home) {
+    const left = (FADE_TO - y / innerHeight) / (FADE_TO - FADE_FROM);
+    el.style.setProperty('--home-y', `${y}px`);
+    el.style.setProperty('--home-fade', String(Math.min(1, Math.max(0, left))));
+  }
+  el.toggleAttribute('data-peek', true);
 }
 
-/** Directly on Home, as a custom property would restyle all of it every frame. */
-function moveHome(home: HTMLElement, side: number, progress: number) {
+/** Directly on it, as a custom property would restyle all of it every frame. */
+function move(el: HTMLElement, side: number, progress: number) {
   const shift = -side * UNDER_SHIFT * (1 - progress) * 100;
-  home.style.transform = `translateX(${shift}%)`;
-  home.style.opacity = String(UNDER_OPACITY + (1 - UNDER_OPACITY) * progress);
+  el.style.transform = `translateX(${shift}%)`;
+  el.style.opacity = String(UNDER_OPACITY + (1 - UNDER_OPACITY) * progress);
 }
 
-function settleHome(home: HTMLElement) {
-  const { transform, opacity } = home.style;
-  home.style.transform = 'none';
-  home.style.opacity = '1';
-  home.animate(
+function settle(el: HTMLElement) {
+  const { transform, opacity } = el.style;
+  el.style.transform = 'none';
+  el.style.opacity = '1';
+  el.animate(
     { transform: [transform, 'none'], opacity: [opacity, '1'] },
     GLIDE
   );
 }
 
-function hideHome(home: HTMLElement) {
-  home.removeAttribute('data-peek');
-  home.style.transform = '';
-  home.style.opacity = '';
+function hide(el: HTMLElement) {
+  el.removeAttribute('data-peek');
+  el.style.transform = '';
+  el.style.opacity = '';
 }
 
 /** The artwork behind the pages, which the page's own background hides while it slides. */
@@ -119,25 +147,44 @@ function release(page: HTMLElement) {
   page.querySelector(':scope > [data-ui=art-wash]')?.remove();
 }
 
-function leave({ page, home }: Slide) {
+function leave({ page, under }: Slide) {
   const from = pagePath();
   const landed = () => {
-    // An entry of the same path keeps this element, which has to come back.
-    if (pagePath() === from) release(page);
-    if (home && pagePath() !== '/') hideHome(home);
+    const onUnder = !!under?.landed();
+    // An entry of the same path keeps this element, which has to come back,
+    // unless it lay over the page's own layer, which it leaves with.
+    if (pagePath() === from && (!onUnder || under?.home)) release(page);
+    if (under && !onUnder) hide(under.el);
   };
   addEventListener('popstate', landed, { once: true });
   setTimeout(landed, BACK_MS);
-  if (home) {
+  if (under) {
+    const { el } = under;
     const returned = new MutationObserver(() => {
-      if (home.inert) return;
+      if (el.inert) return;
       returned.disconnect();
       // The hero's scroll-driven effects see the restored scroll from the next frame.
-      requestAnimationFrame(() => hideHome(home));
+      requestAnimationFrame(() => hide(el));
     });
-    returned.observe(home, { attributeFilter: ['inert'] });
+    returned.observe(el, { attributeFilter: ['inert'] });
   }
   runAction('back');
+}
+
+function begin(side: 1 | -1): boolean {
+  const whole = pageBackLeaves();
+  if (!whole) return false;
+  // A page's `data-back-slide` layer leaves alone, over the rest of the page.
+  const page = whole.querySelector<HTMLElement>('[data-back-slide]') ?? whole;
+  const under = behind(whole);
+  if (under) {
+    move(under.el, side, 0);
+    show(under);
+  }
+  page.toggleAttribute('data-sliding', true);
+  carryWash(page);
+  slide = { page, side, under };
+  return true;
 }
 
 export function backGesture(
@@ -147,30 +194,20 @@ export function backGesture(
     | { event: 'cancel' }
 ): void {
   if (m.event === 'start') {
-    const page = pageBackLeaves();
-    if (!page) return;
-    const side = m.fromRight ? -1 : 1;
-    const home = homeBehind();
-    if (home) {
-      moveHome(home, side, 0);
-      showHome(home);
-    }
-    page.toggleAttribute('data-sliding', true);
-    carryWash(page);
-    slide = { page, side, home };
+    begin(m.fromRight ? -1 : 1);
     return;
   }
   if (!slide) return;
-  const { page, side, home } = slide;
+  const { page, side, under } = slide;
   if (m.event === 'move') {
     page.style.transform = `translateX(${side * m.progress * 100}%)`;
-    if (home) moveHome(home, side, m.progress);
+    if (under) move(under.el, side, m.progress);
     return;
   }
   slide = null;
   glide(page, 'none', () => {
     release(page);
-    if (home) hideHome(home);
+    if (under) hide(under.el);
   });
 }
 
@@ -181,8 +218,22 @@ export function backPressed(): void {
   }
   const current = slide;
   slide = null;
-  if (current.home) settleHome(current.home);
+  if (current.under) settle(current.under.el);
   glide(current.page, `translateX(${current.side * 100}%)`, () =>
     leave(current)
   );
+}
+
+/** Back from a button on a touch screen, leaving as a swipe does; false where no page slides. */
+export function slideBack(): boolean {
+  if (
+    slide ||
+    document.documentElement.hasAttribute('data-tv') ||
+    !matchMedia('(pointer: coarse)').matches ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    !begin(pageRtl() ? -1 : 1)
+  )
+    return false;
+  backPressed();
+  return true;
 }

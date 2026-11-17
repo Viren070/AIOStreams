@@ -110,12 +110,7 @@ const settingsRoute = createRoute({
 
 function SettingsRouteView(): React.ReactElement {
   const { tab } = settingsRoute.useSearch();
-  return (
-    <SettingsPage
-      tab={tab}
-      onTabChange={(next) => navigate(to.settings(next), { replace: true })}
-    />
-  );
+  return <SettingsPage tab={tab} />;
 }
 
 const searchRoute = createRoute({

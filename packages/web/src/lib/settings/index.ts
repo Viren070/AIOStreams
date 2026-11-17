@@ -366,9 +366,8 @@ const discord = record(DISCORD_EVENTS, (event) =>
 );
 
 /*
- * Grouped as the settings page lists them. How the user likes to watch
- * follows their account; what suits this device's screen, input, sound or
- * hardware stays on it.
+ * How the user likes to watch follows their account; what suits this device's
+ * screen, input, sound or hardware stays on it.
  */
 export const settings = {
   interface: {
@@ -684,7 +683,12 @@ export const settings = {
       undefined,
       ['aiostreams-android-tunneling']
     ),
+    gpuSubtitles: device<boolean>('aiostreams-web-video-gpu-subtitles', true),
     upscaling: device<boolean>('aiostreams-web-video-upscaling', false),
+    superResolution: device<boolean>(
+      'aiostreams-web-video-super-resolution',
+      false
+    ),
     hdrOutput: device<boolean>('aiostreams-web-video-hdr-output', false),
   },
   audio: {

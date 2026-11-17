@@ -5,10 +5,12 @@ import { detectFileType } from '../file-type.js';
 import {
   decodePar2,
   par2Md5_16k,
+  par2NameKey,
   PAR2_HASH_BLOCK,
   type Par2Index,
 } from '../../par2/decode.js';
 import { Nzb, NzbFile } from '../../nzb/model.js';
+import { archiveKindOf } from '../archive/archive-volume.js';
 import { CommandPriority } from '../../types.js';
 import { InspectOptions, InspectResult } from './types.js';
 
@@ -130,8 +132,14 @@ export async function applyPar2Names(
       }
       renamed++;
     }
+    const headless = nameHeadlessVolumes(results, index);
     logger.debug(
-      { nzbHash: nzb.hash, renamed, latency: Date.now() - startedAt },
+      {
+        nzbHash: nzb.hash,
+        renamed,
+        headless: headless || undefined,
+        latency: Date.now() - startedAt,
+      },
       'applied par2 filenames'
     );
   } catch (err) {
@@ -140,4 +148,46 @@ export async function applyPar2Names(
       'par2 filename recovery failed'
     );
   }
+}
+
+/**
+ * Names the archive volumes whose first article is gone, which the hash match
+ * can't: each takes the one unclaimed descriptor of its exact size that no
+ * other such volume shares.
+ */
+function nameHeadlessVolumes(
+  results: InspectResult[],
+  index: Par2Index
+): number {
+  const named = (r: InspectResult) =>
+    !!r.file.filename && index.byName.has(par2NameKey(r.file.filename));
+  const headless = results.filter(
+    (r) => r.file.error === 'article_not_found' && r.file.sizeExact && !named(r)
+  );
+  if (headless.length === 0) return 0;
+  const claimed = new Set(
+    results.flatMap((r) =>
+      r.file.filename ? [par2NameKey(r.file.filename)] : []
+    )
+  );
+  const unclaimed = index.files.filter(
+    (d) =>
+      archiveKindOf(d.filename) !== undefined &&
+      !claimed.has(par2NameKey(d.filename))
+  );
+  let count = 0;
+  for (const r of headless) {
+    const sized = (size: number) => size === r.file.size;
+    const candidates = unclaimed.filter((d) => sized(d.length));
+    if (candidates.length !== 1) continue;
+    if (headless.filter((other) => sized(other.file.size)).length !== 1)
+      continue;
+    const [desc] = candidates;
+    const type = detectFileType(Buffer.alloc(0), desc.filename);
+    r.file.filename = desc.filename;
+    r.file.category = type.category;
+    r.file.format = type.format;
+    count++;
+  }
+  return count;
 }
