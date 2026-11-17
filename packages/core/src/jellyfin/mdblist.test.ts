@@ -31,6 +31,17 @@ describe('parseMdbListUrl', () => {
     }
   });
 
+  it('reads a list whose slug is json', () => {
+    for (const link of [
+      'https://mdblist.com/lists/someuser/json',
+      'https://mdblist.com/lists/someuser/json/json',
+    ])
+      assert.deepEqual(parseMdbListUrl(link), {
+        user: 'someuser',
+        slug: 'json',
+      });
+  });
+
   it('decodes a correctly encoded name', () => {
     assert.deepEqual(parseMdbListUrl('https://mdblist.com/lists/hd%6Cists/x'), {
       user: 'hdlists',

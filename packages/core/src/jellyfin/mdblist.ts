@@ -34,7 +34,7 @@ export function parseMdbListUrl(input: string): MdbListRef | null {
   if (!HOSTS.has(url.hostname.toLowerCase())) return null;
   if (url.port || url.username || url.password) return null;
   const parts = url.pathname.split('/').filter(Boolean);
-  if (parts[parts.length - 1] === 'json') parts.pop();
+  if (parts.length === 4 && parts[3] === 'json') parts.pop();
   if (parts.length !== 3 || parts[0] !== 'lists') return null;
   let user: string, slug: string;
   try {
@@ -107,6 +107,8 @@ export async function fetchMdbList(list: MdbListRef): Promise<MdbListTitle[]> {
     response = await makeRequest(mdbListJsonUrl(list), {
       timeout: TIMEOUT_MS,
       headers: { Accept: 'application/json' },
+      // A redirect could lead off mdblist.com; the JSON link never redirects.
+      rawOptions: { redirect: 'manual' },
     });
   } catch {
     throw new MdbListError('MDBList could not be reached', 'unavailable');

@@ -5009,6 +5009,10 @@ msgstr ""
 msgid "the link returned something other than a video"
 msgstr ""
 
+#: src/features/playlists/playlists.tsx
+msgid "The list holds more than a playlist can, so it stops after {Count} titles."
+msgstr ""
+
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the live stream stopped"

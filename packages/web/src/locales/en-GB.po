@@ -5010,6 +5010,10 @@ msgstr "The link may be old, or the page moved."
 msgid "the link returned something other than a video"
 msgstr "the link returned something other than a video"
 
+#: src/features/playlists/playlists.tsx
+msgid "The list holds more than a playlist can, so it stops after {Count} titles."
+msgstr "The list holds more than a playlist can, so it stops after {Count} titles."
+
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts
 msgid "the live stream stopped"

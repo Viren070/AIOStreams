@@ -339,7 +339,15 @@ function PlaylistIndex({
           <NameForm
             placeholder={t`MDBList list link`}
             action={t`Import`}
-            onSave={(url) => edits.importMdbList(url).then(onOpen)}
+            onSave={(url) =>
+              edits.importMdbList(url).then(({ Id, Count, Truncated }) => {
+                if (Truncated)
+                  toast.info(
+                    t`The list holds more than a playlist can, so it stops after ${Count} titles.`
+                  );
+                onOpen(Id);
+              })
+            }
           />
         </div>
       </div>

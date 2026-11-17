@@ -211,6 +211,16 @@ router.post(
         .json({ Message: 'Paste the link of a public MDBList list' });
       return;
     }
+    const owner = playlistOwner(ctx);
+    if (
+      (await JellyfinPlaylistRepository.list(owner)).length >=
+      PLAYLIST_LIMITS.perUser
+    ) {
+      res.status(400).json({
+        Message: `You can have up to ${PLAYLIST_LIMITS.perUser} playlists`,
+      });
+      return;
+    }
     let titles;
     try {
       titles = await fetchMdbList(list);
@@ -227,26 +237,35 @@ router.post(
     const ids = titles.map((title) =>
       encodeItemId(contentDescriptor({ id: title.id, type: title.type }))
     );
-    const items = withoutRepeats(await playableIds(ctx, ids));
+    // A few titles at a time, stopping once the playlist is full: a long
+    // list of shows would otherwise load every show's episodes for nothing.
+    const found: string[] = [];
+    let next = 0;
+    while (next < ids.length && found.length < PLAYLIST_LIMITS.items) {
+      const chunk = ids.slice(next, (next += ROW_CONCURRENCY * 4));
+      found.push(...withoutRepeats(await playableIds(ctx, chunk), found));
+    }
+    const items = found.slice(0, PLAYLIST_LIMITS.items);
     if (!items.length) {
       res.status(422).json({ Message: 'Nothing in that list can be played' });
       return;
     }
-    const playlist = await JellyfinPlaylistRepository.create(
-      playlistOwner(ctx),
-      {
-        id: newPlaylistId(),
-        name: nameOf(bodyField(req, 'Name')) || mdbListName(list),
-        items,
-      }
-    );
+    const playlist = await JellyfinPlaylistRepository.create(owner, {
+      id: newPlaylistId(),
+      name: nameOf(bodyField(req, 'Name')) || mdbListName(list),
+      items,
+    });
     if (!playlist) {
       res.status(400).json({
         Message: `You can have up to ${PLAYLIST_LIMITS.perUser} playlists`,
       });
       return;
     }
-    res.json({ Id: playlist.id, Count: items.length });
+    res.json({
+      Id: playlist.id,
+      Count: items.length,
+      Truncated: found.length > items.length || next < ids.length,
+    });
   })
 );
 
