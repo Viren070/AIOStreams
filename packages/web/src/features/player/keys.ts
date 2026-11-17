@@ -46,6 +46,8 @@ interface PlayerKeys {
   root: React.RefObject<HTMLElement | null>;
   /** False until the first frame. */
   ready: boolean;
+  /** A live stream, which Select doesn't pause while the controls are hidden. */
+  live?: boolean;
   /** Whether the controls show, which Back hides first on a TV. */
   visible(): boolean;
   wake(): void;
@@ -205,7 +207,9 @@ export function usePlayerKeys(keys: PlayerKeys): void {
           )
         )
           return call(k().skipSegment);
-        if (k().visible()) return focusControls();
+        // Play then takes the next press.
+        if (k().visible() || (k().live && !player().state.paused))
+          return focusControls();
         return playKey(() => {
           k().togglePlay();
           if (settings.controls.showOnPauseAndSkip.read()) focusControls();

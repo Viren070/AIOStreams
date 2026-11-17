@@ -355,6 +355,7 @@ export function PlayerControls({
     player,
     root,
     ready,
+    live,
     visible: shown.get,
     wake,
     glance: () => {
