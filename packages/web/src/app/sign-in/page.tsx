@@ -19,6 +19,7 @@ import {
 import { useAction } from '@/lib/input';
 import { configureUrl } from '@/lib/paths';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
+import type { SavedServer } from '@/lib/jellyfin/servers';
 import type {
   PickableUser,
   QuickConnectResult,
@@ -549,8 +550,7 @@ export function SignInScreen({
           avatar: publicAvatar(client, u),
           needs: null,
         }))}
-        onPick={async (id) => {
-          const picked = users.find((u) => u.Id === id)!;
+        onPick={async ({ user: picked }) => {
           if (picked.HasPassword) setChosen(picked);
           else await onSignIn(picked.Name ?? '', '');
         }}
@@ -589,17 +589,26 @@ export function SignInScreen({
   );
 }
 
+export const TILE = {
+  hidden: { opacity: 0, y: 14, scale: 0.96 },
+  shown: { opacity: 1, y: 0, scale: 1 },
+};
+
+export type PickerUser = PickableUser & { server?: SavedServer };
+
+const pickerKey = (u: PickerUser) => `${u.server?.base ?? ''}|${u.user.Id}`;
+
 /** Shared between the picker and the prompt, so one grows into the other. */
 function SharedAvatar({
   user,
   className,
 }: {
-  user: PickableUser;
+  user: PickerUser;
   className?: string;
 }) {
   return (
     <motion.span
-      layoutId={`avatar-${user.user.Id}`}
+      layoutId={`avatar-${pickerKey(user)}`}
       transition={SPRING}
       className="block rounded-full"
     >
@@ -619,7 +628,7 @@ function SecretPrompt({
   onSubmit,
   onBack,
 }: {
-  user: PickableUser;
+  user: PickerUser;
   busy: boolean;
   error: string | null;
   onSubmit(secret: string): Promise<boolean>;
@@ -696,32 +705,44 @@ function SecretPrompt({
   );
 }
 
-/** One card per user, the way a Jellyfin sign-in page lists them. */
+/** A saved server whose users the picker can't list, which opens to sign in again. */
+export interface ServerTile {
+  server: SavedServer;
+  state: 'signed-out' | 'unreachable';
+}
+
 export function UserPicker({
   users,
+  servers = [],
+  serverName,
   onPick,
+  onOpenServer,
   links = [],
   onChangeServer,
 }: {
-  users: PickableUser[];
-  onPick: (userId: string, secret?: string) => Promise<void>;
+  users: PickerUser[];
+  servers?: ServerTile[];
+  serverName?: string | null;
+  onPick: (user: PickerUser, secret?: string) => Promise<void>;
+  onOpenServer?: (server: SavedServer) => void;
   links?: SignInLink[];
   onChangeServer?: () => void;
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   // A lone user that needs a secret opens straight on its prompt.
-  const [asking, setAsking] = React.useState<PickableUser | null>(
-    users.length === 1 && users[0].needs ? users[0] : null
+  const [asking, setAsking] = React.useState<PickerUser | null>(
+    users.length === 1 && users[0].needs && !servers.length ? users[0] : null
   );
   // Back from a prompt returns focus to the user it was for.
   const left = React.useRef<string | null>(null);
+  const mixed = users.some((u) => u.server) || servers.length > 0;
 
-  const pick = async (userId: string, secret?: string) => {
-    setBusy(userId);
+  const pick = async (u: PickerUser, secret?: string) => {
+    setBusy(pickerKey(u));
     setError(null);
     try {
-      await onPick(userId, secret);
+      await onPick(u, secret);
       return true;
     } catch (err) {
       setError(secret ? t`That did not match. Try again.` : signInError(err));
@@ -730,10 +751,10 @@ export function UserPicker({
     }
   };
 
-  const choose = (u: PickableUser) => {
+  const choose = (u: PickerUser) => {
     setError(null);
     if (u.needs) setAsking(u);
-    else void pick(u.user.Id!);
+    else void pick(u);
   };
 
   return (
@@ -743,14 +764,14 @@ export function UserPicker({
         <LayoutGroup>
           <AnimatePresence mode="popLayout" initial={false}>
             {asking ? (
-              <motion.div key={`prompt-${asking.user.Id}`} {...FADE}>
+              <motion.div key={`prompt-${pickerKey(asking)}`} {...FADE}>
                 <SecretPrompt
                   user={asking}
                   busy={!!busy}
                   error={error}
-                  onSubmit={(secret) => pick(asking.user.Id!, secret)}
+                  onSubmit={(secret) => pick(asking, secret)}
                   onBack={() => {
-                    left.current = asking.user.Id!;
+                    left.current = pickerKey(asking);
                     setAsking(null);
                     setError(null);
                   }}
@@ -773,54 +794,99 @@ export function UserPicker({
                     shown: { transition: { staggerChildren: 0.05 } },
                   }}
                 >
-                  {users.map((u) => (
-                    <motion.button
-                      key={u.user.Id}
-                      ref={(el) => {
-                        if (!el || left.current !== u.user.Id) return;
-                        left.current = null;
-                        el.focus({ preventScroll: true });
-                      }}
-                      type="button"
-                      disabled={!!busy}
-                      onClick={() => choose(u)}
-                      variants={{
-                        hidden: { opacity: 0, y: 14, scale: 0.96 },
-                        shown: { opacity: 1, y: 0, scale: 1 },
-                      }}
-                      transition={SPRING}
-                      whileTap={busy ? undefined : { scale: 0.96 }}
-                      data-ui="user-picker-user"
-                      data-focus="own"
-                      className="group/user flex w-28 flex-col items-center sm:w-32"
-                    >
-                      <span
-                        className={cn(
-                          'flex w-full flex-col items-center gap-3 transition-opacity',
-                          busy && busy !== u.user.Id && 'opacity-40'
-                        )}
+                  {users.map((u) => {
+                    const key = pickerKey(u);
+                    return (
+                      <motion.button
+                        key={key}
+                        ref={(el) => {
+                          if (!el || left.current !== key) return;
+                          left.current = null;
+                          el.focus({ preventScroll: true });
+                        }}
+                        type="button"
+                        disabled={!!busy}
+                        onClick={() => choose(u)}
+                        variants={TILE}
+                        transition={SPRING}
+                        whileTap={busy ? undefined : { scale: 0.96 }}
+                        data-ui="user-picker-user"
+                        data-focus="own"
+                        className="group/user flex w-28 flex-col items-center sm:w-32"
                       >
                         <span
-                          data-focus-frame
-                          className="relative rounded-full transition-transform group-focus-visible/user:scale-110"
-                        >
-                          <SharedAvatar
-                            user={u}
-                            className={cn(
-                              'size-24 text-3xl ring-2 ring-transparent transition group-hover/user:ring-white sm:size-28',
-                              busy === u.user.Id &&
-                                'animate-pulse ring-brand-400'
-                            )}
-                          />
-                          {(u.needs === 'pin' ||
-                            u.needs === 'password-pin') && (
-                            <span className="absolute bottom-0 end-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
-                              <BiLockAlt aria-label={t`Has a PIN`} />
-                            </span>
+                          className={cn(
+                            'flex w-full flex-col items-center gap-3 transition-opacity',
+                            busy && busy !== key && 'opacity-40'
                           )}
+                        >
+                          <span
+                            data-focus-frame
+                            className="relative rounded-full transition-transform group-focus-visible/user:scale-110"
+                          >
+                            <SharedAvatar
+                              user={u}
+                              className={cn(
+                                'size-24 text-3xl ring-2 ring-transparent transition group-hover/user:ring-white sm:size-28',
+                                busy === key && 'animate-pulse ring-brand-400'
+                              )}
+                            />
+                            {(u.needs === 'pin' ||
+                              u.needs === 'password-pin') && (
+                              <span className="absolute bottom-0 end-0 flex size-7 items-center justify-center rounded-full bg-gray-900 text-sm ring-2 ring-[--background]">
+                                <BiLockAlt aria-label={t`Has a PIN`} />
+                              </span>
+                            )}
+                          </span>
+                          <span className="w-full text-center">
+                            <span className="block truncate text-sm font-medium">
+                              {u.user.Name}
+                            </span>
+                            {mixed && (
+                              <span
+                                data-ui="user-picker-server"
+                                className="block truncate text-xs text-[--muted]"
+                              >
+                                {u.server?.name ?? serverName}
+                              </span>
+                            )}
+                          </span>
                         </span>
-                        <span className="w-full truncate text-center text-sm font-medium">
-                          {u.user.Name}
+                      </motion.button>
+                    );
+                  })}
+                  {servers.map(({ server, state }) => (
+                    <motion.button
+                      key={`server|${server.base}`}
+                      type="button"
+                      disabled={!!busy}
+                      onClick={() => onOpenServer?.(server)}
+                      variants={TILE}
+                      transition={SPRING}
+                      data-ui="user-picker-server-tile"
+                      data-focus="own"
+                      className="group/user flex w-28 flex-col items-center gap-3 sm:w-32"
+                    >
+                      <span
+                        data-focus-frame
+                        className="rounded-full transition-transform group-focus-visible/user:scale-110"
+                      >
+                        <UserAvatar
+                          name={server.name}
+                          src={server.logo}
+                          className="size-24 text-3xl opacity-60 ring-2 ring-transparent transition group-hover/user:ring-white sm:size-28"
+                        />
+                      </span>
+                      <span className="w-full text-center">
+                        <span className="block truncate text-sm font-medium">
+                          {server.name}
+                        </span>
+                        <span className="block truncate text-xs text-[--muted]">
+                          {state === 'signed-out' ? (
+                            <Trans>Sign in</Trans>
+                          ) : (
+                            <Trans>Can’t reach</Trans>
+                          )}
                         </span>
                       </span>
                     </motion.button>

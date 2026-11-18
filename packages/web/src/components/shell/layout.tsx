@@ -32,7 +32,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
 import { useLiveTvShown } from '@/features/live-tv/live-tv';
-import { usePickableUsers } from '@/lib/jellyfin/history';
+import { useCanSwitch } from '@/lib/profiles';
 import { pageOpening } from '@/lib/page-open';
 import { navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
@@ -154,8 +154,7 @@ const WARM_UP_AFTER_MS = 10_000;
 
 export function WebLayout() {
   const { switchUser, user } = useSession();
-  const users = usePickableUsers();
-  const several = (users.data?.length ?? 0) > 1;
+  const several = useCanSwitch();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const entry = useRouterState({
     select: (s) => s.location.state.__TSR_key ?? s.location.href,

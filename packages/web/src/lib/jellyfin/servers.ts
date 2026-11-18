@@ -10,6 +10,8 @@ export interface SavedServer {
   name: string;
   logo: string | null;
   lastUsed: number;
+  /** Its profiles show on every server's profile picker unless false. */
+  onPicker?: boolean;
 }
 
 const SERVERS_KEY = 'aiostreams-web-servers';
@@ -36,6 +38,15 @@ export function enterServer(server: SavedServer): void {
 
 export function leaveServer(): void {
   storage.remove(CURRENT_KEY);
+}
+
+export function setOnPicker(base: string, onPicker: boolean): void {
+  storage.set(
+    SERVERS_KEY,
+    savedServers().map((s) =>
+      s.base === base ? { ...s, onPicker: onPicker ? undefined : false } : s
+    )
+  );
 }
 
 export function forgetServer(base: string): void {

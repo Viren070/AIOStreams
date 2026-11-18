@@ -12,7 +12,8 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { useSession } from '@/lib/jellyfin/session';
-import { useOwnAvatar, usePickableUsers } from '@/lib/jellyfin/history';
+import { useOwnAvatar } from '@/lib/jellyfin/history';
+import { useCanSwitch } from '@/lib/profiles';
 import { configureUrl } from '@/lib/paths';
 import { serverAddress } from '@/lib/jellyfin/servers';
 import { settings, useSetting } from '@/lib/settings';
@@ -23,9 +24,8 @@ import { SettingsCard, SettingsRow } from './_components/settings-card';
 export function AccountSection() {
   const { client, user, switchUser, signOut, changeServer } = useSession();
   const info = useServerInfo();
-  const users = usePickableUsers();
   const avatar = useOwnAvatar();
-  const several = (users.data?.length ?? 0) > 1;
+  const several = useCanSwitch();
   const [askWho, setAskWho] = useSetting(settings.account.askWho);
   const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({

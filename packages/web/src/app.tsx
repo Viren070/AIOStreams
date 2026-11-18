@@ -9,10 +9,12 @@ import { Toaster } from '@aiostreams/ui/toaster';
 import { DirectionProvider } from '@aiostreams/ui/core/direction';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import {
+  enterOn,
   pickerAccount,
   SessionProvider,
   useSessionPhase,
 } from './lib/jellyfin/session';
+import { useOtherServers } from './lib/profiles';
 import { webRouter } from './router';
 import { SignInScreen, Unreachable, UserPicker } from './app/sign-in/page';
 import { PageBackground } from './components/shell/layout';
@@ -212,7 +214,14 @@ function Standalone() {
           transition={{ duration: 0.18 }}
         >
           {base ? (
-            <Session base={base} changeServer={leave} />
+            <Session
+              base={base}
+              changeServer={leave}
+              openServer={(server) => {
+                leave();
+                choose(server);
+              }}
+            />
           ) : (
             <ServerInfoProvider value={NO_SERVER_INFO}>
               <ServersPage key={linked} onChoose={choose} address={linked} />
@@ -230,13 +239,16 @@ function Standalone() {
 function Session({
   base,
   changeServer: leave,
+  openServer,
 }: {
   base: string;
   changeServer?: () => void;
+  openServer?: (server: SavedServer) => void;
 }) {
   const { phase, signIn, signInWithQuickConnect, switchUser, signOut, retry } =
     useSessionPhase(base);
   const changeServer = leave ?? currentHost().selectServer;
+  const others = useOtherServers(base);
 
   React.useEffect(() => currentHost().start?.({ base }), [base]);
 
@@ -305,8 +317,18 @@ function Session({
     case 'picking':
       screen = (
         <UserPicker
-          users={phase.users}
-          onPick={phase.choose}
+          users={[
+            ...phase.users,
+            ...others.flatMap((o) => (o.state === 'ready' ? o.users : [])),
+          ]}
+          servers={others.flatMap((o) => (o.state === 'ready' ? [] : [o]))}
+          serverName={info.name}
+          onPick={async (user, secret) => {
+            if (!user.server) return phase.choose(user.user.Id!, secret);
+            await enterOn(user.server.base, user.user.Id!, secret);
+            openServer?.(user.server);
+          }}
+          onOpenServer={openServer}
           onChangeServer={changeServer}
         />
       );

@@ -4,7 +4,7 @@ import { Alert } from '@aiostreams/ui/alert';
 import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
-import { usePickableUsers } from '@/lib/jellyfin/history';
+import { useCanSwitch } from '@/lib/profiles';
 import { useViews } from '@/lib/jellyfin/queries';
 import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
 import { configureUrl } from '@/lib/paths';
@@ -14,8 +14,7 @@ export function NoCatalogs() {
   const configure = configureUrl(client.base, useServerInfo());
   const configTip = useFeature('configSignIn');
   const views = useViews();
-  const users = usePickableUsers();
-  const several = (users.data?.length ?? 0) > 1;
+  const several = useCanSwitch();
   const button = 'rounded-full';
 
   return (

@@ -65,7 +65,37 @@ const lastUserKey = (base: string) => `aiostreams-web-last-user:${base}`;
  * unlocked; after, they need it to come back, even once the app restarts.
  */
 const leftKey = (base: string) => `aiostreams-web-left-user:${base}`;
+/** Picked on another server's picker, so its launch doesn't ask again. */
+const pickedKey = (base: string) => `aiostreams-web-picked-user:${base}`;
 const AWAY_MS = 30 * 60_000;
+
+/** Through the session this device already has on that server. */
+export async function enterOn(
+  base: string,
+  userId: string,
+  secret?: string
+): Promise<void> {
+  const stored = readCredentials(base);
+  if (!stored) throw new Error('Not signed in there');
+  if (stored.userId !== userId || secret) {
+    const auth = await new JellyfinClient(
+      base,
+      stored.token
+    ).post<AuthenticationResult>('/AIOStreams/Token', {
+      UserId: userId,
+      ...(secret ? { Pw: secret } : {}),
+    });
+    saveCredentials(base, {
+      serverId: auth.ServerId ?? '',
+      token: auth.AccessToken!,
+      userId,
+    });
+    saveUser(base, auth.User!);
+  }
+  storage.set(lastUserKey(base), userId);
+  storage.remove(leftKey(base));
+  storage.set(pickedKey(base), userId);
+}
 
 /** Ends the token on the server and forgets the sign-in here. */
 export function endSession(base: string, token: string | null): void {
@@ -222,7 +252,9 @@ export function useSessionPhase(base: string) {
         // Opens with the saved user at once; the server's answer replaces it.
         const saved = savedUser(base, stored.userId);
         const left = storage.get<string>(leftKey(base)) === stored.userId;
-        const mayAsk = left || settings.account.askWho.read();
+        const picked = storage.get<string>(pickedKey(base)) === stored.userId;
+        storage.remove(pickedKey(base));
+        const mayAsk = !picked && (left || settings.account.askWho.read());
         if (saved && !mayAsk && !cancelled)
           setPhase({ kind: 'ready', client, user: saved });
         const [me, asking] = await Promise.all([
@@ -230,7 +262,7 @@ export function useSessionPhase(base: string) {
             (user) => ({ user }),
             (error: unknown) => ({ error })
           ),
-          askWho(client, left),
+          mayAsk ? askWho(client, left) : null,
         ]);
         if ('user' in me) {
           saveUser(base, me.user);

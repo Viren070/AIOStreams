@@ -866,6 +866,7 @@ msgid "Calendar"
 msgstr "Calendar"
 
 #: src/app/servers/page.tsx
+#: src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr "Can’t reach"
 
@@ -2325,6 +2326,10 @@ msgstr "Leave {from} to add {adding}?"
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
 msgstr "Leave {from} to open this on {target}?"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr "Leave off the profile picker"
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -4300,6 +4305,10 @@ msgstr "Show in folder"
 #: src/app/settings/playback.tsx
 msgid "Show messages over the video"
 msgstr "Show messages over the video"
+
+#: src/app/servers/page.tsx
+msgid "Show on the profile picker"
+msgstr "Show on the profile picker"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
