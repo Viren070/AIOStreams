@@ -3302,7 +3302,8 @@ export function useFilterSections(): {
                     <span className="font-medium">Per Service</span>
                     <p className="text-sm text-[--muted] mt-1">
                       This keeps one result per service, and choses each result
-                      using the same criteria above.
+                      using the same criteria above. P2P results have no
+                      service, so they don&apos;t offer it.
                     </p>
                   </div>
                   <div>
@@ -3365,11 +3366,14 @@ export function useFilterSections(): {
                 <Select
                   disabled={!userData.deduplicator?.enabled}
                   label="P2P Results"
-                  value={userData.deduplicator?.p2p ?? 'per_addon'}
+                  value={
+                    userData.deduplicator?.p2p === 'per_service'
+                      ? 'single_result'
+                      : (userData.deduplicator?.p2p ?? 'per_addon')
+                  }
                   options={[
                     { label: 'Disabled', value: 'disabled' },
                     { label: 'Single Result', value: 'single_result' },
-                    { label: 'Per Service', value: 'per_service' },
                     { label: 'Per Addon', value: 'per_addon' },
                   ]}
                   onValueChange={(value) => {

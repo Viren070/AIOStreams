@@ -95,7 +95,11 @@ class StreamDeduplicator {
       keys: deduplicationKeys,
       cached: deduplicator.cached || 'per_addon',
       uncached: deduplicator.uncached || 'per_addon',
-      p2p: deduplicator.p2p || 'per_addon',
+      // P2P results have no service, so one per service is one in all.
+      p2p:
+        deduplicator.p2p === 'per_service'
+          ? 'single_result'
+          : deduplicator.p2p || 'per_addon',
       http: deduplicator.http || 'disabled',
       live: deduplicator.live || 'disabled',
       youtube: deduplicator.youtube || 'disabled',
