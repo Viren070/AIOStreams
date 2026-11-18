@@ -443,8 +443,7 @@ GET {addonBase}/watch_state/pull.json?viewer=sam&since=9f2c7b1e4a0d3856
   (lowercased, each run of other characters turned into `-`, trimmed of `-`, cut to 28 characters)
   and never changes, even when the user is renamed. A second user whose name gives the same id
   gets a suffix such as `sam-2`.
-- No `viewer` means the owner of the configuration: the primary user, and any user who shares its
-  history.
+- No `viewer` means the configuration's owner, and any profile that shares its history.
 - Keep everything per viewer: deduplication on `id`, and the pull's `version`.
 - Answer `404` for a viewer you do not know. The event is dropped, not retried, and only that
   user's pull fails.

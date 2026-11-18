@@ -28,14 +28,14 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
         has ready-made configurations.
       </Step>
       <Step>
-        In AIOStreams, go to **Addons → Installed**, click **Add by URL** and
+        In AIOStreams, go to **Addons**, click **Add by URL** and
         paste it.
       </Step>
       <Step>Move it to the top of **My Addons**, so its metadata is used first.</Step>
       <Step>Save.</Step>
     </Steps>
 
-    After you change AIOMetadata's catalogs, press refresh on the **Catalogs** card (**Addons → Installed → Catalogs**) and save, so AIOStreams picks up the new list. Other metadata addons work too: Cinemeta by URL, or **The Movie Database** from the marketplace.
+    After you change AIOMetadata's catalogs, press refresh on the **Catalogs** page and save, so AIOStreams picks up the new list. Other metadata addons work too: Cinemeta by URL, or **The Movie Database** from the marketplace.
 
     **In Stremio, install AIOMetadata on its own instead.** Stremio then asks it directly, so your changes there show up straight away. Inside AIOStreams, its catalogs pass through AIOStreams' cache, which on a public instance the instance's owner controls, not you. If you use both Stremio and the app, **Who gets this** keeps AIOMetadata out of your Stremio install, so its catalogs don't show twice: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
 
@@ -53,7 +53,7 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
   <Accordion title="What do cached and uncached mean?">
     A **cached** stream is already on your debrid service's servers and plays straight away. An **uncached** one has to be downloaded to the service first: playing it starts that download, and you can watch once it's done.
 
-    To hide uncached streams, turn on **Exclude Uncached** under **Filters → Cache**.
+    To hide uncached streams, turn on **Exclude Uncached** under **Filters → Cached and uncached**.
 
   </Accordion>
 
@@ -62,7 +62,7 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
 
     [Hosting your own](/getting-started/deployment) adds what a public instance can't offer: the built-in Usenet engine, Sonarr and Radarr, the dashboard, accounts, and full control over limits and addons.
 
-    Export your configuration now and then (**Save & Install → Backups → Export**). If your instance goes down, you can import it on another one.
+    Export your configuration now and then (**Configuration → Backups → Export**). If your instance goes down, you can import it on another one.
 
   </Accordion>
 
@@ -74,7 +74,7 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
   <Accordion title="Can I watch without Stremio?">
     Yes. The [AIOStreams app](/apps) signs in to your configuration directly: in a browser, or as an app for Windows, Mac and Linux, Android phones and tablets, Android TV and Fire TV, and LG and Samsung TVs.
 
-    AIOStreams also works in apps that support Stremio addons, such as Nuvio and Fusion: install it with the manifest URL from **Save & Install**. And every configuration is also a media server, so [Jellyfin apps](/apps/jellyfin) such as Infuse and Swiftfin can sign in to it.
+    AIOStreams also works in apps that support Stremio addons, such as Nuvio and Fusion: install it with the manifest URL from the **Stremio** page. And every configuration is also a media server, so [Jellyfin apps](/apps/jellyfin) such as Infuse and Swiftfin can sign in to it.
 
   </Accordion>
 
@@ -106,14 +106,14 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
   <Accordion title="How do I change my configuration after installing it?">
     In **Stremio**, click **Configure** next to the AIOStreams addon and sign in with your password. Or go to `https://your-instance/stremio/configure` and click **Sign In**.
 
-    After making changes, go to **Save & Install** and click **Save**.
+    After making changes, click **Save changes** at the top of the page.
 
   </Accordion>
 
   <Accordion title="When do I need to reinstall AIOStreams in Stremio?">
     Most changes apply as soon as you save. **Only reinstall when a pop-up tells you to.** That happens when the addon's manifest changes, for example when you rename or reorder catalogs, or add the first addon of a new kind, such as your first subtitle addon.
 
-    If you linked your Stremio account under **Save & Install → Linked accounts**, AIOStreams reinstalls itself whenever you save.
+    If you linked your Stremio account under **Stremio → Linked accounts**, AIOStreams reinstalls itself whenever you save.
 
     This only applies to Stremio and other apps that install AIOStreams as an addon. The AIOStreams app and Jellyfin apps sign in to your configuration rather than installing it, so there's nothing to reinstall: they pick up your changes after you save.
 
@@ -122,14 +122,14 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
   <Accordion title="I lost my UUID or password">
     **Your UUID** is in the addon's URL in Stremio: the part after `/stremio/`. **Configure** next to the addon opens the sign-in with it filled in.
 
-    **Your password can't be recovered or reset.** AIOStreams stores no email address or other way to prove the configuration is yours. Create a new configuration instead; if you exported a backup, import it on **Save & Install** to get your settings back.
+    **Your password can't be recovered or reset.** AIOStreams stores no email address or other way to prove the configuration is yours. Create a new configuration instead; if you exported a backup, import it under **Configuration → Backups** to get your settings back.
 
     On instances with accounts, a [profile](/guides/config-profiles) saved to your account reopens the configuration without its password.
 
   </Accordion>
 
   <Accordion title="How do I back up or move my configuration?">
-    Go to **Save & Install → Backups** and click **Export** to download a JSON copy. **Import** in the same place restores it, on the same instance or another. Turn on **Exclude Credentials** before sharing an export, so your API keys stay out of it.
+    Go to **Configuration → Backups** and click **Export** to download a JSON copy. **Import** in the same place restores it, on the same instance or another. Turn on **Exclude Credentials** before sharing an export, so your API keys stay out of it.
 
   </Accordion>
 
@@ -143,7 +143,7 @@ Something not working? See [Troubleshooting](/troubleshooting) for fixes to comm
   <Accordion title="Can I use different settings on different devices, or for different people?">
     Yes, from one configuration. **[Variants](/reference/config-expressions)** change parts of it for one install link, one app user, or automatically, for example 1080p only on your phone. The reference also compares variants with [a parent configuration](/reference/config-expressions#variants-or-a-parent-config).
 
-    In the AIOStreams app, each person can have their own user, with their own Continue Watching, trackers and variants: see [Users and PINs](/apps/media-server#users-and-pins).
+    In the AIOStreams app, each person can have their own user, with their own Continue Watching, trackers and variants: see [Users and PINs](/apps/media-server#profiles-and-pins).
 
   </Accordion>
 

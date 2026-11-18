@@ -42,7 +42,7 @@ Here you can manage your installed addons, add new ones, and configure them. You
 the [Group](/guides/groups) feature to group addons together. I will not be covering the Groups feature here, as it is not
 required and is a feature meant for advanced users. You may join the [AIOStreams Discord](https://discord.viren070.me) to view the community's configurations.
 
-To install addons, head to the `Marketplace` tab. You can choose from a variety of addons, and filter by supported services and the type of content or streams they provide.
+To install addons, open the marketplace with `Browse addons`. You can choose from a variety of addons, and filter by supported services and the type of content or streams they provide.
 You may also use the `Custom Addon` feature to add any addon you want as long as you have the manifest URL. The addons provided in the Marketplace
 are all provided for convenience's sake to ensure you can easily add addons without having to leave AIOStreams.
 
@@ -57,13 +57,13 @@ on every addon.
 - `Resources` - This option allows you to override the resources that AIOStreams would use from the addon. This is useful if you want to disable catalogues from the addon, but keep its streams. So you would only select `stream` here. In most cases, its recommended to leave this blank, or at the defaults - as it is automatically determined by AIOStreams later.
 - `URL` - In most cases, you will be able to override the URL of the addon here. Usually this is generated automatically by AIOStreams - A benefit of this is you never having to worry about other addon updates, as AIOStreams will always use the latest version of the addon. However, if you want to use a custom URL, you can do so here. This is useful for using a specific configuration of the addon. Note: you will need to configure any debrid services separately, debrid services configured in AIOStreams do not apply to overriden URLs.
 
-Once you've installed your addons, you can head back to the `Installed` tab to view them. You'll be able to click
+Your installed addons are listed on the `Addons` page. You'll be able to click
 the edit icon to edit the configuration, the delete icon to remove the addon from your installed addons, and optionally toggle the addon on or off
 to temporarily disable it without removing it.
 
 <h5>Catalogues</h5>
 
-Within the `Installed` tab of the `Addons` menu, you will find a section where you can control your catalogues (given that you have at least one addon installed).
+The `Catalogs` page is where you control your catalogues (given that you have at least one addon installed).
 
 You'll first want to click the refresh icon on the top right corner. This will fetch the catalogues from all your addons and display them here.
 
@@ -249,17 +249,17 @@ You can choose from either [MediaFlow Proxy](https://github.com/mhdzumair/mediaf
 
 The rest of the options are already explained well in the UI, so I will not be covering them here.
 
-<h4>Miscellaneous</h4>
+<h4>Playback and Advanced</h4>
 
-The options on this menu are already explained well in the UI, so I will not be covering them here.
+Preloading and Stremio's playback options are on the `Playback` page, and parent configs, variants and health checks on the `Advanced` page. The UI explains each of them, so I will not be covering them here.
 
-<h4>Save & Install</h4>
+<h4>Saving and installing</h4>
 
-Here, you will be able to create a new user on your AIOStreams instance, or update the existing user with the current configuration.
+The first save creates your configuration on your AIOStreams instance: the `Stremio` and `Configuration` pages ask for a password. After that, `Save changes` at the top of every page updates it.
 
-When creating a new user, you will need to set a reasonably strong password. You will also be given a unique UUID that you may need to access your configuration, should you lose your installation URL.
+When creating a configuration, you will need to set a reasonably strong password. You will also be given a unique UUID that you may need to access your configuration, should you lose your installation URL.
 
-Once you create a user, you will be presented with a button to install the addon using your preferred method.
+Once it is created, the `Stremio`, `AIOStreams app` and `Other apps` pages install it.
 
 <Callout type="error">
 Make sure you save your UUID and password somewhere safe, as you will need them to access your configuration in the future.
@@ -269,7 +269,7 @@ You can, however, keep exports of your configurations as backups, which I will d
 
 </Callout>
 
-Below the installation button, you will find a backup section that allows you to export your configuration as a JSON file and also import these configurations later.
+The `Configuration` page has a backup section that allows you to export your configuration as a JSON file and also import these configurations later.
 You can use this to backup your configuration, or to share it with others. You can also use this to import configurations from other users.
 
 You can expand the `Export Settings` to toggle the `Exclude Credentials` option, which will exclude any credentials you have entered in the configuration from the exported file.
@@ -289,7 +289,7 @@ and then click the login icon on the bottom left corner, where you will be asked
 
 <h4>How do I update my configuration?</h4>
 
-You can update your configuration by going to the configuration page and clicking the `Update user` button on the `Save & Install` menu.
+You can update your configuration by going to the configuration page and clicking `Save changes` at the top of the page.
 
 You don't have to reinstall the addon in Stremio, as the manifest URL will remain the same. **Note: This does not apply if you make changes that cause the manifest of the addon to change, such as reordering or editing catalogues or adding a type of addon (e.g. subtitle) that was not previously provided by your installation. In that case, you will need to reinstall the addon in Stremio.**
 

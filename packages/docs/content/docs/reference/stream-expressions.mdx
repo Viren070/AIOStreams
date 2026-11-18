@@ -141,7 +141,7 @@ Whether a health check is currently passing. Available **everywhere**: filters, 
 | --------- | -------- | ----------------------------------------------------- |
 | `id`      | `string` | Id of a health check, quoted. Must be one you defined |
 
-Define health checks in **Miscellaneous → Health Checks**; see [conditional activation](/reference/config-expressions#conditional-activation) for what they can test and how often they run. Every check is resolved once per request, so one request sees one answer everywhere.
+Define health checks in **Advanced → Health Checks**; see [conditional activation](/reference/config-expressions#conditional-activation) for what they can test and how often they run. Every check is resolved once per request, so one request sees one answer everywhere.
 
 ```
 # Skip a group entirely while your indexer is down
@@ -782,7 +782,7 @@ Streams are matched against SeaDex in two ways: by **info hash** (exact, the str
 
 <Callout type="info">
   Only active when SeaDex integration is enabled under **Filters →
-  Miscellaneous**.
+  Release checks**.
 </Callout>
 
 ```

@@ -1,5 +1,5 @@
 ---
-title: Profiles
+title: Saved configurations
 description: Save configurations to the account you sign in with and reopen them without the configuration password.
 ---
 
@@ -10,59 +10,59 @@ Two unrelated logins exist in AIOStreams, and this guide keeps them apart:
 - **Account sign-in** — a username and password from `AIOSTREAMS_AUTH`, or an SSO identity, entered at `/login`. It issues a session cookie and identifies who you are. The instance owner decides who gets an account; holding one does not make you an administrator.
 - **Configuration password** — the UUID and password that open one configuration. The browser holds it only in memory, so refreshing the configure page means typing it again.
 
-A profile trades the second for the first. Sign in to your account, save a configuration to it once, and afterwards pick it from a list instead of retyping its UUID and password.
+A saved configuration trades the second for the first. Sign in to your account, save a configuration to it once, and afterwards pick it from a list instead of retyping its UUID and password.
 
 <Callout type="info">
-  **Profiles require an account sign-in**, so they exist only on an instance
+  **Saving needs an account sign-in**, so it works only on an instance
   that has accounts. Either configure SSO under **Dashboard → Settings → SSO /
   OIDC** (see the [SSO guide](/guides/sso)), or set `AIOSTREAMS_AUTH` —
   that one is an environment variable with no dashboard equivalent, because it
   is read at startup. With neither there is nothing to save against, and the
-  profile controls do not appear anywhere in the UI.
+  controls for it do not appear anywhere in the UI.
 </Callout>
 
 <Callout type="warn">
   **Turn on Require authentication for the config page** as well, under
   **Dashboard → Settings → General** (`AIOSTREAMS_AUTH_REQUIRED`). Strictly it
-  is optional — profiles work whenever you hold a session, however you obtained
+  is optional — saving works whenever you hold a session, however you obtained
   it. But with it off nothing ever asks you to sign in, so the only route to a
   session is to visit `/login` yourself and then navigate back to the configure
   page by hand.
 
 With it on, opening the configure page redirects to `/login?next=…` and returns
-you there once you are signed in, which is the flow profiles are designed
-around.
+you there once you are signed in, which is the flow saved configurations are
+designed around.
 
 </Callout>
 
-## Saving a profile
+## Saving a configuration
 
-While signed in to your account, open **Save / Install** with a configuration loaded and use **Save as profile**, or tick **Save as a profile** in the Load Configuration dialog when you enter a UUID and password. Signed out, neither control is shown.
+While signed in to your account, open **Configuration** with a configuration loaded and use **Save to your account** under **Saved configuration**, or tick **Save to your account** in the Load Configuration dialog when you enter a UUID and password. Signed out, neither control is shown.
 
 Saving is always explicit, because it stores the configuration password on the server. The stored value is the same encrypted blob that already appears in every install URL, encrypted with `SECRET_KEY`, so a copy of the database alone opens nothing.
 
-You can save up to 50 profiles per account.
+You can save up to 50 configurations per account.
 
 ## Reopening one
 
-Open **Load Configuration**. Your profiles appear above the UUID and password fields; picking one loads it. While signed in, arriving at a `/stremio/<uuid>/.../configure` URL for a configuration you have saved opens it directly, without asking for its password. Signed out, that URL prompts for the UUID and password as it always did.
+Open **Load Configuration**. Your saved configurations appear above the UUID and password fields; picking one loads it. While signed in, arriving at a `/stremio/<uuid>/.../configure` URL for a configuration you have saved opens it directly, without asking for its password. Signed out, that URL prompts for the UUID and password as it always did.
 
 <Callout type="info">
-  Profiles belong to the account you signed in with, not to the instance.
+  Saved configurations belong to the account you signed in with, not to the instance.
   Anyone else signing in sees only their own, administrators included. No
   permission is needed beyond being able to sign in, so an account mapped to
-  `none` in `AIOSTREAMS_AUTH_PERMISSIONS` can still use profiles in full.
+  `none` in `AIOSTREAMS_AUTH_PERMISSIONS` can still use them in full.
 </Callout>
 
 ## Share aliases
 
-A profile can be given an **alias**, which publishes the configuration at a short install URL:
+A saved configuration can be given an **alias**, which publishes the configuration at a short install URL:
 
 ```
 https://your-instance.example/stremio/u/<alias>/manifest.json
 ```
 
-Set one and the **Manifest URL** on the Save / Install page switches to it, including the _Install to Stremio_ buttons. The long UUID and password URL keeps working, so anything already installed is unaffected.
+Set one and the **Manifest URL** on the **Stremio** page switches to it, including the _Install to Stremio_ buttons. The long UUID and password URL keeps working, so anything already installed is unaffected.
 
 An alias is 2 to 64 characters of `a-z`, `0-9`, dot, dash or underscore, lowercase, and globally unique across the instance. It cannot look like a UUID, and it cannot reuse a name already published through the instance-wide **Aliased configurations** setting.
 
@@ -75,31 +75,31 @@ An alias is 2 to 64 characters of `a-z`, `0-9`, dot, dash or underscore, lowerca
 
 ### Relationship to instance-wide aliases
 
-**Aliased configurations**, under **Dashboard → Settings → General** (`ALIASED_CONFIGURATIONS`), still works and is unchanged. It is resolved **first**, so an alias defined there always wins over a profile's alias, and a profile can never take over an install URL you published from settings.
+**Aliased configurations**, under **Dashboard → Settings → General** (`ALIASED_CONFIGURATIONS`), still works and is unchanged. It is resolved **first**, so an alias defined there always wins over a saved configuration's alias, and a saved configuration can never take over an install URL you published from settings.
 
-It is, however, unnecessary with profiles.
+It is, however, unnecessary with saved configurations.
 
 ## Account sign-in methods
 
-Profiles are keyed to the account username, whether that came from `AIOSTREAMS_AUTH` or from your identity provider. The configuration password plays no part in which profiles you see.
+Saved configurations are keyed to the account username, whether that came from `AIOSTREAMS_AUTH` or from your identity provider. The configuration password plays no part in which ones you see.
 
 If the same person signs in both ways, enable **Link to local users by username** under **Dashboard → Settings → SSO / OIDC** (`AIOSTREAMS_OIDC_LINK_BY_USERNAME`, covered in the [SSO guide](/guides/sso)) so both routes resolve to one username and therefore one list. Without it, an SSO login whose username collides with a local user is refused outright, so there is no way to end up with two lists by accident.
 
 <Callout type="warn">
   Because the key is the username, an identity provider that later issues the
   same username to a different person hands that person the previous holder's
-  profiles, including the ability to open them. If usernames are recycled at
+  saved configurations, including the ability to open them. If usernames are recycled at
   your provider, point **Username claim** at `sub`.
 </Callout>
 
-Sessions are stateless, so removing an account from `AIOSTREAMS_AUTH` does not end a session it already holds, and its profiles stay reachable until that session expires.
+Sessions are stateless, so removing an account from `AIOSTREAMS_AUTH` does not end a session it already holds, and its saved configurations stay reachable until that session expires.
 
-## When a profile stops working
+## When one stops working
 
-A profile is marked as needing its password again if the stored password no longer opens the configuration, which happens if `SECRET_KEY` is rotated or the database is restored from a backup taken before a password change. Changing a configuration's password through AIOStreams updates every profile pointing at it automatically.
+A saved configuration is marked as needing its password again if the stored password no longer opens the configuration, which happens if `SECRET_KEY` is rotated or the database is restored from a backup taken before a password change. Changing a configuration's password through AIOStreams updates every saved entry pointing at it automatically.
 
 Pick the entry and enter the configuration's current password to repair it in place.
 
 ## Deleting one
 
-**Delete profile** removes the saved entry. The configuration itself, its UUID, and its password are untouched, and install URLs for it keep working, apart from the alias. Deleting the configuration removes every profile pointing at it.
+**Remove from your account** removes the saved entry. The configuration itself, its UUID, and its password are untouched, and install URLs for it keep working, apart from the alias. Deleting the configuration removes every saved entry pointing at it.

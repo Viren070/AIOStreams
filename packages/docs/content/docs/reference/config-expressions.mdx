@@ -42,7 +42,7 @@ able to preview what a merge produces.
 <Steps>
 
 <Step>
-In **Miscellaneous → Variants** (Advanced mode), add a variant with the id `phone`.
+In **Advanced → Variants** (Advanced mode), add a variant with the id `phone`.
 </Step>
 
 <Step>
@@ -157,7 +157,7 @@ header('x-aiostreams-client') == 'AIOStreams Android' and header('x-aiostreams-n
 
 ### Health checks
 
-A health check is a URL this instance calls to decide whether something is up. Define them in **Miscellaneous → Health Checks**, then read one as `health('id')`:
+A health check is a URL this instance calls to decide whether something is up. Define them in **Advanced → Health Checks**, then read one as `health('id')`:
 
 ```
 not health('rd-up')
@@ -190,7 +190,7 @@ Every check a configuration defines is resolved once per request, so one request
 
 Several variants can apply to one request: every one you selected, and every one whose condition matched. They are layered onto a single copy of your configuration, in this order:
 
-1. Variants whose **condition matched**, in the order they are listed in **Miscellaneous → Variants**.
+1. Variants whose **condition matched**, in the order they are listed in **Advanced → Variants**.
 2. Variants **named in the URL**, left to right.
 
 Inside a script, instructions run top to bottom, and `use variant` runs that variant's instructions at the point it appears. The last write to a field wins, so `set` replaces whatever an earlier variant put there, while `add`, `remove`, `insert` and `move` build on it. Prefer those in a variant meant to combine with others.
@@ -213,23 +213,23 @@ A variant that `use variant` pulls in runs again even if it already applied on i
 Giving an addon or catalog to some people only needs no script. On the configure page, the people button beside each addon in **My Addons** and each catalog in **Catalogs**, and **Choose who gets them…** in their **Actions** menus, list who could get it:
 
 - the base config, which is what an install link without a variant serves;
-- each variant you install from a link, one with no activation condition that no user picks;
-- on a [media server](/apps/media-server#users-and-pins), the primary user and each other user.
+- each variant you install from a link, one with no activation condition that no profile picks;
+- each [profile](/apps/media-server#profiles-and-pins), the owner first, whenever there is more than one or the media server is on.
 
 Ticking or unticking a row changes only that row. Behind it, the picker writes ordinary instructions:
 
 - **The base config** gets the item's own on/off switch.
 - **A variant you install from a link** gets an `enable` or `disable` line at its end.
-- **A user** gets the same line in a variant of their own, which has the user's id, or `primary` for the primary user. It is created and added to the end of their variant list the first time, and removed again once it holds nothing.
+- **A profile** gets the same line in a variant of their own, which has the profile's id, or `primary` for the owner. It is created and added to the end of their variant list the first time, and removed again once it holds nothing.
 
 ```
 enable presets[instanceId="8ae"] # Torrentio
 disable catalogModifications[id="8ae1a2b.top"][type="movie"] # Popular
 ```
 
-A line is only written where a row would otherwise come out wrong, and dropped once it changes nothing. The picker reads each row by applying that row's variants, so lines you wrote yourself count: a `disable presets[type=torrentio]` in a user's variants shows them without Torrentio. Only `enable` and `disable` lines naming that exact item are rewritten.
+A line is only written where a row would otherwise come out wrong, and dropped once it changes nothing. The picker reads each row by applying that row's variants, so lines you wrote yourself count: a `disable presets[type=torrentio]` in a profile's variants shows them without Torrentio. Only `enable` and `disable` lines naming that exact item are rewritten.
 
-Some rows can't be changed there: a user whose list puts another variant after their own, when that variant also turns the item on or off, and a user whose id another variant already has. The picker says which. Variants with an activation condition have no row, as they depend on the request, but the picker names any that change the item. Deleting an addon removes its lines, and those of its catalogs, from every variant, and removing a user removes their own variant unless something else uses it.
+Some rows can't be changed there: a profile whose list puts another variant after their own, when that variant also turns the item on or off, and a profile whose id another variant already has. The picker says which. Variants with an activation condition have no row, as they depend on the request, but the picker names any that change the item. Deleting an addon removes its lines, and those of its catalogs, from every variant, and removing a profile removes their own variant unless something else uses it.
 
 ---
 

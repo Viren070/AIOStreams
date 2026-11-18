@@ -11,15 +11,15 @@ The AIOStreams app browses and plays what your configuration finds, with your ca
 
 ## Get the app
 
-| Your device                       | Get it                                                                                                        |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Any device with a browser         | Nothing to install: press **Open in browser** under **Save & Install → AIOStreams app** on the configure page, or open [web.aiostreams.org](https://web.aiostreams.org) |
-| Windows, Mac and Linux            | The [desktop app](/apps/desktop#download)                                                                     |
-| Android phones and tablets        | The [Android app](/apps/android#download)                                                                     |
-| Android TV, Google TV and Fire TV | The [Android app](/apps/android#on-a-tv), which has a layout made for the remote                              |
-| LG TVs                            | The [TV app for LG](/apps/smart-tv#lg-tvs)                                                                    |
-| Samsung TVs                       | The [TV app for Samsung](/apps/smart-tv#samsung-tvs)                                                          |
-| iPhone, iPad and Apple TV         | A browser on iPhone and iPad, or a [Jellyfin app](/apps/jellyfin)                                             |
+| Your device                       | Get it                                                                                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Any device with a browser         | Nothing to install: press **Open in browser** under **AIOStreams app → Setup** on the configure page, or open [web.aiostreams.org](https://web.aiostreams.org) |
+| Windows, Mac and Linux            | The [desktop app](/apps/desktop#download)                                                                                                                      |
+| Android phones and tablets        | The [Android app](/apps/android#download)                                                                                                                      |
+| Android TV, Google TV and Fire TV | The [Android app](/apps/android#on-a-tv), which has a layout made for the remote                                                                               |
+| LG TVs                            | The [TV app for LG](/apps/smart-tv#lg-tvs)                                                                                                                     |
+| Samsung TVs                       | The [TV app for Samsung](/apps/smart-tv#samsung-tvs)                                                                                                           |
+| iPhone, iPad and Apple TV         | A browser on iPhone and iPad, or a [Jellyfin app](/apps/jellyfin)                                                                                              |
 
 It is the same app everywhere: the same home page, title pages and settings. What it plays with differs. A browser plays HEVC, Dolby Vision and surround sound with its [WebGPU engine](#in-a-browser), the desktop app plays nearly anything with mpv, the Android app has ExoPlayer and mpv, and the TV apps use the TV's own player.
 
@@ -32,13 +32,13 @@ It is the same app everywhere: the same home page, title pages and settings. Wha
 
 ## Signing in
 
-The quickest way in is from the configure page: under **Save & Install → AIOStreams app**, **Open in browser** opens the app in that browser, and **Open in desktop app** or **Open in app** opens the installed app with your address filled in. Otherwise, add your server in the app with an address from **Sign-in addresses** there:
+The quickest way in is from the configure page: under **AIOStreams app → Setup**, **Open in browser** opens the app in that browser, and **Open in desktop app** or **Open in app** opens the installed app with your address filled in. Otherwise, add your server in the app with an address from **Connect** there:
 
-- **The address with a sign-in picker** lists your [users](/apps/media-server#users-and-pins). Pick one, then enter your configuration password, or their PIN where the instance allows [PIN-only sign-in](/apps/media-server#letting-people-sign-in-with-only-their-pin).
-- **On a TV**, choose **Quick Connect** on the sign-in screen and approve the code it shows on the configure page, so nothing needs typing. With a share alias in your [profile](/guides/config-profiles), the picker address is also short enough to type: `https://your-instance/jellyfin/u/<alias>`.
-- **Someone outside your household** gets an [address of their own](/apps/media-server#users-outside-your-household), which signs in only their user.
+- **The address with a sign-in picker** lists your [profiles](/apps/media-server#profiles-and-pins). Pick one, then enter your configuration password, or their PIN where the instance allows [PIN-only sign-in](/apps/media-server#letting-people-sign-in-with-only-their-pin).
+- **On a TV**, choose **Quick Connect** on the sign-in screen and approve the code it shows on the configure page, so nothing needs typing. With a share alias on your [saved configuration](/guides/config-profiles), the picker address is also short enough to type: `https://your-instance/jellyfin/u/<alias>`.
+- **Someone outside your household** gets an [address of their own](/apps/media-server#profiles-outside-your-household), which signs in only their profile.
 
-After you sign in as the primary user, the app asks which user is watching, or opens the one used last on that device.
+After you sign in as the owner, the app asks which profile is watching, or opens the one used last on that device.
 
 ## Jellyfin servers
 
@@ -54,7 +54,7 @@ It works the other way too: [Jellyfin apps](/apps/jellyfin) such as Infuse and S
 - **Title pages** show the details, the ratings from each source your addons send, seasons and episodes, and the cast and crew, each with a page of what they have been in. **Play** lists the [versions](/apps/media-server#versions) to choose from. Below it, a row of actions: **Trailer**, **Favourite**, **Rate**, **Watched** and the rest, which on a phone or tablet sit under **More**. Episodes show their title first with their air date, and **Settings → Browsing** can blur the ones you haven't started.
 - **[Live TV](/apps/live-tv)** lists the channels from your addons, with a programme guide, catch-up and reminders.
 - **Favourites** and **Calendar** keep what you saved and what airs next.
-- **Activity** is your watch history, where you can mark things unwatched or remove them. The primary user also sees everyone's history and what each person is playing right now.
+- **Activity** is your watch history, where you can mark things unwatched or remove them. The owner also sees everyone's history and what each person is playing right now.
 - **[Downloads](/apps/offline)** on the desktop and Android apps, and saved pages that browse without a connection.
 - **[Watch together](/apps/watch-together)** keeps friends' players in sync, on your server or across servers, with chat and reactions.
 
@@ -99,6 +99,15 @@ Prefer your own shaders? The desktop app's mpv folder takes your `mpv.conf`, scr
 ## Settings
 
 Some settings are saved to your account and follow you to every device: what is featured on the home page, whether next up joins the continue watching row, the poster size and what shows under posters, and your audio and subtitle languages and subtitle types. The rest, such as the player, its controls and the navigation, stay on the device, so each can suit its screen.
+
+The owner can change another profile's settings, and set defaults for everyone, with **Settings for** at the top of **Settings**, or with **App settings** under **AIOStreams app → Profiles** on the configure page. A profile's own choice wins over everyone's, and a device that hasn't changed a device setting takes everyone's default. A profile that shares the owner's history shares the owner's settings too, so only profiles with a history of their own are listed.
+
+<Callout type="info">
+  **Coming from an earlier version?** Audio and subtitle settings a profile
+  saved before settings for everyone existed count as its own, so everyone's
+  don't replace them. To have one follow everyone's, set it for that profile
+  to the same value as everyone's once.
+</Callout>
 
 The search box at the top of **Settings** finds a setting in any section, by its name or its description.
 
@@ -162,7 +171,7 @@ Under **Settings → Theme** you can pick a preset or your own accent and backgr
 
 ## In a browser
 
-Press **Open in browser** under **Save & Install → AIOStreams app**. It opens on your [address with a sign-in picker](/apps/jellyfin#connecting-an-app), and signs you straight in if you are signed in on the configure page in the same browser. Opening the plain server address in a browser works too; type your UUID or alias as well there.
+Press **Open in browser** under **AIOStreams app → Setup**. It opens on your [address with a sign-in picker](/apps/jellyfin#connecting-an-app), and signs you straight in if you are signed in on the configure page in the same browser. Opening the plain server address in a browser works too; type your UUID or alias as well there.
 
 The same app is also hosted at [web.aiostreams.org](https://web.aiostreams.org), for any server: add your configuration's media server address or a Jellyfin server's, then sign in. The server needs an `https://` address, as a browser won't reach a plain `http://` one from a secure page. Your browser can install it to open it like an app.
 

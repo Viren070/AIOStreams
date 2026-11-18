@@ -78,8 +78,8 @@ One configuration serves all of these at once, so you can start with one and add
     Jellyfin apps such as Infuse and Swiftfin sign in to your configuration as a server: see [Jellyfin apps](/apps/jellyfin).
 
     <Callout type="info">
-      **Chillio, Seanime and Aniyomi** each have a card under **Other apps** on
-      the Save & Install page with their own instructions. Seanime also has a
+      **Chillio, Seanime and Aniyomi** each have a card on the **Other apps**
+      page with their own instructions. Seanime also has a
       [guide](/guides/seanime).
     </Callout>
 
@@ -331,7 +331,7 @@ After clicking **Open Template**, the configure page opens with a short setup th
     - **TorBox Tier** _(TorBox only, required)_: your plan, which sets the size
       limit for uncached downloads.
     - **Setup Variants**: **Include Variants** adds extra install links on the
-      Save & Install page, such as Debrid Only and Usenet Only.
+      **Stremio** page, such as Debrid Only and Usenet Only.
 
     **Show 10 advanced options** has the finer controls. Click **Continue**.
 
@@ -355,7 +355,7 @@ After clicking **Open Template**, the configure page opens with a short setup th
 
 ## Step 6: Save and install
 
-After the setup is applied you land on the **Save & Install** page.
+After the setup is applied you land on the **Stremio** page.
 
 <Steps>
   <Step>
@@ -366,14 +366,14 @@ After the setup is applied you land on the **Save & Install** page.
 
     <Callout type="warn">
       If you see an error like **"Failed to fetch manifest for &lt;addon&gt;"**,
-      go to the **Addons** menu and disable the addon mentioned in the error,
+      go to the **Addons** page and disable the addon mentioned in the error,
       then try clicking **Create** again. This is usually a temporary issue
       with that addon: you can re-enable it and save again later once it
       recovers.
 
       If you see **"Failed to validate TMDB API Key"**, double-check your TMDB
-      API key is correct. You can review it in the **Services** menu under the
-      **Metadata** section.
+      API key is correct. You can review it on the **Services** page under
+      **Metadata**.
     </Callout>
 
   </Step>
@@ -383,7 +383,7 @@ After the setup is applied you land on the **Save & Install** page.
     and updates itself whenever you save. It's optional: **Not now** closes it.
   </Step>
   <Step>
-    **Installation Options** has everything else:
+    The **Stremio**, **AIOStreams app → Setup** and **Other apps** pages have everything else:
 
     - **Stremio**: **Install to Stremio** opens the Stremio app on this device,
       **Install to Stremio Web** installs through Stremio Web (only if you are
@@ -400,7 +400,7 @@ After the setup is applied you land on the **Save & Install** page.
 </Steps>
 
 <Callout type="info">
-  Click **Export** in the **Backups** section to download a JSON copy of your
+  Click **Export** under **Configuration → Backups** to download a JSON copy of your
   configuration. You can use this to restore or transfer your setup later.
 </Callout>
 
@@ -422,17 +422,17 @@ The template brings streams but no catalogs. **[AIOMetadata](https://github.com/
 
     <Steps>
       <Step>
-        Copy AIOMetadata's manifest URL. In AIOStreams, go to **Addons →
-        Installed**, click **Add by URL** and paste it.
+        Copy AIOMetadata's manifest URL. In AIOStreams, go to **Addons**, click **Add
+        by URL** and paste it.
       </Step>
       <Step>
         Move AIOMetadata to the top of **My Addons** with the reorder button, so
         its metadata is used first.
       </Step>
-      <Step>Go to **Save & Install** and click **Save**.</Step>
+      <Step>Click **Save changes** at the top of the page.</Step>
     </Steps>
 
-    After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** card (**Addons → Installed → Catalogs**) and save, so AIOStreams picks up the new list.
+    After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** page and save, so AIOStreams picks up the new list.
 
     Using Stremio too? Keep AIOMetadata out of your Stremio install with **Who gets this**, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
 
@@ -471,9 +471,8 @@ AIOMetadata inside AIOStreams, as in the **AIOStreams app** tab of step 7.
 
   </Step>
   <Step>
-    Save AIOMetadata's configuration. Then in AIOStreams, go to **Save & Install** and click
-    **Save**, so it reads AIOMetadata's changes. **Media server → Trackers** on the same page now
-    lists AIOMetadata.
+    Save AIOMetadata's configuration. Then in AIOStreams, click **Save changes**, so it reads
+    AIOMetadata's changes. **AIOStreams app → Profiles** now lists it under **Trackers**.
   </Step>
 </Steps>
 
@@ -487,9 +486,9 @@ alone.
 One part of it matters if several people use your AIOStreams, each with their own watch-history
 accounts: **users**. Add a user for each person, with **Same person as you** off, and connect
 their own accounts on their card. Under **Also known as (AIOStreams)**, put their name on
-AIOStreams, and the **tracker id** that **Save & Install → Media server → Users** shows for them.
+AIOStreams, and the **tracker id** that **AIOStreams app → Profiles** shows for them.
 Then pick AIOMetadata as their tracker there: see
-[trackers for each user](/apps/media-server#trackers-for-each-user).
+[trackers for each user](/apps/media-server#trackers-for-each-profile).
 
 No **Jellyfin** button means whoever runs that AIOMetadata instance hasn't turned its Jellyfin
 server on. Tracking still works for you, as above, but not for each person separately.
@@ -509,7 +508,7 @@ To edit your configuration after installation:
 - In **Stremio**, click **Configure** next to the AIOStreams addon.
 - Or go to `https://your-instance/stremio/configure`, click **Sign In** and enter your UUID and password.
 
-Once you've made your changes, go to **Save & Install** and click **Save**.
+Once you've made your changes, click **Save changes** at the top of the page.
 
 <Callout type="info">
   Most changes apply immediately without reinstalling. Only reinstall if a
