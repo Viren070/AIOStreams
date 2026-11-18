@@ -2363,6 +2363,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Ścieżka główna"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Zmień serwer"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Oznacz jako obejrzane"

@@ -2357,6 +2357,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Utama"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Tukar pelayan"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Tanda sebagai telah ditonton"

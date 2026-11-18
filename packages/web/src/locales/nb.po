@@ -2356,6 +2356,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Hoved"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Bytt server"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Merk som sett"

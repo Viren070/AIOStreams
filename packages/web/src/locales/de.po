@@ -2357,6 +2357,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Hauptspur"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Server wechseln"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Als gesehen markieren"

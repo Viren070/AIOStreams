@@ -2357,6 +2357,11 @@ msgstr "Ματζέντα"
 msgid "Main"
 msgstr "Κύριο"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Αλλαγή διακομιστή"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Το έχω δει"

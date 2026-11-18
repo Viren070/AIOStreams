@@ -2382,6 +2382,11 @@ msgstr "Majenta"
 msgid "Main"
 msgstr "Ana"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Sunucuyu değiştir"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "İzlendi olarak işaretle"

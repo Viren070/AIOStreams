@@ -2357,6 +2357,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Principal"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Alterar servidor"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Marcar como assistido"
