@@ -6,6 +6,7 @@ import type {
   Variant,
   VariantSelectorLocation,
 } from '../db/schemas.js';
+import { profileById } from '../utils/profiles.js';
 import { compileRegex } from '../utils/regex.js';
 import { RegexAccess } from '../utils/regex-access.js';
 import {
@@ -94,6 +95,9 @@ function variantsEnabled(userData: UserData): boolean {
   return true;
 }
 
+/** `@<profile id>`, or a bare `@` for the owner. */
+const PROFILE_SELECTOR = /^@([a-z0-9][a-z0-9_-]{0,31})?$/;
+
 /** Comma separated, applied left to right. */
 export function parseVariantSelector(raw: unknown): string[] {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -108,11 +112,22 @@ export function parseVariantSelector(raw: unknown): string[] {
   const unique = ids.filter((id) => !seen.has(id) && seen.add(id));
 
   for (const id of unique) {
-    if (!VARIANT_ID_PATTERN.test(id)) {
+    if (!VARIANT_ID_PATTERN.test(id) && !PROFILE_SELECTOR.test(id)) {
       throw new VariantSelectionError(`Invalid variant id "${id}".`);
     }
   }
   return unique;
+}
+
+function withProfileVariants(userData: UserData, selected: string[]): string[] {
+  const ids = selected.flatMap((id) => {
+    const profile = PROFILE_SELECTOR.exec(id);
+    if (!profile) return [id];
+    const found = profileById(userData, profile[1] ?? '');
+    if (!found) throw new VariantSelectionError(`Unknown profile "${id}".`);
+    return found.variants ?? [];
+  });
+  return [...new Set(ids)];
 }
 
 export interface ApplyVariantsResult {
@@ -313,7 +328,9 @@ export function withVariantSelector(
   location: VariantSelectorLocation = 'query'
 ): string {
   if (!activeVariants?.length) return `${base}${resource}`;
-  const ids = activeVariants.map(encodeURIComponent).join(',');
+  const ids = activeVariants
+    .map((id) => encodeURIComponent(id).replace(/^%40/, '@'))
+    .join(',');
   if (location === 'path') {
     return `${base}/${VARIANT_PATH_SEGMENT}/${ids}${resource}`;
   }
@@ -457,16 +474,23 @@ export async function activateVariants(
   }
 
   const { matched } = await evaluateVariantConditions(userData, context);
-  const auto = matched.filter((id) => !selected.includes(id));
+  const chosen = withProfileVariants(userData, selected);
+  const auto = matched.filter((id) => !chosen.includes(id));
 
-  const result = applyVariants(userData, [...auto, ...selected]);
-  if (!result.applied.length) return { ...result, auto: [] };
+  const result = applyVariants(userData, [...auto, ...chosen]);
+  // The token, not its variants, so the addon id survives changes to them.
+  const profiles = selected.filter((id) => PROFILE_SELECTOR.test(id));
+  if (!result.applied.length) {
+    if (!profiles.length) return { ...result, auto: [] };
+    result.userData = { ...userData };
+  }
 
   // applyVariants credits everything to activeVariants; split them back apart,
   // since only an explicit selection belongs in the addon id and self URLs.
-  result.userData.activeVariants = result.applied.filter((id) =>
-    selected.includes(id)
-  );
+  result.userData.activeVariants = [
+    ...profiles,
+    ...result.applied.filter((id) => selected.includes(id)),
+  ];
   result.userData.autoVariants = result.applied.filter((id) =>
     auto.includes(id)
   );

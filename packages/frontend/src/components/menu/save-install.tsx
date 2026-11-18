@@ -56,7 +56,11 @@ import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
 import { PasswordInput } from '@aiostreams/ui/password-input';
 import { useMenu } from '@/context/menu';
-import { variantSelectionFromLocation } from '@/lib/manifest-url';
+import {
+  encodeVariantId,
+  variantSelectionFromLocation,
+} from '@/lib/manifest-url';
+import { profileInstallOptions } from '@/lib/audiences';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -68,7 +72,10 @@ import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
 import { LinkedAccountsSection } from './linked-accounts';
 import { LinkOfferModal, linkOfferDismissed } from './link-offer-modal';
-import { VariantPills } from '@/components/shared/variant-pills';
+import {
+  VariantPills,
+  type VariantOption,
+} from '@/components/shared/variant-pills';
 import { useSession } from '@/context/session';
 import { useQuery } from '@tanstack/react-query';
 import { configProfilesQuery, linkedAccountsQuery } from '@/lib/queries';
@@ -489,6 +496,7 @@ function CompatibleClientLogos() {
 
 interface VariantSelectorProps {
   variants: NonNullable<UserData['variants']>;
+  profiles: VariantOption[];
   selected: string[];
   onChange: (selected: string[]) => void;
   location: VariantSelectorLocation;
@@ -497,6 +505,7 @@ interface VariantSelectorProps {
 
 function VariantSelector({
   variants,
+  profiles,
   selected,
   onChange,
   location,
@@ -508,10 +517,13 @@ function VariantSelector({
       <p className="text-sm text-[--muted] mt-1">
         The links below install the selected variant. Each one appears as a
         separate addon in your client; pick more than one to combine them.
+        {profiles.length > 0 &&
+          " A profile's link follows whatever variants that profile has, so it needs no reinstall when they change."}
       </p>
       <VariantPills
         className="mt-4"
         variants={variants}
+        profiles={profiles}
         value={selected}
         onChange={onChange}
       />
@@ -2137,10 +2149,13 @@ export function useSaveInstall() {
   const enabledVariants = (userData.variants ?? []).filter(
     (variant) => variant.enabled !== false
   );
-  const activeVariants = selectedVariants.filter((id) =>
-    enabledVariants.some((variant) => variant.id === id)
+  const installProfiles = profileInstallOptions(userData);
+  const activeVariants = selectedVariants.filter(
+    (id) =>
+      enabledVariants.some((variant) => variant.id === id) ||
+      installProfiles.some((profile) => profile.id === id)
   );
-  const variantIds = activeVariants.map(encodeURIComponent).join(',');
+  const variantIds = activeVariants.map(encodeVariantId).join(',');
   const variantPath =
     activeVariants.length && variantLocation === 'path'
       ? `/v/${variantIds}`
@@ -2901,6 +2916,7 @@ export function useSaveInstall() {
       enabledVariants.length > 0 ? (
         <VariantSelector
           variants={enabledVariants}
+          profiles={installProfiles}
           selected={activeVariants}
           onChange={setSelectedVariants}
           location={variantLocation}

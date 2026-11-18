@@ -74,6 +74,18 @@ export function profileLabel(
   return profile.name || userData.addonName || 'Owner';
 }
 
+/** Only profiles with variants, as their `@id`. */
+export function profileInstallOptions(
+  userData: Pick<UserData, 'profiles' | 'addonName'>
+): { id: string; name: string }[] {
+  return profilesOf(userData)
+    .filter((profile) => profile.variants?.length)
+    .map((profile) => ({
+      id: `@${profile.id}`,
+      name: profileLabel(userData, profile),
+    }));
+}
+
 export function listAudiences(
   userData: Pick<UserData, 'variants' | 'profiles' | 'addonName'>,
   jellyfin: boolean

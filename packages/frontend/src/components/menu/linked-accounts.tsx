@@ -20,6 +20,7 @@ import {
   type PushTarget,
 } from '@/components/shared/linked-accounts/push-targets-field';
 import type { VariantOption } from '@/components/shared/variant-pills';
+import { profileInstallOptions } from '@/lib/audiences';
 import { parseVariantIds } from '@/lib/manifest-url';
 import { useStatus } from '@/context/status';
 import {
@@ -105,6 +106,7 @@ export function LinkedAccountsSection({
     encryptedPassword: encryptedPassword ?? undefined,
   };
   const variants = userData.variants ?? [];
+  const profiles = profileInstallOptions(userData);
   const credentials = uuid ? { uuid, password } : null;
 
   const queryClient = useQueryClient();
@@ -211,6 +213,7 @@ export function LinkedAccountsSection({
 
       <LinkAccountModal
         variants={variants}
+        profiles={profiles}
         urlParts={urlParts}
         open={linkModal.isOpen}
         onOpenChange={(open) => (open ? linkModal.open() : linkModal.close())}
@@ -224,6 +227,7 @@ export function LinkedAccountsSection({
 
       <ManageAccountModal
         variants={variants}
+        profiles={profiles}
         urlParts={urlParts}
         account={managing}
         platform={managing ? platformOf(managing.platform) : null}
@@ -328,6 +332,7 @@ interface UrlParts {
 
 interface LinkAccountModalProps {
   variants: VariantOption[];
+  profiles: VariantOption[];
   urlParts: UrlParts;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -338,6 +343,7 @@ interface LinkAccountModalProps {
 
 function LinkAccountModal({
   variants,
+  profiles,
   urlParts,
   open,
   onOpenChange,
@@ -479,6 +485,7 @@ function LinkAccountModal({
         {variants.length > 0 ? (
           <PushTargetsField
             variants={variants}
+            profiles={profiles}
             value={targets}
             onChange={setTargets}
             {...urlParts}
@@ -510,6 +517,7 @@ function LinkAccountModal({
 
 interface ManageAccountModalProps {
   variants: VariantOption[];
+  profiles: VariantOption[];
   urlParts: UrlParts;
   account: LinkedAccount | null;
   platform: LinkedAccountPlatformInfo | null;
@@ -520,6 +528,7 @@ interface ManageAccountModalProps {
 
 function ManageAccountModal({
   variants,
+  profiles,
   urlParts,
   account,
   platform,
@@ -591,6 +600,7 @@ function ManageAccountModal({
           <TextInput label="Name" value={label} onValueChange={setLabel} />
           <PushTargetsField
             variants={variants}
+            profiles={profiles}
             value={targets}
             onChange={setTargets}
             {...urlParts}
