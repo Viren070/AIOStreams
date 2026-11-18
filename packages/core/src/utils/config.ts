@@ -244,7 +244,7 @@ export async function validateConfig(
       config.preferredKeywords,
       appConfig.userLimits.maxKeywordFilters,
     ],
-    groups: [config.groups, appConfig.userLimits.maxGroups],
+    groups: [config.groups?.groupings, appConfig.userLimits.maxGroups],
   };
 
   for (const [name, [items, max]] of Object.entries(validations)) {
