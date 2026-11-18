@@ -244,7 +244,7 @@ export function videoEngine(
       const audioTracks = nativeDts?.tracks ?? (audio ? listed(audio) : []);
       const tracks: EngineTrack[] = [
         ...audioTracks.map((t, i) => ({
-          id: String(i),
+          id: String(nativeDts?.tracks[i]?.ordinal ?? i),
           type: 'audio' as const,
           label: ownTrackLabel(t.label, t.language, i + 1),
           lang: t.language,
@@ -508,9 +508,9 @@ export function videoEngine(
       setAudio(id) {
         if (nativeDts && video.current) {
           const ordinal = Number(id);
-          if (id !== null && Number.isInteger(ordinal) && nativeDts.tracks[ordinal] && ordinal !== nativeDts.selected()) {
+          if (id !== null && Number.isInteger(ordinal) && ordinal !== nativeDts.selected()) {
             nativeDts.start(video.current.currentTime, ordinal);
-            set({ audio: id });
+            set({ audio: String(nativeDts.selected()) });
           }
           return;
         }

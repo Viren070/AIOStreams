@@ -2,7 +2,7 @@ import { currentHost } from '@/lib/hosts';
 import type { EngineFile } from './engine';
 
 export interface NativeDts {
-  tracks: { label: string; language: string; codec: string; default: boolean }[];
+  tracks: { ordinal?: number; label: string; language: string; codec: string; default: boolean }[];
   selected(): number;
   start(seconds: number, ordinal?: number): void;
   seek(seconds: number): void;
