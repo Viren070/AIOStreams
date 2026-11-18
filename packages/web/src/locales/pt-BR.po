@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-18 15:29+0000\n"
+"PO-Revision-Date: 2026-11-18 20:31+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -1846,7 +1846,7 @@ msgstr "Envie este código para quem for investigar o problema."
 
 #: src/app/settings/theme.tsx
 msgid "Glass"
-msgstr ""
+msgstr "Efeitos de vidro"
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
@@ -1906,7 +1906,7 @@ msgstr "Tem um PIN"
 
 #: src/app/settings/player.tsx
 msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
-msgstr ""
+msgstr "A placa de vídeo melhora a nitidez ao ampliar o vídeo para preencher a tela. Algumas placas também convertem SDR em HDR quando a tela está no modo HDR; pode ser necessário ativar esses recursos no software da fabricante. Vídeos HDR não são alterados, e o upscaling de anime tem prioridade quando ativado. Consome mais energia e desativa automaticamente se o dispositivo não acompanhar a reprodução."
 
 #: src/app/settings/player.tsx
 msgid "HDR output"
@@ -1980,9 +1980,8 @@ msgid "Home and libraries"
 msgstr "Início e bibliotecas"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Home, posters, trailers and episodes"
-msgstr "Idioma, início, fileiras e episódios"
+msgstr "Início, pôsteres, trailers e episódios"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
@@ -2210,9 +2209,8 @@ msgid "Language and how subtitles look"
 msgstr "Idioma e aparência das legendas"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Language and navigation"
-msgstr "Idioma e saída de áudio"
+msgstr "Idioma e navegação"
 
 #: src/app/settings/page.tsx
 msgid "Language and output"
@@ -2323,7 +2321,7 @@ msgstr "Registros"
 
 #: src/app/settings/page.tsx
 msgid "Look and feel"
-msgstr ""
+msgstr "Aparência e interação"
 
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
@@ -2505,9 +2503,8 @@ msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr "O mpv renderiza o vídeo usando seu mpv.conf e seus shaders."
 
 #: src/app/settings/player.tsx
-#, fuzzy
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
-msgstr "mpv nesta janela, com os controles e as configurações de reprodução do aplicativo. Seu próprio mpv.conf, scripts e shaders também funcionam aqui. Coloque-os na pasta mpv do aplicativo para desktop."
+msgstr "Usa o mpv nesta janela, com os controles e ajustes de reprodução do app. Também aceita seu mpv.conf, scripts e shaders. Adicione-os à pasta do mpv, acessível na seção mpv abaixo."
 
 #: src/app/settings/player.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
@@ -2679,9 +2676,8 @@ msgid "No server answered at that address."
 msgstr "Nenhum servidor respondeu nesse endereço."
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "No setting matches."
-msgstr "Nenhum resultado correspondente."
+msgstr "Nenhuma configuração encontrada."
 
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
@@ -3452,9 +3448,8 @@ msgid "Poster size"
 msgstr "Tamanho dos pôsteres"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "Posters and grids"
-msgstr "Página inicial e layout"
+msgstr "Pôsteres e grades"
 
 #: src/app/settings/cache.tsx
 msgid "Posters, backdrops, logos and photos."
@@ -3969,9 +3964,8 @@ msgid "Search by voice"
 msgstr "Pesquisar por voz"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Search settings"
-msgstr "Pesquisando"
+msgstr "Buscar configurações"
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Search the lines"
@@ -4561,7 +4555,7 @@ msgstr "Sol"
 
 #: src/app/settings/player.tsx
 msgid "Super resolution"
-msgstr ""
+msgstr "Super-resolução"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
@@ -4864,7 +4858,7 @@ msgstr "A sessão está assistindo <0>{title}</0>"
 
 #: src/app/settings/page.tsx
 msgid "The player and its controls"
-msgstr ""
+msgstr "Reprodutor e controles"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
@@ -4872,7 +4866,7 @@ msgstr "o player não pôde reproduzir esta versão"
 
 #: src/app/settings/page.tsx
 msgid "The player, its controls and video"
-msgstr ""
+msgstr "Reprodutor, controles e vídeo"
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
@@ -5300,14 +5294,12 @@ msgid "Updates"
 msgstr "Atualizações"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates and troubleshooting"
-msgstr "Atualizações, mpv e solução de problemas"
+msgstr "Atualizações e solução de problemas"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates, Discord and troubleshooting"
-msgstr "Atualizações, Discord, mpv e solução de problemas"
+msgstr "Atualizações, Discord e solução de problemas"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
 msgid "Usage statistics"
@@ -5408,7 +5400,7 @@ msgstr "Versões são reproduzidas neste navegador. Escolha outro player para ab
 
 #: src/app/settings/page.tsx
 msgid "Versions, next episode and skipping"
-msgstr ""
+msgstr "Versões, próximo episódio e pular trechos"
 
 #: src/app/settings/player.tsx
 msgid "Video"
