@@ -367,6 +367,7 @@ export class StremThruService
             return {
               name: file.name,
               size: file.size,
+              path: file.path,
               index: file.index,
               mediaInfo: (file as any).media_info,
               videoHash: (file as any).video_hash,
