@@ -81,7 +81,7 @@ export class JellyfinRepository {
   ): Promise<Record<string, unknown> | null> {
     const row = await getDb().maybeOne<{ payload: string }>(
       sql`SELECT payload FROM jellyfin_display_prefs
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND pref_id = ${prefId} AND client = ${client}`
     );
     if (!row) return null;
@@ -120,7 +120,7 @@ export class JellyfinRepository {
     await getDb().exec(
       sql`INSERT INTO jellyfin_display_prefs
             (uuid, persona, pref_id, client, payload, updated_at)
-          VALUES (${scope.uuid}, ${scope.persona}, ${prefId}, ${client},
+          VALUES (${scope.uuid}, ${scope.profile}, ${prefId}, ${client},
                   ${JSON.stringify(payload)}, ${Date.now()})
           ON CONFLICT(uuid, persona, pref_id, client) DO UPDATE SET
             payload = excluded.payload, updated_at = excluded.updated_at`

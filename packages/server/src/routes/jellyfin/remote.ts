@@ -55,7 +55,7 @@ export interface RemoteDevice {
   uuid: string;
   userId: string;
   /** Empty for the primary user. */
-  persona: string;
+  profile: string;
   client: ClientInfo;
   media: string[];
   commands: string[];
@@ -188,7 +188,7 @@ async function register(
   const sent: RemoteDevice = {
     uuid,
     userId,
-    persona: ctx.profile.id,
+    profile: ctx.profile.id,
     client,
     media: listOf(req, 'PlayableMediaTypes'),
     commands: listOf(req, 'SupportedCommands'),

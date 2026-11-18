@@ -8,7 +8,7 @@ import type { Profile } from '../schemas.js';
 export interface JellyfinAddressTarget {
   uuid: string;
   encryptedPassword: string;
-  persona: string;
+  profile: string;
 }
 
 interface AddressRow {
@@ -40,7 +40,7 @@ export class JellyfinAddressRepository {
     const value = {
       uuid: row.uuid,
       encryptedPassword: row.encrypted_password,
-      persona: row.persona,
+      profile: row.persona,
     };
     this.cache.set(code, { value, at: Date.now() });
     return value;

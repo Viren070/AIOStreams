@@ -231,7 +231,7 @@ export function JellyfinTrackers({
 
   const profiles = profilesOf(userData);
   // Only worth naming whose trackers they are once there is more than one history.
-  const named = data.trackers.some((t) => t.persona);
+  const named = data.trackers.some((t) => t.profile);
 
   return (
     <div className="space-y-3">
@@ -245,16 +245,16 @@ export function JellyfinTrackers({
       <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
         {data.trackers.map((tracker) => (
           <TrackerRow
-            key={`${tracker.persona ?? ''}|${tracker.addon}`}
+            key={`${tracker.profile ?? ''}|${tracker.addon}`}
             tracker={tracker}
             owner={
               !named
                 ? undefined
                 : profileLabel(
                     userData,
-                    profiles.find((p) => p.id === (tracker.persona ?? '')) ?? {
-                      id: tracker.persona ?? '',
-                      name: tracker.persona,
+                    profiles.find((p) => p.id === (tracker.profile ?? '')) ?? {
+                      id: tracker.profile ?? '',
+                      name: tracker.profile,
                     }
                   )
             }

@@ -5,7 +5,7 @@ export interface JellyfinPlaylist {
   id: string;
   uuid: string;
   /** Empty for the account's own user. */
-  persona: string;
+  profile: string;
   name: string;
   items: string[];
   createdAt: number;
@@ -14,7 +14,7 @@ export interface JellyfinPlaylist {
 
 export interface PlaylistOwner {
   uuid: string;
-  persona: string;
+  profile: string;
 }
 
 /** Past these, creating a playlist or adding to one is refused. */
@@ -46,7 +46,7 @@ function fromRow(row: PlaylistRow): JellyfinPlaylist {
   return {
     id: row.id,
     uuid: row.uuid,
-    persona: row.persona,
+    profile: row.persona,
     name: row.name,
     items: parseItems(row.items),
     createdAt: Number(row.created_at),
@@ -60,7 +60,7 @@ export class JellyfinPlaylistRepository {
   static async list(owner: PlaylistOwner): Promise<JellyfinPlaylist[]> {
     const rows = await getDb().query<PlaylistRow>(
       sql`SELECT ${COLUMNS} FROM jellyfin_playlists
-           WHERE uuid = ${owner.uuid} AND persona = ${owner.persona}
+           WHERE uuid = ${owner.uuid} AND persona = ${owner.profile}
            ORDER BY created_at`
     );
     return rows.map(fromRow);
@@ -69,7 +69,7 @@ export class JellyfinPlaylistRepository {
   static async any(owner: PlaylistOwner): Promise<boolean> {
     const row = await getDb().maybeOne(
       sql`SELECT 1 AS found FROM jellyfin_playlists
-           WHERE uuid = ${owner.uuid} AND persona = ${owner.persona}
+           WHERE uuid = ${owner.uuid} AND persona = ${owner.profile}
            LIMIT 1`
     );
     return !!row;
@@ -82,7 +82,7 @@ export class JellyfinPlaylistRepository {
   ): Promise<JellyfinPlaylist | null> {
     const row = await getDb().maybeOne<PlaylistRow>(
       sql`SELECT ${COLUMNS} FROM jellyfin_playlists
-           WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.persona}`
+           WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.profile}`
     );
     return row ? fromRow(row) : null;
   }
@@ -95,13 +95,13 @@ export class JellyfinPlaylistRepository {
     return getDb().tx(async (tx) => {
       const count = await tx.count(
         sql`SELECT COUNT(*) FROM jellyfin_playlists
-             WHERE uuid = ${owner.uuid} AND persona = ${owner.persona}`
+             WHERE uuid = ${owner.uuid} AND persona = ${owner.profile}`
       );
       if (count >= PLAYLIST_LIMITS.perUser) return null;
       const now = Date.now();
       await tx.exec(
         sql`INSERT INTO jellyfin_playlists (id, uuid, persona, name, items, created_at, updated_at)
-            VALUES (${playlist.id}, ${owner.uuid}, ${owner.persona}, ${playlist.name},
+            VALUES (${playlist.id}, ${owner.uuid}, ${owner.profile}, ${playlist.name},
                     ${JSON.stringify(playlist.items)}, ${now}, ${now})`
       );
       return {
@@ -128,7 +128,7 @@ export class JellyfinPlaylistRepository {
       const lock = tx.dialect === 'postgres' ? raw('FOR UPDATE') : raw('');
       const row = await tx.maybeOne<PlaylistRow>(
         sql`SELECT ${COLUMNS} FROM jellyfin_playlists
-             WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.persona}
+             WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.profile}
              ${lock}`
       );
       if (!row) return null;
@@ -149,7 +149,7 @@ export class JellyfinPlaylistRepository {
   static async remove(owner: PlaylistOwner, id: string): Promise<boolean> {
     const { rowCount } = await getDb().exec(
       sql`DELETE FROM jellyfin_playlists
-           WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.persona}`
+           WHERE id = ${id} AND uuid = ${owner.uuid} AND persona = ${owner.profile}`
     );
     return rowCount > 0;
   }

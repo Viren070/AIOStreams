@@ -25,9 +25,9 @@ const CHUNK = 200;
 
 /* A retired addon's times are kept for its return, but say nothing meanwhile. */
 function ownedInUse(scope: WatchScope): SqlFragment {
-  return sql`t.uuid = ${scope.uuid} AND t.persona = ${scope.persona}
+  return sql`t.uuid = ${scope.uuid} AND t.persona = ${scope.profile}
     AND t.sink_id IN (SELECT id FROM watch_sinks
-                       WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+                       WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                          AND retired_at IS NULL)`;
 }
 
@@ -51,13 +51,13 @@ export class WatchAirTimeRepository {
   ): Promise<void> {
     await db.exec(
       sql`DELETE FROM watch_air_times
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND sink_id = ${sinkId}`
     );
     for (let i = 0; i < rows.length; i += CHUNK) {
       const values = rows.slice(i, i + CHUNK).map(
         (r) =>
-          sql`(${scope.uuid}, ${scope.persona}, ${r.itemKey}, ${sinkId},
+          sql`(${scope.uuid}, ${scope.profile}, ${r.itemKey}, ${sinkId},
             ${r.matchKey}, ${r.seriesKey}, ${r.mediaType}, ${r.airsAt})`
       );
       await db.exec(

@@ -32,7 +32,7 @@ import {
 function fromOf(r: AppReportListing): string {
   if (r.origin) return `via ${r.origin}`;
   if (r.uuid)
-    return `${r.uuid.slice(0, 8)}${r.persona ? ` · ${r.persona}` : ''}`;
+    return `${r.uuid.slice(0, 8)}${r.profile ? ` · ${r.profile}` : ''}`;
   return '—';
 }
 

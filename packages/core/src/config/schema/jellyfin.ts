@@ -128,7 +128,7 @@ export const jellyfinSchema = {
     secret: false,
     ui: { min: 1, max: 10_000 },
   },
-  maxPersonas: {
+  maxProfiles: {
     schema: z.number().int().min(0).max(100),
     default: 20,
     label: 'Max profiles per configuration',

@@ -14,7 +14,7 @@ import {
   PlaybackHandoffRepository,
   providerIdsFor,
   refreshSinkIfStale,
-  retireOtherPersonaSinks,
+  retireOtherProfileSinks,
   retireUnusedSinks,
   type AIOStreams,
   type ContentRef,
@@ -237,7 +237,7 @@ export async function syncTrackerClaims(
   const contexts = await historyContexts(req, uuid, encryptedPassword);
   if (!contexts) return;
   await Promise.all(contexts.map((ctx) => sinksFor(ctx)));
-  await retireOtherPersonaSinks(
+  await retireOtherProfileSinks(
     uuid,
     contexts.flatMap((ctx) => (isOwner(ctx.profile) ? [] : [ctx.profile.id]))
   );
@@ -251,7 +251,7 @@ interface TrackerExchange {
 export interface TrackerStatus {
   addon: string;
   /** Absent for the owner's trackers. */
-  persona?: string;
+  profile?: string;
   status: SinkStatus;
   /** Absent when the addon or this instance does not use that direction. */
   push?: TrackerExchange;
@@ -288,14 +288,14 @@ export async function listTrackers(
     Promise.all(contexts.map((ctx) => ctx.engine())),
   ]);
   const rowOf = new Map(
-    rows.map((row) => [`${row.persona}|${row.addonInstanceId}`, row])
+    rows.map((row) => [`${row.profile}|${row.addonInstanceId}`, row])
   );
   // With its address refused the manifest never loads, so only its row is left.
   const unloaded = contexts.map((ctx, i) => {
     const live = new Set(resolved[i].map((sink) => sink.instanceId));
     return rows.filter(
       (row) =>
-        row.persona === ctx.watch.persona &&
+        row.profile === ctx.watch.profile &&
         row.retiredAt === null &&
         !live.has(row.addonInstanceId) &&
         engines[i].getAddon(row.addonInstanceId)
@@ -324,11 +324,11 @@ export async function listTrackers(
     resolved[i].flatMap((sink): TrackerStatus[] => {
       const { push, pull } = exchanges(sink);
       if (!push && !pull) return [];
-      const row = rowOf.get(`${ctx.watch.persona}|${sink.instanceId}`);
+      const row = rowOf.get(`${ctx.watch.profile}|${sink.instanceId}`);
       return [
         {
           addon: sink.name,
-          persona: ctx.profile.id || undefined,
+          profile: ctx.profile.id || undefined,
           status: row?.status ?? 'connected',
           push: push
             ? { lastAt: row?.lastPushAt ?? null, error: row?.lastError ?? null }
@@ -352,7 +352,7 @@ export async function listTrackers(
           row.addonName ??
           engines[i].getAddon(row.addonInstanceId)?.name ??
           row.addonInstanceId,
-        persona: ctx.profile.id || undefined,
+        profile: ctx.profile.id || undefined,
         status: row.status,
         refused: true,
       });
@@ -570,7 +570,7 @@ const REFRESH_KEYS_MAX = 20_000;
 /** Never awaited: a shelf answers from what is stored, never from the addon. */
 export function refreshWatchState(ctx: JellyfinRequestContext): void {
   if (!appConfig.watchState.pullEnabled) return;
-  const key = `${ctx.watch.uuid}|${ctx.watch.persona}`;
+  const key = `${ctx.watch.uuid}|${ctx.watch.profile}`;
   const now = Date.now();
   const last = refreshedAt.get(key);
   if (last !== undefined && now - last < REFRESH_DEDUPE_MS) return;

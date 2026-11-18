@@ -62,7 +62,7 @@ router.get(
 
 /*
  * Approval from a signed-in Jellyfin client, always as itself: it cannot hand a
- * device another persona. The SPA has its own route.
+ * device another profile. The SPA has its own route.
  */
 router.post(
   '/QuickConnect/Authorize',
@@ -72,7 +72,7 @@ router.post(
       ? await quickConnectAuthorize(code, {
           uuid: ctx.uuid,
           encryptedPassword: ctx.encryptedPassword,
-          persona: ctx.profile.id || undefined,
+          profile: ctx.profile.id || undefined,
         })
       : null;
     res.json(!!entry);

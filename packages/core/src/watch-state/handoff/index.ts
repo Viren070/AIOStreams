@@ -23,7 +23,7 @@ export {
   dispatchListChange,
   dispatchRating,
   ensurePlaybackSink,
-  retireOtherPersonaSinks,
+  retireOtherProfileSinks,
   retireUnusedSinks,
   type BulkMarkInput,
   type ListChangeInput,

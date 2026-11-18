@@ -7,7 +7,7 @@ export type AppReportKind = 'crash' | 'report';
 
 export interface AppReportInput {
   uuid?: string | null;
-  persona?: string | null;
+  profile?: string | null;
   /** The server that passed the report on. */
   origin?: string | null;
   kind: AppReportKind;
@@ -23,7 +23,7 @@ export interface AppReportListing {
   code: string;
   createdAt: number;
   uuid: string | null;
-  persona: string | null;
+  profile: string | null;
   origin: string | null;
   kind: AppReportKind;
   platform: string;
@@ -78,7 +78,7 @@ function listing(row: Row): AppReportListing {
     code: row.code,
     createdAt: Number(row.created_at),
     uuid: row.uuid,
-    persona: row.persona,
+    profile: row.persona,
     origin: row.origin,
     kind: row.kind === 'crash' ? 'crash' : 'report',
     platform: row.platform,
@@ -97,7 +97,7 @@ export class AppReportRepository {
       const res = await getDb().exec(
         sql`INSERT INTO app_reports (code, created_at, uuid, persona, origin, kind,
               platform, app_version, device, note, summary, details)
-            VALUES (${code}, ${Date.now()}, ${report.uuid ?? null}, ${report.persona ?? null},
+            VALUES (${code}, ${Date.now()}, ${report.uuid ?? null}, ${report.profile ?? null},
               ${report.origin ?? null}, ${report.kind}, ${report.platform}, ${report.appVersion},
               ${report.device}, ${report.note}, ${report.summary}, ${report.details})
             ON CONFLICT (code) DO NOTHING`

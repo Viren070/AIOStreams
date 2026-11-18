@@ -64,12 +64,12 @@ export function newPlaySessionId(): string {
   return randomBytes(16).toString('hex');
 }
 
-function pointerTo(memo: PlaybackMemo, persona?: string): MemoPointer {
+function pointerTo(memo: PlaybackMemo, profile?: string): MemoPointer {
   return {
     uuid: memo.uuid,
     encryptedPassword: memo.encryptedPassword,
     itemId: memo.itemId,
-    persona,
+    profile: profile,
   };
 }
 
@@ -81,9 +81,9 @@ function clientKey(token: string, itemId: string) {
 export async function writePlaybackMemo(
   memo: PlaybackMemo,
   scope: string,
-  persona?: string
+  profile?: string
 ): Promise<void> {
-  const pointer = pointerTo(memo, persona);
+  const pointer = pointerTo(memo, profile);
   await Promise.all([
     memos.set(
       itemKey(memo.uuid, scope, memo.itemId),
@@ -134,7 +134,7 @@ export async function writeMemoPointer(
   id: string,
   pointer: MemoPointer
 ): Promise<void> {
-  const key = `ptr:${id}:${pointer.encryptedPassword}:${pointer.persona ?? ''}`;
+  const key = `ptr:${id}:${pointer.encryptedPassword}:${pointer.profile ?? ''}`;
   if (!firstWriteOf(key)) return;
   await pointers
     .set(`msid:${id}`, pointer, PLAYBACK_MEMO_TTL, true)
@@ -165,12 +165,12 @@ export async function writeClientSession(
   token: string,
   memo: PlaybackMemo,
   scope: string,
-  persona?: string
+  profile?: string
 ): Promise<void> {
   await pointers
     .set(
       clientKey(token, memo.itemId),
-      { ...pointerTo(memo, persona), scope },
+      { ...pointerTo(memo, profile), scope },
       PLAYBACK_MEMO_TTL,
       true
     )

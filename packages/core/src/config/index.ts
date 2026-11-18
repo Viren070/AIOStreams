@@ -80,6 +80,7 @@ export const runtimeKeyAliases: Record<string, string> = {
     'builtins.nab.zyclopsHealthProxyEndpoint',
   'userLimits.maxNzbFailoverCount': 'userLimits.maxFailoverAttempts',
   'usenet.maxDownloadConnections': 'usenet.maxConcurrentDownloads',
+  'jellyfin.maxPersonas': 'jellyfin.maxProfiles',
 };
 
 export const settingsStore = new SettingsStore(

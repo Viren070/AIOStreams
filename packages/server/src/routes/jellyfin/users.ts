@@ -7,7 +7,7 @@ import {
   isConfigUuid,
   liveCatalogs,
   mintToken,
-  personaUserId,
+  profileUserId,
   quickConnectConsume,
   resolveConfigAlias,
   serverId as instanceServerId,
@@ -134,7 +134,7 @@ export function userDto(
     Name: profileName(userData, profile),
     ServerId: instanceServerId(),
     ServerName: serverName(),
-    Id: personaUserId(uuid, profile.id),
+    Id: profileUserId(uuid, profile.id),
     ...(tag ? { PrimaryImageTag: tag } : {}),
     HasPassword: true,
     HasConfiguredPassword: true,
@@ -178,7 +178,7 @@ export function sessionInfo(
   remoteIp: string | undefined
 ) {
   const now = new Date().toISOString();
-  const userId = personaUserId(uuid, profile.id);
+  const userId = profileUserId(uuid, profile.id);
   return {
     PlayState: {
       CanSeek: true,
@@ -277,8 +277,8 @@ export function pickerListed(
   userData: UserData
 ): Profile[] {
   return profilesOf(userData).filter((p) =>
-    mount.persona
-      ? p.id === mount.persona && !isOwner(p) && p.hidden
+    mount.profile
+      ? p.id === mount.profile && !isOwner(p) && p.hidden
       : !p.hidden
   );
 }
@@ -369,11 +369,11 @@ async function pickerTarget(
 ): Promise<PickerTarget | null> {
   const userData = await resolveConfig(mount.uuid, mount.encryptedPassword);
   if (!userData) return null;
-  if (!mount.persona) {
+  if (!mount.profile) {
     const profile = profileByName(userData, name);
     return profile ? { userData, profile } : null;
   }
-  const profile = profileById(userData, mount.persona);
+  const profile = profileById(userData, mount.profile);
   if (!profile || isOwner(profile) || !profile.hidden) return null;
   const wanted = name.trim().toLowerCase();
   return !wanted ||
@@ -428,8 +428,8 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    const own = mount?.persona ? await pickerTarget(mount, wanted) : null;
-    if (mount?.persona && !own) {
+    const own = mount?.profile ? await pickerTarget(mount, wanted) : null;
+    if (mount?.profile && !own) {
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
@@ -528,10 +528,10 @@ router.post(
       res.status(401).json({ Message: 'Configuration is no longer valid' });
       return;
     }
-    const named = profileById(userData, entry.persona ?? '');
+    const named = profileById(userData, entry.profile ?? '');
     if (!named) {
       logger.warn(
-        { uuid: entry.uuid, profile: entry.persona },
+        { uuid: entry.uuid, profile: entry.profile },
         'quick connect profile no longer exists, signing in as the owner'
       );
     }
@@ -584,7 +584,7 @@ router.get(
     const wanted = param(req, 'userId').toLowerCase();
     const found = profilesOf(ctx.userData).find(
       (p) =>
-        personaUserId(ctx.uuid, p.id) === wanted &&
+        profileUserId(ctx.uuid, p.id) === wanted &&
         (isOwner(ctx.profile) || listedFor(ctx.profile, p))
     );
     const profile = found ?? ctx.profile;
@@ -740,21 +740,21 @@ async function deviceSessions(
   devices: RemoteDevice[]
 ) {
   const found = devices.flatMap((device) => {
-    const user = profileById(ctx.userData, device.persona);
+    const user = profileById(ctx.userData, device.profile);
     if (!user) return [];
     const scope = watchScopeOf(ctx.uuid, user);
     const key = sessionKeyFor(device.client);
-    return [{ device, user, scope, key, at: `${scope.persona}|${key}` }];
+    return [{ device, user, scope, key, at: `${scope.profile}|${key}` }];
   });
-  const scopes = new Map(found.map((f) => [f.scope.persona, f.scope]));
+  const scopes = new Map(found.map((f) => [f.scope.profile, f.scope]));
   const rows = new Map<string, WatchSessionRow>();
   await Promise.all(
     [...scopes.values()].map(async (scope) => {
       const keys = found
-        .filter((f) => f.scope.persona === scope.persona)
+        .filter((f) => f.scope.profile === scope.profile)
         .map((f) => f.key);
       for (const row of await WatchSessionRepository.getMany(scope, keys))
-        rows.set(`${scope.persona}|${row.sessionKey}`, row);
+        rows.set(`${scope.profile}|${row.sessionKey}`, row);
     })
   );
   return Promise.all(
@@ -834,7 +834,7 @@ router.get(
       const sessions = [];
       for (const row of rows) {
         if (row.lastCheckinAt < since || !onDevice(row.deviceId)) continue;
-        const user = profileById(ctx.userData, row.userPersona ?? row.persona);
+        const user = profileById(ctx.userData, row.userProfile ?? row.profile);
         if (!user) continue;
         sessions.push(sessionFromRow(ctx, row, user, null));
       }

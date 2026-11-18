@@ -10,7 +10,7 @@ import {
   isSeparate,
   itemIdForWatchRow,
   PlaybackHandoffRepository,
-  personaUserId,
+  profileUserId,
   profileById,
   profilesOf,
   readToken,
@@ -84,13 +84,13 @@ interface WebUser {
 function usersOf(ctx: JellyfinRequestContext): WebUser[] {
   return profilesOf(ctx.userData).map((profile) => ({
     profile,
-    id: personaUserId(ctx.uuid, profile.id),
+    id: profileUserId(ctx.uuid, profile.id),
     scope: watchScopeOf(ctx.uuid, profile),
   }));
 }
 
 function ownsScope(user: WebUser): boolean {
-  return user.scope.persona === user.profile.id;
+  return user.scope.profile === user.profile.id;
 }
 
 /** Who the caller may read here: a profile only itself, the owner everyone. */
@@ -147,22 +147,22 @@ async function secretOpens(
 
 function encodeCursor(row: WatchStateRow): string {
   return Buffer.from(
-    JSON.stringify([row.sortAt, row.persona, row.itemKey])
+    JSON.stringify([row.sortAt, row.profile, row.itemKey])
   ).toString('base64url');
 }
 
 function decodeCursor(raw: string | undefined): WatchHistoryCursor | undefined {
   if (!raw) return undefined;
   try {
-    const [sortAt, persona, itemKey] = JSON.parse(
+    const [sortAt, profile, itemKey] = JSON.parse(
       Buffer.from(raw, 'base64url').toString('utf8')
     );
     if (
       typeof sortAt === 'number' &&
-      typeof persona === 'string' &&
+      typeof profile === 'string' &&
       typeof itemKey === 'string'
     ) {
-      return { sortAt, persona, itemKey };
+      return { sortAt, profile, itemKey };
     }
   } catch {}
   return undefined;
@@ -186,7 +186,7 @@ router.get(
         .map((row) => {
           const user = profileById(
             ctx.userData,
-            row.userPersona ?? row.persona
+            row.userProfile ?? row.profile
           );
           return user ? sessionFromRow(ctx, row, user, null) : null;
         })
@@ -195,7 +195,7 @@ router.get(
     const live = playing.length
       ? withControls(playing, await controllableDevices(ctx))
       : playing;
-    const byScope = new Map(counts.map((c) => [c.persona, c]));
+    const byScope = new Map(counts.map((c) => [c.profile, c]));
     const none = {
       played: 0,
       movies: 0,
@@ -210,8 +210,8 @@ router.get(
         avatar: u.profile.avatar ?? null,
         hidden: isSeparate(u.profile),
         locked: !!u.profile.lock,
-        historyOf: personaUserId(ctx.uuid, u.scope.persona),
-        counts: ownsScope(u) ? (byScope.get(u.scope.persona) ?? none) : null,
+        historyOf: profileUserId(ctx.uuid, u.scope.profile),
+        counts: ownsScope(u) ? (byScope.get(u.scope.profile) ?? none) : null,
       })),
       sessions: live,
     });
@@ -247,14 +247,14 @@ router.get(
       res.status(404).json({ Message: 'User not found' });
       return;
     }
-    const personas = scoped
-      ? [scoped.scope.persona]
-      : [...new Set(users.filter(ownsScope).map((u) => u.scope.persona))];
+    const profiles = scoped
+      ? [scoped.scope.profile]
+      : [...new Set(users.filter(ownsScope).map((u) => u.scope.profile))];
     const limit = Math.min(
       Math.max(1, qi(req, 'limit', HISTORY_PAGE)),
       HISTORY_PAGE_MAX
     );
-    const rows = await WatchStateRepository.listHistory(ctx.uuid, personas, {
+    const rows = await WatchStateRepository.listHistory(ctx.uuid, profiles, {
       limit: limit + 1,
       after: decodeCursor(qs(req, 'cursor')),
       localOnly: qs(req, 'source') === 'local',
@@ -273,7 +273,7 @@ router.get(
     );
     res.json({
       items: page.map((row, i) => ({
-        userId: personaUserId(ctx.uuid, row.persona),
+        userId: profileUserId(ctx.uuid, row.profile),
         itemKey: row.itemKey,
         kind: row.kind,
         played: row.played,
@@ -329,7 +329,7 @@ router.post(
     logger.info(
       {
         uuid: ctx.uuid,
-        persona: user.scope.persona,
+        profile: user.scope.profile,
         cleared,
         all: !parsed.data.itemKeys,
       },
@@ -345,7 +345,7 @@ function iso(ms: number | null): string | null {
 
 function exportRow(r: WatchStateRow) {
   return {
-    persona: r.persona,
+    profile: r.profile,
     itemKey: r.itemKey,
     kind: r.kind,
     type: r.mediaType,
@@ -383,12 +383,12 @@ router.get(
   '/AIOStreams/History/Export',
   web(async (_req, res, ctx) => {
     const owners = visibleUsers(ctx).filter(ownsScope);
-    const personas = [...new Set(owners.map((u) => u.scope.persona))];
+    const profiles = [...new Set(owners.map((u) => u.scope.profile))];
     const head = JSON.stringify({
       exportedAt: new Date().toISOString(),
       users: owners.map((u) => ({
         id: u.id,
-        persona: u.scope.persona,
+        profile: u.scope.profile,
         name: userDto(ctx.uuid, ctx.userData, u.profile).Name,
       })),
     });
@@ -401,10 +401,10 @@ router.get(
     res.once('close', () => (gone = true));
     try {
       await write(res, `${head.slice(0, -1)},"rows":[`);
-      let after: { persona: string; itemKey: string } | undefined;
+      let after: { profile: string; itemKey: string } | undefined;
       let first = true;
       while (!gone) {
-        const page = await WatchStateRepository.listPage(ctx.uuid, personas, {
+        const page = await WatchStateRepository.listPage(ctx.uuid, profiles, {
           limit: EXPORT_PAGE,
           after,
         });
@@ -414,7 +414,7 @@ router.get(
         first = false;
         if (page.length < EXPORT_PAGE) break;
         const last = page[page.length - 1];
-        after = { persona: last.persona, itemKey: last.itemKey };
+        after = { profile: last.profile, itemKey: last.itemKey };
       }
       res.end(']}');
     } catch (error) {
@@ -450,7 +450,7 @@ router.post(
       res.json(
         await submitAppReport(
           parsed.data,
-          { uuid: ctx.uuid, persona: ctx.profile.id || null },
+          { uuid: ctx.uuid, profile: ctx.profile.id || null },
           body.forward === true
         )
       );

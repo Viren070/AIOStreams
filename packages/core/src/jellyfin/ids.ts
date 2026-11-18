@@ -575,9 +575,9 @@ export function uuidToUserId(uuid: string): string {
 }
 
 /** The account keeps the bare uuid id, which signed-in clients already hold. */
-export function personaUserId(uuid: string, persona: string): string {
-  if (!persona) return uuidToUserId(uuid);
-  return sha(`jellyfin-persona:${uuid}:${persona}`)
+export function profileUserId(uuid: string, profile: string): string {
+  if (!profile) return uuidToUserId(uuid);
+  return sha(`jellyfin-persona:${uuid}:${profile}`)
     .toString('hex')
     .slice(0, 32);
 }

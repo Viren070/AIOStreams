@@ -448,7 +448,7 @@ export function ProfileList({
   const trackersLoading = !!credentials && trackerQuery.isPending;
   const { status } = useStatus();
   const maxProfiles =
-    status?.settings?.jellyfin?.maxPersonas ?? DEFAULT_MAX_PROFILES;
+    status?.settings?.jellyfin?.maxProfiles ?? DEFAULT_MAX_PROFILES;
   const maxTrackers = status?.settings?.jellyfin?.maxTrackers;
   const pinSignIn = status?.settings?.jellyfin?.pinSignIn ?? false;
   const baseUrl = status?.settings?.baseUrl || window.location.origin;

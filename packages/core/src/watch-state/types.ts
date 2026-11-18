@@ -18,20 +18,19 @@ export type {
 
 /**
  * Names one history. Anything that reads or writes a row keyed by
- * `(uuid, persona)` takes this; a credential or a piece of content is a `uuid`.
- * `persona` is a profile id.
+ * `(uuid, profile)` takes this; a credential or a piece of content is a `uuid`.
  */
 export interface WatchScope {
   uuid: string;
-  persona: string;
+  profile: string;
 }
 
 export function ownerScope(uuid: string): WatchScope {
-  return { uuid, persona: OWNER_ID };
+  return { uuid, profile: OWNER_ID };
 }
 
-export function scopeOf(row: { uuid: string; persona: string }): WatchScope {
-  return { uuid: row.uuid, persona: row.persona };
+export function scopeOf(row: { uuid: string; profile: string }): WatchScope {
+  return { uuid: row.uuid, profile: row.profile };
 }
 
 export interface ContentRef {

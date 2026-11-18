@@ -2,7 +2,7 @@ import {
   AUDIO_TYPES,
   isOwner,
   JellyfinRepository,
-  personaUserId,
+  profileUserId,
   profilesOf,
   SUBTITLE_MODES,
   SUBTITLE_TYPES,
@@ -15,10 +15,10 @@ const EVERYONE = '*';
 
 const everyoneScope = (uuid: string): WatchScope => ({
   uuid,
-  persona: EVERYONE,
+  profile: EVERYONE,
 });
 
-export const everyoneUserId = (uuid: string) => personaUserId(uuid, EVERYONE);
+export const everyoneUserId = (uuid: string) => profileUserId(uuid, EVERYONE);
 
 /**
  * Whose preferences a request names, or null when the caller may not change
@@ -37,7 +37,7 @@ export function prefsScope(
   }
   if (!isOwner(ctx.profile)) return ctx.watch;
   const profile = profilesOf(ctx.userData).find(
-    (p) => personaUserId(ctx.uuid, p.id) === wanted
+    (p) => profileUserId(ctx.uuid, p.id) === wanted
   );
   return profile ? watchScopeOf(ctx.uuid, profile) : ctx.watch;
 }
@@ -129,7 +129,7 @@ function withLanguageLists(
 
 async function layers(scope: WatchScope) {
   const [everyone, own] = await Promise.all([
-    scope.persona === EVERYONE
+    scope.profile === EVERYONE
       ? null
       : JellyfinRepository.getUserConfiguration(everyoneScope(scope.uuid)),
     JellyfinRepository.getUserConfiguration(scope),

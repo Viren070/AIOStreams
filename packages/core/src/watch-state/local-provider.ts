@@ -90,8 +90,8 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     scope: WatchScope,
     event: WatchEvent
   ): Promise<WatchStateRow | null> {
-    // Per history, or two personas on one episode would share a pending slot.
-    const key = `${scope.uuid}|${scope.persona}|${event.identity.itemKey}`;
+    // Per history, or two profiles on one episode would share a pending slot.
+    const key = `${scope.uuid}|${scope.profile}|${event.identity.itemKey}`;
     switch (event.type) {
       case 'progress': {
         if (
@@ -202,7 +202,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
     const keys = itemKeys
       ? await WatchStateRepository.withSpellings(scope, itemKeys)
       : undefined;
-    const prefix = `${scope.uuid}|${scope.persona}|`;
+    const prefix = `${scope.uuid}|${scope.profile}|`;
     const only = keys ? new Set(keys) : null;
     for (const key of this.pending.keys()) {
       if (!key.startsWith(prefix)) continue;
@@ -239,7 +239,7 @@ export class LocalWatchStateProvider implements WatchStateProvider {
         logger.warn(
           {
             uuid: p.scope.uuid,
-            persona: p.scope.persona,
+            profile: p.scope.profile,
             itemKey: p.identity.itemKey,
             err: error instanceof Error ? error.message : String(error),
           },

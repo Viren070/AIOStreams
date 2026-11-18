@@ -161,7 +161,7 @@ export type Profile = z.infer<typeof ProfileSchema>;
 const ProfilesSchema = z.array(ProfileSchema).superRefine((profiles, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
   const others = profiles.filter((p) => p.id !== '');
-  const max = config.jellyfin.maxPersonas;
+  const max = config.jellyfin.maxProfiles;
   if (others.length > max) {
     issue(
       max === 0
@@ -1915,8 +1915,8 @@ const StatusResponseSchema = z.object({
         maxCatalogItems: z.number(),
         /** Catalogs shown as libraries, in the configuration's order. 0 = uncapped. */
         maxLibraries: z.number(),
-        /** Extra users a configuration may add beyond its primary user. */
-        maxPersonas: z.number(),
+        /** Profiles a configuration may add beyond its owner. */
+        maxProfiles: z.number(),
         /** Whether a user's PIN alone signs it in on a picker address. */
         pinSignIn: z.boolean().optional(),
         /** Trackers one user syncs with at most. */

@@ -24,7 +24,7 @@ import {
   readToken,
   resolveConfigAlias,
   memoScope,
-  personaUserId,
+  profileUserId,
   recordClientAgent,
   serverId as instanceServerId,
   sql,
@@ -282,7 +282,7 @@ export async function userForToken(token: string): Promise<TokenUser | null> {
     uuid,
     userData,
     profile,
-    userId: personaUserId(uuid, profile.id),
+    userId: profileUserId(uuid, profile.id),
     watch: watchScopeOf(uuid, profile),
     payload,
   };
@@ -291,7 +291,7 @@ export async function userForToken(token: string): Promise<TokenUser | null> {
 export function watchScopeOf(uuid: string, profile: Profile): WatchScope {
   return profile.history === 'shared'
     ? ownerScope(uuid)
-    : { uuid, persona: profile.id };
+    : { uuid, profile: profile.id };
 }
 
 /** What a client types or posts back for a profile other than the owner: its id or name. */
@@ -462,7 +462,7 @@ function userForId(
   userData: UserData,
   userId: string
 ): Profile | undefined {
-  return profilesOf(userData).find((p) => personaUserId(uuid, p.id) === userId);
+  return profilesOf(userData).find((p) => profileUserId(uuid, p.id) === userId);
 }
 
 interface ApiKeyClaim {
@@ -578,7 +578,7 @@ async function buildContext(
     if (isOwner(profile)) return getEngine();
     return (ownerEngine ??= configFor(ownerVariants).then(engineOf));
   };
-  const userId = personaUserId(uuid, profile.id);
+  const userId = profileUserId(uuid, profile.id);
   const watch = watchScopeOf(uuid, profile);
   return {
     uuid,

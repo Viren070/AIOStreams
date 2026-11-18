@@ -6,7 +6,7 @@ import {
   createLogger,
   decodeImageTag,
   decodeItemId,
-  personaUserId,
+  profileUserId,
   pickImage,
   profilesOf,
   recallImages,
@@ -344,7 +344,7 @@ router.get(
         ? pickerListed(mount, userData)
         : profilesOf(userData);
     const avatar = users.find(
-      (p) => uuid && personaUserId(uuid, p.id) === wanted
+      (p) => uuid && profileUserId(uuid, p.id) === wanted
     )?.avatar;
     if (!avatar) {
       res.status(404).end();

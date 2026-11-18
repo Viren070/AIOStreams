@@ -34,7 +34,7 @@ const codeField = z
 const approveBody = z.object({
   code: codeField,
   /** Which of the configuration's profiles the device signs in as; absent is the owner. */
-  persona: z
+  profile: z
     .string()
     .regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
     .optional(),
@@ -93,7 +93,7 @@ router.post('/quickconnect/approve', async (req, res, next) => {
     }
     await UserRepository.verifyUser(creds.uuid, creds.password);
     const config = await UserRepository.getUser(creds.uuid, creds.password);
-    const profile = config && profileById(config, parsed.data.persona ?? '');
+    const profile = config && profileById(config, parsed.data.profile ?? '');
     if (!profile) {
       next(
         new APIError(
@@ -122,7 +122,7 @@ router.post('/quickconnect/approve', async (req, res, next) => {
     const entry = await quickConnectAuthorize(parsed.data.code, {
       uuid: creds.uuid,
       encryptedPassword: enc.data,
-      persona: parsed.data.persona,
+      profile: parsed.data.profile,
     });
     if (!entry) {
       res.status(404).json(
@@ -136,7 +136,7 @@ router.post('/quickconnect/approve', async (req, res, next) => {
     logger.info(
       {
         uuid: creds.uuid,
-        persona: parsed.data.persona,
+        profile: parsed.data.profile,
         device: entry.deviceName,
         app: entry.appName,
       },

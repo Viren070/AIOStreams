@@ -2046,7 +2046,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
   >(null);
   const [lookingUpQuickConnect, setLookingUpQuickConnect] =
     React.useState(false);
-  const [quickConnectPersona, setQuickConnectPersona] = React.useState('');
+  const [quickConnectProfileId, setQuickConnectProfileId] = React.useState('');
   const [quickConnectPin, setQuickConnectPin] = React.useState('');
   const [approvingQuickConnect, setApprovingQuickConnect] =
     React.useState(false);
@@ -2284,8 +2284,8 @@ export function useSaveInstall({ offerStremio = true } = {}) {
   };
   const profiles = profilesOf(userData);
   const quickConnectProfile =
-    profiles.find((p) => p.id === quickConnectPersona) ?? profiles[0];
-  const quickConnectPersonaName = quickConnectPersona
+    profiles.find((p) => p.id === quickConnectProfileId) ?? profiles[0];
+  const quickConnectProfileName = quickConnectProfileId
     ? profileLabel(userData, quickConnectProfile)
     : null;
   const quickConnectLocked = !!quickConnectProfile.lock;
@@ -2354,7 +2354,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
   const cancelQuickConnect = () => {
     setQuickConnectCode('');
     setQuickConnectPending(null);
-    setQuickConnectPersona('');
+    setQuickConnectProfileId('');
     setQuickConnectPin('');
   };
 
@@ -2365,13 +2365,13 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       const result = await approveJellyfinQuickConnect(
         { uuid, password: password || null },
         quickConnectCode,
-        quickConnectPersona || undefined,
+        quickConnectProfileId || undefined,
         quickConnectLocked ? quickConnectPin : undefined
       );
       toast.success(
         result.device?.app
           ? `Signed in ${result.device.app} on ${result.device.name}${
-              quickConnectPersonaName ? ` as ${quickConnectPersonaName}` : ''
+              quickConnectProfileName ? ` as ${quickConnectProfileName}` : ''
             }`
           : 'Quick Connect approved'
       );
@@ -2640,9 +2640,9 @@ export function useSaveInstall({ offerStremio = true } = {}) {
             {profiles.length > 1 && (
               <Select
                 label="Sign in as"
-                value={quickConnectPersona || '__owner__'}
+                value={quickConnectProfileId || '__owner__'}
                 onValueChange={(value) => {
-                  setQuickConnectPersona(value === '__owner__' ? '' : value);
+                  setQuickConnectProfileId(value === '__owner__' ? '' : value);
                   setQuickConnectPin('');
                 }}
                 options={profiles.map((p) => ({
@@ -2675,8 +2675,8 @@ export function useSaveInstall({ offerStremio = true } = {}) {
                 loading={approvingQuickConnect}
               >
                 Approve
-                {quickConnectPersonaName
-                  ? ` as ${quickConnectPersonaName}`
+                {quickConnectProfileName
+                  ? ` as ${quickConnectProfileName}`
                   : ''}
               </Button>
               <Button intent="primary-subtle" onClick={cancelQuickConnect}>

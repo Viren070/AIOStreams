@@ -136,7 +136,7 @@ export interface MemoPointer {
   uuid: string;
   encryptedPassword: string;
   itemId: string;
-  persona?: string;
+  profile?: string;
   /** Only on the pointers to a play session. */
   scope?: string;
 }
