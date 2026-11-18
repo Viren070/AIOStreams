@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-17 19:29+0000\n"
+"PO-Revision-Date: 2026-11-18 15:29+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -2137,7 +2137,7 @@ msgstr "Unisciti"
 
 #: src/features/party/not-in-party.tsx src/features/party/party-sheet.tsx
 msgid "Join a party"
-msgstr "Unisciti ad un watch party"
+msgstr "Unisciti a un watch party"
 
 #: src/features/party/not-in-party.tsx
 msgid "Joining leaves the party you're in."
@@ -2847,7 +2847,7 @@ msgstr "Se disattivato, il trailer viene comunque riprodotto con l'audio quando 
 
 #: src/features/party/in-party.tsx
 msgid "Off, the video jumps instead."
-msgstr "Disattivato, il video invece salta."
+msgstr "Disattivato, il video salta."
 
 #: src/components/shell/usage-stats.tsx
 msgid "OK"
@@ -5408,7 +5408,7 @@ msgstr "Le versioni vengono riprodotte nel browser. Scegli un altro lettore se p
 
 #: src/app/settings/page.tsx
 msgid "Versions, next episode and skipping"
-msgstr "Versioni, episodio successivo e salto"
+msgstr "Versioni, episodio successivo e opzioni di salto"
 
 #: src/app/settings/player.tsx
 msgid "Video"
@@ -5504,7 +5504,7 @@ msgstr "Watch party"
 #: src/features/party/in-party.tsx src/features/party/party-sheet.tsx
 #: src/features/player/options.tsx
 msgid "Watch together"
-msgstr "Visione condivisa"
+msgstr "Guarda insieme"
 
 #: src/app/discover/page.tsx src/app/history/page.tsx
 #: src/app/item/_components/actions.tsx
@@ -5625,7 +5625,7 @@ msgstr "Quando il TV o il ricevitore decodificano"
 
 #: src/app/settings/playback.tsx
 msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
-msgstr "Se un file indica le sigle, i titoli di coda, il riepilogo o l’anteprima, la funzione di salto utilizza questi dati anziché i tempi forniti dal server, poiché sono specifici di quel file. Per tutto il resto, continua a utilizzare i dati del server."
+msgstr "Se un file indica le sigle, i titoli di coda, il riassunto o l’anteprima, la funzione di salto utilizza questi dati anziché quelli forniti dal server, in quanto sono più precisi. Per tutto il resto verranno comunque usati i dati del server."
 
 #: src/app/settings/about.tsx
 msgid "Where the app is made, and where to report a problem."
