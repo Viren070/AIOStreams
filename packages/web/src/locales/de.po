@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-14 20:08+0000\n"
+"PO-Revision-Date: 2026-11-18 15:29+0000\n"
 "Last-Translator: hamburgercowgoldfish <242998989+hamburgercowgoldfish@users.noreply.github.com>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/aiostreams/web-app/de/>\n"
 "Language: de\n"
@@ -182,7 +182,7 @@ msgstr "{name} hat die Watch-Party verlassen"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "{off} off"
-msgstr ""
+msgstr "{off} aus"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -522,7 +522,7 @@ msgstr "Alle Felder"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Alle ein"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -744,11 +744,11 @@ msgstr "Schwarz"
 
 #: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Rendert Untertitel über die Grafikkarte statt über den Prozessor, was die CPU entlastet. Gilt nur für Videos, die mit ExoPlayer abgespielt werden. Ausschalten, falls Untertitel fehlerhaft aussehen."
 
 #: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Rendert Untertitel über die Grafikkarte statt über den Prozessor, was die CPU entlastet. Ausschalten, falls Untertitel fehlerhaft aussehen."
 
 #: src/lib/i18n.ts
 msgid "Blue"
@@ -1001,14 +1001,12 @@ msgid "Colour"
 msgstr "Farbe"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Colours"
-msgstr "Farbe"
+msgstr "Farben"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Colours, glass and custom CSS"
-msgstr "Farben & Benutzerdefiniertes CSS"
+msgstr "Farben, Glas und benutzerdefiniertes CSS"
 
 #: src/app/settings/browsing.tsx
 msgid "Combine movie and show results"
@@ -1318,9 +1316,8 @@ msgid "Day"
 msgstr "Tag"
 
 #: src/app/settings/player.tsx
-#, fuzzy
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf, under mpv below."
-msgstr "Dekodiert nahezu jedes Video (per Software, falls kein Hardware-Decoder vorhanden ist). Nutzt deine mpv.conf aus den Android-App-Einstellungen."
+msgstr "Dekodiert nahezu jedes Video (per Software, falls kein Hardware-Decoder vorhanden ist). Nutzt deine mpv.conf aus dem Bereich \"mpv\" weiter unten."
 
 #: src/app/settings/player.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
@@ -1480,7 +1477,7 @@ msgstr "Fertig"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Double tap to skip"
-msgstr ""
+msgstr "Doppeltippen zum Überspringen"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1541,7 +1538,7 @@ msgstr "Downloads warten auf WLAN oder ein Netzwerk ohne Datenlimit, statt mobil
 
 #: src/app/settings/player.tsx
 msgid "Draw subtitles on the graphics card"
-msgstr ""
+msgstr "Untertitel über die Grafikkarte rendern"
 
 #: src/lib/i18n.ts
 msgid "Drawer"
@@ -1841,7 +1838,7 @@ msgstr "Allgemein"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Gestures"
-msgstr ""
+msgstr "Gesten"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
@@ -1849,7 +1846,7 @@ msgstr "Gib diesen Code an die Person weiter, die das Problem untersucht."
 
 #: src/app/settings/theme.tsx
 msgid "Glass"
-msgstr ""
+msgstr "Glas"
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
@@ -1909,7 +1906,7 @@ msgstr "Mit PIN geschützt"
 
 #: src/app/settings/player.tsx
 msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
-msgstr ""
+msgstr "Schärft das Video über die Grafikkarte, während es auf Bildschirmgröße vergrößert wird. Einige Grafikkarten wandeln auf einem Bildschirm im HDR-Modus zudem SDR-Videos in HDR um. Bei manchen Grafikkarten muss dies vorab in derer jeweiligen App aktiviert werden. HDR-Videos bleiben unverändert, und bei Anime greift stattdessen das Anime-Upscaling, sofern es eingeschaltet ist. Verbraucht mehr Strom und deaktiviert sich automatisch, wenn die Leistung des Geräts nicht ausreicht."
 
 #: src/app/settings/player.tsx
 msgid "HDR output"
@@ -1949,7 +1946,7 @@ msgstr "Ausgeblendet"
 
 #: src/app/settings/browsing.tsx
 msgid "Hidden, channels also leave search and favourites."
-msgstr ""
+msgstr "Ausgeblendet - Kanäle werden auch aus Suche und Favoriten entfernt."
 
 #: src/features/player/next-episode.tsx
 msgid "Hide"
@@ -1969,9 +1966,8 @@ msgid "Hold"
 msgstr "Halten"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Hold to speed up"
-msgstr "Geschwindigkeit beim Halten"
+msgstr "Gedrückt halten zum Beschleunigen"
 
 #: src/app/settings/apps.tsx src/app/settings/browsing.tsx
 #: src/app/settings/interface.tsx src/components/shell/layout.tsx
@@ -1984,13 +1980,12 @@ msgid "Home and libraries"
 msgstr "Startseite und Mediatheken"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Home, posters, trailers and episodes"
-msgstr "Sprache, Startseite, Raster und Folgen"
+msgstr "Startseite, Poster, Trailer und Episoden"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
-msgstr ""
+msgstr "Startseite, Suche und Kataloge"
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2074,7 +2069,7 @@ msgstr "In den Downloads der App"
 
 #: src/app/settings/browsing.tsx
 msgid "In the navigation only"
-msgstr ""
+msgstr "Nur in der Navigation"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2214,9 +2209,8 @@ msgid "Language and how subtitles look"
 msgstr "Sprache & Untertitel-Darstellung"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Language and navigation"
-msgstr "Sprache & Ausgabe"
+msgstr "Sprache und Navigation"
 
 #: src/app/settings/page.tsx
 msgid "Language and output"
@@ -2327,7 +2321,7 @@ msgstr "Protokolle"
 
 #: src/app/settings/page.tsx
 msgid "Look and feel"
-msgstr ""
+msgstr "Aussehen und Bedienung"
 
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
@@ -2509,9 +2503,8 @@ msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr "mpv übernimmt die Videoausgabe mit deiner mpv.conf und deinen Shadern."
 
 #: src/app/settings/player.tsx
-#, fuzzy
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
-msgstr "mpv in diesem Fenster mit der Steuerung und den Wiedergabeeinstellungen dieser App. Deine eigene mpv.conf, Skripte und Shader funktionieren hier ebenfalls. Lege sie im mpv-Ordner unter Desktop-App ab."
+msgstr "mpv in diesem Fenster mit der Steuerung und den Wiedergabeeinstellungen dieser App. Deine eigene mpv.conf, Skripte und Shader funktionieren hier ebenfalls. Lege sie im mpv-Ordner unter \"mpv\" weiter unten ab."
 
 #: src/app/settings/player.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
@@ -2683,9 +2676,8 @@ msgid "No server answered at that address."
 msgstr "Unter dieser Adresse hat kein Server geantwortet."
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "No setting matches."
-msgstr "Keine passenden Ergebnisse."
+msgstr "Keine passende Einstellung gefunden."
 
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
@@ -2871,16 +2863,15 @@ msgstr "auf {relay}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "On either side of the video, by the skip length."
-msgstr ""
+msgstr "Auf beiden Seiten des Videos um die eingestellte Sprungweite."
 
 #: src/app/settings/browsing.tsx
 msgid "On home and in the navigation"
-msgstr ""
+msgstr "Auf der Startseite und in der Navigation"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
-msgstr "Auf der Startseite, während das Hero-Banner rotiert, sowie in Rastern. In einem Raster hebt sich eine Kachel unter dem Mauszeiger hervor, sodass die benachbarten Kacheln an ihrem Platz bleiben."
+msgstr "Auf der Startseite, während das Hero-Banner rotiert, in der Suche und in Rastern. Unter dem Mauszeiger hebt sich eine Kachel hervor; mit Tastatur oder Fernbedienung erweitert sie sich zur Detailansicht."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3051,7 +3042,7 @@ msgstr "Andere Geräte"
 
 #: src/app/settings/theme.tsx
 msgid "Other pages, such as settings"
-msgstr ""
+msgstr "Weitere Seiten, wie etwa die Einstellungen"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3247,9 +3238,8 @@ msgid "PIN or password"
 msgstr "PIN oder Passwort"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Pinch to fill the screen"
-msgstr "Vollbild beenden"
+msgstr "Zwei-Finger-Zoom zum Ausfüllen des Bildschirms"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3462,9 +3452,8 @@ msgid "Poster size"
 msgstr "Postergröße"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "Posters and grids"
-msgstr "Startseite und Raster"
+msgstr "Poster und Raster"
 
 #: src/app/settings/cache.tsx
 msgid "Posters, backdrops, logos and photos."
@@ -3492,9 +3481,8 @@ msgid "Preview"
 msgstr "Vorschau"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "Preview the card you rest on"
-msgstr "Fokussierte Kachel"
+msgstr "Fokussierte Kachel als Vorschau anzeigen"
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -3980,9 +3968,8 @@ msgid "Search by voice"
 msgstr "Sprachsuche"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Search settings"
-msgstr "Suche läuft"
+msgstr "Einstellungen durchsuchen"
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Search the lines"
@@ -4576,24 +4563,23 @@ msgstr "Sonne"
 
 #: src/app/settings/player.tsx
 msgid "Super resolution"
-msgstr ""
+msgstr "Super Resolution"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "AIOStreams unterstützen"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Swipe across to seek"
-msgstr "Speicherplatz"
+msgstr "Seitwärts wischen zum Spulen"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the left for brightness"
-msgstr ""
+msgstr "Links hoch- oder runterwischen für Helligkeit"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the right for volume"
-msgstr ""
+msgstr "Rechts hoch- oder runterwischen für Lautstärke"
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4790,9 +4776,8 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Der Player der App und seine Optionen, etwa das Starten von Videos im Querformat."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
-msgstr "Das weichgezeichnete und abgedunkelte Hintergrundbild des geöffneten Titels hinter den Seiten und der Versionsliste."
+msgstr "Das weichgezeichnete und abgedunkelte Hintergrundbild des geöffneten Titels hinter diesen Seiten. Die Versionsliste zeigt es gemeinsam mit den Titelseiten."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -4881,7 +4866,7 @@ msgstr "In der Watch-Party läuft <0>{title}</0>"
 
 #: src/app/settings/page.tsx
 msgid "The player and its controls"
-msgstr ""
+msgstr "Der Player und seine Steuerung"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
@@ -4889,7 +4874,7 @@ msgstr "der Player konnte diese Version nicht abspielen"
 
 #: src/app/settings/page.tsx
 msgid "The player, its controls and video"
-msgstr ""
+msgstr "Der Player, seine Steuerung und Video"
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
@@ -5317,14 +5302,12 @@ msgid "Updates"
 msgstr "Updates"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates and troubleshooting"
-msgstr "Updates, mpv und Fehlerbehebung"
+msgstr "Updates und Fehlerbehebung"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates, Discord and troubleshooting"
-msgstr "Updates, Discord, mpv und Fehlerbehebung"
+msgstr "Updates, Discord und Fehlerbehebung"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
 msgid "Usage statistics"
@@ -5425,7 +5408,7 @@ msgstr "Versionen werden in diesem Browser abgespielt. Wähle einen anderen Play
 
 #: src/app/settings/page.tsx
 msgid "Versions, next episode and skipping"
-msgstr ""
+msgstr "Versionen, nächste Episode und Überspringen"
 
 #: src/app/settings/player.tsx
 msgid "Video"
@@ -5586,7 +5569,7 @@ msgstr "Zu speichernde Inhalte"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "What touching or holding the video does."
-msgstr ""
+msgstr "Was beim Tippen oder Gedrückthalten des Videos geschieht."
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
@@ -5722,7 +5705,7 @@ msgstr "Mit {names}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "With a finger or the mouse button, at the held speed."
-msgstr ""
+msgstr "Durch Halten mit dem Finger oder der Maustaste in der eingestellten Geschwindigkeit."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
