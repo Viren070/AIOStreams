@@ -479,7 +479,7 @@ msgid "Added to {name}"
 msgstr ""
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr ""
 
 #: src/app/settings/about.tsx
@@ -834,7 +834,7 @@ msgstr ""
 msgid "Calendar"
 msgstr ""
 
-#: src/app/servers/page.tsx
+#: src/app/servers/page.tsx src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr ""
 
@@ -1650,7 +1650,7 @@ msgstr ""
 msgid "Every {list} at {time}"
 msgstr ""
 
-#: src/app/history/page.tsx
+#: src/app/history/page.tsx src/app/settings/page.tsx
 msgid "Everyone"
 msgstr ""
 
@@ -2179,6 +2179,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr ""
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr ""
 
@@ -2230,6 +2231,10 @@ msgstr ""
 
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
+msgstr ""
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
 msgstr ""
 
 #: src/features/party/in-party.tsx
@@ -2528,7 +2533,7 @@ msgid "Navigation"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+msgid "Needed to switch to this profile."
 msgstr ""
 
 #: src/app/downloads/page.tsx
@@ -3044,7 +3049,7 @@ msgid "Other pages, such as settings"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
+msgid "Other profile"
 msgstr ""
 
 #: src/app/player/page.tsx
@@ -3166,10 +3171,6 @@ msgstr ""
 
 #: src/app/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
-msgstr ""
-
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
 msgstr ""
 
 #: src/app/search/page.tsx
@@ -3520,6 +3521,10 @@ msgstr ""
 
 #: src/components/media/people.tsx
 msgid "Producer"
+msgstr ""
+
+#: src/app/history/page.tsx
+msgid "Profile"
 msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
@@ -3919,11 +3924,15 @@ msgstr ""
 msgid "Saved to {folder}"
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr ""
 
@@ -4070,6 +4079,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/app/settings/page.tsx
+msgid "Settings for"
+msgstr ""
+
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
@@ -4119,6 +4132,10 @@ msgstr ""
 msgid "Show messages over the video"
 msgstr ""
 
+#: src/app/servers/page.tsx
+msgid "Show on the profile picker"
+msgstr ""
+
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
 msgstr ""
@@ -4133,10 +4150,6 @@ msgstr ""
 
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
-msgstr ""
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
 msgstr ""
 
 #: src/app/settings/playback.tsx
@@ -4584,13 +4597,13 @@ msgstr ""
 msgid "Switch"
 msgstr ""
 
-#: src/app.tsx
-msgid "Switch server"
-msgstr ""
-
 #: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-msgid "Switch user"
+msgid "Switch profile"
+msgstr ""
+
+#: src/app.tsx
+msgid "Switch server"
 msgstr ""
 
 #: src/app/settings/player.tsx
@@ -4776,6 +4789,14 @@ msgstr ""
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5031,6 +5052,10 @@ msgstr ""
 msgid "This item was not found"
 msgstr ""
 
+#: src/app/sign-in/page.tsx
+msgid "This profile has a PIN."
+msgstr ""
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr ""
@@ -5043,7 +5068,7 @@ msgstr ""
 msgid "This server can't list what you've watched."
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "This server doesn't let your account change these."
 msgstr ""
 
@@ -5077,10 +5102,6 @@ msgstr ""
 
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
-msgstr ""
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
 msgstr ""
 
 #: src/app/player/page.tsx
@@ -5348,10 +5369,6 @@ msgstr ""
 msgid "Used when an episode has no credits marked."
 msgstr ""
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr ""
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr ""
@@ -5487,7 +5504,7 @@ msgid "Watch along"
 msgstr ""
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr ""
 
 #: src/app/settings/playback.tsx
@@ -5575,7 +5592,7 @@ msgid "What you can send from a party's chat."
 msgstr ""
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+msgid "What your Discord profile shows."
 msgstr ""
 
 #: src/app/settings/audio.tsx
@@ -5726,7 +5743,7 @@ msgstr ""
 msgid "Yesterday"
 msgstr ""
 
-#: src/components/shell/nav/account.tsx
+#: src/app/settings/page.tsx src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx
 #: src/components/shell/nav/touch-rail.tsx src/components/shell/nav/tv-rail.tsx

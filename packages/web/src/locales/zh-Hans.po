@@ -482,7 +482,8 @@ msgid "Added to {name}"
 msgstr "已添加到 {name}"
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+#, fuzzy
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr "请在配置页面设置插件、目录和用户。"
 
 #: src/app/settings/about.tsx
@@ -841,7 +842,7 @@ msgstr "缓存大小"
 msgid "Calendar"
 msgstr "日历"
 
-#: src/app/servers/page.tsx
+#: src/app/servers/page.tsx src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr "无法连接"
 
@@ -1668,7 +1669,7 @@ msgstr "每{list}"
 msgid "Every {list} at {time}"
 msgstr "每{list}的 {time}"
 
-#: src/app/history/page.tsx
+#: src/app/history/page.tsx src/app/settings/page.tsx
 msgid "Everyone"
 msgstr "所有人"
 
@@ -2205,6 +2206,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "离开应用后，视频会在小窗口中继续播放。"
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr "已保存在此设备上。"
 
@@ -2258,6 +2260,10 @@ msgstr "离开 {from} 以添加 {adding}？"
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
 msgstr "离开 {from} 以在 {target} 上打开此内容？"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2558,7 +2564,8 @@ msgid "Navigation"
 msgstr "导航"
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+#, fuzzy
+msgid "Needed to switch to this profile."
 msgstr "切换到此用户时需要。"
 
 #: src/app/downloads/page.tsx
@@ -3082,8 +3089,9 @@ msgid "Other pages, such as settings"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
-msgstr "其他用户"
+#, fuzzy
+msgid "Other profile"
+msgstr "其他应用"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3205,10 +3213,6 @@ msgstr "已在 {name} 处暂停，播放至 {at}"
 #: src/app/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "连续播放达到此集数且期间没有按键、点击或按下按钮后，会暂停并在播放下一集前询问。"
-
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
 
 #: src/app/search/page.tsx
 msgid "People"
@@ -3570,6 +3574,10 @@ msgstr "上一个预告片"
 #: src/components/media/people.tsx
 msgid "Producer"
 msgstr "制片人"
+
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -3972,11 +3980,15 @@ msgstr "已保存"
 msgid "Saved to {folder}"
 msgstr "已保存到 {folder}"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr "已保存到你的账户，因此会同步到你的所有设备。"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr "已保存到你的账户，因此其他设备和 Jellyfin 应用也会使用此设置。"
 
@@ -4126,6 +4138,11 @@ msgstr "手动设置"
 msgid "Settings"
 msgstr "设置"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Settings for"
+msgstr "设置"
+
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
@@ -4176,6 +4193,11 @@ msgstr "在文件夹中显示"
 msgid "Show messages over the video"
 msgstr "在视频上显示消息"
 
+#: src/app/servers/page.tsx
+#, fuzzy
+msgid "Show on the profile picker"
+msgstr "显示提示"
+
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
 msgstr "在视频上显示回应"
@@ -4191,11 +4213,6 @@ msgstr "提前显示字幕"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "延后显示字幕"
-
-#: src/app/settings/player.tsx
-#, fuzzy
-msgid "Show the controls on pause and skip"
-msgstr "显示控制项"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"
@@ -4648,14 +4665,15 @@ msgstr ""
 msgid "Switch"
 msgstr "切换"
 
+#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
+#: src/components/shell/layout.tsx
+#, fuzzy
+msgid "Switch profile"
+msgstr "切换服务器"
+
 #: src/app.tsx
 msgid "Switch server"
 msgstr "切换服务器"
-
-#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
-#: src/components/shell/layout.tsx
-msgid "Switch user"
-msgstr "切换用户"
 
 #: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -4841,6 +4859,14 @@ msgstr "应用自带的播放器及其选项，例如以横屏启动视频。"
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5100,6 +5126,11 @@ msgstr ""
 msgid "This item was not found"
 msgstr "未找到此项目"
 
+#: src/app/sign-in/page.tsx
+#, fuzzy
+msgid "This profile has a PIN."
+msgstr "此用户已设置 PIN 码。"
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr "本季"
@@ -5112,7 +5143,7 @@ msgstr "此服务器"
 msgid "This server can't list what you've watched."
 msgstr "此服务器无法列出你已观看的内容。"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 #, fuzzy
 msgid "This server doesn't let your account change these."
 msgstr "此服务器无法列出你已观看的内容。"
@@ -5148,10 +5179,6 @@ msgstr "此预告片播放失败：{failure}"
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
 msgstr "此预告片已不可用。"
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
-msgstr "此用户已设置 PIN 码。"
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5424,10 +5451,6 @@ msgstr "使用你的用户名和 PIN 码，或配置的 UUID 及其密码。"
 msgid "Used when an episode has no credits marked."
 msgstr "当剧集没有标记片尾字幕时使用。"
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr "用户"
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr "用户名"
@@ -5565,7 +5588,8 @@ msgid "Watch along"
 msgstr "同步观看"
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+#, fuzzy
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr "以此配置中的其他用户身份观看。设置了 PIN 码的用户切换离开后，再次切换回来时需要重新输入。"
 
 #: src/app/settings/playback.tsx
@@ -5654,7 +5678,8 @@ msgid "What you can send from a party's chat."
 msgstr "你可以从一起观看的聊天中发送的内容。"
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+#, fuzzy
+msgid "What your Discord profile shows."
 msgstr "Discord 个人资料中显示的内容。保存在此设备上。"
 
 #: src/app/settings/audio.tsx
@@ -5807,7 +5832,7 @@ msgstr "黄色"
 msgid "Yesterday"
 msgstr ""
 
-#: src/components/shell/nav/account.tsx
+#: src/app/settings/page.tsx src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx
 #: src/components/shell/nav/touch-rail.tsx src/components/shell/nav/tv-rail.tsx

@@ -481,7 +481,8 @@ msgid "Added to {name}"
 msgstr "Ditambahkan ke {name}"
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+#, fuzzy
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr "Add-on, katalog, dan pengguna diatur di halaman konfigurasi."
 
 #: src/app/settings/about.tsx
@@ -838,7 +839,7 @@ msgstr "Ukuran cache"
 msgid "Calendar"
 msgstr "Kalender"
 
-#: src/app/servers/page.tsx
+#: src/app/servers/page.tsx src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr "Tidak dapat terhubung"
 
@@ -1659,7 +1660,7 @@ msgstr "Setiap {list}"
 msgid "Every {list} at {time}"
 msgstr "Setiap {list} pukul {time}"
 
-#: src/app/history/page.tsx
+#: src/app/history/page.tsx src/app/settings/page.tsx
 msgid "Everyone"
 msgstr "Semua orang"
 
@@ -2192,6 +2193,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "Tetap memutar video di jendela kecil saat Anda keluar dari aplikasi."
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr "Disimpan di perangkat ini."
 
@@ -2245,6 +2247,10 @@ msgstr "Tinggalkan {from} untuk menambahkan {adding}?"
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
 msgstr "Tinggalkan {from} untuk membuka ini di {target}?"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2543,7 +2549,8 @@ msgid "Navigation"
 msgstr "Navigasi"
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+#, fuzzy
+msgid "Needed to switch to this profile."
 msgstr "Diperlukan untuk beralih ke pengguna ini."
 
 #: src/app/downloads/page.tsx
@@ -3062,8 +3069,9 @@ msgid "Other pages, such as settings"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
-msgstr "Pengguna lain"
+#, fuzzy
+msgid "Other profile"
+msgstr "Aplikasi lain"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3185,10 +3193,6 @@ msgstr "Dijeda di {name}, pada {at}"
 #: src/app/settings/playback.tsx
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Menjeda dan meminta konfirmasi sebelum episode berikutnya setelah sejumlah episode ini diputar berturut-turut tanpa penekanan tombol atau klik."
-
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Menjeda, memutar, atau melompat menggunakan remote atau keyboard akan menampilkan kontrol, yang tetap terlihat sesaat setelah lompatan. Jika dinonaktifkan, hanya ikon yang muncul sebentar."
 
 #: src/app/search/page.tsx
 msgid "People"
@@ -3545,6 +3549,10 @@ msgstr "Cuplikan sebelumnya"
 #: src/components/media/people.tsx
 msgid "Producer"
 msgstr "Produser"
+
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -3944,11 +3952,15 @@ msgstr "Disimpan"
 msgid "Saved to {folder}"
 msgstr "Disimpan ke {folder}"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr "Disimpan ke akun Anda, sehingga tersedia di setiap perangkat yang Anda gunakan."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr "Disimpan ke akun Anda, sehingga perangkat lain dan aplikasi Jellyfin Anda juga menggunakannya."
 
@@ -4097,6 +4109,11 @@ msgstr "Atur secara manual"
 msgid "Settings"
 msgstr "Pengaturan"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Settings for"
+msgstr "Pengaturan"
+
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
@@ -4147,6 +4164,11 @@ msgstr "Tampilkan dalam folder"
 msgid "Show messages over the video"
 msgstr "Tampilkan pesan di atas video"
 
+#: src/app/servers/page.tsx
+#, fuzzy
+msgid "Show on the profile picker"
+msgstr "Tampilkan konfirmasi"
+
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
 msgstr "Tampilkan reaksi di atas video"
@@ -4162,10 +4184,6 @@ msgstr "Tampilkan subtitel lebih awal"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Tampilkan subtitel lebih lambat"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Tampilkan kontrol saat menjeda dan melompat"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"
@@ -4614,14 +4632,15 @@ msgstr ""
 msgid "Switch"
 msgstr "Beralih"
 
+#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
+#: src/components/shell/layout.tsx
+#, fuzzy
+msgid "Switch profile"
+msgstr "Ganti server"
+
 #: src/app.tsx
 msgid "Switch server"
 msgstr "Ganti server"
-
-#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
-#: src/components/shell/layout.tsx
-msgid "Switch user"
-msgstr "Ganti pengguna"
 
 #: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -4806,6 +4825,14 @@ msgstr "Pemutar aplikasi dan opsinya, seperti memulai video dalam orientasi lans
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5065,6 +5092,11 @@ msgstr ""
 msgid "This item was not found"
 msgstr "Item ini tidak ditemukan"
 
+#: src/app/sign-in/page.tsx
+#, fuzzy
+msgid "This profile has a PIN."
+msgstr "Pengguna ini memiliki PIN."
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr "Musim ini"
@@ -5077,7 +5109,7 @@ msgstr "Server ini"
 msgid "This server can't list what you've watched."
 msgstr "Server ini tidak dapat menampilkan daftar yang sudah Anda tonton."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 #, fuzzy
 msgid "This server doesn't let your account change these."
 msgstr "Server ini tidak dapat menampilkan daftar yang sudah Anda tonton."
@@ -5113,10 +5145,6 @@ msgstr "Cuplikan ini gagal diputar: {failure}"
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
 msgstr "Cuplikan ini sudah tidak tersedia."
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
-msgstr "Pengguna ini memiliki PIN."
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5388,10 +5416,6 @@ msgstr "Gunakan nama pengguna dan PIN Anda, atau UUID konfigurasi beserta kata s
 msgid "Used when an episode has no credits marked."
 msgstr "Digunakan saat episode tidak memiliki penanda kredit."
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr "Pengguna"
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr "Nama pengguna"
@@ -5528,7 +5552,8 @@ msgid "Watch along"
 msgstr "Ikut menonton"
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+#, fuzzy
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr "Tonton sebagai pengguna lain pada konfigurasi ini. Pengguna dengan PIN perlu memasukkannya kembali setelah beralih ke pengguna lain."
 
 #: src/app/settings/playback.tsx
@@ -5617,7 +5642,8 @@ msgid "What you can send from a party's chat."
 msgstr "Yang dapat Anda kirim dari obrolan sesi nonton bersama."
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+#, fuzzy
+msgid "What your Discord profile shows."
 msgstr "Informasi yang ditampilkan di profil Discord Anda. Disimpan di perangkat ini."
 
 #: src/app/settings/audio.tsx
@@ -5768,7 +5794,7 @@ msgstr "Kuning"
 msgid "Yesterday"
 msgstr "Kemarin"
 
-#: src/components/shell/nav/account.tsx
+#: src/app/settings/page.tsx src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx
 #: src/components/shell/nav/touch-rail.tsx src/components/shell/nav/tv-rail.tsx
