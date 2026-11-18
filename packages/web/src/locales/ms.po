@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-18 02:59+0000\n"
+"PO-Revision-Date: 2026-11-18 15:29+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -5569,7 +5569,7 @@ msgstr "Perkara untuk disimpan"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "What touching or holding the video does."
-msgstr ""
+msgstr "Tindakan apabila menyentuh atau memegang video."
 
 #: src/app/settings/_components/reaction-setting.tsx
 msgid "What you can send from a party's chat."
@@ -5705,7 +5705,7 @@ msgstr "Bersama {names}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "With a finger or the mouse button, at the held speed."
-msgstr ""
+msgstr "Dengan jari atau butang tetikus, pada kelajuan yang ditahan."
 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Words or /pattern/"
