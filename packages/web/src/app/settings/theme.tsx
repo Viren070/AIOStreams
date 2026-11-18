@@ -28,7 +28,7 @@ import { currentHost } from '@/lib/hosts';
 import { focusOn, keyboardFocus } from '@/lib/input';
 import { SettingsCard } from './_components/settings-card';
 import { Anchor } from '@/components/anchor';
-import { followsYou, onDevice, DOCS_URL } from './_components/common';
+import { DOCS_URL } from './_components/common';
 
 const KEEP_CSS_MS = 15_000;
 
@@ -108,11 +108,7 @@ export function ThemeSection() {
   };
   return (
     <>
-      <SettingsCard
-        name="colours"
-        title={t`Colours`}
-        description={followsYou()}
-      >
+      <SettingsCard name="colours" title={t`Colours`} holds="profile">
         <div className="space-y-2">
           <p className="text-sm font-semibold">
             <Trans>Presets</Trans>
@@ -187,7 +183,7 @@ export function ThemeSection() {
           onValueChange={(value) => setArtBackground(value as ArtPage[])}
         />
       </SettingsCard>
-      <SettingsCard name="glass" title={t`Glass`} description={onDevice()}>
+      <SettingsCard name="glass" title={t`Glass`} holds="device">
         <Select
           label={t`Glass surface`}
           help={t`What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device.`}
@@ -211,7 +207,7 @@ export function ThemeSection() {
           />
         )}
       </SettingsCard>
-      <SettingsCard name="css" title="CSS" description={followsYou()}>
+      <SettingsCard name="css" title="CSS" holds="profile">
         {server.css && (
           <Switch
             side="right"

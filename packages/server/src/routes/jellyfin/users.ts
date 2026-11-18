@@ -5,7 +5,6 @@ import {
   encryptString,
   getSimpleTextHash,
   isConfigUuid,
-  JellyfinRepository,
   liveCatalogs,
   mintToken,
   personaUserId,
@@ -14,9 +13,6 @@ import {
   serverId as instanceServerId,
   sessionKeyFor,
   msToTicks,
-  AUDIO_TYPES,
-  SUBTITLE_MODES,
-  SUBTITLE_TYPES,
   WatchSessionRepository,
   buildMediaStreams,
   resolveByItem,
@@ -30,7 +26,6 @@ import {
   profilesOf,
   type Profile,
   type UserData,
-  type WatchScope,
   type WatchSessionRow,
 } from '@aiostreams/core';
 import {
@@ -48,6 +43,13 @@ import {
   type JellyfinRequestContext,
 } from './context.js';
 import { subtitleUrlFor, summaryItem } from './items.js';
+import {
+  everyoneUserId,
+  prefsScope,
+  saveUserConfiguration,
+  storedUserConfiguration,
+  userConfiguration,
+} from './preferences.js';
 import { pickSource } from './playback.js';
 import { serverName } from './system.js';
 import { sessionIdOf } from './session-sockets.js';
@@ -55,96 +57,6 @@ import { controllableDevices, type RemoteDevice } from './remote.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router({ mergeParams: true });
-
-export function userConfiguration() {
-  return {
-    AudioLanguagePreference: '',
-    AudioLanguages: [] as string[],
-    PlayDefaultAudioTrack: true,
-    AudioTypes: [...AUDIO_TYPES] as string[],
-    SubtitleLanguagePreference: '',
-    SubtitleLanguages: [] as string[],
-    SubtitleTypes: [...SUBTITLE_TYPES] as string[],
-    ListPreferredSubtitlesOnly: true,
-    DisplayMissingEpisodes: true,
-    GroupedFolders: [],
-    SubtitleMode: 'Default',
-    DisplayCollectionsView: false,
-    EnableLocalPassword: false,
-    OrderedViews: [],
-    LatestItemsExcludes: [],
-    MyMediaExcludes: [],
-    HidePlayedInLatest: true,
-    RememberAudioSelections: true,
-    RememberSubtitleSelections: true,
-    EnableNextEpisodeAutoPlay: true,
-    CastReceiverId: '',
-  };
-}
-
-const isLanguage = (v: unknown) => typeof v === 'string' && v.length <= 16;
-const isRanking = (all: readonly string[]) => (v: unknown) =>
-  Array.isArray(v) &&
-  v.length <= all.length &&
-  new Set(v).size === v.length &&
-  v.every((t) => all.includes(t));
-const isLanguageList = (v: unknown) =>
-  Array.isArray(v) && v.length <= 10 && v.every((l) => isLanguage(l) && l);
-
-/** The playback preferences a user can set and this server keeps. */
-const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
-  AudioLanguagePreference: isLanguage,
-  AudioLanguages: isLanguageList,
-  SubtitleLanguagePreference: isLanguage,
-  SubtitleLanguages: isLanguageList,
-  SubtitleMode: (v) => SUBTITLE_MODES.some((mode) => mode === v),
-  SubtitleTypes: isRanking(SUBTITLE_TYPES),
-  AudioTypes: isRanking(AUDIO_TYPES),
-  ListPreferredSubtitlesOnly: (v) => typeof v === 'boolean',
-  PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
-  RememberAudioSelections: (v) => typeof v === 'boolean',
-  RememberSubtitleSelections: (v) => typeof v === 'boolean',
-  EnableNextEpisodeAutoPlay: (v) => typeof v === 'boolean',
-};
-
-function userPreferences(body: unknown): Record<string, unknown> {
-  const source = body && typeof body === 'object' ? body : {};
-  return Object.fromEntries(
-    Object.entries(source).filter(([key, value]) =>
-      USER_PREFERENCES[key]?.(value)
-    )
-  );
-}
-
-const LANGUAGE_LISTS = [
-  ['AudioLanguagePreference', 'AudioLanguages'],
-  ['SubtitleLanguagePreference', 'SubtitleLanguages'],
-] as const;
-
-/**
- * Keeps each single language the first of its list. A client that only knows
- * the single one may send back the list it read, so a single language that
- * isn't that list's first is its choice, and goes to the front.
- */
-function withLanguageLists(
-  config: Record<string, unknown>,
-  sent: Record<string, unknown>
-): Record<string, unknown> {
-  for (const [single, list] of LANGUAGE_LISTS) {
-    if (!(single in sent) && !(list in sent)) continue;
-    const languages = (config[list] as string[] | undefined) ?? [];
-    const one = config[single] as string;
-    if (single in sent && one !== (languages[0] ?? ''))
-      config[list] = one ? [one, ...languages.filter((l) => l !== one)] : [];
-    config[single] = (config[list] as string[] | undefined)?.[0] ?? '';
-  }
-  return config;
-}
-
-export async function storedUserConfiguration(scope: WatchScope) {
-  const stored = await JellyfinRepository.getUserConfiguration(scope);
-  return { ...userConfiguration(), ...userPreferences(stored) };
-}
 
 export function userPolicy(
   opts: { admin?: boolean; hidden?: boolean; forKey?: boolean } = {}
@@ -231,6 +143,11 @@ export function userDto(
     LastLoginDate: now,
     LastActivityDate: now,
     Configuration: userConfiguration(),
+    aiostreams: {
+      profile: profile.id,
+      owner: isOwner(profile),
+      everyone: everyoneUserId(uuid),
+    },
     Policy: opts.forKey
       ? userPolicy({
           admin: isOwner(profile),
@@ -682,22 +599,22 @@ router.get(
     });
   })
 );
-/* A user token only ever reads and writes its own preferences. */
 router.get(
   '/Users/:userId/Configuration',
-  jf(async (_req, res, ctx) => {
-    res.json(await storedUserConfiguration(ctx.watch));
+  jf(async (req, res, ctx) => {
+    const scope = prefsScope(ctx, param(req, 'userId'), false)!;
+    res.json(await storedUserConfiguration(scope));
   })
 );
 router.post(
   ['/Users/Configuration', '/Users/:userId/Configuration'],
   jf(async (req, res, ctx) => {
-    const stored = await JellyfinRepository.getUserConfiguration(ctx.watch);
-    const sent = userPreferences(req.body);
-    await JellyfinRepository.setUserConfiguration(
-      ctx.watch,
-      withLanguageLists({ ...userPreferences(stored), ...sent }, sent)
-    );
+    const scope = prefsScope(ctx, param(req, 'userId'), true);
+    if (!scope) {
+      res.status(403).json({ Message: 'Only the owner sets these' });
+      return;
+    }
+    await saveUserConfiguration(scope, req.body);
     res.status(204).end();
   })
 );

@@ -17,6 +17,7 @@ import { watchServer } from './connection';
 import { startOver } from '@/lib/paths';
 import { startPath } from '@/lib/start-page';
 import type {
+  AiostreamsUser,
   AuthenticationResult,
   Branding,
   PickableUser,
@@ -412,7 +413,11 @@ export function SessionProvider({
 }) {
   const others = React.useRef(new Map<string, Promise<JellyfinClient>>());
   React.useEffect(() => others.current.clear(), [client]);
-  React.useEffect(() => syncPreferences(client, user.Id!), [client, user.Id]);
+  const everyoneId = (user as AiostreamsUser).aiostreams?.everyone;
+  React.useEffect(
+    () => syncPreferences(client, user.Id!, everyoneId),
+    [client, user.Id, everyoneId]
+  );
 
   const clientFor = React.useCallback(
     (userId: string) => {

@@ -22,7 +22,14 @@ export const to = {
     const query = params.toString();
     return `/live${query ? `?${query}` : ''}`;
   },
-  settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),
+  /** `who` is a user id, or everyone's, whose settings to show instead of this device's. */
+  settings: (tab?: string, who?: string) => {
+    const params = new URLSearchParams();
+    if (tab) params.set('tab', tab);
+    if (who) params.set('for', who);
+    const query = params.toString();
+    return `/settings${query ? `?${query}` : ''}`;
+  },
   search: (term?: string) =>
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',
   discover: (

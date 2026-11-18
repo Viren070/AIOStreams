@@ -24,10 +24,13 @@ import {
   LuUser,
   LuVolume2,
 } from 'react-icons/lu';
+import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
 import { Card } from '@aiostreams/ui/card';
 import { Button } from '@aiostreams/ui/button';
 import { TextInput } from '@aiostreams/ui/text-input';
+import { Select } from '@aiostreams/ui/select';
+import { LoadingSpinner } from '@aiostreams/ui/loading-spinner';
 import { cn } from '@aiostreams/ui/core/styling';
 import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
 import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
@@ -39,12 +42,17 @@ import { canPlayWithWebGpu } from '@/lib/playback/player-choice';
 import { BackButton } from '@/components/back-button';
 import { PageBody } from '@/components/shell/page';
 import { PageScroll } from '@/components/shell/page-scroll';
+import { useSession } from '@/lib/jellyfin/session';
+import type { AiostreamsUser, WebActivity } from '@/lib/jellyfin/types';
+import { SettingsLayer, useLayer } from '@/lib/settings';
 import { ShortcutSettings } from './_components/shortcut-settings';
 import {
   hasWords,
+  holdsIn,
   searchWords,
   SettingsPageHeader,
   SettingsSearch,
+  type Holds,
 } from './_components/settings-card';
 import { PlaybackSection } from './playback';
 import { PlayerSection } from './player';
@@ -67,6 +75,8 @@ interface Section {
   description: string;
   icon: IconType;
   group: Group;
+  /** What its cards hold, which decides whether it shows for another profile or everyone. */
+  holds?: Holds[];
   Content: React.ComponentType;
 }
 
@@ -83,6 +93,7 @@ function sections(): Section[] {
       description: t`Versions, next episode and skipping`,
       icon: LuCirclePlay,
       group: 'watching' as const,
+      holds: ['profile'],
       Content: PlaybackSection,
     },
     {
@@ -93,6 +104,7 @@ function sections(): Section[] {
         : t`The player and its controls`,
       icon: LuMonitorPlay,
       group: 'watching' as const,
+      holds: ['device'],
       Content: PlayerSection,
     },
     {
@@ -101,6 +113,7 @@ function sections(): Section[] {
       description: shellHost() ? t`Language and output` : t`Language`,
       icon: LuVolume2,
       group: 'watching' as const,
+      holds: ['server', 'device'],
       Content: AudioSection,
     },
     {
@@ -109,6 +122,7 @@ function sections(): Section[] {
       description: t`Language and how subtitles look`,
       icon: LuCaptions,
       group: 'watching' as const,
+      holds: ['server', 'profile'],
       Content: SubtitlesSection,
     },
     {
@@ -117,6 +131,7 @@ function sections(): Section[] {
       description: t`Language and navigation`,
       icon: LuPanelsTopLeft,
       group: 'look' as const,
+      holds: ['profile', 'device'],
       Content: InterfaceSection,
     },
     {
@@ -125,6 +140,7 @@ function sections(): Section[] {
       description: t`Home, posters, trailers and episodes`,
       icon: LuLayoutGrid,
       group: 'look' as const,
+      holds: ['profile', 'device'],
       Content: BrowsingSection,
     },
     {
@@ -133,6 +149,7 @@ function sections(): Section[] {
       description: t`Colours, glass and custom CSS`,
       icon: LuPalette,
       group: 'look' as const,
+      holds: ['profile', 'device'],
       Content: ThemeSection,
     },
     // A touch screen has no keys to set, and a remote too few to move around.
@@ -184,6 +201,7 @@ function sections(): Section[] {
             description: t`Updates, Discord and troubleshooting`,
             icon: LuMonitor,
             group: 'app' as const,
+            holds: ['device'] as Holds[],
             Content: DesktopSection,
           },
         ]
@@ -196,6 +214,7 @@ function sections(): Section[] {
             description: t`Updates and troubleshooting`,
             icon: host.tv ? LuTv : LuSmartphone,
             group: 'app' as const,
+            holds: ['device'] as Holds[],
             Content: AndroidSection,
           },
         ]
@@ -208,6 +227,7 @@ function sections(): Section[] {
             description: host.settings.description,
             icon: LuAppWindow,
             group: 'app' as const,
+            holds: ['device'] as Holds[],
             Content: AppSection,
           },
         ]
@@ -363,31 +383,36 @@ function DonateButton({ onClick }: { onClick(): void }) {
   );
 }
 
+interface SettingsProps {
+  all: Section[];
+  query: string;
+  words: readonly string[];
+  who: string | undefined;
+  whoseField: React.ReactNode;
+  onQuery(query: string): void;
+  onDonate(): void;
+}
+
 function NarrowSettings({
   all,
   picked,
   query,
   words,
+  who,
+  whoseField,
   onQuery,
   onDonate,
-}: {
-  all: Section[];
-  picked: Section | undefined;
-  query: string;
-  words: readonly string[];
-  onQuery(query: string): void;
-  onDonate(): void;
-}) {
+}: SettingsProps & { picked: Section | undefined }) {
   const [listY, setListY] = React.useState(0);
   const open = (id: string) => {
     setListY(window.scrollY);
-    navigate(to.settings(id));
+    navigate(to.settings(id, who));
   };
   return (
     <div className="relative">
       {/* Kept under an open section, where a back swipe shows it as it was left. */}
       <div
-        data-back-under={to.settings()}
+        data-back-under={to.settings(undefined, who)}
         data-back-y={listY}
         inert={!!picked}
         className={cn(
@@ -400,6 +425,7 @@ function NarrowSettings({
           <h1 data-ui="page-title" className="text-3xl font-bold">
             <Trans>Settings</Trans>
           </h1>
+          {whoseField}
           <SearchField value={query} onChange={onQuery} />
           {words.length ? (
             <SearchResults all={all} words={words} />
@@ -454,7 +480,7 @@ function NarrowSettings({
                 title={picked.label}
                 description={picked.description}
                 icon={picked.icon}
-                leading={<BackButton fallback={to.settings()} />}
+                leading={<BackButton fallback={to.settings(undefined, who)} />}
               />
               <SectionContent section={picked} />
             </div>
@@ -471,16 +497,11 @@ function WideSettings({
   active,
   query,
   words,
+  who,
+  whoseField,
   onQuery,
   onDonate,
-}: {
-  all: Section[];
-  active: Section;
-  query: string;
-  words: readonly string[];
-  onQuery(query: string): void;
-  onDonate(): void;
-}) {
+}: SettingsProps & { active: Section }) {
   // With no marker sliding, the tabs keep the usual focus mark.
   const still = useReducedMotion();
   // Built in the background, so a key can cut short a section still building.
@@ -489,7 +510,7 @@ function WideSettings({
   const searching = words.length > 0;
   const open = (id: string) => {
     onQuery('');
-    navigate(to.settings(id), { replace: true });
+    navigate(to.settings(id, who), { replace: true });
   };
 
   return (
@@ -518,6 +539,7 @@ function WideSettings({
           data-sticky
           className="sticky top-6 z-[1] flex max-h-[calc(100vh-3rem)] flex-col gap-3 self-start"
         >
+          {whoseField}
           <SearchField value={query} onChange={onQuery} />
           <TabsList
             data-ui="settings-tabs"
@@ -584,31 +606,124 @@ function WideSettings({
   );
 }
 
-export function SettingsPage({ tab }: { tab: string }) {
+interface Whose {
+  /** Another profile's, or everyone's, when not this device's own. */
+  target: { userId: string; everyone: boolean } | null;
+  options: { value: string; label: string }[];
+  me: string;
+}
+
+/** `who` is a user id, `everyone`, or `profile:<id>` as the configure page links it. */
+function useWhose(who: string): Whose {
+  const { client, user } = useSession();
+  const me = user.Id!;
+  const { owner, everyone } = (user as AiostreamsUser).aiostreams ?? {};
+  const profiles = useQuery({
+    queryKey: ['jf', client.base, me, 'settings-profiles'],
+    queryFn: () => client.get<WebActivity>('/AIOStreams/Activity'),
+    enabled: !!owner && !!everyone,
+    staleTime: 60_000,
+  });
+  const others = (profiles.data?.users ?? []).filter((u) => u.user.Id !== me);
+  if (!owner || !everyone || !others.length)
+    return { target: null, options: [], me };
+  // Sharing the owner's history, a profile also shares its settings.
+  const own = others.filter((u) => u.historyOf === u.user.Id);
+  const named = own.find(
+    (u) =>
+      u.user.Id === who ||
+      `profile:${(u.user as AiostreamsUser).aiostreams?.profile}` === who
+  );
+  const target =
+    who === everyone || who === 'everyone'
+      ? { userId: everyone, everyone: true }
+      : named
+        ? { userId: named.user.Id!, everyone: false }
+        : null;
+  return {
+    target,
+    me,
+    options: [
+      { value: me, label: t`You` },
+      { value: everyone, label: t`Everyone` },
+      ...own.map((u) => ({ value: u.user.Id!, label: u.user.Name ?? '' })),
+    ],
+  };
+}
+
+function WhoseField({
+  whose,
+  value,
+  onChange,
+}: {
+  whose: Whose;
+  value: string;
+  onChange(who: string): void;
+}) {
+  if (!whose.options.length) return null;
+  return (
+    <Select
+      data-ui="settings-whose"
+      label={t`Settings for`}
+      options={whose.options}
+      value={value}
+      onValueChange={onChange}
+    />
+  );
+}
+
+export function SettingsPage({ tab, who }: { tab: string; who: string }) {
+  const { client } = useSession();
+  const whose = useWhose(who);
+  const layer = useLayer(client, whose.target);
   const all = React.useMemo(sections, []);
+  const shown = React.useMemo(
+    () =>
+      whose.target
+        ? all.filter((s) => s.holds?.some((h) => holdsIn(layer, h)))
+        : all,
+    [all, whose.target, layer]
+  );
   const donation = useDisclosure(false);
   const wide = useMediaQuery('(min-width: 1024px)');
   const [query, setQuery] = React.useState('');
   const typed = React.useMemo(() => searchWords(query), [query]);
   // Every section builds for a search, which typing shouldn't wait on.
   const words = React.useDeferredValue(typed);
-  const picked = all.find((s) => s.id === tab);
+  const picked = shown.find((s) => s.id === tab);
+  const target = whose.target?.userId;
   const shared = {
-    all,
+    all: shown,
     query,
     words,
+    who: target,
     onQuery: setQuery,
     onDonate: donation.open,
+    whoseField: (
+      <WhoseField
+        whose={whose}
+        value={target ?? whose.me}
+        onChange={(next) =>
+          navigate(to.settings(tab, next === whose.me ? undefined : next), {
+            replace: true,
+          })
+        }
+      />
+    ),
   };
 
   return (
-    <>
-      {wide ? (
-        <WideSettings {...shared} active={picked ?? all[0]} />
+    <SettingsLayer value={layer}>
+      {whose.target && !layer ? (
+        <PageBody>
+          <LoadingSpinner />
+        </PageBody>
+      ) : wide ? (
+        <WideSettings {...shared} active={picked ?? shown[0]} />
       ) : (
         <NarrowSettings {...shared} picked={picked} />
       )}
       <DonationModal open={donation.isOpen} onOpenChange={donation.toggle} />
-    </>
+    </SettingsLayer>
   );
 }

@@ -16,6 +16,7 @@ import {
   resolveConfig,
 } from './context.js';
 import { relayMode } from '../../party/mode.js';
+import { prefsScope } from './preferences.js';
 
 const router: Router = Router({ mergeParams: true });
 
@@ -236,7 +237,7 @@ router.get(
     const client = qs(req, 'client') || 'emby';
     const id = param(req, 'id');
     const stored = await JellyfinRepository.getDisplayPrefs(
-      ctx.watch,
+      prefsScope(ctx, qs(req, 'userId'), false)!,
       id,
       client
     );
@@ -259,8 +260,13 @@ router.post(
       req.body && typeof req.body === 'object'
         ? (req.body as Record<string, unknown>)
         : {};
+    const scope = prefsScope(ctx, qs(req, 'userId'), true);
+    if (!scope) {
+      res.status(403).json({ Message: 'Only the owner sets these' });
+      return;
+    }
     await JellyfinRepository.setDisplayPrefs(
-      ctx.watch,
+      scope,
       param(req, 'id'),
       client,
       body

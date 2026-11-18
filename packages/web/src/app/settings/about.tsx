@@ -13,7 +13,7 @@ import { serverAddress } from '@/lib/jellyfin/servers';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { LicensesSetting } from './_components/licenses';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { DOCS_URL, onDevice } from './_components/common';
+import { DOCS_URL } from './_components/common';
 
 const REPO_URL = 'https://github.com/Viren070/AIOStreams';
 
@@ -137,11 +137,7 @@ export function AboutSection() {
 function UsageStatsCard() {
   const [on] = useSetting(settings.app.usageStats);
   return (
-    <SettingsCard
-      name="usage-stats"
-      title={t`Usage statistics`}
-      description={onDevice()}
-    >
+    <SettingsCard name="usage-stats" title={t`Usage statistics`} holds="local">
       <Switch
         side="right"
         label={t`Send usage statistics`}

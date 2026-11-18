@@ -27,12 +27,7 @@ import {
 import { ColorInput } from '@aiostreams/ui/color-input';
 import { currentHost } from '@/lib/hosts';
 import { SettingsCard } from './_components/settings-card';
-import {
-  languageOptions,
-  LanguageList,
-  followsYou,
-  onAccount,
-} from './_components/common';
+import { languageOptions, LanguageList } from './_components/common';
 
 const subtitleModes = (): {
   value: SubtitleMode;
@@ -110,7 +105,8 @@ export function SubtitlesSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount(locked)}
+        holds="server"
+        locked={locked}
       >
         <fieldset disabled={locked} className="contents">
           <LanguageList
@@ -161,7 +157,7 @@ export function SubtitlesSection() {
           />
         </fieldset>
       </SettingsCard>
-      <SettingsCard name="preview" title={t`Preview`}>
+      <SettingsCard name="preview" title={t`Preview`} holds="profile" plain>
         <div className="relative aspect-[16/5] rounded-lg bg-gradient-to-br from-gray-700 to-gray-950">
           <span
             className="absolute left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded px-2 py-0.5 text-center text-lg"
@@ -171,7 +167,7 @@ export function SubtitlesSection() {
           </span>
         </div>
       </SettingsCard>
-      <SettingsCard name="text" title={t`Text`} description={followsYou()}>
+      <SettingsCard name="text" title={t`Text`} holds="profile">
         <Select
           label={t`Size`}
           options={SUBTITLE_SIZES.map((value) => ({
@@ -209,7 +205,12 @@ export function SubtitlesSection() {
           onValueChange={([v]) => setPosition(v)}
         />
       </SettingsCard>
-      <SettingsCard name="outline-and-shadow" title={t`Outline and shadow`}>
+      <SettingsCard
+        name="outline-and-shadow"
+        title={t`Outline and shadow`}
+        holds="profile"
+        plain
+      >
         <Select
           label={t`Width`}
           options={[
@@ -234,7 +235,12 @@ export function SubtitlesSection() {
           onValueChange={setOutlineColor}
         />
       </SettingsCard>
-      <SettingsCard name="background" title={t`Background`}>
+      <SettingsCard
+        name="background"
+        title={t`Background`}
+        holds="profile"
+        plain
+      >
         <ColorInput
           picker={!currentHost().tv}
           label={t`Colour`}
@@ -251,7 +257,7 @@ export function SubtitlesSection() {
           onValueChange={([v]) => setBackgroundOpacity(v)}
         />
       </SettingsCard>
-      <SettingsCard>
+      <SettingsCard holds="profile" plain>
         <Switch
           side="right"
           label={t`Apply to styled subtitles too`}

@@ -18,7 +18,6 @@ import {
 } from '@/lib/settings';
 import { SettingsCard } from './_components/settings-card';
 import { startPages } from '@/lib/start-page';
-import { onDevice, followsYou } from './_components/common';
 
 function startPageName(page: StartPage): string {
   switch (page) {
@@ -63,11 +62,7 @@ function NavigationCard() {
   const topTabs =
     (tv ? tvNavigation : touch ? touchNavigation : desktopNavigation) === 'top';
   return (
-    <SettingsCard
-      name="navigation"
-      title={t`Navigation`}
-      description={onDevice()}
-    >
+    <SettingsCard name="navigation" title={t`Navigation`} holds="device">
       <Select
         label={t`Start on`}
         help={t`The page the app opens on. A link still opens what it points to.`}
@@ -213,11 +208,7 @@ function LanguageCard() {
     .sort((a, b) => a.label.localeCompare(b.label));
   const system = localeName(systemLocale());
   return (
-    <SettingsCard
-      name="language"
-      title={t`Language`}
-      description={followsYou()}
-    >
+    <SettingsCard name="language" title={t`Language`} holds="profile">
       <Select
         label={t`App language`}
         help={t`Titles, synopses and version names stay in the language the server sends.`}

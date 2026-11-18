@@ -18,7 +18,7 @@ import {
 import { useFeature } from '@/lib/jellyfin/server-info';
 import { SettingsCard } from './_components/settings-card';
 import { BadgesRow, QuickFiltersRow } from './_components/version-settings';
-import { followsYou, seconds } from './_components/common';
+import { seconds } from './_components/common';
 import { ReactionSetting } from './_components/reaction-setting';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
@@ -102,11 +102,7 @@ export function PlaybackSection() {
 
   return (
     <>
-      <SettingsCard
-        name="versions"
-        title={t`Versions`}
-        description={followsYou()}
-      >
+      <SettingsCard name="versions" title={t`Versions`} holds="profile">
         <Switch
           side="right"
           label={t`Auto-play the first version`}
@@ -128,11 +124,7 @@ export function PlaybackSection() {
         <QuickFiltersRow />
         <BadgesRow />
       </SettingsCard>
-      <SettingsCard
-        name="next-episode"
-        title={t`Next episode`}
-        description={followsYou()}
-      >
+      <SettingsCard name="next-episode" title={t`Next episode`} holds="profile">
         <Switch
           side="right"
           label={t`Play it automatically`}
@@ -234,11 +226,7 @@ export function PlaybackSection() {
           />
         )}
       </SettingsCard>
-      <SettingsCard
-        name="skipping"
-        title={t`Skipping`}
-        description={followsYou()}
-      >
+      <SettingsCard name="skipping" title={t`Skipping`} holds="profile">
         {SEGMENT_TYPES.map((type) => (
           <SegmentActionSelect key={type} type={type} />
         ))}
@@ -255,7 +243,7 @@ export function PlaybackSection() {
       <SettingsCard
         name="watch-parties"
         title={t`Watch parties`}
-        description={followsYou()}
+        holds="profile"
       >
         <Switch
           side="right"

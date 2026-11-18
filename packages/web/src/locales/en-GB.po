@@ -1722,6 +1722,7 @@ msgid "Every {list} at {time}"
 msgstr "Every {list} at {time}"
 
 #: src/app/history/page.tsx
+#: src/app/settings/page.tsx
 msgid "Everyone"
 msgstr "Everyone"
 
@@ -2267,6 +2268,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "Keeps the video playing in a small window when you leave the app."
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr "Kept on this device."
 
@@ -4082,11 +4084,15 @@ msgstr "Saved"
 msgid "Saved to {folder}"
 msgstr "Saved to {folder}"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr "Saved to this profile, on every device it signs in on."
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr "Saved to your account, so it follows you to every device."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr "Saved to your account, so your other devices and Jellyfin apps use it too."
 
@@ -4241,6 +4247,10 @@ msgstr "Set by hand"
 #: src/components/shell/layout.tsx
 msgid "Settings"
 msgstr "Settings"
+
+#: src/app/settings/page.tsx
+msgid "Settings for"
+msgstr "Settings for"
 
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
@@ -4965,6 +4975,14 @@ msgstr "The app's player and its options, such as starting videos in landscape."
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr "The default for every device. A device that changes it keeps its own."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
+msgstr "The default for every profile. A profile that changes it keeps its own."
+
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
 msgstr "The device is signed in"
@@ -5230,7 +5248,7 @@ msgstr "This server"
 msgid "This server can't list what you've watched."
 msgstr "This server can't list what you've watched."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "This server doesn't let your account change these."
 msgstr "This server doesn't let your account change these."
 
@@ -5783,8 +5801,8 @@ msgid "What you can send from a party's chat."
 msgstr "What you can send from a party's chat."
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
-msgstr "What your Discord profile shows. Kept on this device."
+msgid "What your Discord profile shows."
+msgstr "What your Discord profile shows."
 
 #: src/app/settings/audio.tsx
 msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."
@@ -5934,6 +5952,7 @@ msgstr "Yellow"
 msgid "Yesterday"
 msgstr "Yesterday"
 
+#: src/app/settings/page.tsx
 #: src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx

@@ -12,7 +12,6 @@ import {
 } from '@/lib/settings';
 import { downloadsHost, useDownloadFolder } from '@/lib/downloads';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { onDevice } from './_components/common';
 
 export function DownloadsSection() {
   const host = downloadsHost();
@@ -23,7 +22,7 @@ export function DownloadsSection() {
   const [wifiOnly, setWifiOnly] = useSetting(settings.downloads.wifiOnly);
   const button = 'w-full rounded-full sm:w-auto';
   return (
-    <SettingsCard description={onDevice()}>
+    <SettingsCard holds="local">
       {host?.folder && (
         <SettingsRow
           label={t`Folder`}

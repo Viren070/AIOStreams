@@ -53,7 +53,6 @@ import {
   showEpisodesOf,
   withPlayedCounts,
   isMemoFresh,
-  JellyfinRepository,
   resolveByItem,
   resolveByMediaSource,
   stripInternal,
@@ -87,6 +86,7 @@ import {
   type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { storedPreferences } from './preferences.js';
 import { StaticFiles } from '../../utils/static-errors.js';
 import {
   ANDROID_PLAYER_CLIENT,
@@ -921,9 +921,7 @@ export function nothingToPlayPath(
 export async function trackPreferences(
   ctx: JellyfinRequestContext
 ): Promise<TrackPreferences> {
-  return trackPreferencesFrom(
-    await JellyfinRepository.getUserConfiguration(ctx.watch)
-  );
+  return trackPreferencesFrom(await storedPreferences(ctx.watch));
 }
 
 /** MediaSources for an item, from a memo; the first source carries `firstId`. */

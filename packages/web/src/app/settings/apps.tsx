@@ -35,7 +35,6 @@ import {
 } from '@/lib/settings';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { onDevice } from './_components/common';
 
 function UpdatesCard() {
   const [setting, setSetting] = useSetting(settings.app.updateChannel);
@@ -45,7 +44,7 @@ function UpdatesCard() {
   const busy = update?.state === 'checking' || update?.state === 'downloading';
   const button = 'w-full rounded-full sm:w-auto';
   return (
-    <SettingsCard name="updates" title={t`Updates`} description={onDevice()}>
+    <SettingsCard name="updates" title={t`Updates`} holds="local">
       <Select
         label={t`Channel`}
         help={t`Nightly builds come from every change, ahead of releases, and can break.`}
@@ -142,7 +141,8 @@ function DiscordCard() {
     <SettingsCard
       name="discord"
       title={t`Discord`}
-      description={t`What your Discord profile shows. Kept on this device.`}
+      description={t`What your Discord profile shows.`}
+      holds="device"
     >
       {DISCORD_EVENTS.map((event) => (
         <DiscordEventSwitch key={event} event={event} />

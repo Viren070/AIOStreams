@@ -16,6 +16,7 @@ import { audioDelayLabel, dialogueLabel } from '@/lib/playback/sound';
 import {
   settings,
   useSetting,
+  useSettingsLayer,
   AUDIO_CHANNELS,
   AUDIO_DELAY_LIMIT_MS,
   AUDIO_DELAY_STEP_MS,
@@ -26,12 +27,7 @@ import {
   type PassthroughFormat,
 } from '@/lib/settings';
 import { SettingsCard } from './_components/settings-card';
-import {
-  languageOptions,
-  LanguageList,
-  onDevice,
-  onAccount,
-} from './_components/common';
+import { languageOptions, LanguageList } from './_components/common';
 
 const audioTypeOptions = (): { value: AudioType; label: string }[] => [
   { value: 'main', label: t`Main` },
@@ -64,7 +60,8 @@ export function AudioSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount(locked)}
+        holds="server"
+        locked={locked}
       >
         <fieldset disabled={locked} className="contents">
           <LanguageList
@@ -138,10 +135,11 @@ function OutputCard() {
   const [formats, setFormats] = useSetting(settings.audio.passthroughFormats);
   const [ac3Encode, setAc3Encode] = useSetting(settings.audio.ac3Encode);
   const info = useShellInfo();
+  const layer = useSettingsLayer();
   const passing = passthrough !== 'off';
   return (
-    <SettingsCard name="output" title={t`Output`} description={onDevice()}>
-      {!android && <AudioDeviceSelect />}
+    <SettingsCard name="output" title={t`Output`} holds="device">
+      {!android && !layer && <AudioDeviceSelect />}
       <Select
         label={t`Channels`}
         help={t`What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in.`}
@@ -230,7 +228,7 @@ function SoundCard() {
   const [delay, setDelay] = useSetting(settings.audio.delayMs);
   const delayLabel = audioDelayLabel(delay);
   return (
-    <SettingsCard name="sound" title={t`Sound`} description={onDevice()}>
+    <SettingsCard name="sound" title={t`Sound`} holds="device">
       <Select
         label={t`Dialogue boost`}
         help={t`Raises the centre channel, where surround sound puts dialogue. Not for sound passed through.`}

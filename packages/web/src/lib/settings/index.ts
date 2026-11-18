@@ -8,6 +8,7 @@ import {
   device,
   deviceLists,
   group,
+  local,
   record,
   synced,
   syncedChoice,
@@ -20,9 +21,13 @@ import {
 
 export {
   onSettingsChange,
+  SettingsLayer,
   signedIn,
   syncPreferences,
+  useLayer,
   useSetting,
+  useSettingsLayer,
+  type Layer,
   type Setting,
 } from './store';
 
@@ -622,7 +627,7 @@ export const settings = {
     choice: device<string>('aiostreams-web-player-choice', 'app', undefined, [
       'aiostreams-web-player',
     ]),
-    link: device<string>('aiostreams-web-player-link', ''),
+    link: local(device<string>('aiostreams-web-player-link', '')),
     engine: device<PlayerEngine>(
       'aiostreams-web-player-engine',
       'auto',
@@ -646,10 +651,12 @@ export const settings = {
       PIP_WINDOWS
     ),
     /** Where the mini player was left. */
-    miniCorner: device<MiniCorner>(
-      'aiostreams-web-mini-corner',
-      'bottom-end',
-      MINI_CORNERS
+    miniCorner: local(
+      device<MiniCorner>(
+        'aiostreams-web-mini-corner',
+        'bottom-end',
+        MINI_CORNERS
+      )
     ),
   },
   video: {
@@ -694,9 +701,11 @@ export const settings = {
       ['aiostreams-desktop-audio-channels']
     ),
     /** mpv's name for the output, or `auto` for the system's default. */
-    device: device<string>('aiostreams-web-audio-device', 'auto', undefined, [
-      'aiostreams-desktop-audio-device',
-    ]),
+    device: local(
+      device<string>('aiostreams-web-audio-device', 'auto', undefined, [
+        'aiostreams-desktop-audio-device',
+      ])
+    ),
     passthrough: device<Passthrough>(
       'aiostreams-web-audio-passthrough',
       appBridge()?.platform === 'android' ? 'auto' : 'off',
@@ -752,11 +761,13 @@ export const settings = {
     ),
   },
   app: {
-    updateChannel: device<UpdateChannelSetting>(
-      'aiostreams-web-app-update-channel',
-      'installed',
-      UPDATE_CHANNELS,
-      ['aiostreams-desktop-update-channel']
+    updateChannel: local(
+      device<UpdateChannelSetting>(
+        'aiostreams-web-app-update-channel',
+        'installed',
+        UPDATE_CHANNELS,
+        ['aiostreams-desktop-update-channel']
+      )
     ),
     pip: device<boolean>('aiostreams-web-app-pip', true, undefined, [
       'aiostreams-android-pip',
@@ -769,47 +780,44 @@ export const settings = {
     ),
     discord,
     discordEvents: group(discord),
-    usageStats: device<boolean>('aiostreams-web-app-usage-stats', true),
-    usageStatsNoticed: device<boolean>(
-      'aiostreams-web-app-usage-stats-noticed',
-      false
+    usageStats: local(device<boolean>('aiostreams-web-app-usage-stats', true)),
+    usageStatsNoticed: local(
+      device<boolean>('aiostreams-web-app-usage-stats-noticed', false)
     ),
   },
   cache: {
-    enabled: device<boolean>('aiostreams-web-cache', true),
-    maxStaleDays: device<number>(
-      'aiostreams-web-cache-max-stale',
-      7,
-      CACHE_MAX_STALE_DAYS
+    enabled: local(device<boolean>('aiostreams-web-cache', true)),
+    maxStaleDays: local(
+      device<number>('aiostreams-web-cache-max-stale', 7, CACHE_MAX_STALE_DAYS)
     ),
-    maxSizeMb: device<number>('aiostreams-web-cache-size', 500, CACHE_SIZES_MB),
+    maxSizeMb: local(
+      device<number>('aiostreams-web-cache-size', 500, CACHE_SIZES_MB)
+    ),
     categories: record(CACHE_CATEGORIES, (category) =>
-      device<boolean>(`aiostreams-web-cache-${category}`, true)
+      local(device<boolean>(`aiostreams-web-cache-${category}`, true))
     ),
   },
   downloads: {
-    concurrent: device<number>(
-      'aiostreams-web-downloads-at-once',
-      2,
-      DOWNLOADS_AT_ONCE
+    concurrent: local(
+      device<number>('aiostreams-web-downloads-at-once', 2, DOWNLOADS_AT_ONCE)
     ),
-    searches: device<number>(
-      'aiostreams-web-downloads-searches',
-      3,
-      DOWNLOAD_SEARCHES,
-      ['aiostreams-web-download-searches']
+    searches: local(
+      device<number>(
+        'aiostreams-web-downloads-searches',
+        3,
+        DOWNLOAD_SEARCHES,
+        ['aiostreams-web-download-searches']
+      )
     ),
-    subtitles: device<boolean>(
-      'aiostreams-web-downloads-subtitles',
-      true,
-      undefined,
-      ['aiostreams-web-download-subtitles']
+    subtitles: local(
+      device<boolean>('aiostreams-web-downloads-subtitles', true, undefined, [
+        'aiostreams-web-download-subtitles',
+      ])
     ),
-    wifiOnly: device<boolean>(
-      'aiostreams-web-downloads-wifi-only',
-      true,
-      undefined,
-      ['aiostreams-web-download-wifi-only']
+    wifiOnly: local(
+      device<boolean>('aiostreams-web-downloads-wifi-only', true, undefined, [
+        'aiostreams-web-download-wifi-only',
+      ])
     ),
   },
 };

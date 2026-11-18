@@ -1721,6 +1721,7 @@ msgid "Every {list} at {time}"
 msgstr ""
 
 #: src/app/history/page.tsx
+#: src/app/settings/page.tsx
 msgid "Everyone"
 msgstr ""
 
@@ -2266,6 +2267,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr ""
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr ""
 
@@ -4081,11 +4083,15 @@ msgstr ""
 msgid "Saved to {folder}"
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr ""
 
@@ -4239,6 +4245,10 @@ msgstr ""
 #: src/app/settings/page.tsx
 #: src/components/shell/layout.tsx
 msgid "Settings"
+msgstr ""
+
+#: src/app/settings/page.tsx
+msgid "Settings for"
 msgstr ""
 
 #: src/app/settings/player.tsx
@@ -4964,6 +4974,14 @@ msgstr ""
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr ""
 
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
+msgstr ""
+
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
 msgstr ""
@@ -5229,7 +5247,7 @@ msgstr ""
 msgid "This server can't list what you've watched."
 msgstr ""
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "This server doesn't let your account change these."
 msgstr ""
 
@@ -5782,7 +5800,7 @@ msgid "What you can send from a party's chat."
 msgstr ""
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+msgid "What your Discord profile shows."
 msgstr ""
 
 #: src/app/settings/audio.tsx
@@ -5933,6 +5951,7 @@ msgstr ""
 msgid "Yesterday"
 msgstr ""
 
+#: src/app/settings/page.tsx
 #: src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx

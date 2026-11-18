@@ -104,13 +104,14 @@ const settingsRoute = createRoute({
   path: '/settings',
   validateSearch: (search: Record<string, unknown>) => ({
     tab: search.tab == null ? '' : String(search.tab),
+    for: search.for == null ? '' : String(search.for),
   }),
   component: SettingsRouteView,
 });
 
 function SettingsRouteView(): React.ReactElement {
-  const { tab } = settingsRoute.useSearch();
-  return <SettingsPage tab={tab} />;
+  const { tab, for: who } = settingsRoute.useSearch();
+  return <SettingsPage tab={tab} who={who} />;
 }
 
 const searchRoute = createRoute({

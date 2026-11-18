@@ -227,6 +227,38 @@ for, with a password and PIN written as `password/PIN`. It answers like
 `/Users/AuthenticateByName`, with `401` for a wrong secret, `404` for an unknown user and `429` after
 too many tries.
 
+## Settings for everyone
+
+A user's `UserDto`, from `/Users/Me`, `/Users` and `/Users/{id}`, carries an `aiostreams` object:
+
+```json
+{ "profile": "kids", "owner": false, "everyone": "…" }
+```
+
+| Field      | Shape   | What the web app does with it                                                                  |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `profile`  | string  | The user's id in its configuration, `""` for the owner; the configure page links to it by this |
+| `owner`    | boolean | Offers this user the settings of every other user, and everyone's                              |
+| `everyone` | user id | Where defaults for every user are kept; the app reads them beneath each user's own             |
+
+Everyone's settings are kept like a user's, under the `everyone` id:
+
+- `GET /DisplayPreferences/{id}?userId={everyone}` reads everyone's display preferences, and the app
+  shows a user's own value over them. Anyone may read them; only the owner may `POST` them, and anyone
+  else gets `403`.
+- With another user's id in `userId`, the owner reads and writes that user's display preferences. For
+  anyone else, any id other than `everyone` means their own.
+- `GET` and `POST /Users/{id}/Configuration` do the same for playback preferences: audio and subtitle
+  languages, the subtitle mode, track types and the like.
+- The `Configuration` from `/Users/Me` and `/Users/{id}` is the user's own playback preferences over
+  everyone's. A save keeps only what differs from what the user inherits, so a later change to
+  everyone's still reaches it. The server picks tracks with these too, so other Jellyfin clients
+  follow everyone's.
+- A user that shares another's history (`historyOf`) also shares its settings, so the app offers only
+  users with a history of their own.
+
+Without `everyone`, each user's settings are its own and the app offers no one else's.
+
 ## History and activity
 
 `GET /AIOStreams/Activity` answers the Activity page's header:

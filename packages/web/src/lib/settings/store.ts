@@ -2,10 +2,33 @@ import React from 'react';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import { storage } from '@/lib/storage';
 
-/** A stored value; `read` returns the same reference until it changes. */
+/**
+ * Where a setting lives: with the profile, on the device with a default for
+ * every device, or on the device alone.
+ */
+export type SettingKind = 'synced' | 'device' | 'local';
+
+/**
+ * A stored value; `read` returns the same reference until it changes. Without
+ * a layer it is this device's signed-in profile.
+ */
 export interface Setting<T> {
-  read(): T;
-  write(value: T): void;
+  kind: SettingKind;
+  read(layer?: Layer): T;
+  write(value: T, layer?: Layer): void;
+}
+
+type Synced = Record<string, string>;
+
+/** One profile's settings over everyone's, or everyone's alone. */
+export interface Layer {
+  /** Whose they are; absent for the signed-in profile. */
+  userId?: string;
+  own(): Synced;
+  inherited(): Synced;
+  /** Its own document is everyone's, which also holds defaults for devices. */
+  everyone: boolean;
+  set(key: string, raw: string | undefined): void;
 }
 
 const listeners = new Set<() => void>();
@@ -19,8 +42,19 @@ function announce() {
   listeners.forEach((l) => l());
 }
 
+const LayerContext = React.createContext<Layer | null>(null);
+/** The settings a page under it shows and changes, when not the device's own. */
+export const SettingsLayer = LayerContext.Provider;
+export const useSettingsLayer = () => React.useContext(LayerContext);
+
 export function useSetting<T>(setting: Setting<T>): [T, (value: T) => void] {
-  return [React.useSyncExternalStore(subscribe, setting.read), setting.write];
+  const layer = React.useContext(LayerContext) ?? live;
+  const read = React.useCallback(() => setting.read(layer), [setting, layer]);
+  const write = React.useCallback(
+    (value: T) => setting.write(value, layer),
+    [setting, layer]
+  );
+  return [React.useSyncExternalStore(subscribe, read), write];
 }
 
 export function onSettingsChange(listener: () => void): () => void {
@@ -50,9 +84,14 @@ function forget(was: Was<unknown>[]) {
  * server. The device holds a copy so a page never waits on them; the server's
  * wins once it answers.
  */
-type Synced = Record<string, string>;
-
 const SYNCED_KEYS = new Set<string>();
+const DEVICE_KEYS = new Set<string>();
+
+/** Everyone's document holds a device setting's default under this key. */
+const deviceDefaultKey = (key: string) => `d:${key}`;
+
+/** Stored over a default for everyone, to keep the built-in one. */
+const BUILT_IN = '~';
 
 /** Settings this device kept before they followed the user. */
 const moved = new Map<
@@ -66,16 +105,41 @@ const SAVED_MARK = 'saved';
 const cacheKey = (userId: string) => `aiostreams-web-prefs:${userId}`;
 const movedKey = (userId: string) => `aiostreams-web-prefs-moved:${userId}`;
 let current: Synced = {};
-let session: { client: JellyfinClient; userId: string } | null = null;
+let everyoneDoc: Synced = {};
+let session: {
+  client: JellyfinClient;
+  userId: string;
+  everyoneId?: string;
+} | null = null;
 let generation = 0;
 
-function known(prefs: Record<string, unknown> | null | undefined): Synced {
+function known(
+  prefs: Record<string, unknown> | null | undefined,
+  everyone = false
+): Synced {
   const out: Synced = {};
-  for (const key of SYNCED_KEYS) {
+  const keys = everyone
+    ? [...SYNCED_KEYS, ...[...DEVICE_KEYS].map(deviceDefaultKey)]
+    : SYNCED_KEYS;
+  for (const key of keys) {
     const value = prefs?.[key];
     if (typeof value === 'string' && value) out[key] = value;
   }
   return out;
+}
+
+const live: Layer = {
+  own: () => current,
+  inherited: () => everyoneDoc,
+  everyone: false,
+  set: (key, raw) => update(key, raw),
+};
+
+function fetchPrefs(client: JellyfinClient, userId: string) {
+  return client.get<{ CustomPrefs?: Record<string, string | null> }>(
+    `/DisplayPreferences/${PREFS_ID}`,
+    { client: PREFS_ID, userId }
+  );
 }
 
 function fromDevice(): Synced {
@@ -99,7 +163,10 @@ function publish(next: Synced) {
 
 let saving: Promise<unknown> = Promise.resolve();
 
-function push(prefs: Synced, target = session) {
+function push(
+  prefs: Synced,
+  target: { client: JellyfinClient; userId: string } | null = session
+) {
   if (!target) return;
   const { client, userId } = target;
   saving = client
@@ -121,10 +188,12 @@ function push(prefs: Synced, target = session) {
  */
 export function syncPreferences(
   client: JellyfinClient,
-  userId: string
+  userId: string,
+  /** The id everyone's defaults are kept under, on a server that has them. */
+  everyoneId?: string
 ): () => void {
   const mine = ++generation;
-  session = { client, userId };
+  session = { client, userId, everyoneId };
   const folded = storage.get<unknown>(movedKey(userId));
   const older = Object.fromEntries(
     Object.entries(fromDevice()).filter(
@@ -132,31 +201,91 @@ export function syncPreferences(
     )
   );
   current = { ...older, ...(storage.get<Synced>(cacheKey(userId)) ?? {}) };
+  everyoneDoc = everyoneId
+    ? (storage.get<Synced>(cacheKey(everyoneId)) ?? {})
+    : {};
   announce();
   // Else a change still saving reads back as its old value.
   flushPush();
   void saving
     .then(() =>
-      client.get<{
-        CustomPrefs?: Record<string, string | null>;
-      }>(`/DisplayPreferences/${PREFS_ID}`, { client: PREFS_ID, userId })
+      Promise.all([
+        fetchPrefs(client, userId),
+        everyoneId ? fetchPrefs(client, everyoneId).catch(() => null) : null,
+      ])
     )
-    .then((remote) => {
+    .then(([remote, everyone]) => {
       if (mine !== generation) return;
+      if (everyoneId && everyone) {
+        everyoneDoc = known(everyone.CustomPrefs, true);
+        storage.set(cacheKey(everyoneId), everyoneDoc);
+      }
       if (remote.CustomPrefs?.[SAVED_MARK]) {
         const theirs = known(remote.CustomPrefs);
         publish({ ...older, ...theirs });
         if (Object.keys(older).some((key) => !(key in theirs))) push(current);
       } else if (Object.keys(current).length) push(current);
+      else announce();
       storage.set(movedKey(userId), [...moved.keys()]);
     })
     .catch(() => undefined);
   return () => {
     if (mine === generation) {
       session = null;
+      everyoneDoc = {};
       publish({});
     }
   };
+}
+
+/** Another profile's settings, or everyone's, for the owner to change. */
+export function useLayer(
+  client: JellyfinClient,
+  target: { userId: string; everyone: boolean } | null
+): Layer | null {
+  const [doc, setDoc] = React.useState<Synced | null>(null);
+  const userId = target?.userId;
+  const everyone = !!target?.everyone;
+  React.useEffect(() => {
+    setDoc(null);
+    if (!userId) return;
+    let gone = false;
+    fetchPrefs(client, userId).then(
+      (remote) => !gone && setDoc(known(remote.CustomPrefs, everyone)),
+      () => !gone && setDoc({})
+    );
+    return () => {
+      gone = true;
+    };
+  }, [client, userId, everyone]);
+  const docRef = React.useRef(doc);
+  docRef.current = doc;
+  const loaded = doc !== null;
+  return React.useMemo(() => {
+    if (!userId || !loaded) return null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return {
+      userId,
+      own: () => docRef.current ?? {},
+      inherited: () => (everyone ? {} : everyoneDoc),
+      everyone,
+      set(key, raw) {
+        const next = { ...(docRef.current ?? {}) };
+        if (raw) next[key] = raw;
+        else delete next[key];
+        docRef.current = next;
+        setDoc(next);
+        if (everyone) {
+          everyoneDoc = next;
+          if (session?.everyoneId)
+            storage.set(cacheKey(session.everyoneId), next);
+        }
+        announce();
+        clearTimeout(timer);
+        timer = setTimeout(() => push(next, { client, userId }), 500);
+      },
+    };
+  }, [client, userId, everyone, loaded]);
 }
 
 /** Whether a user's settings apply, rather than the defaults of nobody signed in. */
@@ -187,7 +316,10 @@ function update(key: string, value: string | undefined) {
   pushTimer = setTimeout(flushPush, 500);
 }
 
-/** A setting that follows the user; `format` returns undefined for the default. */
+/**
+ * A setting that follows the user; `format` returns undefined for the
+ * built-in default. A profile's own value wins over everyone's.
+ */
 export function synced<T>(
   key: string,
   parse: (raw: string | undefined) => T,
@@ -196,17 +328,30 @@ export function synced<T>(
 ): Setting<T> {
   SYNCED_KEYS.add(key);
   if (was.length) moved.set(key, { was, format });
-  let raw: string | undefined;
-  let value = parse(undefined);
+  const seen = new WeakMap<Layer, { raw: string | undefined; value: T }>();
   return {
-    read() {
-      if (current[key] !== raw) {
-        raw = current[key];
-        value = parse(raw);
+    kind: 'synced',
+    read(layer = live) {
+      const own = layer.own()[key];
+      const raw =
+        own === BUILT_IN ? undefined : (own ?? layer.inherited()[key]);
+      let last = seen.get(layer);
+      if (!last || last.raw !== raw) {
+        last = { raw, value: parse(raw) };
+        seen.set(layer, last);
       }
-      return value;
+      return last.value;
     },
-    write: (next) => update(key, format(next)),
+    write(next, layer = live) {
+      const raw = format(next);
+      const inherited = layer.inherited()[key];
+      layer.set(
+        key,
+        raw === inherited
+          ? undefined
+          : (raw ?? (inherited === undefined ? undefined : BUILT_IN))
+      );
+    },
   };
 }
 
@@ -299,13 +444,17 @@ export const syncedText = (key: string) =>
 
 type Valid<T> = readonly T[] | ((value: T) => boolean);
 
-/** A setting kept on this device; `fallback` is also what clears it, and a function's is read when needed. */
+/**
+ * A setting kept on this device, over a default everyone's settings may set;
+ * `fallback` is the built-in one, and a function's is read when needed.
+ */
 export function device<T extends string | number | boolean>(
   key: string,
   fallback: T | (() => T),
   valid?: Valid<T>,
   was: Was<T>[] = []
 ): Setting<T> {
+  DEVICE_KEYS.add(key);
   const initial = () =>
     typeof fallback === 'function' ? fallback() : fallback;
   const ok = (value: unknown): value is T =>
@@ -314,19 +463,49 @@ export function device<T extends string | number | boolean>(
       (typeof valid === 'function'
         ? valid(value as T)
         : valid.includes(value as T)));
-  return {
-    read() {
+  const defaultIn = (doc: Synced): T | undefined => {
+    const raw =
+      setting.kind === 'local' ? undefined : doc[deviceDefaultKey(key)];
+    if (raw === undefined) return undefined;
+    try {
+      const value: unknown = JSON.parse(raw);
+      return ok(value) ? value : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const setting: Setting<T> = {
+    kind: 'device',
+    read(layer = live) {
+      if (layer.everyone) return defaultIn(layer.own()) ?? initial();
       const stored = storage.get<unknown>(key);
       const value = stored === null ? readWas(was)?.value : stored;
-      return ok(value) ? value : initial();
+      return ok(value) ? value : (defaultIn(everyoneDoc) ?? initial());
     },
-    write(value) {
+    write(value, layer = live) {
+      if (layer.everyone) {
+        if (setting.kind === 'local') return;
+        layer.set(
+          deviceDefaultKey(key),
+          value === initial() ? undefined : JSON.stringify(value)
+        );
+        return;
+      }
+      // Another profile's settings hold none of this device's.
+      if (layer !== live) return;
       forget(was);
-      if (value === initial()) storage.remove(key);
+      if (value === (defaultIn(everyoneDoc) ?? initial())) storage.remove(key);
       else storage.set(key, value);
       announce();
     },
   };
+  return setting;
+}
+
+/** Kept on each device with no default for everyone, such as a device's own outputs. */
+export function local<T>(setting: Setting<T>): Setting<T> {
+  setting.kind = 'local';
+  return setting;
 }
 
 /** Lists of strings by name, kept on this device; an empty record clears it. */
@@ -337,6 +516,7 @@ export function deviceLists(
   let seen: string | undefined;
   let value: Record<string, string[]> = {};
   return {
+    kind: 'local',
     read() {
       const stored = storage.get<unknown>(key) ?? readWas(was)?.value;
       const text = JSON.stringify(stored);
@@ -354,7 +534,8 @@ export function deviceLists(
       }
       return value;
     },
-    write(next) {
+    write(next, layer = live) {
+      if (layer !== live) return;
       forget(was);
       if (Object.keys(next).length) storage.set(key, next);
       else storage.remove(key);
@@ -368,20 +549,24 @@ type Values<G> = { [K in keyof G]: G[K] extends Setting<infer T> ? T : never };
 export function group<G extends Record<string, Setting<unknown>>>(
   members: G
 ): Setting<Values<G>> {
-  let value: Values<G> | undefined;
+  const values = new WeakMap<Layer, Values<G>>();
+  const kinds = new Set(Object.values(members).map((m) => m.kind));
   return {
-    read() {
+    kind: kinds.size === 1 ? [...kinds][0] : 'synced',
+    read(layer = live) {
+      const value = values.get(layer);
       const next = {} as Values<G>;
       let changed = !value;
       for (const key in members) {
-        next[key] = members[key].read() as Values<G>[typeof key];
+        next[key] = members[key].read(layer) as Values<G>[typeof key];
         if (!Object.is(next[key], value?.[key])) changed = true;
       }
-      if (changed) value = next;
-      return value!;
+      if (!changed) return value!;
+      values.set(layer, next);
+      return next;
     },
-    write(next) {
-      for (const key in members) members[key].write(next[key]);
+    write(next, layer) {
+      for (const key in members) members[key].write(next[key], layer);
     },
   };
 }

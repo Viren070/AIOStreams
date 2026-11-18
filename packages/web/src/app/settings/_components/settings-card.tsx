@@ -2,6 +2,8 @@ import React from 'react';
 import type { IconType } from 'react-icons';
 import { Card } from '@aiostreams/ui/card';
 import { cn } from '@aiostreams/ui/core/styling';
+import { t } from '@lingui/core/macro';
+import { useSettingsLayer, type Layer } from '@/lib/settings';
 
 const fold = (text: string) =>
   text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -19,19 +21,61 @@ export const hasWords = (
 
 export const SettingsSearch = React.createContext<readonly string[]>([]);
 
+/**
+ * Where a card's settings are kept: with the profile, on the device with a
+ * default for every device, or on the device alone. The server's playback
+ * preferences are the profile's too, and reach other Jellyfin apps.
+ */
+export type Holds = 'profile' | 'server' | 'device' | 'local';
+
+/** Another profile's settings are the profile's alone; everyone's also hold device defaults. */
+export function holdsIn(layer: Layer | null, holds: Holds | undefined) {
+  if (!layer) return true;
+  return (
+    holds === 'profile' ||
+    holds === 'server' ||
+    (layer.everyone && holds === 'device')
+  );
+}
+
+function holdsText(layer: Layer | null, holds: Holds, locked?: boolean) {
+  if (holds === 'device' || holds === 'local') {
+    return layer?.everyone
+      ? t`The default for every device. A device that changes it keeps its own.`
+      : t`Kept on this device.`;
+  }
+  if (layer?.everyone)
+    return t`The default for every profile. A profile that changes it keeps its own.`;
+  if (layer) return t`Saved to this profile, on every device it signs in on.`;
+  if (holds === 'server')
+    return locked
+      ? t`This server doesn't let your account change these.`
+      : t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
+  return t`Saved to your account, so it follows you to every device.`;
+}
+
 export function SettingsCard({
   name,
   title,
   description,
+  holds,
+  locked,
+  plain,
   children,
 }: {
   /** `data-name`, which custom CSS matches, so it stays in English. */
   name?: string;
   title?: string;
   description?: React.ReactNode;
+  holds?: Holds;
+  /** The server keeps the profile from changing what it holds. */
+  locked?: boolean;
+  /** Says nothing of where it is kept, as the card before it does. */
+  plain?: boolean;
   children: React.ReactNode;
 }) {
   const words = React.useContext(SettingsSearch);
+  const layer = useSettingsLayer();
   const root = React.useRef<HTMLDivElement>(null);
   // By the text each line shows, so a search covers whatever this device lists.
   React.useLayoutEffect(() => {
@@ -49,6 +93,16 @@ export function SettingsCard({
       for (const item of items) item.hidden = false;
     };
   });
+  if (!holdsIn(layer, holds)) return null;
+  const where = holds && !plain && holdsText(layer, holds, locked);
+  if (where)
+    description = description ? (
+      <>
+        {description} {where}
+      </>
+    ) : (
+      where
+    );
   return (
     <div
       ref={root}
