@@ -114,7 +114,8 @@ import {
   defaultDeduplicatorMultiGroupBehaviour,
 } from './_components/filter-utils';
 import type { SyncConfig } from './_components/synced-patterns';
-import { UserData } from '@aiostreams/core';
+import { StatusResponse, UserData } from '@aiostreams/core';
+import type { IconType } from 'react-icons';
 import { toast } from 'sonner';
 import { Popover } from '@aiostreams/ui/popover';
 import { AiOutlineExclamationCircle } from 'react-icons/ai';
@@ -185,6 +186,60 @@ export function FiltersMenu() {
         <Content />
       </PageWrapper>
     </>
+  );
+}
+
+export const FILTER_TAB_ICONS: Record<FilterTabId, IconType> = {
+  cache: FaBolt,
+  resolution: BiSolidCameraMovie,
+  quality: MdMovieFilter,
+  encode: FaFilm,
+  'stream-type': MdVideoLibrary,
+  'visual-tag': MdHdrOn,
+  'audio-tag': BsSpeakerFill,
+  'audio-channel': MdSurroundSound,
+  language: FaLanguage,
+  subtitle: MdSubtitles,
+  seeders: MdPerson,
+  age: FaClock,
+  matching: FaEquals,
+  keyword: MdTextFields,
+  'release-group': FaTextSlash,
+  'stream-expression': TbFilterCode,
+  regex: BsRegex,
+  size: GoFileBinary,
+  bitrate: FaTachometerAlt,
+  limit: GoContainer,
+  deduplicator: MdCleaningServices,
+  miscellaneous: MdMiscellaneousServices,
+};
+
+const ADVANCED_FILTER_TABS: FilterTabId[] = [
+  'stream-type',
+  'quality',
+  'encode',
+  'visual-tag',
+  'audio-tag',
+  'audio-channel',
+  'matching',
+  'keyword',
+  'release-group',
+  'stream-expression',
+  'regex',
+];
+
+export function filterTabShown(
+  id: FilterTabId,
+  mode: string,
+  status: StatusResponse | null
+): boolean {
+  if (mode !== 'pro' && ADVANCED_FILTER_TABS.includes(id)) return false;
+  if (id !== 'regex') return true;
+  const access = status?.settings.regexAccess;
+  return (
+    access?.level !== 'none' ||
+    (access.patterns?.length ?? 0) > 0 ||
+    (access.urls?.length ?? 0) > 0
   );
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageWrapper } from '../shared/page-wrapper';
+import { MenuHeader } from '../shared/menu-header';
 import { SettingsCard } from '../shared/settings-card';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -29,12 +30,12 @@ import { cn } from '@aiostreams/ui/core/styling';
 export function StatsMenu() {
   return (
     <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <Content />
+      <StatsContent />
     </PageWrapper>
   );
 }
 
-function Content() {
+export function StatsContent() {
   const { status } = useStatus();
   const user = useUserData();
   const [range, setRange] = React.useState<'24h' | '7d'>('7d');
@@ -52,17 +53,18 @@ function Content() {
 
   return (
     <>
-      <div className="flex items-center w-full">
-        <div>
-          <h2>Stats</h2>
-          <p className="text-[--muted]">
+      <MenuHeader
+        title="Stats"
+        controls={false}
+        description={
+          <>
             Per-user breakdown of how your addons performed across recent stream
             requests. Data window is up to{' '}
             <strong>{range === '24h' ? '24 hours' : '7 days'}</strong>; older
             events are pruned automatically.
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {!isSignedIn && (
         <Alert

@@ -650,6 +650,9 @@ interface UserDataContextType {
   setEncryptedPassword: (encryptedPassword: string | null) => void;
   /** Edits past this point count as a draft; matching it again clears one. */
   setBaseline: (data: UserData) => void;
+  unsaved: boolean;
+  /** The top-level fields that differ from the baseline. */
+  changedFields: readonly string[];
   /** Null unless it belongs to the configuration currently held. */
   pendingDraft: Draft | null;
   restoreDraft: () => void;
@@ -742,10 +745,21 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uuid]);
 
+  const [unsaved, setUnsaved] = React.useState(false);
+  const [changedFields, setChangedFields] = React.useState<readonly string[]>(
+    []
+  );
   React.useEffect(() => {
     if (!baselineReady) return;
     const handle = setTimeout(() => {
-      if (sameConfig(userData, baselineRef.current)) {
+      const { diffs } = computeUserDataDiff(userData, baselineRef.current);
+      const same = diffs.length === 0;
+      setUnsaved(!same);
+      const fields = [...new Set(diffs.map((d) => d.path[0]))].sort();
+      setChangedFields((prev) =>
+        prev.join() === fields.join() ? prev : fields
+      );
+      if (same) {
         clearDrafts(uuid);
         return;
       }
@@ -817,6 +831,8 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       encryptedPassword,
       setEncryptedPassword,
       setBaseline,
+      unsaved,
+      changedFields,
       pendingDraft: applicableDraft,
       restoreDraft,
       discardDraft,
@@ -829,6 +845,8 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
       password,
       encryptedPassword,
       setBaseline,
+      unsaved,
+      changedFields,
       applicableDraft,
       restoreDraft,
       discardDraft,

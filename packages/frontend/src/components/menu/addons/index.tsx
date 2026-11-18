@@ -63,7 +63,7 @@ function addonSetKey(presets: UserData['presets'] | undefined): string {
   );
 }
 
-export function useAddonsSections() {
+export function useAddonsSections(options: { catalogsShown?: boolean } = {}) {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
@@ -203,7 +203,9 @@ export function useAddonsSections() {
     [fetchCatalogsData, userData]
   );
 
-  const catalogsShown = page === 'installed' && installedTab === 'catalogs';
+  const catalogsShown =
+    options.catalogsShown ??
+    (page === 'installed' && installedTab === 'catalogs');
   useEffect(() => {
     if (!catalogsShown || !userData.presets?.length) return;
     if (fetchedFor.current === addonsKey) return;
@@ -388,7 +390,7 @@ export function useAddonsSections() {
   );
 
   const addonGridClassName =
-    'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 5xl:grid-cols-6 6xl:grid-cols-7 7xl:grid-cols-8 gap-4';
+    'grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4';
 
   const installed = (
     <>

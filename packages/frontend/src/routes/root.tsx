@@ -1,9 +1,11 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@aiostreams/ui/toaster';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import type { QueryClient } from '@tanstack/react-query';
+import { PHONE_LAYOUT } from '@/context/menu';
 import { lazy, Suspense } from 'react';
 
 const DevTools = import.meta.env.DEV
@@ -46,9 +48,16 @@ function NotFound() {
 }
 
 function RootComponent() {
+  // Clear of a phone's Save bar, and of the header wider screens save from.
+  const phone = useMediaQuery(PHONE_LAYOUT);
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
-      <Toaster swipeDirections={['top', 'right']} />
+      <Toaster
+        // It reads its props once.
+        key={phone ? 'phone' : 'wide'}
+        position={phone ? 'top-center' : 'bottom-right'}
+        swipeDirections={phone ? ['top', 'right'] : ['bottom', 'right']}
+      />
       <Outlet />
       {DevTools && (
         <Suspense>

@@ -517,7 +517,8 @@ export function MyAddons({
       />
     );
   };
-  const listClass = 'grid grid-cols-1 gap-1.5 xl:grid-cols-2 3xl:grid-cols-3';
+  const listClass =
+    'grid grid-cols-[repeat(auto-fill,minmax(min(100%,26rem),1fr))] gap-1.5';
   const pillClass = (active: boolean, activeClass: string) =>
     cn(
       'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
@@ -532,15 +533,16 @@ export function MyAddons({
         title="My Addons"
         description="Manage your installed addons. Reorder, batch edit, or categorise by type."
         action={
-          <IconButton
+          <Button
             rounded
+            size="sm"
             intent="primary-subtle"
-            icon={<LuArrowUpDown className="w-5 h-5" />}
+            leftIcon={<LuArrowUpDown className="h-4 w-4" />}
             onClick={() => reorderModal.open()}
             disabled={userData.presets.length < 2}
-            title="Reorder priority"
-            aria-label="Reorder priority"
-          />
+          >
+            Reorder
+          </Button>
         }
       >
         {userData.presets.length === 0 ? (

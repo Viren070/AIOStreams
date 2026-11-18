@@ -64,7 +64,7 @@ export function SubTabProvider({ children }: { children: React.ReactNode }) {
       if (key) {
         const url = new URL(window.location.href);
         url.searchParams.set(key, tab);
-        window.history.replaceState({}, '', url.toString());
+        window.history.replaceState(window.history.state, '', url.toString());
       }
     }
   }, []);

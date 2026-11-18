@@ -7,11 +7,11 @@ import {
 } from '@aiostreams/ui/app-layout';
 import { MainSidebar } from './main-sidebar';
 import { LoadingOverlayWithLogo } from '@/components/shared/loading-overlay';
-import { MenuProvider } from '@/context/menu';
+import { MenuProvider, useMenu } from '@/context/menu';
+import { NewLayout } from './new-layout';
 import { MenuContent } from '@/components/menu-content';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import { TopNavbar } from './top-navbar';
-import { Button } from '@aiostreams/ui/button';
 import { UserDataProvider } from '@/context/userData';
 import { SaveProvider } from '@/context/save';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
@@ -59,24 +59,7 @@ function AppContent() {
           <QuickActionsProvider>
             <CommandPaletteProvider>
               <SaveProvider>
-                <AppSidebarProvider>
-                  <AppLayout withSidebar sidebarSize="slim">
-                    <AppLayoutSidebar>
-                      <MainSidebar />
-                    </AppLayoutSidebar>
-                    <AppLayout>
-                      <AppLayoutContent>
-                        <div data-main-layout-container className="h-auto">
-                          <TopNavbar />
-                          <DraftRestoreBanner />
-                          <div data-main-layout-content>
-                            <MenuContent />
-                          </div>
-                        </div>
-                      </AppLayoutContent>
-                    </AppLayout>
-                  </AppLayout>
-                </AppSidebarProvider>
+                <Layout />
               </SaveProvider>
               <CommandPalette />
             </CommandPaletteProvider>
@@ -84,6 +67,31 @@ function AppContent() {
         </SubTabProvider>
       </MenuProvider>
     </ConfigAuthProvider>
+  );
+}
+
+function Layout() {
+  const { layout } = useMenu();
+  if (layout === 'new') return <NewLayout />;
+  return (
+    <AppSidebarProvider>
+      <AppLayout withSidebar sidebarSize="slim">
+        <AppLayoutSidebar>
+          <MainSidebar />
+        </AppLayoutSidebar>
+        <AppLayout>
+          <AppLayoutContent>
+            <div data-main-layout-container className="h-auto">
+              <TopNavbar />
+              <DraftRestoreBanner />
+              <div data-main-layout-content>
+                <MenuContent />
+              </div>
+            </div>
+          </AppLayoutContent>
+        </AppLayout>
+      </AppLayout>
+    </AppSidebarProvider>
   );
 }
 

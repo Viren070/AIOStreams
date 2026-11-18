@@ -127,7 +127,6 @@ function TrackerRow({
 export function JellyfinTrackers({
   onChooseTrackers,
 }: {
-  /** Opens the tab where each user's trackers are picked. */
   onChooseTrackers: () => void;
 }) {
   const { uuid, password, userData } = useUserData();

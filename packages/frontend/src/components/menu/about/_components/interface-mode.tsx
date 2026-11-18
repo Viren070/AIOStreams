@@ -12,8 +12,8 @@ export function InterfaceMode() {
         <h3 className="text-base font-semibold text-white">Interface</h3>
         <p className="text-sm text-[--muted] mt-1">
           {mode === 'pro'
-            ? 'Advanced is on: the Sorting page and all advanced options are shown.'
-            : 'Simple hides the Sorting page and the more advanced options.'}
+            ? 'Advanced is on: sorting and every advanced option are shown.'
+            : 'Simple hides sorting and the more advanced options.'}
         </p>
       </div>
       <ModeSwitch

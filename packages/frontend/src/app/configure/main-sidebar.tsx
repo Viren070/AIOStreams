@@ -24,6 +24,7 @@ import {
   BiSearch,
   BiGridAlt,
   BiBarChartAlt2,
+  BiLayout,
 } from 'react-icons/bi';
 import { useCommandPalette } from '@/context/command-palette';
 import { useRegisterQuickAction } from '@/context/quick-actions';
@@ -39,17 +40,10 @@ type MenuItem = VerticalMenuItem & {
   id: MenuId;
 };
 
-export function MainSidebar() {
-  const navigate = useNavigate();
-  const { selectedMenu, setSelectedMenu } = useMenu();
-  const donationModal = useDisclosure(false);
-
-  const user = useUserData();
+export function useConfigureQuickActions(onDonate: () => void) {
   const { isSignedIn, openSignIn, openSignOut } = useConfigAuth();
-
-  const { status, error, loading } = useStatus();
   const { mode, setMode } = useMode();
-  const { open: openCommandPalette } = useCommandPalette();
+  const { layout, setLayout } = useMenu();
 
   useRegisterQuickAction(
     isSignedIn
@@ -76,9 +70,9 @@ export function MainSidebar() {
       label: 'Donate',
       icon: <BiHeart />,
       keywords: ['support', 'sponsor'],
-      onSelect: () => donationModal.open(),
+      onSelect: onDonate,
     },
-    [donationModal]
+    [onDonate]
   );
 
   useRegisterQuickAction(
@@ -92,6 +86,31 @@ export function MainSidebar() {
     },
     [mode, setMode]
   );
+
+  useRegisterQuickAction(
+    {
+      id: 'toggle-layout',
+      label: layout === 'new' ? 'Use the classic layout' : 'Use the new layout',
+      icon: <BiLayout />,
+      keywords: ['layout', 'classic', 'old', 'new', 'design'],
+      onSelect: () => setLayout(layout === 'new' ? 'classic' : 'new'),
+    },
+    [layout, setLayout]
+  );
+}
+
+export function MainSidebar() {
+  const navigate = useNavigate();
+  const { selectedMenu, setSelectedMenu, setLayout } = useMenu();
+  const donationModal = useDisclosure(false);
+
+  const user = useUserData();
+  const { isSignedIn, openSignIn, openSignOut } = useConfigAuth();
+
+  const { status } = useStatus();
+  const { mode } = useMode();
+  const { open: openCommandPalette } = useCommandPalette();
+  useConfigureQuickActions(donationModal.open);
 
   const topMenuItems: MenuItem[] = [
     {
@@ -202,6 +221,11 @@ export function MainSidebar() {
   );
 
   const footerItems: VerticalMenuItem[] = [
+    {
+      name: 'New layout',
+      iconType: BiLayout,
+      onClick: () => setLayout('new'),
+    },
     {
       name: 'Dashboard',
       iconType: BiGridAlt,

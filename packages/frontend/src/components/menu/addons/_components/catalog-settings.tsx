@@ -476,7 +476,7 @@ export function CatalogSettingsCard({
     <SettingsCard
       title="Catalogs"
       id="catalogs"
-      description="Rename, reorder, and toggle your catalogs, and apply modifications like RPDB posters and shuffling. Adjusting catalogs may require a reinstall - if it does, a pop-up will tell you."
+      description="Rename, reorder, and toggle your catalogs, and apply modifications like RPDB posters and shuffling. Select several and use Actions to merge them into one. Adjusting catalogs may require a reinstall - if it does, a pop-up will tell you."
       action={
         <IconButton
           size="sm"

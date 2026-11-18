@@ -12,7 +12,7 @@ import { TextInput } from '@aiostreams/ui/text-input';
 import { toast } from 'sonner';
 import { Button } from '@aiostreams/ui/button';
 import MarkdownLite from '../shared/markdown-lite';
-import { PageControls } from '../shared/page-controls';
+import { MenuHeader } from '../shared/menu-header';
 import { PasswordInput } from '@aiostreams/ui/password-input';
 import { useMode } from '@/context/mode';
 type ProxyServiceId = keyof typeof constants.PROXY_SERVICE_DETAILS;
@@ -31,13 +31,13 @@ export function ProxyMenu() {
   return (
     <>
       <PageWrapper className="space-y-4 p-4 sm:p-8">
-        <Content />
+        <ProxyContent />
       </PageWrapper>
     </>
   );
 }
 
-function Content() {
+export function ProxyContent() {
   const { status } = useStatus();
   const { userData, setUserData } = useUserData();
   const { mode } = useMode();
@@ -91,23 +91,14 @@ function Content() {
 
   return (
     <>
-      <div className="flex items-center w-full">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2>Proxy</h2>
-            {hasParent && isInherited('proxy') && (
-              <InheritedBadge section="proxy" />
-            )}
-          </div>
-          <p className="text-[--muted]">
-            Configure a proxy for your streams to bypass IP restrictions or
-            improve compatibility
-          </p>
-        </div>
-        <div className="hidden lg:block lg:ml-auto">
-          <PageControls />
-        </div>
-      </div>
+      <MenuHeader
+        title="Proxy"
+        description="Configure a proxy for your streams to bypass IP restrictions or improve compatibility"
+        badge={
+          hasParent &&
+          isInherited('proxy') && <InheritedBadge section="proxy" />
+        }
+      />
 
       <div className="space-y-2">
         <SettingsCard>

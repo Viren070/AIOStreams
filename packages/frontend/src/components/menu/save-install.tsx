@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@aiostreams/ui/button';
+import { cn } from '@aiostreams/ui/core/styling';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
@@ -19,7 +20,11 @@ import { profileLabel } from '@/lib/audiences';
 import { profilesOf } from '../../../../core/src/utils/profiles';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@aiostreams/ui/alert';
-import { SettingsCard } from '../shared/settings-card';
+import {
+  PlainSections,
+  SettingsCard,
+  SettingsRows,
+} from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
   Code2,
@@ -31,14 +36,21 @@ import {
   LibraryBig,
   Settings2,
   DownloadIcon,
+  ExternalLink,
   PlusIcon,
   Rss,
   SearchIcon,
   Smartphone,
+  TriangleAlert,
   UploadIcon,
   Users,
 } from 'lucide-react';
-import { LuSquareCheck, LuSquareMinus, LuWand } from 'react-icons/lu';
+import {
+  LuChevronRight,
+  LuSquareCheck,
+  LuSquareMinus,
+  LuWand,
+} from 'react-icons/lu';
 import { AnimatePresence, motion } from 'motion/react';
 import { Checkbox, CheckboxGroup } from '@aiostreams/ui/checkbox';
 import { IconButton } from '@aiostreams/ui/button';
@@ -121,7 +133,6 @@ interface AppCardProps {
   description: string;
   onClick: () => void;
   unofficial?: boolean;
-  beta?: boolean;
   author?: string;
   disabled?: boolean;
   disabledReason?: string;
@@ -134,11 +145,44 @@ function AppCard({
   description,
   onClick,
   unofficial,
-  beta,
   author,
   disabled,
   disabledReason,
 }: AppCardProps) {
+  if (React.useContext(PlainSections)) {
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors first:rounded-t-xl last:rounded-b-xl enabled:hover:bg-[--subtle] focus-visible:bg-[--subtle] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-brand-400">
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt=""
+              className="h-full w-full object-contain"
+            />
+          ) : (
+            icon
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 text-sm text-white">
+            {name}
+            {unofficial && (
+              <span className="text-[11px] text-[--muted]">Unofficial</span>
+            )}
+          </span>
+          <span className="block truncate text-xs text-[--muted]">
+            {disabledReason ??
+              (author ? `${description}, by ${author}` : description)}
+          </span>
+        </span>
+        <LuChevronRight className="h-4 w-4 shrink-0 text-[--muted]" />
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -163,11 +207,6 @@ function AppCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-white">{name}</span>
-          {beta && (
-            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-              Beta
-            </span>
-          )}
           {unofficial && (
             <span className="rounded-full border border-gray-600 bg-gray-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
               Unofficial
@@ -458,16 +497,6 @@ const COMPATIBLE_CLIENTS: {
     url: 'https://auroramediacenter.com/',
     imgClassName: 'scale-150',
   },
-  {
-    name: 'Fusion',
-    logoSrc: 'https://fusionapp.dev/FUSN_dark-iOS.png',
-    url: 'https://fusionapp.dev/',
-  },
-  {
-    name: 'Omni',
-    logoSrc: 'https://omni.stkc.win/favicon.ico',
-    url: 'https://omni.stkc.win/',
-  },
 ];
 
 function CompatibleClientLogos() {
@@ -650,25 +679,52 @@ function AppFact({
   );
 }
 
-function AppBlock({
+function AppOffNotice() {
+  return (
+    <div className="mb-5 flex gap-3 rounded-lg border border-[--border] p-3">
+      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-gray-100">
+          This instance has the app turned off
+        </p>
+        <p className="text-xs text-[--muted]">
+          The app signs in through an instance&apos;s media server, which this
+          one doesn&apos;t run. Whoever runs it can turn it on under Dashboard →
+          Settings → Media server, or you can use the app with another instance.
+        </p>
+        <a
+          href="https://aiostreams.org/getting-started/public-instances"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-[--brand] hover:underline"
+        >
+          Public instances
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export function AppBlock({
   webAppUrl,
   desktopLink,
   onOpenServer,
   disabled,
-  disabledReason,
 }: {
   webAppUrl: string;
   desktopLink: string;
   onOpenServer: (tab: ServerTab) => void;
   disabled?: boolean;
-  disabledReason?: string;
 }) {
+  const { layout } = useMenu();
   const download = useDesktopDownload();
   const android = /Android/.test(navigator.userAgent);
   const own = download.os ? 'desktop' : android ? 'android' : null;
   const open = (url: string) => () => window.open(url, '_blank', 'noopener');
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+      {disabled && <AppOffNotice />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
@@ -691,16 +747,17 @@ function AppBlock({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
-              intent="primary"
-              className="w-full shadow-md sm:col-span-2"
-              leftIcon={<MonitorPlay className="h-4 w-4" />}
-              disabled={disabled}
-            >
-              Open in browser
-            </Button>
-            {own && (
+            {!disabled && (
+              <Button
+                onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
+                intent="primary"
+                className="w-full shadow-md sm:col-span-2"
+                leftIcon={<MonitorPlay className="h-4 w-4" />}
+              >
+                Open in browser
+              </Button>
+            )}
+            {own && !disabled && (
               <Button
                 onClick={() => window.open(desktopLink)}
                 intent="gray-outline"
@@ -712,7 +769,6 @@ function AppBlock({
                     <Smartphone className="h-4 w-4" />
                   )
                 }
-                disabled={disabled}
               >
                 {own === 'desktop' ? 'Open in desktop app' : 'Open in app'}
               </Button>
@@ -723,17 +779,13 @@ function AppBlock({
                   own === 'desktop' ? download.url : ANDROID_DOWNLOAD_URL
                 )}
                 intent="gray-outline"
-                className="w-full"
+                className={cn('w-full', disabled && 'sm:col-span-2')}
                 leftIcon={<DownloadIcon className="h-4 w-4" />}
-                disabled={disabled}
               >
                 {own === 'desktop' ? download.label : 'Download for Android'}
               </Button>
             )}
           </div>
-          {disabledReason && (
-            <p className="text-xs text-amber-300">{disabledReason}</p>
-          )}
         </div>
 
         <div className="space-y-3 lg:border-l lg:border-gray-700/50 lg:pl-8">
@@ -752,30 +804,32 @@ function AppBlock({
               phones download to watch offline.
             </AppFact>
           </ul>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button
-              size="sm"
-              intent="gray-outline"
-              rounded
-              className="w-full sm:w-auto"
-              leftIcon={<Users className="h-4 w-4" />}
-              onClick={() => onOpenServer('users')}
-              disabled={disabled}
-            >
-              Users, trackers and playback
-            </Button>
-            <Button
-              size="sm"
-              intent="gray-outline"
-              rounded
-              className="w-full sm:w-auto"
-              leftIcon={<KeyRound className="h-4 w-4" />}
-              onClick={() => onOpenServer('connect')}
-              disabled={disabled}
-            >
-              Sign-in addresses
-            </Button>
-          </div>
+          {!disabled && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button
+                size="sm"
+                intent="gray-outline"
+                rounded
+                className="w-full sm:w-auto"
+                leftIcon={<Users className="h-4 w-4" />}
+                onClick={() => onOpenServer('users')}
+              >
+                {layout === 'new'
+                  ? 'Profiles and trackers'
+                  : 'Users, trackers and playback'}
+              </Button>
+              <Button
+                size="sm"
+                intent="gray-outline"
+                rounded
+                className="w-full sm:w-auto"
+                leftIcon={<KeyRound className="h-4 w-4" />}
+                onClick={() => onOpenServer('connect')}
+              >
+                Sign-in addresses
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-gray-700/50 pt-4">
@@ -787,7 +841,6 @@ function AppBlock({
             intent="gray-outline"
             rounded
             onClick={open(p.url)}
-            disabled={disabled}
           >
             {p.label}
           </Button>
@@ -797,7 +850,6 @@ function AppBlock({
           intent="gray-outline"
           rounded
           onClick={open(`${DOCS_APPS_URL}#get-the-app`)}
-          disabled={disabled}
         >
           All apps
         </Button>
@@ -846,7 +898,6 @@ function InstallCard(props: InstallCardProps) {
           desktopLink={desktopLink}
           onOpenServer={onOpenJellyfin}
           disabled={props.disableJellyfinCard}
-          disabledReason={props.jellyfinDisabledReason}
         />
 
         <LinkedAccountsSection manifestUrl={manifestUrl} />
@@ -970,7 +1021,7 @@ export function OtherAppCards({
   jellyfin = true,
 }: InstallCardProps & { jellyfin?: boolean }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <AppCard
         logoSrc="https://seanime.app/seanime-logo.png"
         name="Seanime"
@@ -984,7 +1035,6 @@ export function OtherAppCards({
           logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
           name="Jellyfin apps"
           description="Use your configuration in any Jellyfin app"
-          beta
           onClick={() => onOpenJellyfin('connect')}
           disabled={disableJellyfinCard}
           disabledReason={jellyfinDisabledReason}
@@ -1004,7 +1054,7 @@ export function OtherAppCards({
         author="worldInColors"
         onClick={onOpenAniyomi}
       />
-    </div>
+    </SettingsRows>
   );
 }
 
@@ -1017,7 +1067,7 @@ export function ApiCards({
   searchApiDisabledReason,
 }: InstallCardProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <AppCard
         icon={<Rss className="h-5 w-5" />}
         name="Newznab / Torznab"
@@ -1034,7 +1084,7 @@ export function ApiCards({
         disabled={disableSearchApiCard}
         disabledReason={searchApiDisabledReason}
       />
-    </div>
+    </SettingsRows>
   );
 }
 
@@ -1097,8 +1147,7 @@ function DangerZoneCard({
     <SettingsCard
       title="Danger Zone"
       description="Perform potentially destructive actions that cannot be undone"
-      className="lg:bg-red-700/70 border-red-500/20"
-      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-700/20"
+      danger
     >
       <div className="flex flex-wrap items-center gap-3">
         {hasUser && (
@@ -1875,7 +1924,8 @@ export function SaveInstallMenu() {
   );
 }
 
-export function useSaveInstall() {
+/** `offerStremio`: a configuration created here offers to install it in Stremio. */
+export function useSaveInstall({ offerStremio = true } = {}) {
   const {
     userData,
     setUserData,
@@ -1950,7 +2000,7 @@ export function useSaveInstall() {
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
     React.useState('');
-  const { setSelectedMenu, firstMenu } = useMenu();
+  const { setSelectedMenu, firstMenu, layout } = useMenu();
   const templateExportModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const exportMenuModal = useDisclosure(false);
@@ -2055,9 +2105,14 @@ export function useSaveInstall() {
     setCreateLoading(true);
     try {
       const result = await createUserConfig(userData, newPassword);
-      toast.success(
-        'Configuration created successfully, your UUID and password are below'
-      );
+      toast.success('Configuration created', {
+        description: `Keep its UUID and password somewhere safe: neither can be recovered. ${
+          layout === 'new'
+            ? 'Copy the UUID from the Configuration page.'
+            : 'The UUID is on this page.'
+        }`,
+        duration: 10_000,
+      });
       setUuid(result.uuid);
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
@@ -2066,7 +2121,7 @@ export function useSaveInstall() {
           () => {}
         );
       }
-      if (!linkOfferDismissed()) {
+      if (offerStremio && !linkOfferDismissed()) {
         setLinkOfferFor({ uuid: result.uuid, password: newPassword });
       }
     } catch (err) {
@@ -2707,7 +2762,7 @@ export function useSaveInstall() {
   const jellyfinTrackers = (
     <JellyfinTrackers onChooseTrackers={() => setJellyfinTab('users')} />
   );
-  const jellyfinPlayback = (
+  const jellyfinVersions = (
     <div className="space-y-5">
       <Switch
         label="Resolve streams when an item opens"
@@ -2737,7 +2792,7 @@ export function useSaveInstall() {
       <NumberInput
         label="Versions per item"
         help={`Up to ${jellyfinVersionCap} on this instance.`}
-        moreHelp={`For Jellyfin apps. The AIOStreams app lists up to ${jellyfinAppVersionCap} whatever this is set to; Filters → Result Limits caps those. Version names come from your formatter.`}
+        moreHelp={`For Jellyfin apps. The AIOStreams app lists up to ${jellyfinAppVersionCap} whatever this is set to; your result limits cap those. Version names come from your formatter.`}
         min={1}
         max={jellyfinVersionCap}
         value={Math.min(
@@ -2784,124 +2839,128 @@ export function useSaveInstall() {
           }))
         }
       />
-      {jellyfinSegmentsAvailable && (
-        <div className="space-y-3 border-t border-gray-800 pt-4">
-          <Switch
-            label="Skip intro and credits"
-            help="Offers your client markers so it can show a skip button."
-            moreHelp="Timestamps come from community databases and are submitted against one release of an episode, so on a differently cut copy a marker can be a few seconds out. Whether your client skips automatically or asks first is a setting inside that client, not here."
-            side="right"
-            value={userData.jellyfin?.segments ?? true}
-            defaultValue={true}
-            onValueChange={(value) =>
-              setUserData((prev) => ({
-                ...prev,
-                jellyfin: { ...prev.jellyfin, segments: value },
-              }))
-            }
-          />
-          {(userData.jellyfin?.segments ?? true) && (
-            <CheckboxGroup
-              label="Markers to offer"
-              help="Turning off credits keeps the next-episode countdown some clients build from it."
-              options={[
-                { value: 'Intro', label: 'Intro' },
-                { value: 'Recap', label: 'Recap' },
-                { value: 'Outro', label: 'Credits' },
-              ]}
-              value={
-                userData.jellyfin?.segmentTypes ?? ['Intro', 'Recap', 'Outro']
-              }
-              onValueChange={(value) =>
-                setUserData((prev) => ({
-                  ...prev,
-                  jellyfin: {
-                    ...prev.jellyfin,
-                    segmentTypes: value as NonNullable<
-                      UserData['jellyfin']
-                    >['segmentTypes'],
-                  },
-                }))
-              }
-            />
-          )}
-          {(userData.jellyfin?.segments ?? true) &&
-            jellyfinSegmentProviders.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-white">Sources</p>
-                <ul className="space-y-1">
-                  {jellyfinSegmentProviders.map((provider) => {
-                    const ownKey =
-                      provider.id === 'pmdb' && !!userData.pmdbApiKey;
-                    const missingKey =
-                      provider.key === 'configuration' && !ownKey;
-                    return (
-                      <li
-                        key={provider.id}
-                        className="flex items-center justify-between gap-3 text-xs"
-                      >
-                        <span className="truncate text-gray-300">
-                          {provider.name}
-                        </span>
-                        <span
-                          className={
-                            missingKey
-                              ? 'shrink-0 text-[--orange]'
-                              : 'shrink-0 text-gray-500'
-                          }
-                        >
-                          {missingKey
-                            ? 'Needs your key'
-                            : ownKey
-                              ? 'Using your key'
-                              : 'Included'}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="text-xs text-gray-500">
-                  Asked in this order; the first with a marker for a type
-                  supplies it.
-                </p>
-              </div>
-            )}
-          {(userData.jellyfin?.segments ?? true) && jellyfinPmdbKey && (
-            <PasswordInput
-              autoComplete="new-password"
-              label="PublicMetaDB API Key"
-              help={
-                <span>
-                  {jellyfinPmdbKey === 'instance'
-                    ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
-                    : 'Adds markers from PublicMetaDB, which also covers movies. '}
-                  Create a key under Settings → API on{' '}
-                  <a
-                    href="https://publicmetadb.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[--brand] hover:underline"
+    </div>
+  );
+  const jellyfinMarkers = jellyfinSegmentsAvailable ? (
+    <div className="space-y-3">
+      <Switch
+        label="Skip intro and credits"
+        help="Offers your client markers so it can show a skip button."
+        moreHelp="Timestamps come from community databases and are submitted against one release of an episode, so on a differently cut copy a marker can be a few seconds out. Whether your client skips automatically or asks first is a setting inside that client, not here."
+        side="right"
+        value={userData.jellyfin?.segments ?? true}
+        defaultValue={true}
+        onValueChange={(value) =>
+          setUserData((prev) => ({
+            ...prev,
+            jellyfin: { ...prev.jellyfin, segments: value },
+          }))
+        }
+      />
+      {(userData.jellyfin?.segments ?? true) && (
+        <CheckboxGroup
+          label="Markers to offer"
+          help="Turning off credits keeps the next-episode countdown some clients build from it."
+          options={[
+            { value: 'Intro', label: 'Intro' },
+            { value: 'Recap', label: 'Recap' },
+            { value: 'Outro', label: 'Credits' },
+          ]}
+          value={userData.jellyfin?.segmentTypes ?? ['Intro', 'Recap', 'Outro']}
+          onValueChange={(value) =>
+            setUserData((prev) => ({
+              ...prev,
+              jellyfin: {
+                ...prev.jellyfin,
+                segmentTypes: value as NonNullable<
+                  UserData['jellyfin']
+                >['segmentTypes'],
+              },
+            }))
+          }
+        />
+      )}
+      {(userData.jellyfin?.segments ?? true) &&
+        jellyfinSegmentProviders.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white">Sources</p>
+            <ul className="space-y-1">
+              {jellyfinSegmentProviders.map((provider) => {
+                const ownKey = provider.id === 'pmdb' && !!userData.pmdbApiKey;
+                const missingKey = provider.key === 'configuration' && !ownKey;
+                return (
+                  <li
+                    key={provider.id}
+                    className="flex items-center justify-between gap-3 text-xs"
                   >
-                    publicmetadb.com
-                  </a>
-                  .
-                </span>
-              }
-              placeholder={
-                jellyfinPmdbKey === 'instance'
-                  ? 'Provided by this instance (enter your own to override)'
-                  : 'Enter your PublicMetaDB API key'
-              }
-              value={userData.pmdbApiKey}
-              onValueChange={(value) =>
-                setUserData((prev) => ({
-                  ...prev,
-                  pmdbApiKey: value || undefined,
-                }))
-              }
-            />
-          )}
-        </div>
+                    <span className="truncate text-gray-300">
+                      {provider.name}
+                    </span>
+                    <span
+                      className={
+                        missingKey
+                          ? 'shrink-0 text-[--orange]'
+                          : 'shrink-0 text-gray-500'
+                      }
+                    >
+                      {missingKey
+                        ? 'Needs your key'
+                        : ownKey
+                          ? 'Using your key'
+                          : 'Included'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-xs text-gray-500">
+              Asked in this order; the first with a marker for a type supplies
+              it.
+            </p>
+          </div>
+        )}
+      {(userData.jellyfin?.segments ?? true) && jellyfinPmdbKey && (
+        <PasswordInput
+          autoComplete="new-password"
+          label="PublicMetaDB API Key"
+          help={
+            <span>
+              {jellyfinPmdbKey === 'instance'
+                ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
+                : 'Adds markers from PublicMetaDB, which also covers movies. '}
+              Create a key under Settings → API on{' '}
+              <a
+                href="https://publicmetadb.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[--brand] hover:underline"
+              >
+                publicmetadb.com
+              </a>
+              .
+            </span>
+          }
+          placeholder={
+            jellyfinPmdbKey === 'instance'
+              ? 'Provided by this instance (enter your own to override)'
+              : 'Enter your PublicMetaDB API key'
+          }
+          value={userData.pmdbApiKey}
+          onValueChange={(value) =>
+            setUserData((prev) => ({
+              ...prev,
+              pmdbApiKey: value || undefined,
+            }))
+          }
+        />
+      )}
+    </div>
+  ) : null;
+  const jellyfinPlayback = (
+    <div className="space-y-5">
+      {jellyfinVersions}
+      {jellyfinMarkers && (
+        <div className="border-t border-gray-800 pt-4">{jellyfinMarkers}</div>
       )}
     </div>
   );
@@ -2999,6 +3058,8 @@ export function useSaveInstall() {
     jellyfinConnect,
     jellyfinTrackers,
     jellyfinPlayback,
+    jellyfinVersions,
+    jellyfinMarkers,
     modals: (
       <>
         <Modal
@@ -3192,11 +3253,7 @@ export function useSaveInstall() {
           description="Stream AIOStreams content directly within Seanime"
         >
           <div className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-gray-400">
-                Seanime integration is in{' '}
-                <span className="font-medium text-amber-300">beta</span>
-              </span>
+            <div className="flex items-center justify-end gap-2 text-xs">
               <span className="text-gray-400">
                 Extension version:{' '}
                 <span className="font-medium text-gray-200">
