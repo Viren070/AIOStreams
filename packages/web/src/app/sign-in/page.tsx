@@ -714,7 +714,6 @@ export interface ServerTile {
 export function UserPicker({
   users,
   servers = [],
-  serverName,
   onPick,
   onOpenServer,
   links = [],
@@ -722,7 +721,6 @@ export function UserPicker({
 }: {
   users: PickerUser[];
   servers?: ServerTile[];
-  serverName?: string | null;
   onPick: (user: PickerUser, secret?: string) => Promise<void>;
   onOpenServer?: (server: SavedServer) => void;
   links?: SignInLink[];
@@ -730,13 +728,13 @@ export function UserPicker({
 }) {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const mixed = users.some((u) => u.server) || servers.length > 0;
   // A lone user that needs a secret opens straight on its prompt.
   const [asking, setAsking] = React.useState<PickerUser | null>(
-    users.length === 1 && users[0].needs && !servers.length ? users[0] : null
+    users.length === 1 && users[0].needs && !mixed ? users[0] : null
   );
   // Back from a prompt returns focus to the user it was for.
   const left = React.useRef<string | null>(null);
-  const mixed = users.some((u) => u.server) || servers.length > 0;
 
   const pick = async (u: PickerUser, secret?: string) => {
     setBusy(pickerKey(u));
@@ -847,7 +845,7 @@ export function UserPicker({
                                 data-ui="user-picker-server"
                                 className="block truncate text-xs text-[--muted]"
                               >
-                                {u.server?.name ?? serverName}
+                                {u.server?.name}
                               </span>
                             )}
                           </span>

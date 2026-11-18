@@ -10,7 +10,7 @@ export interface SavedServer {
   name: string;
   logo: string | null;
   lastUsed: number;
-  /** Its profiles show on every server's profile picker unless false. */
+  /** False keeps it off the shared profile picker, and the other servers off its own. */
   onPicker?: boolean;
 }
 

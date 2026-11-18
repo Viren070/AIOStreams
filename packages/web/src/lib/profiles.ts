@@ -3,7 +3,7 @@ import { JellyfinClient, JellyfinError } from '@/lib/jellyfin/client';
 import { readCredentials } from '@/lib/jellyfin/credentials';
 import { savedServers, type SavedServer } from '@/lib/jellyfin/servers';
 import { usePickableUsers } from '@/lib/jellyfin/history';
-import { useSession } from '@/lib/jellyfin/session';
+import { stayingUser, useSession } from '@/lib/jellyfin/session';
 import { storage } from '@/lib/storage';
 import type { PickableUser, UserDto } from '@/lib/jellyfin/types';
 
@@ -11,17 +11,17 @@ export interface ServerProfile extends PickableUser {
   server: SavedServer;
 }
 
-export type OtherServer =
+export type PickerServer =
   | { server: SavedServer; state: 'ready'; users: ServerProfile[] }
   | { server: SavedServer; state: 'signed-out' | 'unreachable' };
 
 const cacheKey = (base: string) => `aiostreams-web-picker:${base}`;
 
-async function listProfiles(server: SavedServer): Promise<OtherServer> {
+async function listProfiles(server: SavedServer): Promise<PickerServer> {
   const stored = readCredentials(server.base);
   if (!stored) return { server, state: 'signed-out' };
   const client = new JellyfinClient(server.base, stored.token);
-  const ready = (users: PickableUser[]): OtherServer => {
+  const ready = (users: PickableUser[]): PickerServer => {
     storage.set(cacheKey(server.base), users);
     return {
       server,
@@ -49,14 +49,17 @@ async function listProfiles(server: SavedServer): Promise<OtherServer> {
   }
 }
 
-function pickerServers(current: string): SavedServer[] {
-  return savedServers().filter(
-    (s) => s.base !== current && s.onPicker !== false
-  );
+export function pickerServers(current: string): SavedServer[] {
+  const saved = savedServers();
+  if (saved.find((s) => s.base === current)?.onPicker === false) return [];
+  return saved.filter((s) => s.base !== current && s.onPicker !== false);
 }
 
-export function useOtherServers(current: string): OtherServer[] {
-  const servers = __STANDALONE__ ? pickerServers(current) : [];
+/** This server, then the others sharing its picker, each once it has answered. */
+export function usePickerProfiles(current: string): PickerServer[] {
+  const here = savedServers().filter((s) => s.base === current);
+  const servers = [...here, ...pickerServers(current)];
+  const stay = stayingUser(current);
   const results = useQueries({
     queries: servers.map((server) => ({
       queryKey: ['picker-profiles', server.base],
@@ -64,7 +67,18 @@ export function useOtherServers(current: string): OtherServer[] {
       staleTime: 60_000,
     })),
   });
-  return results.flatMap((r) => (r.data ? [r.data] : []));
+  return results.flatMap(({ data }) => {
+    if (!data) return [];
+    if (data.state !== 'ready' || data.server.base !== current) return [data];
+    return [
+      {
+        ...data,
+        users: data.users.map((u) =>
+          u.user.Id === stay ? { ...u, needs: null } : u
+        ),
+      },
+    ];
+  });
 }
 
 export function useCanSwitch(): boolean {

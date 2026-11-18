@@ -2453,6 +2453,10 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Main"
 
+#: src/app.tsx
+msgid "Manage servers"
+msgstr "Manage servers"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Mark as watched"
