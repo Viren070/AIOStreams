@@ -45,6 +45,8 @@ const statsPages = (): Track[] => [
 
 /** How long a player in its own window waits for the next episode's page. */
 const LINGER_MS = 10_000;
+/** How long a remote rests on a place before the player fetches it. */
+const HEADING_REST_MS = 250;
 let linger: ReturnType<typeof setTimeout> | undefined;
 /** What a launched player moved on to by itself, which the next page takes over. */
 let advanced: { itemId: string; sourceId: string } | null = null;
@@ -120,6 +122,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
   let statsPage: string | null = null;
   let fullscreen = false;
   let unsubscribe = () => {};
+  let heading: ReturnType<typeof setTimeout> | undefined;
 
   const load = (played: PlayedFile, append: boolean) => {
     const prefs = file?.prefs ?? {};
@@ -299,6 +302,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       if (!adopting) load(next, false);
     },
     close() {
+      clearTimeout(heading);
       unsubscribe();
       unsubscribe = () => {};
       if (statsPage) showOverlay(null);
@@ -314,7 +318,10 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       );
     },
     setPaused: (paused) => send('player-set', { paused }),
-    seek: (positionMs, snapMs) => send('player-seek', { positionMs, snapMs }),
+    seek: (positionMs, snapMs) => {
+      clearTimeout(heading);
+      send('player-seek', { positionMs, snapMs });
+    },
     setVolume: (volume, muted) => send('player-set', { volume, muted }),
     setRate: (speed) => send('player-set', { speed }),
     setAudio: (audio) => send('player-set', { audio }),
@@ -333,6 +340,19 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
+    // Only where presses rest a moment, not every place they pass.
+    prepareSeek:
+      external || appBridge()?.platform !== 'android'
+        ? undefined
+        : (positionMs) => {
+            clearTimeout(heading);
+            if (positionMs === null)
+              return send('player-prepare-seek', { positionMs });
+            heading = setTimeout(
+              () => send('player-prepare-seek', { positionMs }),
+              HEADING_REST_MS
+            );
+          },
     skipAhead:
       external || appBridge()?.platform !== 'android'
         ? undefined

@@ -553,6 +553,7 @@ export function usePlayer(
     setSubtitle,
     setSubtitleDelay: timing.setSubtitleDelay,
     skipAhead: engine.skipAhead && ((skips) => engine.skipAhead!(skips)),
+    prepareSeek: engine.prepareSeek && ((ms) => engine.prepareSeek!(ms)),
     // Also for players without styles: the page lifts the subtitle it draws for them.
     liftSubtitles: lift.set,
     canReadSubtitle: (id) =>

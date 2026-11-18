@@ -26,6 +26,8 @@ internal class Blocks {
 
     fun lastAfter(index: Long, pick: (Long) -> Boolean): Long? = blocks.tailMap(index, false).descendingKeySet().firstOrNull(pick)
 
+    fun firstBefore(index: Long, pick: (Long) -> Boolean): Long? = blocks.headMap(index, false).keys.firstOrNull(pick)
+
     /** Copies what's held from [position] in its block, 0 when nothing is. */
     fun read(position: Long, target: ByteArray, offset: Int, count: Int): Int {
         val block = blocks[position / BLOCK] ?: return 0

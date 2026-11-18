@@ -62,8 +62,12 @@ internal class Stream(
     private var landings: List<LongRange> = emptyList()
     private var discarded: List<LongRange> = emptyList()
 
-    /** What a second connection fetches: the file's index once its start shows where it is, or a landing. */
+    /** Where the page is about to seek to, which a second connection fetches at once. */
+    private var heading: LongRange? = null
+
+    /** What a second connection fetches: the file's index once its start shows where it is, a landing, or the heading. */
     private var side: LongRange? = null
+    private var sideGivesWay = false
     private var indexChecked = false
 
     /** Opens at bytes not held, which a landing's fetch gives the link up for. */
@@ -103,6 +107,19 @@ internal class Stream(
         this.landings = landings.sortedBy { it.first }.map { it.first..min(it.last, it.first + budget / LANDING_SHARE - 1) }
         runHint = -1
         changed.signalAll()
+    }
+
+    /** Gives up the fetch for an earlier heading, or a landing's, unless the player reads in it now. */
+    fun setHeading(range: LongRange?) {
+        lock.withLock {
+            val capped = range?.let { it.first..min(it.last, it.first + budget / HEADING_SHARE - 1) }
+            if (capped == heading) return
+            heading = capped
+            val task = sideTask
+            if (task != null && sideGivesWay && side?.let { readAt in it } == false) abandon(task)
+            changed.signalAll()
+        }
+        fetchHeading()
     }
 
     fun discard(range: LongRange) = lock.withLock {
@@ -150,6 +167,8 @@ internal class Stream(
     /** Where the player starts reading; the file's length after that, once the link answers. */
     fun open(position: Long): Long = lock.withLock {
         moveReader(position)
+        // Once there, it's read on to like any other.
+        if (heading?.let { position in it } == true) heading = null
         // A seek into a held skip watches it.
         skips.firstOrNull { position in it }?.let(::release)
         if (side?.let { position in it } != true && blocks.end(position) == position) misses++
@@ -292,7 +311,7 @@ internal class Stream(
             }
             val from = aheadEnd()
             val ahead = aheadBytes()
-            val high = (aheadLimit() - landingBytes()).coerceAtLeast(MIN_AHEAD_BYTES)
+            val high = (aheadLimit() - landingBytes() - headingBytes()).coerceAtLeast(MIN_AHEAD_BYTES)
             val low = lowWater(high)
             if (ahead >= high) refilling = false else if (ahead < low) refilling = true
             val done = length != C.LENGTH_UNSET.toLong() && from >= length
@@ -349,6 +368,18 @@ internal class Stream(
         fetchSide(range, "stream-cache-landing", yields = true)
     }
 
+    /** Fetches where the page heads from the first byte not held, unless another side fetch is running. */
+    private fun fetchHeading() {
+        val range = lock.withLock {
+            val target = heading ?: return
+            if (side != null) return
+            val from = blocks.end(target.first)
+            if (from > target.last) return
+            from..target.last
+        }
+        fetchSide(range, "stream-cache-heading", yields = false, givesWay = true)
+    }
+
     /** Bytes held of the next landing beyond what the reader reads on to. */
     private fun landingBytes(): Long {
         val landing = landings.firstOrNull { it.first > readAt } ?: return 0
@@ -356,12 +387,20 @@ internal class Stream(
         return min(blocks.end(landing.first), landing.last + 1) - landing.first
     }
 
-    /** [yields] stops it once the player runs dry or opens what isn't held. */
-    private fun fetchSide(range: LongRange, name: String, yields: Boolean) {
+    /** Bytes held where the page heads, outside what the reader reads on to. */
+    private fun headingBytes(): Long {
+        val target = heading ?: return 0
+        if (target.first in readAt..aheadEnd()) return 0
+        return min(blocks.end(target.first), target.last + 1) - target.first
+    }
+
+    /** [yields] stops it once the player runs dry or opens what isn't held; one that [givesWay] stops for the next heading. */
+    private fun fetchSide(range: LongRange, name: String, yields: Boolean, givesWay: Boolean = yields) {
         val task = Task()
         val missed = lock.withLock {
             if (side != null) return
             side = range
+            sideGivesWay = givesWay
             sideTask = task
             misses
         }
@@ -430,6 +469,7 @@ internal class Stream(
         var ticks = 0
         while (!closed) {
             SystemClock.sleep(WATCH_MS)
+            fetchHeading()
             fetchLanding()
             if (++ticks % MEMORY_TICKS == 0 && memory.short() && !shrink()) memory.onShort?.invoke()
             val now = SystemClock.elapsedRealtimeNanos()
@@ -523,17 +563,18 @@ internal class Stream(
         return true
     }
 
-    /** Frees the block least likely to be read: played ones past what's kept, other runs but the next landing, the rest played, then the far end. */
+    /** Frees the block least likely to be read: played ones past what's kept, other runs but the next landing, the rest played, then the far end; never where the page heads. */
     private fun evict(writing: Long): Boolean {
-        val first = blocks.first ?: return false
+        if (blocks.first == null) return false
         val reading = readAt / BLOCK
         val runEnd = (aheadEnd() - 1) / BLOCK
         val keepBehind = budget / 4 / BLOCK
         val landing = landings.firstOrNull { it.first > readAt }?.let { it.first / BLOCK..it.last / BLOCK } ?: LongRange.EMPTY
-        val spare = { index: Long -> index != writing && index != reading }
-        val victim = first.takeIf { it < reading - keepBehind }
+        val headed = heading?.let { it.first / BLOCK..it.last / BLOCK } ?: LongRange.EMPTY
+        val spare = { index: Long -> index != writing && index != reading && index !in headed }
+        val victim = blocks.firstBefore(reading - keepBehind, spare)
             ?: blocks.lastAfter(runEnd) { spare(it) && it !in landing }
-            ?: first.takeIf { it < reading }
+            ?: blocks.firstBefore(reading, spare)
             ?: blocks.lastAfter(reading, spare)
             ?: return false
         blocks.drop(victim)
@@ -567,6 +608,7 @@ internal class Stream(
         const val MEMORY_TICKS = 5
         const val STALL_NS = 8_000_000_000L
         const val LANDING_SHARE = 8
+        const val HEADING_SHARE = 10
         const val SPARE_MARGIN_US = 4_000_000L
         const val HELD_POLL_NS = 100_000_000L
         const val RECONNECTS_WINDOW_MS = 600_000L

@@ -135,6 +135,8 @@ export function useBurstSeek(
         sent: !last,
         timer: setTimeout(settle, SEEK_BURST_MS),
       };
+      // The player can fetch there while the burst waits for its last press.
+      if (!burst.current.sent) latest.current.prepareSeek?.(target);
       setHeading(target);
       setLanded(false);
     },
