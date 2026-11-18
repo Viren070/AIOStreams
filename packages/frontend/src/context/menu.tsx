@@ -149,8 +149,8 @@ const sameNav = (a: Nav, b: Nav) =>
 
 type Move = 'none' | 'fade' | 'open' | 'close' | 'push' | 'pop';
 
-/** On a phone: Home, then the page list, then a page. */
-const depthOf = (nav: Nav) => (!nav.page ? 0 : nav.page === PAGE_LIST ? 1 : 2);
+/** On a phone, left to right: the page list, Home, then a page. */
+const placeOf = (nav: Nav) => (nav.page === PAGE_LIST ? 0 : !nav.page ? 1 : 2);
 
 /** A page's own levels slide; so do a phone's Home, page list and pages. */
 function moveOf(from: Nav, to: Nav, phone: boolean): Move {
@@ -160,8 +160,8 @@ function moveOf(from: Nav, to: Nav, phone: boolean): Move {
     if (from.pageTab === to.pageTab) return 'none';
     return to.pageTab ? 'open' : 'close';
   }
-  if (phone && depthOf(from) !== depthOf(to))
-    return depthOf(to) > depthOf(from) ? 'push' : 'pop';
+  if (phone && placeOf(from) !== placeOf(to))
+    return placeOf(to) > placeOf(from) ? 'push' : 'pop';
   return 'fade';
 }
 
