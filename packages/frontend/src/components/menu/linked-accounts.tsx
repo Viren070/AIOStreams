@@ -528,7 +528,10 @@ function ManageAccountModal({
   onChanged,
 }: ManageAccountModalProps) {
   const [label, setLabel] = React.useState('');
+  const { userData } = useUserData();
+  const hasParent = Boolean(userData.parentConfig?.uuid);
   const [autoPush, setAutoPush] = React.useState(true);
+  const [pushOnParentChange, setPushOnParentChange] = React.useState(false);
   const [targets, setTargets] = React.useState<PushTarget[]>([[]]);
   const [saving, setSaving] = React.useState(false);
   const unlinkDialog = useConfirmationDialog({
@@ -552,6 +555,7 @@ function ManageAccountModal({
     if (!account) return;
     setLabel(account.label);
     setAutoPush(account.autoPush);
+    setPushOnParentChange(account.pushOnParentChange);
     const urls = account.config?.manifestUrls ?? [];
     setTargets(urls.length ? urls.map(parseVariantIds) : [[]]);
   }, [account]);
@@ -563,6 +567,7 @@ function ManageAccountModal({
       await updateLinkedAccount(credentials, account.id, {
         label,
         autoPush,
+        pushOnParentChange,
         ...(variants.length
           ? { manifestUrls: pushTargetsToUrls(targets, urlParts) }
           : {}),
@@ -610,6 +615,25 @@ function ManageAccountModal({
               onValueChange={setAutoPush}
             />
           </div>
+          {hasParent && (
+            <div className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3">
+              <div className="flex-1 pr-3">
+                <div className="text-sm font-medium text-white">
+                  Push when a parent configuration changes
+                </div>
+                <div className="mt-1 text-xs text-gray-400">
+                  When a configuration this one inherits from is saved, the
+                  server pushes this link for you, but only if your addon
+                  changed.
+                </div>
+              </div>
+              <Switch
+                id="linked-account-push-on-parent-change"
+                value={pushOnParentChange}
+                onValueChange={setPushOnParentChange}
+              />
+            </div>
+          )}
           <div className="flex justify-between gap-3">
             <Button intent="alert-subtle" onClick={unlinkDialog.open}>
               Unlink

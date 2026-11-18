@@ -1,6 +1,7 @@
 import { getDb } from '../db.js';
 import type { DbDriver } from '../driver/types.js';
 import { raw, sql } from '../sql.js';
+import { descendantsCte } from './config-parents.js';
 import {
   decryptString,
   encryptString,
@@ -19,7 +20,7 @@ import type {
 const logger = createLogger('linked-accounts');
 
 const COLUMNS =
-  'id, uuid, platform, label, identity, config, auto_push, last_synced_at, last_status, last_error, last_pushed_manifest_hash, created_at, updated_at';
+  'id, uuid, platform, label, identity, config, auto_push, push_on_parent_change, last_synced_at, last_status, last_error, last_pushed_manifest_hash, created_at, updated_at';
 
 interface LinkedAccountRow {
   id: string;
@@ -30,6 +31,7 @@ interface LinkedAccountRow {
   credentials?: string;
   config: string;
   auto_push: number | string;
+  push_on_parent_change: number | string;
   last_synced_at: number | string | null;
   last_status: string | null;
   last_error: string | null;
@@ -63,6 +65,7 @@ function toAccount(row: LinkedAccountRow): LinkedAccount {
     identity: row.identity,
     config: parseConfig(row.config),
     autoPush: Number(row.auto_push) === 1,
+    pushOnParentChange: Number(row.push_on_parent_change) === 1,
     lastSyncedAt:
       row.last_synced_at == null ? undefined : Number(row.last_synced_at),
     lastStatus: (row.last_status as LinkedAccountStatus) ?? undefined,
@@ -113,6 +116,46 @@ export class LinkedAccountRepository {
     return { ...toAccount(row), credentials: JSON.parse(decrypted.data) };
   }
 
+  /**
+   * Opted-in links of every configuration that inherits from `parentUuid`,
+   * nearest descendants first, then least recently checked, so a capped run
+   * reaches different links each time instead of always the same ones.
+   * `urls` is how many manifests a push of the link fetches.
+   */
+  static async listForParentChange(
+    parentUuid: string,
+    maxDepth: number,
+    limit: number
+  ): Promise<Array<{ uuid: string; id: string; urls: number }>> {
+    const rows = await getDb().query<{
+      uuid: string;
+      id: string;
+      config: string;
+    }>(
+      sql`WITH RECURSIVE ${descendantsCte(parentUuid, maxDepth)}
+          SELECT l.uuid, l.id, l.config FROM linked_accounts l
+            JOIN (SELECT uuid, MIN(depth) AS depth FROM descendants
+                   GROUP BY uuid) d ON d.uuid = l.uuid
+           WHERE l.push_on_parent_change = 1
+             AND l.uuid <> ${parentUuid}
+           ORDER BY d.depth, COALESCE(l.last_checked_at, 0), l.created_at, l.id
+           LIMIT ${limit}`
+    );
+    return rows.map((row) => ({
+      uuid: row.uuid,
+      id: row.id,
+      urls: parseConfig(row.config).manifestUrls.length,
+    }));
+  }
+
+  /** Stamps a push attempt, whatever its outcome. */
+  static async markChecked(uuid: string, id: string): Promise<void> {
+    await getDb().exec(
+      sql`UPDATE linked_accounts SET last_checked_at = ${Date.now()}
+           WHERE uuid = ${uuid} AND id = ${id}`
+    );
+  }
+
   static async countForUser(uuid: string): Promise<number> {
     return getDb().count(
       sql`SELECT COUNT(*) FROM linked_accounts WHERE uuid = ${uuid}`
@@ -159,6 +202,7 @@ export class LinkedAccountRepository {
     patch: {
       label?: string;
       autoPush?: boolean;
+      pushOnParentChange?: boolean;
       config?: LinkedAccountConfig;
       credentials?: Record<string, string>;
     }
@@ -167,6 +211,11 @@ export class LinkedAccountRepository {
     if (patch.label !== undefined) sets.push(sql`label = ${patch.label}`);
     if (patch.autoPush !== undefined) {
       sets.push(sql`auto_push = ${patch.autoPush ? 1 : 0}`);
+    }
+    if (patch.pushOnParentChange !== undefined) {
+      sets.push(
+        sql`push_on_parent_change = ${patch.pushOnParentChange ? 1 : 0}`
+      );
     }
     if (patch.config !== undefined) {
       sets.push(sql`config = ${JSON.stringify(patch.config)}`);

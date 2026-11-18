@@ -1,5 +1,5 @@
 export { initDb, getDb, closeDb } from './db.js';
-export { UserRepository } from './repositories/users.js';
+export { UserRepository, userConfigBus } from './repositories/users.js';
 export {
   AdminUsersRepository,
   type AdminUserListItem,
@@ -73,6 +73,7 @@ export {
   type IssuedConfigSession,
 } from './repositories/config-sessions.js';
 export { LinkedAccountRepository } from './repositories/linked-accounts.js';
+export { ConfigParentRepository } from './repositories/config-parents.js';
 export {
   JellyfinAddressRepository,
   type JellyfinAddressTarget,
