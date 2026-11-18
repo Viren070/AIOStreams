@@ -464,6 +464,35 @@ function withFolderSeason(
   return parsed;
 }
 
+/**
+ * In a pack of several seasons, an episode with no season in its name or
+ * folders is any of the files with that number: the size would pick one.
+ * Better no stream than another season's episode.
+ */
+function isEpisodeAmbiguous(
+  best: ParsedResult,
+  scored: { file: DebridFile; parsed: ParsedResult }[],
+  parsedTitle: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  const episode = metadata.episode;
+  if ((parsedTitle.seasons?.length ?? 0) < 2 || !metadata.season || !episode) {
+    return false;
+  }
+  const bare = (parsed: ParsedResult) =>
+    !parsed.seasons?.length && !!parsed.episodes?.includes(episode);
+  if (!bare(best)) return false;
+  const absolute = metadata.absoluteEpisode;
+  if (absolute && absolute !== episode && best.episodes?.includes(absolute)) {
+    return false;
+  }
+  const alike = scored.filter(
+    ({ file, parsed }) =>
+      bare(parsed) && !isSampleName(file.name) && !isCreditlessName(file.name)
+  );
+  return alike.length > 1;
+}
+
 /** Below this share of the largest video, a file is a clip, not a feature. */
 const FEATURE_MIN_SHARE = 0.1;
 
@@ -840,6 +869,15 @@ export async function selectFileInTorrentOrNZB(
       );
       report.skipped = true;
       report.skipReason = `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`;
+      await handleReport();
+      return undefined;
+    }
+    if (isEpisodeAmbiguous(parsedFile, fileScores, parsedTitle, metadata)) {
+      logger.debug(
+        `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`
+      );
+      report.skipped = true;
+      report.skipReason = `Ambiguous episode - several files of a multi-season pack are episode ${metadata.episode} with no season`;
       await handleReport();
       return undefined;
     }

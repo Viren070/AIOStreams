@@ -106,4 +106,30 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
       15
     );
   });
+
+  it('gives no file when the pack of seasons has several such episodes and no paths', async () => {
+    const files = thronesFiles(() => undefined);
+    assert.equal(await select(PACK, files, thrones(2, 13)), undefined);
+  });
+
+  it('still selects the episode of a one-season pack without paths', async () => {
+    const files = thronesFiles(() => undefined).filter((f) => f.index === 12);
+    assert.equal(
+      await select('Game of Thrones S02 2160p', files, thrones(2, 13)),
+      12
+    );
+  });
+
+  it('still selects an absolutely numbered episode in a pack of seasons', async () => {
+    const files = animeFiles([1, 2, 13, 14]).map(({ path, ...file }) => file);
+    assert.equal(
+      await select('[Grp] Show S01-S02 [1080p]', files, {
+        titles: ['Show'],
+        season: 2,
+        episode: 1,
+        absoluteEpisode: 13,
+      }),
+      13
+    );
+  });
 });
