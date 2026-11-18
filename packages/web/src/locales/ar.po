@@ -3178,10 +3178,6 @@ msgstr "متوقف مؤقتًا على {name}، عند {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "يتوقف مؤقتًا ويسأل قبل الحلقة التالية بعد تشغيل هذا العدد من الحلقات متتالية دون ضغطة مفتاح أو نقرة أو زر."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "يؤدي الإيقاف المؤقت أو التشغيل أو التخطي بجهاز التحكم أو لوحة المفاتيح إلى إظهار عناصر التحكم، للحظة بعد التخطي. وعند إيقافه، تظهر أيقونة قصيرة فقط."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "الأشخاص"
@@ -4148,10 +4144,6 @@ msgstr "إظهار الترجمة أبكر"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "إظهار الترجمة لاحقًا"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "إظهار عناصر التحكم عند الإيقاف المؤقت والتخطي"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

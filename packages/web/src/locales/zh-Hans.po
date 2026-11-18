@@ -3206,10 +3206,6 @@ msgstr "已在 {name} 处暂停，播放至 {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "连续播放达到此集数且期间没有按键、点击或按下按钮后，会暂停并在播放下一集前询问。"
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "人物"
@@ -4191,11 +4187,6 @@ msgstr "提前显示字幕"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "延后显示字幕"
-
-#: src/app/settings/player.tsx
-#, fuzzy
-msgid "Show the controls on pause and skip"
-msgstr "显示控制项"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

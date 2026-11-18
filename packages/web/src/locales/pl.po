@@ -3178,10 +3178,6 @@ msgstr "Wstrzymano na: {name}, w {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Wstrzymuje i pyta przed kolejnym odcinkiem po odtworzeniu tylu odcinków z rzędu bez naciśnięcia żadnego klawisza, kliknięcia ani użycia przycisku."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Wstrzymanie, wznowienie lub przewinięcie za pomocą pilota albo klawiatury wyświetla elementy sterujące (przy przewinięciu tylko na chwilę). Po wyłączeniu tej opcji pojawia się tylko krótka ikona."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Osoby"
@@ -4148,10 +4144,6 @@ msgstr "Pokazuj napisy wcześniej"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Pokazuj napisy później"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Wyświetlaj elementy sterujące przy wstrzymaniu i przewinięciu"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

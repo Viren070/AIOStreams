@@ -3171,10 +3171,6 @@ msgstr ""
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr ""
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr ""
@@ -4138,10 +4134,6 @@ msgstr ""
 
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
-msgstr ""
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
 msgstr ""
 
 #: src/app/settings/playback.tsx

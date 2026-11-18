@@ -3173,10 +3173,6 @@ msgstr "Pausado em {name}, na marca de {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Após a reprodução automática dessa quantidade de episódios em sequência, sem que você pressione uma tecla, clique ou aperte um botão, a reprodução é pausada e o app pergunta se você ainda está assistindo, antes de iniciar o próximo episódio."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Ao pausar, retomar ou passar para outro ponto do vídeo pelo controle remoto ou teclado, os controles aparecem. Após passar, ficam visíveis por alguns instantes. Com a opção desativada, aparece apenas um ícone rapidamente."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Pessoas"
@@ -4141,10 +4137,6 @@ msgstr "Mostrar legendas mais cedo"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Mostrar legendas mais tarde"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Mostrar os controles ao pausar, avançar ou voltar"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

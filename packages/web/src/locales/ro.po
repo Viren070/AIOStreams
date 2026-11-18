@@ -3178,10 +3178,6 @@ msgstr "În pauză la {name}, la {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Oprește redarea și solicită confirmarea înainte de episodul următor, după ce au fost redate consecutiv atâtea episoade fără nicio intervenție de la tastatură, mouse sau telecomandă."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "La pauză, la reluarea redării sau la derularea înainte și înapoi folosind telecomanda ori tastatura, comenzile playerului sunt afișate automat. După derulare, acestea rămân vizibile pentru scurt timp. Dacă dezactivezi opțiunea, va apărea doar o pictogramă temporară."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Persoane"
@@ -4148,10 +4144,6 @@ msgstr "Afișează subtitrările mai devreme"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Afișează subtitrările mai târziu"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Afișează comenzile la pauză și sărire"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

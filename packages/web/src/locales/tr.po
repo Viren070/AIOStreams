@@ -3205,10 +3205,6 @@ msgstr "{name} üzerinde, {at} konumunda duraklatıldı"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Bu sayıda bölüm art arda, tuşa basılmadan veya tıklama yapılmadan oynatıldıktan sonra duraklatır ve sonraki bölüme geçmeden önce sorar."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr ""
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Kişiler"
@@ -4187,11 +4183,6 @@ msgstr "Altyazıları öne al"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Altyazıları geriye al"
-
-#: src/app/settings/player.tsx
-#, fuzzy
-msgid "Show the controls on pause and skip"
-msgstr "Kontrolleri göster"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

@@ -3186,10 +3186,6 @@ msgstr "Dijeda di {name}, pada {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Menjeda dan meminta konfirmasi sebelum episode berikutnya setelah sejumlah episode ini diputar berturut-turut tanpa penekanan tombol atau klik."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Menjeda, memutar, atau melompat menggunakan remote atau keyboard akan menampilkan kontrol, yang tetap terlihat sesaat setelah lompatan. Jika dinonaktifkan, hanya ikon yang muncul sebentar."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Orang"
@@ -4162,10 +4158,6 @@ msgstr "Tampilkan subtitel lebih awal"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Tampilkan subtitel lebih lambat"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Tampilkan kontrol saat menjeda dan melompat"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

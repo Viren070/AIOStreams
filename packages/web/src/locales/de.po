@@ -3169,10 +3169,6 @@ msgstr "{name} bei {at} pausiert"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Pausiert vor der nächsten Folge und fragt nach, sobald so viele Folgen ohne Tasten-, Klick- oder Knopfdruck hintereinander abgespielt wurden."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Pausieren, Abspielen oder Springen per Fernbedienung oder Tastatur blendet die Bedienelemente ein. Ausgeschaltet wird nach einem Sprung nur kurz ein Symbol angezeigt."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Personen"
@@ -4135,10 +4131,6 @@ msgstr "Untertitel früher anzeigen"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Untertitel später anzeigen"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Bedienelemente beim Pausieren und Überspringen einblenden"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

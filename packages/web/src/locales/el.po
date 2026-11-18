@@ -3176,10 +3176,6 @@ msgstr "Σε παύση: {name}, στο {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Κάνει παύση και ζητά επιβεβαίωση πριν από το επόμενο επεισόδιο, όταν έχουν αναπαραχθεί τόσα επεισόδια διαδοχικά χωρίς πάτημα πλήκτρου, κλικ ή κουμπιού."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Η παύση, η αναπαραγωγή ή η μετακίνηση μέσω τηλεχειριστηρίου ή πληκτρολογίου εμφανίζουν τα στοιχεία ελέγχου, για λίγο μετά τη μετακίνηση. Αν απενεργοποιηθεί, εμφανίζεται μόνο ένα σύντομο εικονίδιο."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Πρόσωπα"
@@ -4144,10 +4140,6 @@ msgstr "Εμφάνιση υποτίτλων νωρίτερα"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Εμφάνιση υποτίτλων αργότερα"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Εμφάνιση στοιχείων ελέγχου σε παύση και μετακίνηση"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"

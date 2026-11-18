@@ -3169,10 +3169,6 @@ msgstr "Dijeda pada {name}, masa {at}"
 msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
 msgstr "Menjeda dan bertanya sebelum episod seterusnya selepas bilangan episod ini dimainkan berturut-turut tanpa sebarang tindakan."
 
-#: src/app/settings/player.tsx
-msgid "Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows."
-msgstr "Jeda, main atau melangkau dengan kawalan jauh atau papan kekunci akan memaparkan kawalan seketika selepas melangkau. Jika dimatikan, hanya ikon ringkas akan dipaparkan."
-
 #: src/app/search/page.tsx
 msgid "People"
 msgstr "Individu"
@@ -4135,10 +4131,6 @@ msgstr "Paparkan sarikata lebih awal"
 #: src/features/player/options.tsx
 msgid "Show subtitles later"
 msgstr "Paparkan sarikata lebih lambat"
-
-#: src/app/settings/player.tsx
-msgid "Show the controls on pause and skip"
-msgstr "Papar kawalan semasa jeda dan langkau"
 
 #: src/app/settings/playback.tsx
 msgid "Show the prompt"
