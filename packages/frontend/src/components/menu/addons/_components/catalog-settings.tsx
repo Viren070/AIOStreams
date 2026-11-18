@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { CatalogModification, UserData } from '@aiostreams/core';
 import { useUserData } from '@/context/userData';
+import { usePageEntered } from '@/components/shared/page-wrapper';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Checkbox } from '@aiostreams/ui/checkbox';
@@ -231,12 +232,14 @@ export function CatalogSettingsCard({
   }, [catalogs, deferredSearch, addons, type, status, newCatalogs]);
   const visibleKeys = useMemo(() => visible.map(catalogKey), [visible]);
 
-  // The first screenful mounts at once; the rest follows without blocking.
+  // The first screenful mounts at once; the rest follows without blocking,
+  // once the page has animated in.
+  const entered = usePageEntered();
   const [rowLimit, setRowLimit] = useState(FIRST_ROWS);
   useEffect(() => {
-    if (rowLimit < visible.length)
+    if (entered && rowLimit < visible.length)
       startTransition(() => setRowLimit(Number.POSITIVE_INFINITY));
-  }, [rowLimit, visible.length]);
+  }, [entered, rowLimit, visible.length]);
   const rendered = useMemo(
     () => (rowLimit < visible.length ? visible.slice(0, rowLimit) : visible),
     [visible, rowLimit]
