@@ -480,7 +480,8 @@ msgid "Added to {name}"
 msgstr "Προστέθηκε στη λίστα {name}"
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+#, fuzzy
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr "Τα πρόσθετα, οι κατάλογοι και οι χρήστες ορίζονται στη σελίδα διαμόρφωσης."
 
 #: src/app/settings/about.tsx
@@ -835,7 +836,7 @@ msgstr "Μέγεθος προσωρινής μνήμης"
 msgid "Calendar"
 msgstr "Ημερολόγιο"
 
-#: src/app/servers/page.tsx
+#: src/app/servers/page.tsx src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr "Αδυναμία επικοινωνίας"
 
@@ -1651,7 +1652,7 @@ msgstr "Κάθε {list}"
 msgid "Every {list} at {time}"
 msgstr "Κάθε {list} στις {time}"
 
-#: src/app/history/page.tsx
+#: src/app/history/page.tsx src/app/settings/page.tsx
 msgid "Everyone"
 msgstr "Όλοι"
 
@@ -2180,6 +2181,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "Συνεχίζει την αναπαραγωγή βίντεο σε μικρό παράθυρο όταν φεύγεις από την εφαρμογή."
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr "Αποθηκεύεται σε αυτή τη συσκευή."
 
@@ -2232,6 +2234,10 @@ msgstr "Να αποχωρήσεις από το {from} για να προσθέ�
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
 msgstr "Να αποχωρήσεις από το {from} για να το ανοίξεις στο {target};"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2529,7 +2535,8 @@ msgid "Navigation"
 msgstr "Πλοήγηση"
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+#, fuzzy
+msgid "Needed to switch to this profile."
 msgstr "Απαιτείται για μετάβαση σε αυτόν τον χρήστη."
 
 #: src/app/downloads/page.tsx
@@ -3045,8 +3052,9 @@ msgid "Other pages, such as settings"
 msgstr "Άλλες σελίδες, όπως οι ρυθμίσεις"
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
-msgstr "Άλλος χρήστης"
+#, fuzzy
+msgid "Other profile"
+msgstr "Άλλη εφαρμογή"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3519,6 +3527,10 @@ msgstr "Προηγούμενο τρέιλερ"
 msgid "Producer"
 msgstr "Παραγωγός"
 
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr ""
+
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
 msgstr "Επαναφέρει όλα τα πλήκτρα στην αρχική τους λειτουργία."
@@ -3916,11 +3928,15 @@ msgstr "Αποθηκεύτηκε"
 msgid "Saved to {folder}"
 msgstr "Αποθηκεύτηκε στο {folder}"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr "Αποθηκεύεται στον λογαριασμό σου και σε ακολουθεί σε κάθε συσκευή."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr "Αποθηκεύεται στον λογαριασμό σου, ώστε να χρησιμοποιείται και από τις άλλες συσκευές σου και τις εφαρμογές Jellyfin."
 
@@ -4067,6 +4083,11 @@ msgstr "Χειροκίνητος ορισμός"
 msgid "Settings"
 msgstr "Ρυθμίσεις"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Settings for"
+msgstr "Ρυθμίσεις"
+
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr "Αρχεία shader (.wgsl) για τη μηχανή WebGPU. Εφαρμόζονται στο βίντεο με αλφαβητική σειρά ονόματος και αποθηκεύονται σε αυτό το πρόγραμμα περιήγησης. Τα απαιτητικά shader μπορεί να προκαλέσουν κολλήματα."
@@ -4115,6 +4136,11 @@ msgstr "Εμφάνιση στον φάκελο"
 #: src/app/settings/playback.tsx
 msgid "Show messages over the video"
 msgstr "Εμφάνιση μηνυμάτων πάνω στο βίντεο"
+
+#: src/app/servers/page.tsx
+#, fuzzy
+msgid "Show on the profile picker"
+msgstr "Εμφάνιση προτροπής"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
@@ -4577,14 +4603,15 @@ msgstr "Σύρε πάνω ή κάτω δεξιά για την ένταση"
 msgid "Switch"
 msgstr "Εναλλαγή"
 
+#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
+#: src/components/shell/layout.tsx
+#, fuzzy
+msgid "Switch profile"
+msgstr "Αλλαγή διακομιστή"
+
 #: src/app.tsx
 msgid "Switch server"
 msgstr "Αλλαγή διακομιστή"
-
-#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
-#: src/components/shell/layout.tsx
-msgid "Switch user"
-msgstr "Αλλαγή χρήστη"
 
 #: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -4770,6 +4797,14 @@ msgstr "Το πρόγραμμα αναπαραγωγής της εφαρμογή
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
 msgstr "Η εικόνα του τρέχοντος τίτλου εμφανίζεται θολή και σκοτεινή πίσω από αυτές τις σελίδες. Εμφανίζεται και στη λίστα εκδόσεων όταν είναι ενεργή για τις σελίδες τίτλων."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
+msgstr ""
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5024,6 +5059,11 @@ msgstr "Αυτό δεν είναι αρχείο σταδίου .wgsl."
 msgid "This item was not found"
 msgstr "Αυτό το στοιχείο δεν βρέθηκε"
 
+#: src/app/sign-in/page.tsx
+#, fuzzy
+msgid "This profile has a PIN."
+msgstr "Αυτός ο χρήστης έχει PIN."
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr "Αυτή η σεζόν"
@@ -5036,7 +5076,7 @@ msgstr "Αυτός ο διακομιστής"
 msgid "This server can't list what you've watched."
 msgstr "Αυτός ο διακομιστής δεν μπορεί να εμφανίσει όσα έχεις παρακολουθήσει."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "This server doesn't let your account change these."
 msgstr "Ο διακομιστής δεν επιτρέπει στον λογαριασμό σου να αλλάξει αυτές τις ρυθμίσεις."
 
@@ -5071,10 +5111,6 @@ msgstr "Αυτό το τρέιλερ δεν αναπαράχθηκε: {failure}"
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
 msgstr "Αυτό το τρέιλερ δεν είναι πλέον διαθέσιμο."
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
-msgstr "Αυτός ο χρήστης έχει PIN."
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5341,10 +5377,6 @@ msgstr "Χρησιμοποίησε το όνομα χρήστη και το PIN 
 msgid "Used when an episode has no credits marked."
 msgstr "Χρησιμοποιείται όταν δεν έχουν επισημανθεί τίτλοι τέλους σε ένα επεισόδιο."
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr "Χρήστης"
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr "Όνομα χρήστη"
@@ -5480,7 +5512,8 @@ msgid "Watch along"
 msgstr "Παρακολούθηση μαζί"
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+#, fuzzy
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr "Παρακολούθησε ως άλλος χρήστης αυτής της διαμόρφωσης. Αν ένας χρήστης έχει PIN, θα ζητηθεί ξανά όταν επιστρέψεις σε αυτόν."
 
 #: src/app/settings/playback.tsx
@@ -5568,7 +5601,8 @@ msgid "What you can send from a party's chat."
 msgstr "Τι μπορείς να στείλεις από τη συνομιλία μιας ομαδικής προβολής."
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+#, fuzzy
+msgid "What your Discord profile shows."
 msgstr "Τι εμφανίζει το προφίλ σου στο Discord. Αποθηκεύεται σε αυτή τη συσκευή."
 
 #: src/app/settings/audio.tsx
@@ -5719,7 +5753,7 @@ msgstr "Κίτρινο"
 msgid "Yesterday"
 msgstr "Χθες"
 
-#: src/components/shell/nav/account.tsx
+#: src/app/settings/page.tsx src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx
 #: src/components/shell/nav/touch-rail.tsx src/components/shell/nav/tv-rail.tsx

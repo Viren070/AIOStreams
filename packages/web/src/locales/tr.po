@@ -482,7 +482,8 @@ msgid "Added to {name}"
 msgstr "{name} öğesine eklendi"
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+#, fuzzy
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr "Eklentiler, kataloglar ve kullanıcılar yapılandırma sayfasında ayarlanır."
 
 #: src/app/settings/about.tsx
@@ -841,7 +842,7 @@ msgstr "Önbellek boyutu"
 msgid "Calendar"
 msgstr "Takvim"
 
-#: src/app/servers/page.tsx
+#: src/app/servers/page.tsx src/app/sign-in/page.tsx
 msgid "Can’t reach"
 msgstr "Ulaşılamıyor"
 
@@ -1668,7 +1669,7 @@ msgstr "Her {list}"
 msgid "Every {list} at {time}"
 msgstr "Her {list}, saat {time}"
 
-#: src/app/history/page.tsx
+#: src/app/history/page.tsx src/app/settings/page.tsx
 msgid "Everyone"
 msgstr "Herkes"
 
@@ -2204,6 +2205,7 @@ msgid "Keeps the video playing in a small window when you leave the app."
 msgstr "Uygulamadan çıkış yapıldığı zaman videoyu küçük pencerede oynatmaya devam eder."
 
 #: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Kept on this device."
 msgstr "Bu cihazda saklanır."
 
@@ -2257,6 +2259,10 @@ msgstr "{adding} eklemek için {from} sunucusundan ayrılsın mı?"
 #: src/app.tsx
 msgid "Leave {from} to open this on {target}?"
 msgstr "Bunu {target} üzerinde açmak için {from} sunucusundan ayrılsın mı?"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr ""
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2557,7 +2563,8 @@ msgid "Navigation"
 msgstr "Navigasyon"
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+#, fuzzy
+msgid "Needed to switch to this profile."
 msgstr "Bu kullanıcıya geçmek için gerekir."
 
 #: src/app/downloads/page.tsx
@@ -3081,8 +3088,9 @@ msgid "Other pages, such as settings"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
-msgstr "Başka kullanıcı"
+#, fuzzy
+msgid "Other profile"
+msgstr "Başka uygulama"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3565,6 +3573,10 @@ msgstr "Önceki fragman"
 msgid "Producer"
 msgstr "Yapımcı"
 
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr ""
+
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
 msgstr "Tüm tuşları varsayılan hâline döndürür."
@@ -3965,11 +3977,15 @@ msgstr "Kaydedildi"
 msgid "Saved to {folder}"
 msgstr "{folder} konumuna kaydedildi"
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
 msgstr "Hesabına kaydedilir ve tüm cihazlarında kullanılır."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
 msgstr "Hesabına kaydedilir; diğer cihazlarında ve Jellyfin uygulamalarında da kullanılır."
 
@@ -4118,6 +4134,11 @@ msgstr "Elle ayarlandı"
 msgid "Settings"
 msgstr "Ayarlar"
 
+#: src/app/settings/page.tsx
+#, fuzzy
+msgid "Settings for"
+msgstr "Ayarlar"
+
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
 msgstr ""
@@ -4167,6 +4188,11 @@ msgstr "Klasörde göster"
 #: src/app/settings/playback.tsx
 msgid "Show messages over the video"
 msgstr "Mesajları videonun üzerinde göster"
+
+#: src/app/servers/page.tsx
+#, fuzzy
+msgid "Show on the profile picker"
+msgstr "Bildirimi göster"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
@@ -4634,14 +4660,15 @@ msgstr ""
 msgid "Switch"
 msgstr "Geçiş yap"
 
+#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
+#: src/components/shell/layout.tsx
+#, fuzzy
+msgid "Switch profile"
+msgstr "Sunucuyu değiştir"
+
 #: src/app.tsx
 msgid "Switch server"
 msgstr "Sunucuyu değiştir"
-
-#: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
-#: src/components/shell/layout.tsx
-msgid "Switch user"
-msgstr "Kullanıcı değiştir"
 
 #: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -4826,6 +4853,14 @@ msgstr "Uygulamanın oynatıcısı ve videoları yatay başlatma gibi seçenekle
 
 #: src/app/settings/theme.tsx
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr ""
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
 msgstr ""
 
 #: src/app/settings/account.tsx
@@ -5084,6 +5119,11 @@ msgstr ""
 msgid "This item was not found"
 msgstr "Bu öğe bulunamadı"
 
+#: src/app/sign-in/page.tsx
+#, fuzzy
+msgid "This profile has a PIN."
+msgstr "Bu kullanıcının PIN'i var."
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr "Bu sezon"
@@ -5096,7 +5136,7 @@ msgstr "Bu sunucu"
 msgid "This server can't list what you've watched."
 msgstr "Bu sunucu izlediklerini listeleyemiyor."
 
-#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
 #, fuzzy
 msgid "This server doesn't let your account change these."
 msgstr "Bu sunucu izlediklerini listeleyemiyor."
@@ -5132,10 +5172,6 @@ msgstr "Bu fragman oynatılamadı: {failure}"
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
 msgstr "Bu fragman artık mevcut değil."
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
-msgstr "Bu kullanıcının PIN'i var."
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5408,10 +5444,6 @@ msgstr "Kullanıcı adını ve PIN'ini ya da yapılandırmanın UUID'sini ve par
 msgid "Used when an episode has no credits marked."
 msgstr "Bölümde jenerik işaretlenmemişse kullanılır."
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr "Kullanıcı"
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr "Kullanıcı adı"
@@ -5549,7 +5581,8 @@ msgid "Watch along"
 msgstr "Birlikte izle"
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+#, fuzzy
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr "Bu yapılandırmadaki başka bir kullanıcı olarak izle. PIN'i olan kullanıcıdan, başka kullanıcıya geçildikten sonra yeniden PIN istenir."
 
 #: src/app/settings/playback.tsx
@@ -5638,7 +5671,8 @@ msgid "What you can send from a party's chat."
 msgstr "Birlikte izleme sohbetinden gönderebileceğin tepkiler."
 
 #: src/app/settings/apps.tsx
-msgid "What your Discord profile shows. Kept on this device."
+#, fuzzy
+msgid "What your Discord profile shows."
 msgstr "Discord profilinde gösterilen bilgiler. Bu cihazda saklanır."
 
 #: src/app/settings/audio.tsx
@@ -5789,7 +5823,7 @@ msgstr "Sarı"
 msgid "Yesterday"
 msgstr ""
 
-#: src/components/shell/nav/account.tsx
+#: src/app/settings/page.tsx src/components/shell/nav/account.tsx
 #: src/components/shell/nav/corner-menu.tsx
 #: src/components/shell/nav/mobile-nav.tsx
 #: src/components/shell/nav/touch-rail.tsx src/components/shell/nav/tv-rail.tsx
