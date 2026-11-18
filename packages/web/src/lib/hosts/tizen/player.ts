@@ -142,11 +142,14 @@ export const avPlayEngine: EngineFactory = (emit) => {
     const sx = 1920 / innerWidth;
     const sy = 1080 / innerHeight;
     const r = frame ?? { x: 0, y: 0, width: innerWidth, height: innerHeight };
+    // It refuses a rect past the screen's edges, so one that runs over moves back onto it.
+    const width = Math.min(Math.round(r.width * sx), 1920);
+    const height = Math.min(Math.round(r.height * sy), 1080);
     av.setDisplayRect(
-      Math.round(r.x * sx),
-      Math.round(r.y * sy),
-      Math.round(r.width * sx),
-      Math.round(r.height * sy)
+      Math.min(Math.max(Math.round(r.x * sx), 0), 1920 - width),
+      Math.min(Math.max(Math.round(r.y * sy), 0), 1080 - height),
+      width,
+      height
     );
   };
 
@@ -357,8 +360,10 @@ export const avPlayEngine: EngineFactory = (emit) => {
       const shown = document.createElement('object');
       object = shown;
       shown.type = 'application/avplayer';
+      // The video shows through whatever lies beneath the object, so it goes under
+      // the page's background (-z-10), whose hole then shows it.
       shown.style.cssText =
-        'position:fixed;left:0;top:0;width:100%;height:100%';
+        'position:fixed;left:0;top:0;width:100%;height:100%;z-index:-20';
       document.body.prepend(shown);
 
       const onPrepared = () => {
