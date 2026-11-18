@@ -37,8 +37,8 @@ export function rateLabel(rate: number): string {
 /** Back to a chapter's start, or the one before when it has only just begun. */
 const RESTART_CHAPTER_MS = 3000;
 
-/** `quiet` leaves the controls hidden, `brief` shows them for a moment. */
-type Outcome = boolean | void | 'quiet' | 'brief';
+/** `quiet` leaves the controls hidden. */
+type Outcome = boolean | void | 'quiet';
 
 interface PlayerKeys {
   player: PlayerController;
@@ -51,13 +51,11 @@ interface PlayerKeys {
   /** Whether the controls show, which Back hides first on a TV. */
   visible(): boolean;
   wake(): void;
-  /** Shows the controls for a moment. */
-  glance(): void;
   glancing(): boolean;
   hide(): void;
   notice(text: string): void;
   togglePlay(): void;
-  /** True when it scrubs, which shows the controls whatever the setting. */
+  /** True when it scrubs, which shows the controls. */
   seekBy(deltaMs: number, held: boolean): boolean;
   /** Plays from a remote's scrub, or drops it; false without one. */
   endScrub(commit: boolean): boolean;
@@ -180,19 +178,16 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       if (target) focusOn(target);
     };
 
-    const quietly = () =>
-      !k().visible() && !settings.controls.showOnPauseAndSkip.read();
     const playKey = (toggle: () => void): Outcome => {
-      const quiet = quietly();
+      const quiet = !k().visible();
       toggle();
       if (quiet) return 'quiet';
     };
     const skip = (sign: number, repeat: boolean): Outcome => {
       const hidden = !k().visible() || k().glancing();
-      const quiet = quietly();
       const ms = sign * settings.controls.seekStep.read() * 1000;
       if (k().seekBy(ms, repeat) || !hidden) return;
-      return quiet ? 'quiet' : 'brief';
+      return 'quiet';
     };
 
     const actions: Partial<
@@ -210,10 +205,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         // Play then takes the next press.
         if (k().visible() || (k().live && !player().state.paused))
           return focusControls();
-        return playKey(() => {
-          k().togglePlay();
-          if (settings.controls.showOnPauseAndSkip.read()) focusControls();
-        });
+        return playKey(() => k().togglePlay());
       },
       'player.playPause': () =>
         playKey(() => {
@@ -302,8 +294,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         if (keyboardFocus() && movesFocus(input)) return false;
         const outcome = run(input, repeat);
         if (outcome === false) return false;
-        if (outcome === 'brief') k().glance();
-        else if (outcome !== 'quiet') k().wake();
+        if (outcome !== 'quiet') k().wake();
       })
     );
     // A focused control keeps its key.

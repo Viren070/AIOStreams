@@ -171,7 +171,7 @@ export function PlayerControls({
     chapters ||
     listing ||
     channels ||
-    scrub !== null;
+    scrub?.resume !== undefined;
   const view = (idle: boolean, hidden: boolean) => {
     const pauseScreen =
       ready &&
@@ -338,7 +338,7 @@ export function PlayerControls({
       setScrub(null);
       if (commit && s && Math.abs(s.toMs - s.fromMs) >= 1000)
         latest.current.seek(s.toMs);
-      wake();
+      if (shown.get()) wake();
     },
     onPinch: player.fit
       ? (out) => {
@@ -358,10 +358,6 @@ export function PlayerControls({
     live,
     visible: shown.get,
     wake,
-    glance: () => {
-      wake();
-      soon(BRIEF_IDLE_MS);
-    },
     glancing: () => brief.current,
     hide,
     notice: showNotice,
