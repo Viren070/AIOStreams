@@ -57,6 +57,8 @@ export interface EmbeddedSubtitles {
   read(number: number, sink: EventSink): (() => void) | null;
   /** A Matroska file's subtitle blocks the player read with the video; from the first, no track is read for them. */
   supply(blocks: readonly SuppliedBlock[]): void;
+  /** Resume independent reads if the demuxer hands playback back to the video element. */
+  resumeFileReads(): void;
   /** `bufferedMs` is null where the player doesn't say. */
   setPosition(ms: number, bufferedMs: number | null): void;
   setPlaying(playing: boolean): void;
@@ -117,7 +119,7 @@ export function embeddedSubtitles(
   const harvests = new Map<number, SubtitleHarvest>();
   let supplied = false;
   /** Blocks that came before the file's head was read. */
-  let early: SuppliedBlock[] = [];
+  let early: SuppliedBlock[] | null = [];
   let onPosition = (_ms: number) => {};
   let hide = () => {};
 
@@ -127,11 +129,11 @@ export function embeddedSubtitles(
 
   const subtitles = openFile(reader)
     .then((opened) => {
+      const waiting = early;
+      early = null;
       if (!opened || closed) return [];
       file = opened;
-      const waiting = early;
-      early = [];
-      if (waiting.length) supply(waiting);
+      if (waiting?.length) supply(waiting);
       if (opened.matroska)
         fonts = new AttachedFonts(opened.matroska, (font) => {
           pool.push(font);
@@ -139,7 +141,10 @@ export function embeddedSubtitles(
         });
       return opened.subtitles.filter((track) => track.kind);
     })
-    .catch(() => []);
+    .catch(() => {
+      early = null;
+      return [];
+    });
 
   /** `again` sends the events still ahead after a seek back, for a sink that prunes what it passed. One track at a time. */
   const follow = (
@@ -209,7 +214,7 @@ export function embeddedSubtitles(
     if (closed) return;
     const opened = file;
     if (!opened) {
-      early = [...early, ...blocks].slice(-EARLY_BLOCKS);
+      if (early) early = [...early, ...blocks].slice(-EARLY_BLOCKS);
       return;
     }
     if (!opened.matroska) return;
@@ -322,6 +327,12 @@ export function embeddedSubtitles(
     },
     read,
     supply,
+    resumeFileReads() {
+      if (early) early = [];
+      if (!supplied) return;
+      supplied = false;
+      for (const harvest of harvests.values()) harvest.fromPlayer(false);
+    },
     index: () =>
       subtitles.then(() => {
         const opened = file;
@@ -363,6 +374,7 @@ export function embeddedSubtitles(
     setPlaying: (playing) => reader.setPlaying(playing),
     close() {
       closed = true;
+      early = null;
       hide();
       reader.close();
     },

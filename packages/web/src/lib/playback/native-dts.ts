@@ -1,4 +1,5 @@
 import { currentHost } from '@/lib/hosts';
+import type { EmbeddedSubtitles } from '@/lib/subtitles/embedded';
 import type { EngineFile } from './engine';
 
 export interface NativeDts {
@@ -29,9 +30,9 @@ export function canUseNativeDts(el: HTMLVideoElement, file: EngineFile) {
 }
 
 export async function prepareNativeDts(el: HTMLVideoElement, file: EngineFile, signal: AbortSignal,
-  failed: (error: unknown) => void): Promise<NativeDts | null> {
+  failed: (error: unknown) => void, supply?: EmbeddedSubtitles['supply']): Promise<NativeDts | null> {
   const embedded = new URL(__WEBGPU_PLAYER_MODULE__, new URL(__webpack_public_path__, location.href));
   const module = await import(/* webpackIgnore: true */ new URL('NativeDtsPlayback.js', embedded).href);
   if (signal.aborted) return null;
-  return module.prepareNativeDtsPlayback(el, file.url, file.headers, signal, failed);
+  return module.prepareNativeDtsPlayback(el, file.url, file.headers, signal, failed, supply);
 }

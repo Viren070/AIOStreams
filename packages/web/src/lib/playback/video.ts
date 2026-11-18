@@ -455,14 +455,16 @@ export function videoEngine(
         else if (canUseNativeDts(el, next)) {
           const controller = new AbortController();
           nativeLoad = controller;
+          const subtitles = embedded;
           const direct = () => {
             if (controller.signal.aborted) return;
             if (nativeDts && el.currentTime) nativeStart = el.currentTime * 1000;
             if (nativeDts) el.autoplay = !el.paused;
             dropDts();
+            subtitles?.resumeFileReads();
             el.src = next.url;
           };
-          void prepareNativeDts(el, next, controller.signal, direct).then((opened) => {
+          void prepareNativeDts(el, next, controller.signal, direct, subtitles?.supply).then((opened) => {
             if (controller.signal.aborted) return;
             if (!opened) return direct();
             nativeDts = opened;
