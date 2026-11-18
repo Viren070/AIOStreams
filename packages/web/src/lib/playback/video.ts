@@ -22,6 +22,7 @@ import type {
   EngineTrack,
 } from './engine';
 import { ownTrackLabel } from './controller';
+import { canUseNativeDts, prepareNativeDts, type NativeDts } from './native-dts';
 import {
   canFullscreen,
   isFullscreen,
@@ -150,6 +151,13 @@ export function videoEngine(
     let ownText: { el: HTMLVideoElement; track: TextTrack } | null = null;
     let stopOwnText = () => {};
     let detach = () => {};
+    let nativeDts: NativeDts | null = null;
+    let nativeLoad: AbortController | null = null;
+    const dropDts = () => {
+      nativeLoad?.abort();
+      nativeLoad = null;
+      nativeDts = null;
+    };
     let hls: { destroy(): void } | null = null;
     const dropHls = () => {
       hls?.destroy();
@@ -233,7 +241,7 @@ export function videoEngine(
     };
     const listTracks = () => {
       const audio = video.current && audioTracksOf(video.current);
-      const audioTracks = audio ? listed(audio) : [];
+      const audioTracks = nativeDts?.tracks ?? (audio ? listed(audio) : []);
       const tracks: EngineTrack[] = [
         ...audioTracks.map((t, i) => ({
           id: String(i),
@@ -251,7 +259,7 @@ export function videoEngine(
         })),
       ];
       emit({ type: 'tracks', tracks });
-      const on = audioTracks.findIndex((t) => t.enabled);
+      const on = nativeDts?.selected() ?? (audio ? listed(audio).findIndex((t) => t.enabled) : -1);
       set({ audio: on < 0 ? null : String(on) });
     };
     const onTrackLoad = () => {
@@ -316,6 +324,7 @@ export function videoEngine(
         if (!el) return;
         detach();
         dropHls();
+        dropDts();
         removeElements();
         file = next;
         delayMs = next.subtitleDelayMs;
@@ -360,12 +369,17 @@ export function videoEngine(
             endMs: ranges.end(i) * 1000,
           }));
         };
+        let nativeStart = next.startMs;
+        let nativeTracksAnnounced = false;
         const handlers: Record<string, () => void> = {
           loadedmetadata: () => {
-            if (next.startMs) el.currentTime = next.startMs / 1000;
+            if (!nativeDts && nativeStart) el.currentTime = nativeStart / 1000;
             set({ durationMs: el.duration * 1000 || 0 });
             listTracks();
-            loaded();
+            if (!nativeDts || !nativeTracksAnnounced) {
+              nativeTracksAnnounced = !!nativeDts;
+              loaded();
+            }
           },
           durationchange: () => set({ durationMs: el.duration * 1000 || 0 }),
           playing: () => {
@@ -438,13 +452,30 @@ export function videoEngine(
             if (file === next) hls = opened;
             else opened?.destroy();
           });
-        else el.src = next.url;
+        else if (canUseNativeDts(el, next)) {
+          const controller = new AbortController();
+          nativeLoad = controller;
+          const direct = () => {
+            if (controller.signal.aborted) return;
+            if (nativeDts && el.currentTime) nativeStart = el.currentTime * 1000;
+            if (nativeDts) el.autoplay = !el.paused;
+            dropDts();
+            el.src = next.url;
+          };
+          void prepareNativeDts(el, next, controller.signal, direct).then((opened) => {
+            if (controller.signal.aborted) return;
+            if (!opened) return direct();
+            nativeDts = opened;
+            opened.start(nativeStart / 1000);
+          }).catch(direct);
+        } else el.src = next.url;
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {
         detach();
         detach = () => {};
         dropHls();
+        dropDts();
         removeElements();
         file = null;
         const el = video.current;
@@ -456,10 +487,13 @@ export function videoEngine(
       setPaused(paused) {
         const el = video.current;
         if (!el) return;
+        if (nativeDts) return nativeDts.setPaused(paused);
+        if (nativeLoad) el.autoplay = !paused;
         if (paused) el.pause();
         else void el.play().catch(() => {});
       },
       seek(ms) {
+        if (nativeDts) return nativeDts.seek(ms / 1000);
         if (video.current) video.current.currentTime = ms / 1000;
       },
       setVolume(volume, muted) {
@@ -472,6 +506,14 @@ export function videoEngine(
         if (video.current) video.current.playbackRate = rate;
       },
       setAudio(id) {
+        if (nativeDts && video.current) {
+          const ordinal = Number(id);
+          if (id !== null && Number.isInteger(ordinal) && nativeDts.tracks[ordinal] && ordinal !== nativeDts.selected()) {
+            nativeDts.start(video.current.currentTime, ordinal);
+            set({ audio: id });
+          }
+          return;
+        }
         const audio = video.current && audioTracksOf(video.current);
         if (!audio) return;
         listed(audio).forEach((t, i) => (t.enabled = String(i) === id));
