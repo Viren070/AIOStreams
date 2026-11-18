@@ -63,7 +63,7 @@ function addonSetKey(presets: UserData['presets'] | undefined): string {
   );
 }
 
-function Content() {
+export function useAddonsSections() {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
@@ -390,7 +390,257 @@ function Content() {
   const addonGridClassName =
     'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 5xl:grid-cols-6 6xl:grid-cols-7 7xl:grid-cols-8 gap-4';
 
-  return (
+  const installed = (
+    <>
+      <div className="space-y-6">
+        <MyAddons onEdit={handleEditFromMyAddons} onAddCustom={openAddCustom} />
+        {userData.presets.length > 0 && mode === 'pro' && (
+          <AddonFetchingBehaviorCard />
+        )}
+      </div>
+    </>
+  );
+  const catalogs = (
+    <>
+      <div className="space-y-6">
+        {userData.presets.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-[--muted]">
+              Install some addons first to configure catalogs.
+            </p>
+          </Card>
+        ) : (
+          <>
+            <MergedCatalogsCard
+              request={mergeRequest}
+              onRequestHandled={clearMergeRequest}
+            />
+            <CatalogSettingsCard
+              loading={catalogLoading}
+              fetchCatalogsData={refreshCatalogs}
+              newCatalogs={newCatalogs}
+              upstreamKeys={upstreamKeys}
+              onMerge={setMergeRequest}
+            />
+          </>
+        )}
+      </div>
+    </>
+  );
+  const marketplace = (
+    <>
+      <div>
+        <h2>Marketplace</h2>
+        <p className="text-[--muted] text-sm">
+          Browse and install addons from the marketplace.
+          {openAddCustom && (
+            <>
+              {' '}
+              Not listed?{' '}
+              <button
+                type="button"
+                className="text-[--brand] hover:underline"
+                onClick={openAddCustom}
+              >
+                Add it by URL
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+
+      {/* Category tabs */}
+      <StaticTabs
+        className="w-fit max-w-full border rounded-full py-0"
+        triggerClass="px-4 py-1 text-sm h-full rounded-full"
+        pillClass="rounded-full border-transparent"
+        items={[
+          {
+            name: 'All',
+            isCurrent: marketplaceCategoryFilter === 'all',
+            onClick: () => setMarketplaceCategoryFilter('all'),
+          },
+          {
+            name: 'Streams',
+            isCurrent:
+              marketplaceCategoryFilter === constants.PresetCategory.STREAMS,
+            onClick: () =>
+              setMarketplaceCategoryFilter(constants.PresetCategory.STREAMS),
+          },
+          {
+            name: 'Subtitles',
+            isCurrent:
+              marketplaceCategoryFilter === constants.PresetCategory.SUBTITLES,
+            onClick: () =>
+              setMarketplaceCategoryFilter(constants.PresetCategory.SUBTITLES),
+          },
+          {
+            name: 'Metadata & Catalogs',
+            isCurrent:
+              marketplaceCategoryFilter ===
+              constants.PresetCategory.META_CATALOGS,
+            onClick: () =>
+              setMarketplaceCategoryFilter(
+                constants.PresetCategory.META_CATALOGS
+              ),
+          },
+          {
+            name: 'Miscellaneous',
+            isCurrent:
+              marketplaceCategoryFilter === constants.PresetCategory.MISC,
+            onClick: () =>
+              setMarketplaceCategoryFilter(constants.PresetCategory.MISC),
+          },
+        ]}
+      />
+
+      {/* Filters and search row */}
+      <div className="flex flex-col lg:flex-row gap-2">
+        <div className="flex gap-2 flex-1 lg:flex-none">
+          <Select
+            value={serviceFilter}
+            onValueChange={setServiceFilter}
+            options={[
+              { label: 'All Services', value: 'all' },
+              ...serviceOptions,
+            ]}
+            fieldClass="lg:w-[200px]"
+          />
+          <Select
+            value={streamTypeFilter}
+            onValueChange={setStreamTypeFilter}
+            options={[
+              { label: 'All Types', value: 'all' },
+              ...streamTypeOptions,
+            ]}
+            fieldClass="lg:w-[200px]"
+          />
+        </div>
+        <TextInput
+          value={search}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearch(e.target.value)
+          }
+          placeholder="Search addons..."
+          className="flex-1"
+          leftIcon={<SearchIcon className="w-4 h-4" />}
+        />
+      </div>
+
+      {/* Addon cards by category */}
+      {filteredPresets.length === 0 && (
+        <Card className="p-8 text-center space-y-3">
+          <p className="text-[--muted]">
+            No addons found matching your criteria.
+          </p>
+          {openAddCustom && (
+            <Button
+              size="sm"
+              intent="gray-outline"
+              rounded
+              onClick={openAddCustom}
+            >
+              Add one by URL
+            </Button>
+          )}
+        </Card>
+      )}
+
+      {!!streamPresets?.length && (
+        <Card className="p-4 space-y-6">
+          <h3 className="flex gap-3 items-center">
+            <RiFolderDownloadFill /> Streams
+          </h3>
+          <div className={addonGridClassName}>
+            {streamPresets.map((preset: any) => (
+              <AddonCard
+                key={preset.ID}
+                preset={preset}
+                onAdd={() => handleAddPreset(preset)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {!!subtitlePresets?.length && (
+        <Card className="p-4 space-y-6">
+          <h3 className="flex gap-3 items-center">
+            <MdSubtitles /> Subtitles
+          </h3>
+          <div className={addonGridClassName}>
+            {subtitlePresets.map((preset: any) => (
+              <AddonCard
+                key={preset.ID}
+                preset={preset}
+                onAdd={() => handleAddPreset(preset)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {!!metaCatalogPresets?.length && (
+        <Card className="p-4 space-y-6">
+          <h3 className="flex gap-3 items-center">
+            <MdOutlineDataset /> Metadata & Catalogs
+          </h3>
+          <div className={addonGridClassName}>
+            {metaCatalogPresets.map((preset: any) => (
+              <AddonCard
+                key={preset.ID}
+                preset={preset}
+                onAdd={() => handleAddPreset(preset)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {!!miscPresets?.length && (
+        <Card className="p-4 space-y-6">
+          <h3 className="flex gap-3 items-center">
+            <LuSettings /> Miscellaneous
+          </h3>
+          <div className={addonGridClassName}>
+            {miscPresets.map((preset: any) => (
+              <AddonCard
+                key={preset.ID}
+                preset={preset}
+                onAdd={() => handleAddPreset(preset)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
+  );
+  const modals = (
+    <>
+      {/* Add/Edit Addon Modal (ensure both tabs can use it)*/}
+      <AddonModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        mode={modalMode}
+        presetMetadata={modalPreset}
+        initialValues={modalInitialValues as any}
+        onSubmit={handleModalSubmit}
+      />
+      <AddCustomAddonModal
+        open={addCustomOpen}
+        onOpenChange={setAddCustomOpen}
+        onSubmit={(options) => {
+          if (!customPreset) return;
+          installPreset(customPreset, {
+            ...defaultOptions(customPreset),
+            ...options,
+          });
+          setAddCustomOpen(false);
+        }}
+      />
+    </>
+  );
+  const classic = (
     <>
       <div className="flex items-center justify-between gap-2">
         <StaticTabs
@@ -451,47 +701,13 @@ function Content() {
                     value: 'addons',
                     label: 'Addons',
                     icon: <IoExtensionPuzzle className="w-4 h-4" />,
-                    content: (
-                      <div className="space-y-6">
-                        <MyAddons
-                          onEdit={handleEditFromMyAddons}
-                          onAddCustom={openAddCustom}
-                        />
-                        {userData.presets.length > 0 && mode === 'pro' && (
-                          <AddonFetchingBehaviorCard />
-                        )}
-                      </div>
-                    ),
+                    content: installed,
                   },
                   {
                     value: 'catalogs',
                     label: 'Catalogs',
                     icon: <MdOutlineDataset className="w-4 h-4" />,
-                    content: (
-                      <div className="space-y-6">
-                        {userData.presets.length === 0 ? (
-                          <Card className="p-8 text-center">
-                            <p className="text-[--muted]">
-                              Install some addons first to configure catalogs.
-                            </p>
-                          </Card>
-                        ) : (
-                          <>
-                            <MergedCatalogsCard
-                              request={mergeRequest}
-                              onRequestHandled={clearMergeRequest}
-                            />
-                            <CatalogSettingsCard
-                              loading={catalogLoading}
-                              fetchCatalogsData={refreshCatalogs}
-                              newCatalogs={newCatalogs}
-                              upstreamKeys={upstreamKeys}
-                              onMerge={setMergeRequest}
-                            />
-                          </>
-                        )}
-                      </div>
-                    ),
+                    content: catalogs,
                   },
                 ]}
               />
@@ -510,227 +726,18 @@ function Content() {
             key="marketplace"
             className="pt-0 space-y-6 relative z-[4]"
           >
-            <>
-              <div>
-                <h2>Marketplace</h2>
-                <p className="text-[--muted] text-sm">
-                  Browse and install addons from the marketplace.
-                  {openAddCustom && (
-                    <>
-                      {' '}
-                      Not listed?{' '}
-                      <button
-                        type="button"
-                        className="text-[--brand] hover:underline"
-                        onClick={openAddCustom}
-                      >
-                        Add it by URL
-                      </button>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {/* Category tabs */}
-              <StaticTabs
-                className="w-fit max-w-full border rounded-full py-0"
-                triggerClass="px-4 py-1 text-sm h-full rounded-full"
-                pillClass="rounded-full border-transparent"
-                items={[
-                  {
-                    name: 'All',
-                    isCurrent: marketplaceCategoryFilter === 'all',
-                    onClick: () => setMarketplaceCategoryFilter('all'),
-                  },
-                  {
-                    name: 'Streams',
-                    isCurrent:
-                      marketplaceCategoryFilter ===
-                      constants.PresetCategory.STREAMS,
-                    onClick: () =>
-                      setMarketplaceCategoryFilter(
-                        constants.PresetCategory.STREAMS
-                      ),
-                  },
-                  {
-                    name: 'Subtitles',
-                    isCurrent:
-                      marketplaceCategoryFilter ===
-                      constants.PresetCategory.SUBTITLES,
-                    onClick: () =>
-                      setMarketplaceCategoryFilter(
-                        constants.PresetCategory.SUBTITLES
-                      ),
-                  },
-                  {
-                    name: 'Metadata & Catalogs',
-                    isCurrent:
-                      marketplaceCategoryFilter ===
-                      constants.PresetCategory.META_CATALOGS,
-                    onClick: () =>
-                      setMarketplaceCategoryFilter(
-                        constants.PresetCategory.META_CATALOGS
-                      ),
-                  },
-                  {
-                    name: 'Miscellaneous',
-                    isCurrent:
-                      marketplaceCategoryFilter ===
-                      constants.PresetCategory.MISC,
-                    onClick: () =>
-                      setMarketplaceCategoryFilter(
-                        constants.PresetCategory.MISC
-                      ),
-                  },
-                ]}
-              />
-
-              {/* Filters and search row */}
-              <div className="flex flex-col lg:flex-row gap-2">
-                <div className="flex gap-2 flex-1 lg:flex-none">
-                  <Select
-                    value={serviceFilter}
-                    onValueChange={setServiceFilter}
-                    options={[
-                      { label: 'All Services', value: 'all' },
-                      ...serviceOptions,
-                    ]}
-                    fieldClass="lg:w-[200px]"
-                  />
-                  <Select
-                    value={streamTypeFilter}
-                    onValueChange={setStreamTypeFilter}
-                    options={[
-                      { label: 'All Types', value: 'all' },
-                      ...streamTypeOptions,
-                    ]}
-                    fieldClass="lg:w-[200px]"
-                  />
-                </div>
-                <TextInput
-                  value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setSearch(e.target.value)
-                  }
-                  placeholder="Search addons..."
-                  className="flex-1"
-                  leftIcon={<SearchIcon className="w-4 h-4" />}
-                />
-              </div>
-
-              {/* Addon cards by category */}
-              {filteredPresets.length === 0 && (
-                <Card className="p-8 text-center space-y-3">
-                  <p className="text-[--muted]">
-                    No addons found matching your criteria.
-                  </p>
-                  {openAddCustom && (
-                    <Button
-                      size="sm"
-                      intent="gray-outline"
-                      rounded
-                      onClick={openAddCustom}
-                    >
-                      Add one by URL
-                    </Button>
-                  )}
-                </Card>
-              )}
-
-              {!!streamPresets?.length && (
-                <Card className="p-4 space-y-6">
-                  <h3 className="flex gap-3 items-center">
-                    <RiFolderDownloadFill /> Streams
-                  </h3>
-                  <div className={addonGridClassName}>
-                    {streamPresets.map((preset: any) => (
-                      <AddonCard
-                        key={preset.ID}
-                        preset={preset}
-                        onAdd={() => handleAddPreset(preset)}
-                      />
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {!!subtitlePresets?.length && (
-                <Card className="p-4 space-y-6">
-                  <h3 className="flex gap-3 items-center">
-                    <MdSubtitles /> Subtitles
-                  </h3>
-                  <div className={addonGridClassName}>
-                    {subtitlePresets.map((preset: any) => (
-                      <AddonCard
-                        key={preset.ID}
-                        preset={preset}
-                        onAdd={() => handleAddPreset(preset)}
-                      />
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {!!metaCatalogPresets?.length && (
-                <Card className="p-4 space-y-6">
-                  <h3 className="flex gap-3 items-center">
-                    <MdOutlineDataset /> Metadata & Catalogs
-                  </h3>
-                  <div className={addonGridClassName}>
-                    {metaCatalogPresets.map((preset: any) => (
-                      <AddonCard
-                        key={preset.ID}
-                        preset={preset}
-                        onAdd={() => handleAddPreset(preset)}
-                      />
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {!!miscPresets?.length && (
-                <Card className="p-4 space-y-6">
-                  <h3 className="flex gap-3 items-center">
-                    <LuSettings /> Miscellaneous
-                  </h3>
-                  <div className={addonGridClassName}>
-                    {miscPresets.map((preset: any) => (
-                      <AddonCard
-                        key={preset.ID}
-                        preset={preset}
-                        onAdd={() => handleAddPreset(preset)}
-                      />
-                    ))}
-                  </div>
-                </Card>
-              )}
-            </>
+            <>{marketplace}</>
           </PageWrapper>
         )}
       </AnimatePresence>
-      {/* Add/Edit Addon Modal (ensure both tabs can use it)*/}
-      <AddonModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        mode={modalMode}
-        presetMetadata={modalPreset}
-        initialValues={modalInitialValues as any}
-        onSubmit={handleModalSubmit}
-      />
-      <AddCustomAddonModal
-        open={addCustomOpen}
-        onOpenChange={setAddCustomOpen}
-        onSubmit={(options) => {
-          if (!customPreset) return;
-          installPreset(customPreset, {
-            ...defaultOptions(customPreset),
-            ...options,
-          });
-          setAddCustomOpen(false);
-        }}
-      />
+      {modals}
     </>
   );
+  return { installed, catalogs, marketplace, modals, classic };
+}
+
+function Content() {
+  return useAddonsSections().classic;
 }
 
 function defaultOptions(preset: any): Record<string, any> {
