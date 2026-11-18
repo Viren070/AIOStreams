@@ -173,8 +173,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   const { status } = useStatus();
   const user = useUserData();
   const statsAvailable =
-    status?.settings.userAnalyticsEnabled === true &&
-    Boolean(user.uuid && user.password);
+    status?.settings.userAnalyticsEnabled === true && Boolean(user.uuid);
 
   const menus = useMemo(() => {
     let availableMenus = VALID_MENUS as readonly MenuId[];

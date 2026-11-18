@@ -40,12 +40,12 @@ export function StatsContent() {
   const user = useUserData();
   const [range, setRange] = React.useState<'24h' | '7d'>('7d');
 
-  const isSignedIn = Boolean(user.uuid && user.password);
+  const isSignedIn = Boolean(user.uuid);
   const enabledOnInstance = status?.settings.userAnalyticsEnabled === true;
 
   const query = useQuery({
     queryKey: ['user-analytics', user.uuid, range],
-    queryFn: () => fetchUserAnalytics(user.uuid!, user.password!, range),
+    queryFn: () => fetchUserAnalytics(user.uuid!, user.password, range),
     enabled: isSignedIn && enabledOnInstance,
     refetchOnWindowFocus: false,
     staleTime: 30_000,

@@ -147,8 +147,7 @@ export function CommandPalette() {
   const { status } = useStatus();
   const user = useUserData();
   const statsAvailable =
-    status?.settings.userAnalyticsEnabled === true &&
-    Boolean(user.uuid && user.password);
+    status?.settings.userAnalyticsEnabled === true && Boolean(user.uuid);
   const [query, setQuery] = useState('');
   // Keeps typing responsive while the (much larger) result list renders at a
   // lower priority.
