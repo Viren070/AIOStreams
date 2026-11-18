@@ -816,7 +816,7 @@ export function AppBlock({
               >
                 {layout === 'new'
                   ? 'Profiles and trackers'
-                  : 'Users, trackers and playback'}
+                  : 'Profiles, trackers and playback'}
               </Button>
               <Button
                 size="sm"
@@ -999,7 +999,7 @@ export function StremioInstall({
           <p className="text-xs text-gray-500 ml-1">
             Install manually to Stremio or any Stremio addon compatible client.
             {usingAlias &&
-              ' Your profile alias stands in for the UUID and password; the long URL still works.'}
+              ' Your alias stands in for the UUID and password; the long URL still works.'}
           </p>
           <CompatibleClientLogos />
         </div>
@@ -1156,7 +1156,7 @@ function DangerZoneCard({
               Change Password
             </Button>
             <Button intent="alert" rounded onClick={onDeleteUserOpen}>
-              Delete User
+              Delete Configuration
             </Button>
           </>
         )}
@@ -2595,7 +2595,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
             {aliasForInstall
               ? ' Your alias stands in for the UUID and password; the long address still works.'
               : sessionUser
-                ? ' A share alias in your profile makes it short enough to type on a TV.'
+                ? ' A share alias on the saved configuration makes it short enough to type on a TV.'
                 : ''}
           </p>
         </div>
@@ -3526,7 +3526,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
               },
               {
                 value: 'users',
-                label: 'Users',
+                label: 'Profiles',
                 content: <ProfileList />,
               },
               {

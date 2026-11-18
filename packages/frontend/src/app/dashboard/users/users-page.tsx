@@ -156,9 +156,9 @@ export function UsersPage() {
   return (
     <PageWrapper className="p-4 sm:p-8 space-y-4">
       <div>
-        <h2>Users</h2>
+        <h2>Configurations</h2>
         <p className="text-[--muted]">
-          {d ? `${d.total} configured users` : 'Browse user configs'}
+          {d ? `${d.total} configurations` : 'Browse configurations'}
         </p>
       </div>
 

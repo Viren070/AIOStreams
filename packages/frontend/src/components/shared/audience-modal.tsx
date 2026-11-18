@@ -113,7 +113,7 @@ export function AudienceModal({
   const conditional = who.conditional(target.toggles);
   const groups = [
     {
-      title: 'Users',
+      title: 'Profiles',
       rows: who.audiences.flatMap((a, i) => (a.kind === 'user' ? [i] : [])),
     },
     {

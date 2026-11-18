@@ -116,7 +116,7 @@ export function ConfigModal({
           toast.error(
             err instanceof Error
               ? `Loaded, but not saved: ${err.message}`
-              : 'Loaded, but could not be saved as a profile'
+              : 'Loaded, but could not be saved to your account'
           );
         }
       }
@@ -175,11 +175,9 @@ export function ConfigModal({
       queryClient.invalidateQueries({
         queryKey: configProfilesQuery.queryKey,
       });
-      toast.success(`Deleted profile "${profile.label}"`);
+      toast.success(`Removed "${profile.label}" from your account`);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to delete profile'
-      );
+      toast.error(err instanceof Error ? err.message : 'Failed to remove it');
     } finally {
       setDeletingId(null);
       setPendingDelete(null);
@@ -250,7 +248,7 @@ export function ConfigModal({
         {hasProfiles && (
           <div className="space-y-2">
             <p className="text-sm text-[--muted]">
-              Your profiles
+              Saved configurations
               {sessionUser ? ` (${sessionUser.username})` : ''}
             </p>
             <ul className="space-y-1">
@@ -261,8 +259,8 @@ export function ConfigModal({
                     className="flex flex-wrap items-center gap-2 rounded-[--radius] border border-[--border] px-3 py-2"
                   >
                     <span className="flex-1 min-w-0 text-sm">
-                      Delete <b>{profile.label}</b>? The configuration itself is
-                      kept.
+                      Remove <b>{profile.label}</b> from your account? The
+                      configuration itself is kept.
                     </span>
                     <Button
                       type="button"
@@ -271,7 +269,7 @@ export function ConfigModal({
                       loading={deletingId === profile.id}
                       onClick={() => handleDelete(profile)}
                     >
-                      Delete
+                      Remove
                     </Button>
                     <Button
                       type="button"
@@ -311,7 +309,7 @@ export function ConfigModal({
                       intent="alert-subtle"
                       size="sm"
                       disabled={busyProfileId !== null || deletingId !== null}
-                      aria-label={`Delete profile ${profile.label}`}
+                      aria-label={`Remove ${profile.label} from your account`}
                       onClick={() => setPendingDelete(profile)}
                     />
                   </li>
@@ -362,7 +360,7 @@ export function ConfigModal({
             {sessionUser && (
               <div className="space-y-2">
                 <Checkbox
-                  label="Save as a profile"
+                  label="Save to your account"
                   value={saveToAccount}
                   onValueChange={(v) => setSaveToAccount(v === true)}
                 />
