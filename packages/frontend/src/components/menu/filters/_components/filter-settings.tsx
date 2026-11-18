@@ -173,7 +173,7 @@ export function FilterSettings<T extends string>({
               <Combobox
                 label={`Included ${filterName}`}
                 value={included}
-                help={`Included ${filterName.toLowerCase()} will be included regardless of ANY other exclude/required filters, not just for ${filterName.toLowerCase()}`}
+                help={`Streams with these ${filterName.toLowerCase()} skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply.`}
                 onValueChange={(values) => {
                   setIncluded(values as T[]);
                   onIncludedChange(values as T[]);

@@ -457,7 +457,7 @@ export async function validateConfig(
 
   if (needTmdb && !tmdbAuth) {
     throw new Error(
-      'A TMDB API key or access token is required for the following features: title matching, year matching, and digital release filter'
+      'A TMDB API key or access token is required for the following features: title matching, year matching, digital release filter, and bitrate from metadata runtime'
     );
   }
 

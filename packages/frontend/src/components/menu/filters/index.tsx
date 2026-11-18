@@ -1208,7 +1208,7 @@ export function useFilterSections(): {
                         }
                         minStepsBetweenThumbs={1}
                         label="Included Seeder Range"
-                        help="Streams with seeders in this range will be included, ignoring ANY other exclude/required filters, not just for this filter"
+                        help="Streams with seeders in this range skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
                       />
                       <div className="flex justify-between mt-1 text-xs text-[--muted]">
                         <span>
@@ -1471,7 +1471,7 @@ export function useFilterSections(): {
                         }
                         minStepsBetweenThumbs={1}
                         label="Included Age Range"
-                        help="Streams with age in this range will be included even if they would be excluded otherwise"
+                        help="Streams with age in this range skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
                       />
                       <div className="flex justify-between mt-1 text-xs text-[--muted]">
                         <span>
@@ -1536,7 +1536,7 @@ export function useFilterSections(): {
                   value: type,
                 }))}
                 defaultValue={['usenet']}
-                value={userData.ageRangeTypes || ['usenet']}
+                value={userData.ageRangeTypes ?? []}
                 onValueChange={(value) => {
                   setUserData((prev) => ({
                     ...prev,
@@ -1557,7 +1557,7 @@ export function useFilterSections(): {
           <SettingsCard
             id="titleMatching"
             title="Title Matching"
-            description="Any streams which don't specifically match the requested title will be filtered out. You can optionally choose to only apply it to specific request types and addons. This requires a TMDB Read Access Token to be set in the Services menu."
+            description="Any streams which don't specifically match the requested title will be filtered out. You can optionally choose to only apply it to specific request types and addons. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
           >
             <Switch
               label="Enabled"
@@ -1719,7 +1719,7 @@ export function useFilterSections(): {
           <SettingsCard
             id="yearMatching"
             title="Year Matching"
-            description="Any streams which don't specifically match the requested year will be filtered out. You can optionally choose to only apply it to specific request types and addons"
+            description="Any streams which don't specifically match the requested year will be filtered out. You can optionally choose to only apply it to specific request types and addons. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
           >
             <Switch
               label="Enable"
@@ -2487,7 +2487,7 @@ export function useFilterSections(): {
           {mode === 'pro' && (
             <TextInputs
               label="Included Keywords"
-              help="Streams that contain any of these keywords will be included, ignoring ANY other exclude/required filters, not just for this filter"
+              help="Streams that contain any of these keywords skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
               itemName="Keyword"
               values={userData.includedKeywords || []}
               onValuesChange={(values) => {
@@ -2548,7 +2548,7 @@ export function useFilterSections(): {
           />
           <TextInputs
             label="Included Release Groups"
-            help="Streams from these release groups will be included, ignoring ANY other exclude/required filters, not just for this filter"
+            help="Streams from these release groups skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
             itemName="Release Group"
             values={userData.includedReleaseGroups || []}
             onValuesChange={(values) => {
@@ -2690,7 +2690,7 @@ export function useFilterSections(): {
             <TextInputs
               label="Included Regex"
               fieldName="includedRegexPatterns"
-              help="Streams that match any of these regular expressions will be included, ignoring other exclude/required filters"
+              help="Streams that match any of these regular expressions skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
               itemName="Regex"
               values={userData.includedRegexPatterns || []}
               onValuesChange={(values) => {
@@ -2754,7 +2754,7 @@ export function useFilterSections(): {
           />
           <RankedRegexInputs
             title="Ranked Regex Patterns"
-            description="Add regex patterns with scores. Matches on filename only. Accumulates scores."
+            description="Add regex patterns with scores. Matches on the filename and folder name. Accumulates scores."
             values={userData.rankedRegexPatterns || []}
             onValuesChange={(values) => {
               setUserData((prev) => ({
@@ -2820,7 +2820,7 @@ export function useFilterSections(): {
             <Switch
               label="Use Runtime from Metadata Providers"
               side="right"
-              help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size."
+              help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
               value={userData.bitrate?.useMetadataRuntime ?? true}
               onValueChange={(value) => {
                 setUserData((prev: any) => ({
@@ -3317,7 +3317,7 @@ export function useFilterSections(): {
                 <Select
                   disabled={!userData.deduplicator?.enabled}
                   label="Cached Results"
-                  value={userData.deduplicator?.cached ?? 'disabled'}
+                  value={userData.deduplicator?.cached ?? 'per_addon'}
                   options={[
                     { label: 'Disabled', value: 'disabled' },
                     { label: 'Single Result', value: 'single_result' },
@@ -3341,7 +3341,7 @@ export function useFilterSections(): {
                 <Select
                   disabled={!userData.deduplicator?.enabled}
                   label="Uncached Results"
-                  value={userData.deduplicator?.uncached ?? 'disabled'}
+                  value={userData.deduplicator?.uncached ?? 'per_addon'}
                   options={[
                     { label: 'Disabled', value: 'disabled' },
                     { label: 'Single Result', value: 'single_result' },
@@ -3365,7 +3365,7 @@ export function useFilterSections(): {
                 <Select
                   disabled={!userData.deduplicator?.enabled}
                   label="P2P Results"
-                  value={userData.deduplicator?.p2p ?? 'disabled'}
+                  value={userData.deduplicator?.p2p ?? 'per_addon'}
                   options={[
                     { label: 'Disabled', value: 'disabled' },
                     { label: 'Single Result', value: 'single_result' },
@@ -3577,7 +3577,7 @@ export function useFilterSections(): {
                             },
                             {
                               type: 'usenet_age' as const,
-                              position: 'after_addon' as const,
+                              position: 'before_addon' as const,
                             },
                           ];
                           const filtered = existing.filter(
@@ -3709,7 +3709,7 @@ export function useFilterSections(): {
           <SettingsCard
             id="digitalReleaseFilter"
             title="Digital Release Filter"
-            description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime)."
+            description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime). Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
           >
             <Switch
               label="Enabled"

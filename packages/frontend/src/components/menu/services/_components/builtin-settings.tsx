@@ -454,7 +454,7 @@ export function CacheAndPlayCard() {
         multiple
         emptyMessage="No stream types found"
         defaultValue={['usenet']}
-        value={userData.cacheAndPlay?.streamTypes ?? ['usenet']}
+        value={userData.cacheAndPlay?.streamTypes ?? []}
         onValueChange={(value) => {
           setUserData((prev) => ({
             ...prev,
