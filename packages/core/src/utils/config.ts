@@ -1539,7 +1539,8 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 // prettier-ignore
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
-  'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
+  'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams',
+  'precacheNextEpisode', 'precacheSelector', 'precacheSingleStream',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'newCatalogsDisabled', 'upstreamCatalogOrder', 'mergedCatalogs',
   'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
 ];

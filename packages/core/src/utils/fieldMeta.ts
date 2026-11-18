@@ -83,7 +83,6 @@ type IgnoredKeys =
   | 'ip'
   | 'addonCategories'
   | 'appliedTemplates'
-  | 'precacheNextEpisode'
   | 'alwaysPrecache'
   | 'precacheCondition';
 
@@ -234,6 +233,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   hideErrorsForResources: { label: 'Hide Errors for Resources', group: 'misc', type: 'list', menu: 'miscellaneous', subTab: 'display', sectionId: 'hideErrors' },
   externalDownloads: { label: 'External Downloads', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'display' },
   preloadStreams: { label: 'Preload Streams', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
+  precacheNextEpisode: { label: 'Precache Next Episode', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSelector: { label: 'Precache Selector', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
   precacheSingleStream: { label: 'Precache Single Stream', group: 'misc', type: 'scalar', menu: 'miscellaneous', subTab: 'background' },
 
