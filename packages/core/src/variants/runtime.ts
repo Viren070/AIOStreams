@@ -197,18 +197,8 @@ export function applyVariants(
     applied.push(variant.id.toLowerCase());
   }
 
-  // Scripts cannot name this path, but `set jellyfin = ...` could still replace it.
-  if (userData.jellyfin?.personas) {
-    result.jellyfin = {
-      ...result.jellyfin,
-      personas: userData.jellyfin.personas,
-    };
-  } else if (result.jellyfin?.personas) {
-    result.jellyfin = { ...result.jellyfin, personas: undefined };
-  }
-  const pinned = withOwnAccountLock(result, userData);
-  pinned.activeVariants = applied;
-  return { userData: pinned, applied, notes };
+  result.activeVariants = applied;
+  return { userData: result, applied, notes };
 }
 
 /**
@@ -658,16 +648,3 @@ export function knownHealthCheckIds(userData: UserData): string[] {
 }
 
 export type { HealthResult, VariantRequestContext };
-
-/** The account's PIN is always the config's own, whatever else was merged or applied. */
-export function withOwnAccountLock(result: UserData, own: UserData): UserData {
-  const lock = own.jellyfin?.primary?.lock;
-  if (result.jellyfin?.primary?.lock === lock) return result;
-  return {
-    ...result,
-    jellyfin: {
-      ...result.jellyfin,
-      primary: { ...result.jellyfin?.primary, lock },
-    },
-  };
-}

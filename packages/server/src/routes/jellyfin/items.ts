@@ -380,7 +380,7 @@ export async function userViews(
 }
 
 export function playlistOwner(ctx: JellyfinRequestContext): PlaylistOwner {
-  return { uuid: ctx.uuid, persona: ctx.persona?.id ?? '' };
+  return { uuid: ctx.uuid, persona: ctx.profile.id };
 }
 
 /** A playlist, pictured by its first title, or that episode's show. */
@@ -989,7 +989,7 @@ function rememberMarker(ctx: JellyfinRequestContext, itemId: string): string {
     uuid: ctx.uuid,
     encryptedPassword: ctx.encryptedPassword,
     itemId,
-    persona: ctx.persona?.id,
+    persona: ctx.profile.id || undefined,
   }).catch(() => undefined);
   return marker;
 }

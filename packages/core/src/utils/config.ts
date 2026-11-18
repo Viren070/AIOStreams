@@ -32,8 +32,8 @@ import {
   knownHealthCheckIds,
   validateConditionalActivation,
   validateVariants,
-  withOwnAccountLock,
 } from '../variants/runtime.js';
+import { isOwner, migrateProfiles } from './profiles.js';
 import { parseSyncedUrl } from './sync/index.js';
 import { ZodError } from 'zod';
 import {
@@ -279,18 +279,10 @@ export async function validateConfig(
       }
     }
   };
-  const personas = config.jellyfin?.personas ?? [];
-  checkLinked('The primary user', config.jellyfin?.primary?.variants ?? []);
-  for (const persona of personas) {
-    checkLinked(`Persona "${persona.name}"`, persona.variants ?? []);
-  }
-  const primaryName = config.jellyfin?.primary?.name?.trim().toLowerCase();
-  if (
-    primaryName &&
-    personas.some((p) => p.name.trim().toLowerCase() === primaryName)
-  ) {
-    throw new Error(
-      `A persona and the primary user share the name "${config.jellyfin?.primary?.name}"`
+  for (const profile of config.profiles ?? []) {
+    checkLinked(
+      isOwner(profile) ? 'The owner' : `Profile "${profile.name}"`,
+      profile.variants ?? []
     );
   }
 
@@ -571,12 +563,9 @@ function removeInvalidPresetReferences(config: UserData) {
     );
   }
   // An emptied list stays None: automatic could take trackers others picked.
-  for (const user of [
-    config.jellyfin?.primary,
-    ...(config.jellyfin?.personas ?? []),
-  ]) {
-    if (user?.trackers) {
-      user.trackers = user.trackers.filter((id) =>
+  for (const profile of config.profiles ?? []) {
+    if (profile.trackers) {
+      profile.trackers = profile.trackers.filter((id) =>
         existingPresetIds?.includes(id)
       );
     }
@@ -621,6 +610,8 @@ export function applyMigrations(config: any): UserData {
         break;
     }
   }
+
+  migrateProfiles(config);
 
   if (typeof config.digitalReleaseFilter === 'boolean') {
     const oldValue = config.digitalReleaseFilter;
@@ -1564,7 +1555,7 @@ const BRANDING_FIELDS: (keyof UserData)[] = [
 // so a parent's would target fields the child lacks.
 // prettier-ignore
 const PERSONAL_FIELDS: (keyof UserData)[] = [
-  'appliedTemplates', 'variants', 'healthChecks',
+  'appliedTemplates', 'variants', 'healthChecks', 'profiles',
 ];
 
 /**
@@ -1741,15 +1732,5 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
       }
     }
   }
-
-  // Personas key this config's own rows and name its own variants.
-  if (child.jellyfin?.personas) {
-    result.jellyfin = {
-      ...result.jellyfin,
-      personas: child.jellyfin.personas,
-    };
-  } else if (result.jellyfin?.personas) {
-    result.jellyfin = { ...result.jellyfin, personas: undefined };
-  }
-  return withOwnAccountLock(result, child);
+  return result;
 }

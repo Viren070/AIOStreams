@@ -8,6 +8,7 @@ import {
   decodeItemId,
   personaUserId,
   pickImage,
+  profilesOf,
   recallImages,
   resolveByMediaSource,
   type ContentDescriptor,
@@ -16,7 +17,6 @@ import {
   contextFromCredentials,
   jfOptional,
   param,
-  personasOf,
   qi,
   qs,
   resolveConfig,
@@ -342,16 +342,10 @@ router.get(
       ? []
       : mount
         ? pickerListed(mount, userData)
-        : [null, ...personasOf(userData)];
-    const user = users.find(
-      (p) => uuid && personaUserId(uuid, p?.id ?? '') === wanted
-    );
-    const avatar =
-      user === undefined
-        ? undefined
-        : user
-          ? user.avatar
-          : userData?.jellyfin?.primary?.avatar;
+        : profilesOf(userData);
+    const avatar = users.find(
+      (p) => uuid && personaUserId(uuid, p.id) === wanted
+    )?.avatar;
     if (!avatar) {
       res.status(404).end();
       return;

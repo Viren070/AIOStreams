@@ -248,6 +248,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   serviceWrap: { label: 'Service Wrap', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   cacheAndPlay: { label: 'Cache and Play', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   jellyfin: { label: 'Jellyfin', group: 'misc', type: 'scalar', menu: 'save-install', keywords: ['jellyfin', 'swiftfin', 'streamyfin', 'findroid', 'infuse', 'kodi'] },
+  profiles: { label: 'Profiles', group: 'misc', type: 'list', identityKey: 'id', menu: 'save-install', keywords: ['users', 'household', 'pin', 'trackers'], ignoreForParentConfig: true },
   autoRemoveDownloads: { label: 'Auto Remove Downloads', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
   checkOwned: { label: 'Check Owned', group: 'misc', type: 'scalar', menu: 'services', subTab: 'builtin' },
 

@@ -3,7 +3,6 @@ import {
   AIOStreams,
   APIError,
   Cache,
-  accountScope,
   activateVariants,
   config as appConfig,
   constants,
@@ -14,7 +13,12 @@ import {
   isConfigUuid,
   isEncrypted,
   JellyfinAddressRepository,
-  PERSONA_PIN_PATTERN,
+  PROFILE_PIN_PATTERN,
+  isOwner,
+  ownerOf,
+  ownerScope,
+  profileById,
+  profilesOf,
   verifyHash,
   mintToken,
   readToken,
@@ -30,7 +34,7 @@ import {
   type ClientInfo,
   type ItemBuildContext,
   type JellyfinApiKey,
-  type JellyfinPersona,
+  type Profile,
   exposedCatalogs,
   guessLeaf,
   leafEvidenceFor,
@@ -59,11 +63,10 @@ export interface JellyfinRequestContext {
   encryptedPassword: string;
   userData: UserData;
   userId: string;
-  /** Who is signed in; null for the account. */
-  persona: JellyfinPersona | null;
+  profile: Profile;
   /** Set for API-key requests, which act for any user the URL names. */
   apiKey: JellyfinApiKey | null;
-  /** The history in use: the account's when the persona shares it. */
+  /** The history in use: the owner's when the profile shares it. */
   watch: WatchScope;
   serverId: string;
   /** Absolute origin plus mount path, e.g. https://host/jellyfin */
@@ -72,8 +75,8 @@ export interface JellyfinRequestContext {
   client: ClientInfo;
   build: ItemBuildContext;
   engine(): Promise<AIOStreams>;
-  /** The primary user's configuration, whose sinks are the ones trackers sync with. */
-  primaryEngine(): Promise<AIOStreams>;
+  /** The owner's configuration, whose sinks are the ones trackers sync with. */
+  ownerEngine(): Promise<AIOStreams>;
   /** Playback memos are keyed by this, so a config change never reuses them. */
   scope(): string;
   /** Metas fetched while serving this request, keyed `type|id`. */
@@ -255,7 +258,7 @@ export async function resolveConfigFor(
 export interface TokenUser {
   uuid: string;
   userData: UserData;
-  persona: JellyfinPersona | null;
+  profile: Profile;
   userId: string;
   watch: WatchScope;
   payload: TokenPayload;
@@ -272,78 +275,43 @@ export async function userForToken(token: string): Promise<TokenUser | null> {
   const resolved = await resolveConfigFor(payload.u, payload.p);
   if (!resolved) return null;
   const { uuid, userData } = resolved;
-  const persona = payload.k ? personaById(userData, payload.k) : null;
-  if (payload.k && !persona) return null;
-  if ((payload.l ?? '') !== lockTag(userData, persona)) return null;
+  const profile = profileById(userData, payload.k ?? '');
+  if (!profile) return null;
+  if ((payload.l ?? '') !== lockTag(profile)) return null;
   return {
     uuid,
     userData,
-    persona,
-    userId: personaUserId(uuid, persona?.id ?? ''),
-    watch: watchScopeOf(uuid, persona),
+    profile,
+    userId: personaUserId(uuid, profile.id),
+    watch: watchScopeOf(uuid, profile),
     payload,
   };
 }
 
-/** A persona with a history of its own keeps its watch state and preferences apart. */
-export function watchScopeOf(
-  uuid: string,
-  persona: JellyfinPersona | null | undefined
-): WatchScope {
-  return persona && persona.history !== 'shared'
-    ? { uuid, persona: persona.id }
-    : accountScope(uuid);
+export function watchScopeOf(uuid: string, profile: Profile): WatchScope {
+  return profile.history === 'shared'
+    ? ownerScope(uuid)
+    : { uuid, persona: profile.id };
 }
 
-export function personasOf(userData: UserData): JellyfinPersona[] {
-  return userData.jellyfin?.personas ?? [];
-}
-
-export function personaById(
-  userData: UserData,
-  id: string
-): JellyfinPersona | null {
-  return personasOf(userData).find((p) => p.id === id) ?? null;
-}
-
-/** What a client types or posts back: the id, or the name it was shown. */
-export function personaByName(
+/** What a client types or posts back for a profile other than the owner: its id or name. */
+export function profileByName(
   userData: UserData,
   name: string
-): JellyfinPersona | null {
+): Profile | null {
   const wanted = name.trim().toLowerCase();
   if (!wanted) return null;
   return (
-    personasOf(userData).find(
-      (p) => p.id === wanted || p.name.trim().toLowerCase() === wanted
+    profilesOf(userData).find(
+      (p) =>
+        !isOwner(p) &&
+        (p.id === wanted || p.name?.trim().toLowerCase() === wanted)
     ) ?? null
   );
 }
 
-export function personaLocked(
-  persona: JellyfinPersona | null | undefined
-): boolean {
-  return !!persona?.lock;
-}
-
-/** The PIN hash of a persona, or of the account for `null`. */
-function lockOf(
-  userData: Pick<UserData, 'jellyfin'>,
-  persona: JellyfinPersona | null
-): string | undefined {
-  return persona ? persona.lock : userData.jellyfin?.primary?.lock;
-}
-
-export function accountLocked(userData: Pick<UserData, 'jellyfin'>): boolean {
-  return !!lockOf(userData, null);
-}
-
-export function lockTag(
-  userData: Pick<UserData, 'jellyfin'>,
-  persona: JellyfinPersona | null
-): string {
-  const lock = lockOf(userData, persona);
-  return lock ? getSimpleTextHash(lock).slice(0, 12) : '';
+export function lockTag(profile: Profile): string {
+  return profile.lock ? getSimpleTextHash(profile.lock).slice(0, 12) : '';
 }
 
 /** Sent when the credential was right but a PIN is missing or wrong, so a client can ask for it. */
@@ -352,26 +320,22 @@ export const PIN_REQUIRED = 'PIN required';
 // Shared across replicas when Redis is set, so a guess cannot be spread over them.
 const pinAttempts = attemptLimiter(15 * 60, 5, 'jellyfin-pin');
 
-/**
- * Whether `pin` opens the user, a persona or the account for `null`. Past the
- * attempt limit even the right PIN is refused for a while.
- */
+/** Past the attempt limit even the right PIN is refused for a while. */
 export async function userUnlocks(
   uuid: string,
-  userData: Pick<UserData, 'jellyfin'>,
-  persona: JellyfinPersona | null,
+  profile: Profile,
   pin: string
 ): Promise<boolean> {
-  const lock = lockOf(userData, persona);
+  const lock = profile.lock;
   if (!lock) return true;
   // No PIN at all is a prompt, not a guess.
   if (!pin) return false;
-  const key = `${uuid}:${persona?.id ?? ''}`;
+  const key = `${uuid}:${profile.id}`;
   if (!(await pinAttempts.take(key))) {
-    logger.warn({ uuid, persona: persona?.id }, 'user pin locked out');
+    logger.warn({ uuid, profile: profile.id }, 'profile pin locked out');
     return false;
   }
-  if (PERSONA_PIN_PATTERN.test(pin) && (await verifyHash(pin, lock))) {
+  if (PROFILE_PIN_PATTERN.test(pin) && (await verifyHash(pin, lock))) {
     await pinAttempts.reset(key);
     return true;
   }
@@ -493,14 +457,12 @@ function urlUserId(req: Request): string | undefined {
   return raw ? raw.replace(/-/g, '').toLowerCase() : undefined;
 }
 
-/** Null for the primary user, undefined when the id is nobody's. */
 function userForId(
   uuid: string,
   userData: UserData,
   userId: string
-): JellyfinPersona | null | undefined {
-  if (userId === personaUserId(uuid, '')) return null;
-  return personasOf(userData).find((p) => personaUserId(uuid, p.id) === userId);
+): Profile | undefined {
+  return profilesOf(userData).find((p) => personaUserId(uuid, p.id) === userId);
 }
 
 interface ApiKeyClaim {
@@ -525,7 +487,7 @@ async function buildContext(
   encryptedPassword: string,
   token: string | undefined,
   client: ClientInfo,
-  personaKey: string,
+  profileId: string,
   keyClaim?: ApiKeyClaim,
   /** The token's PIN tag; absent when the context is not built from a token. */
   lockClaim?: string
@@ -536,25 +498,26 @@ async function buildContext(
   const baseUserData = userData;
 
   let apiKey: JellyfinApiKey | null = null;
-  let persona: JellyfinPersona | null;
+  let profile: Profile;
   if (keyClaim) {
     apiKey =
       userData.jellyfin?.apiKeys?.find((k) => k.id === keyClaim.id) ?? null;
     if (!apiKey) return null;
     const named = keyClaim.userId
       ? userForId(uuid, userData, keyClaim.userId)
-      : null;
-    // A key goes to a tool, not a person, so it must not open a PIN.
-    if (named === undefined || personaLocked(named)) return UNKNOWN_USER;
-    persona = named;
+      : ownerOf(userData);
+    // A key goes to a tool, not a person, so it must not open a PIN. It acts
+    // as the owner, whose configuration it already holds.
+    if (!named || (!isOwner(named) && named.lock)) return UNKNOWN_USER;
+    profile = named;
   } else {
-    // A token naming a persona that no longer exists is no longer valid.
-    persona = personaKey ? personaById(userData, personaKey) : null;
-    if (personaKey && !persona) return null;
-    if (lockClaim !== undefined && lockClaim !== lockTag(userData, persona))
-      return null;
+    // A token naming a profile that no longer exists is no longer valid.
+    const found = profileById(userData, profileId);
+    if (!found) return null;
+    if (lockClaim !== undefined && lockClaim !== lockTag(found)) return null;
+    profile = found;
   }
-  const primaryVariants = userData.jellyfin?.primary?.variants ?? [];
+  const ownerVariants = ownerOf(userData).variants ?? [];
   const request = buildVariantRequestContext(req, 'jellyfin');
   const variantContext = {
     ...request,
@@ -578,7 +541,7 @@ async function buildContext(
       logger.warn(
         {
           uuid,
-          persona: persona?.id,
+          profile: profile.id,
           variants: selected,
           err: error instanceof Error ? error.message : String(error),
         },
@@ -587,14 +550,12 @@ async function buildContext(
       return baseUserData;
     }
   };
-  userData = await configFor(
-    persona ? (persona.variants ?? []) : primaryVariants
-  );
+  userData = await configFor(profile.variants ?? []);
 
   const serverIdValue = instanceServerId();
   const baseUrl = `${requestOrigin(req)}${req.baseUrl}`.replace(/\/$/, '');
   let engine: Promise<AIOStreams> | null = null;
-  let primaryEngine: Promise<AIOStreams> | null = null;
+  let ownerEngine: Promise<AIOStreams> | null = null;
   let scope: string | null = null;
   let views: Promise<ViewEntry[]> | null = null;
   let leafEvidence: Promise<LeafEvidence> | null = null;
@@ -613,18 +574,18 @@ async function buildContext(
       guess: (entry: { id: string; type: string }) =>
         guessLeaf(entry, (type, id) => engine.canGetMeta(type, id)),
     })));
-  const getPrimaryEngine = () => {
-    if (!persona) return getEngine();
-    return (primaryEngine ??= configFor(primaryVariants).then(engineOf));
+  const getOwnerEngine = () => {
+    if (isOwner(profile)) return getEngine();
+    return (ownerEngine ??= configFor(ownerVariants).then(engineOf));
   };
-  const userId = personaUserId(uuid, persona?.id ?? '');
-  const watch = watchScopeOf(uuid, persona);
+  const userId = personaUserId(uuid, profile.id);
+  const watch = watchScopeOf(uuid, profile);
   return {
     uuid,
     encryptedPassword,
     userData: finalUserData,
     userId,
-    persona,
+    profile,
     apiKey,
     watch,
     serverId: serverIdValue,
@@ -635,8 +596,8 @@ async function buildContext(
         u: uuid,
         p: encryptedPassword,
         d: client.deviceId,
-        k: persona?.id,
-        l: lockTag(baseUserData, persona) || undefined,
+        k: profile.id || undefined,
+        l: lockTag(profile) || undefined,
       }),
     client,
     build: {
@@ -647,7 +608,7 @@ async function buildContext(
       markUnaired: finalUserData.jellyfin?.markUnaired ?? false,
     },
     engine: getEngine,
-    primaryEngine: getPrimaryEngine,
+    ownerEngine: getOwnerEngine,
     metas: new Map(),
     views: getViews,
     leafEvidence: getLeafEvidence,
@@ -816,13 +777,13 @@ export function jfOptional(
 
 /**
  * Builds a context from stored credentials, for routes with no Jellyfin token.
- * The account unless a persona is named; null when that persona is gone.
+ * The owner unless a profile is named; null when that profile is gone.
  */
 export async function contextFromCredentials(
   req: Request,
   uuid: string,
   encryptedPassword: string,
-  personaKey = ''
+  profileId = ''
 ): Promise<JellyfinRequestContext | null> {
   const ctx = await buildContext(
     req,
@@ -835,7 +796,7 @@ export async function contextFromCredentials(
       deviceId: 'unknown',
       version: '0',
     },
-    personaKey
+    profileId
   );
   return ctx === UNKNOWN_USER ? null : ctx;
 }

@@ -45,7 +45,7 @@ export function useAudiences(): Audiences {
   const jellyfinEnabled = status?.settings.jellyfin?.enabled ?? false;
   const {
     variants,
-    jellyfin,
+    profiles,
     addonName,
     presets,
     catalogModifications,
@@ -53,8 +53,8 @@ export function useAudiences(): Audiences {
   } = userData;
 
   const audiences = useMemo(
-    () => listAudiences({ variants, jellyfin, addonName }, jellyfinEnabled),
-    [variants, jellyfin, addonName, jellyfinEnabled]
+    () => listAudiences({ variants, profiles, addonName }, jellyfinEnabled),
+    [variants, profiles, addonName, jellyfinEnabled]
   );
   const available =
     allowed && audiences.some((a) => a.kind === 'link' || !!a.userId);

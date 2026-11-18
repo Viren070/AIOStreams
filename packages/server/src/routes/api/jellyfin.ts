@@ -7,6 +7,8 @@ import {
   createLogger,
   encryptString,
   mintToken,
+  ownerOf,
+  profileById,
   quickConnectAuthorize,
   quickConnectByCode,
   UserRepository,
@@ -15,11 +17,7 @@ import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
 import { attachSession } from '../../middlewares/auth.js';
 import { resolveConfigCredentials } from '../../utils/basic-auth.js';
 import { createResponse } from '../../utils/responses.js';
-import {
-  accountLocked,
-  resolveConfig,
-  userUnlocks,
-} from '../jellyfin/context.js';
+import { resolveConfig, userUnlocks } from '../jellyfin/context.js';
 import { authenticationResult, userDto } from '../jellyfin/users.js';
 
 const logger = createLogger('jellyfin');
@@ -35,7 +33,7 @@ const codeField = z
 
 const approveBody = z.object({
   code: codeField,
-  /** Which of the configuration's personas the device signs in as. */
+  /** Which of the configuration's profiles the device signs in as; absent is the owner. */
   persona: z
     .string()
     .regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)
@@ -95,51 +93,26 @@ router.post('/quickconnect/approve', async (req, res, next) => {
     }
     await UserRepository.verifyUser(creds.uuid, creds.password);
     const config = await UserRepository.getUser(creds.uuid, creds.password);
-    if (!parsed.data.persona && config) {
-      if (
-        !(await userUnlocks(creds.uuid, config, null, parsed.data.pin ?? ''))
-      ) {
-        next(
-          new APIError(
-            constants.ErrorCode.UNAUTHORIZED,
-            undefined,
-            'Wrong PIN for this user'
-          )
-        );
-        return;
-      }
-    }
-    if (parsed.data.persona) {
-      const persona = config?.jellyfin?.personas?.find(
-        (p) => p.id === parsed.data.persona
+    const profile = config && profileById(config, parsed.data.persona ?? '');
+    if (!profile) {
+      next(
+        new APIError(
+          constants.ErrorCode.BAD_REQUEST,
+          undefined,
+          'Unknown profile'
+        )
       );
-      if (!persona) {
-        next(
-          new APIError(
-            constants.ErrorCode.BAD_REQUEST,
-            undefined,
-            'Unknown persona'
-          )
-        );
-        return;
-      }
-      if (
-        !(await userUnlocks(
-          creds.uuid,
-          config!,
-          persona,
-          parsed.data.pin ?? ''
-        ))
-      ) {
-        next(
-          new APIError(
-            constants.ErrorCode.UNAUTHORIZED,
-            undefined,
-            'Wrong PIN for this user'
-          )
-        );
-        return;
-      }
+      return;
+    }
+    if (!(await userUnlocks(creds.uuid, profile, parsed.data.pin ?? ''))) {
+      next(
+        new APIError(
+          constants.ErrorCode.UNAUTHORIZED,
+          undefined,
+          'Wrong PIN for this profile'
+        )
+      );
+      return;
     }
     const enc = encryptString(creds.password);
     if (!enc.success || !enc.data) {
@@ -386,7 +359,8 @@ router.post('/web/token', async (req, res, next) => {
       next(new APIError(constants.ErrorCode.UNAUTHORIZED));
       return;
     }
-    if (accountLocked(userData)) {
+    const owner = ownerOf(userData);
+    if (owner.lock) {
       const pin = String(
         (req.body as { pin?: unknown } | undefined)?.pin ?? ''
       );
@@ -397,8 +371,8 @@ router.post('/web/token', async (req, res, next) => {
             success: true,
             data: {
               needsPin: true,
-              User: userDto(creds.uuid, userData, null),
-              avatar: userData.jellyfin?.primary?.avatar ?? null,
+              User: userDto(creds.uuid, userData, owner),
+              avatar: owner.avatar ?? null,
               branding: {
                 name: userData.addonName ?? null,
                 logo: userData.addonLogo ?? null,
@@ -408,12 +382,12 @@ router.post('/web/token', async (req, res, next) => {
         );
         return;
       }
-      if (!(await userUnlocks(creds.uuid, userData, null, pin))) {
+      if (!(await userUnlocks(creds.uuid, owner, pin))) {
         next(
           new APIError(
             constants.ErrorCode.UNAUTHORIZED,
             undefined,
-            'Wrong PIN for this user'
+            'Wrong PIN for this profile'
           )
         );
         return;
@@ -427,7 +401,7 @@ router.post('/web/token', async (req, res, next) => {
           creds.uuid,
           enc.data,
           userData,
-          null
+          owner
         ),
       })
     );

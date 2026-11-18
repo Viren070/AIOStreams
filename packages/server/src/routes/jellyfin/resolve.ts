@@ -412,7 +412,7 @@ async function resolveUncached(
   };
   keepEnrichedSubtitles(memo, await resolveByItem(ctx.uuid, scope, itemId));
   if (moreSources.length) await writeMoreSources(memo.psid, moreSources);
-  await writePlaybackMemo(memo, scope, ctx.persona?.id);
+  await writePlaybackMemo(memo, scope, ctx.profile.id || undefined);
   if (!playableSources(sources).length) {
     const reason = (streamsRes?.errors ?? [])
       .map((e) => [e.title, e.description].filter(Boolean).join(': '))
@@ -480,7 +480,7 @@ export async function enrichSourceSubtitles(
     { itemId: memo.itemId, msid: record.msid, added },
     'file-matched subtitles merged'
   );
-  await writePlaybackMemo(memo, ctx.scope(), ctx.persona?.id);
+  await writePlaybackMemo(memo, ctx.scope(), ctx.profile.id || undefined);
 }
 
 export async function applyProbedMediaInfo(
@@ -506,7 +506,7 @@ export async function applyProbedMediaInfo(
     { itemId: memo.itemId, msid: record.msid },
     'stored media info applied on play'
   );
-  await writePlaybackMemo(memo, ctx.scope(), ctx.persona?.id);
+  await writePlaybackMemo(memo, ctx.scope(), ctx.profile.id || undefined);
 }
 
 export function resolveMarkerId(

@@ -72,7 +72,7 @@ router.post(
       ? await quickConnectAuthorize(code, {
           uuid: ctx.uuid,
           encryptedPassword: ctx.encryptedPassword,
-          persona: ctx.persona?.id,
+          persona: ctx.profile.id || undefined,
         })
       : null;
     res.json(!!entry);

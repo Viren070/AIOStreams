@@ -42,6 +42,7 @@ export * from './seadex.js';
 export * from './time.js';
 export * from './fieldMeta.js';
 export * from './user-scope.js';
+export * from './profiles.js';
 export * from './xml.js';
 export { config as appConfig } from '../config/index.js';
 export * from './formatter-definitions.js';

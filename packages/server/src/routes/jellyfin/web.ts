@@ -1,21 +1,24 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
-  accountScope,
   appReportBodySchema,
   AppReportsDisabledError,
   config as appConfig,
   createLogger,
   getWatchStateProvider,
+  isOwner,
+  isSeparate,
   itemIdForWatchRow,
   PlaybackHandoffRepository,
   personaUserId,
+  profileById,
+  profilesOf,
   readToken,
   submitAppReport,
   UserRepository,
   WatchSessionRepository,
   WatchStateRepository,
-  type JellyfinPersona,
+  type Profile,
   type WatchHistoryCursor,
   type WatchScope,
   type WatchStateRow,
@@ -23,11 +26,8 @@ import {
 import {
   bodyOf,
   jf,
-  accountLocked,
-  personaById,
-  personaLocked,
   userUnlocks,
-  personasOf,
+  watchScopeOf,
   qi,
   qs,
   type JellyfinRequestContext,
@@ -75,60 +75,46 @@ function web(
 }
 
 interface WebUser {
-  persona: JellyfinPersona | null;
+  profile: Profile;
   id: string;
   /** The history this user reads and writes. */
   scope: WatchScope;
 }
 
 function usersOf(ctx: JellyfinRequestContext): WebUser[] {
-  const account = accountScope(ctx.uuid);
-  return [
-    { persona: null, id: personaUserId(ctx.uuid, ''), scope: account },
-    ...personasOf(ctx.userData).map((p) => ({
-      persona: p,
-      id: personaUserId(ctx.uuid, p.id),
-      scope:
-        p.history === 'shared' ? account : { uuid: ctx.uuid, persona: p.id },
-    })),
-  ];
+  return profilesOf(ctx.userData).map((profile) => ({
+    profile,
+    id: personaUserId(ctx.uuid, profile.id),
+    scope: watchScopeOf(ctx.uuid, profile),
+  }));
 }
 
 function ownsScope(user: WebUser): boolean {
-  return user.scope.persona === (user.persona?.id ?? '');
+  return user.scope.persona === user.profile.id;
 }
 
-/**
- * Who the caller may read here: a persona only itself, the configuration's own
- * user everyone, as it is the one that holds the personas.
- */
+/** Who the caller may read here: a profile only itself, the owner everyone. */
 function visibleUsers(ctx: JellyfinRequestContext): WebUser[] {
   const users = usersOf(ctx);
-  if (!ctx.persona) return users;
-  return users.filter((u) => u.persona?.id === ctx.persona?.id);
+  if (isOwner(ctx.profile)) return users;
+  return users.filter((u) => u.profile.id === ctx.profile.id);
 }
 
-/** A session that began with the configuration password, or is the account itself. */
+/** A session that began with the configuration password, or is the owner's. */
 function provedPassword(ctx: JellyfinRequestContext): boolean {
-  return !ctx.persona || readToken(ctx.token)?.o === 1;
-}
-
-function isCaller(ctx: JellyfinRequestContext, user: WebUser): boolean {
-  return (user.persona?.id ?? '') === (ctx.persona?.id ?? '');
+  return isOwner(ctx.profile) || readToken(ctx.token)?.o === 1;
 }
 
 type Secret = 'pin' | 'password' | 'password-pin';
 
 /** What switching to `user` asks of the caller. */
 function secretFor(ctx: JellyfinRequestContext, user: WebUser): Secret | null {
-  const locked = user.persona
-    ? personaLocked(user.persona)
-    : accountLocked(ctx.userData);
+  const locked = !!user.profile.lock;
   // A PIN is asked on every switch, to the signed-in user too, or handing over
-  // a signed-in device would hand over the account.
-  if (isCaller(ctx, user)) return locked ? 'pin' : null;
-  // A persona session may have begun with its PIN alone.
-  if (!provedPassword(ctx) && (!user.persona || !locked)) {
+  // a signed-in device would hand over the owner.
+  if (user.profile.id === ctx.profile.id) return locked ? 'pin' : null;
+  // A profile's session may have begun with its PIN alone.
+  if (!provedPassword(ctx) && (isOwner(user.profile) || !locked)) {
     return locked ? 'password-pin' : 'password';
   }
   return locked ? 'pin' : null;
@@ -148,22 +134,14 @@ async function secretOpens(
   secret: string
 ): Promise<boolean> {
   if (needs === 'pin') {
-    return userUnlocks(ctx.uuid, ctx.userData, user.persona, secret);
+    return userUnlocks(ctx.uuid, user.profile, secret);
   }
   if (needs === 'password') return passwordOpens(ctx, secret);
   const slash = secret.lastIndexOf('/');
   if (slash <= 0) return false;
   return (
     (await passwordOpens(ctx, secret.slice(0, slash))) &&
-    userUnlocks(ctx.uuid, ctx.userData, user.persona, secret.slice(slash + 1))
-  );
-}
-
-function avatarOf(ctx: JellyfinRequestContext, user: WebUser): string | null {
-  return (
-    (user.persona
-      ? user.persona.avatar
-      : ctx.userData.jellyfin?.primary?.avatar) ?? null
+    userUnlocks(ctx.uuid, user.profile, secret.slice(slash + 1))
   );
 }
 
@@ -196,9 +174,9 @@ router.get(
     const users = visibleUsers(ctx);
     const [counts, rows] = await Promise.all([
       WatchStateRepository.historyCounts(ctx.uuid),
-      ctx.persona
-        ? []
-        : WatchSessionRepository.listForUuid(ctx.uuid, SESSIONS_LIMIT),
+      isOwner(ctx.profile)
+        ? WatchSessionRepository.listForUuid(ctx.uuid, SESSIONS_LIMIT)
+        : [],
     ]);
     const idleSince =
       Date.now() - appConfig.watchState.sessionIdleTimeout * 1000;
@@ -206,9 +184,11 @@ router.get(
       rows
         .filter((row) => row.endedAt == null && row.lastCheckinAt >= idleSince)
         .map((row) => {
-          const key = row.userPersona ?? row.persona;
-          const user = key ? personaById(ctx.userData, key) : null;
-          return key && !user ? null : sessionFromRow(ctx, row, user, null);
+          const user = profileById(
+            ctx.userData,
+            row.userPersona ?? row.persona
+          );
+          return user ? sessionFromRow(ctx, row, user, null) : null;
         })
     );
     const playing = sessions.filter((s) => s !== null);
@@ -226,12 +206,10 @@ router.get(
     };
     res.json({
       users: users.map((u) => ({
-        user: userDto(ctx.uuid, ctx.userData, u.persona),
-        avatar: avatarOf(ctx, u),
-        hidden: !!u.persona?.hidden,
-        locked: u.persona
-          ? personaLocked(u.persona)
-          : accountLocked(ctx.userData),
+        user: userDto(ctx.uuid, ctx.userData, u.profile),
+        avatar: u.profile.avatar ?? null,
+        hidden: isSeparate(u.profile),
+        locked: !!u.profile.lock,
         historyOf: personaUserId(ctx.uuid, u.scope.persona),
         counts: ownsScope(u) ? (byScope.get(u.scope.persona) ?? none) : null,
       })),
@@ -242,9 +220,7 @@ router.get(
 
 /** Who the caller may switch to; a separate user is reached only by its own sign-in. */
 function switchable(ctx: JellyfinRequestContext): WebUser[] {
-  return usersOf(ctx).filter((u) =>
-    listedFor(ctx.userData, ctx.persona, u.persona)
-  );
+  return usersOf(ctx).filter((u) => listedFor(ctx.profile, u.profile));
 }
 
 router.get(
@@ -252,9 +228,9 @@ router.get(
   web(async (_req, res, ctx) => {
     res.json(
       switchable(ctx).map((u) => ({
-        user: userDto(ctx.uuid, ctx.userData, u.persona),
-        avatar: avatarOf(ctx, u),
-        hidden: !!u.persona?.hidden,
+        user: userDto(ctx.uuid, ctx.userData, u.profile),
+        avatar: u.profile.avatar ?? null,
+        hidden: isSeparate(u.profile),
         needs: secretFor(ctx, u),
       }))
     );
@@ -413,7 +389,7 @@ router.get(
       users: owners.map((u) => ({
         id: u.id,
         persona: u.scope.persona,
-        name: userDto(ctx.uuid, ctx.userData, u.persona).Name,
+        name: userDto(ctx.uuid, ctx.userData, u.profile).Name,
       })),
     });
     res.setHeader(
@@ -474,7 +450,7 @@ router.post(
       res.json(
         await submitAppReport(
           parsed.data,
-          { uuid: ctx.uuid, persona: ctx.persona?.id ?? null },
+          { uuid: ctx.uuid, persona: ctx.profile.id || null },
           body.forward === true
         )
       );
@@ -512,7 +488,7 @@ router.post(
         ctx.uuid,
         ctx.encryptedPassword,
         ctx.userData,
-        user.persona,
+        user.profile,
         { provedPassword: provedPassword(ctx) }
       )
     );

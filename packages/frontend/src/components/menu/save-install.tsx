@@ -13,8 +13,10 @@ import {
   CreateUserResponse,
 } from '@/lib/api';
 import { JellyfinApiKeys } from './jellyfin-api-keys';
-import { JellyfinPersonas } from './jellyfin-personas';
-import { JellyfinTrackers } from './jellyfin-trackers';
+import { ProfileList } from './profiles/profile-list';
+import { JellyfinTrackers } from './profiles/trackers';
+import { profileLabel } from '@/lib/audiences';
+import { profilesOf } from '../../../../core/src/utils/profiles';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@aiostreams/ui/alert';
 import { SettingsCard } from '../shared/settings-card';
@@ -2193,16 +2195,13 @@ function Content() {
       onError: () => toast.error('Failed to copy username'),
     });
   };
-  const jellyfinPersonas = userData.jellyfin?.personas ?? [];
-  const jellyfinAccountName =
-    userData.jellyfin?.primary?.name || userData.addonName || 'Primary user';
+  const profiles = profilesOf(userData);
+  const quickConnectProfile =
+    profiles.find((p) => p.id === quickConnectPersona) ?? profiles[0];
   const quickConnectPersonaName = quickConnectPersona
-    ? (jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.name ??
-      quickConnectPersona)
+    ? profileLabel(userData, quickConnectProfile)
     : null;
-  const quickConnectLocked = quickConnectPersona
-    ? !!jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.lock
-    : !!userData.jellyfin?.primary?.lock;
+  const quickConnectLocked = !!quickConnectProfile.lock;
   // An alias makes it short enough to type on a TV.
   const jellyfinPickerUrl = aliasForInstall
     ? `${baseUrl}/jellyfin/u/${aliasForInstall}`
@@ -3047,11 +3046,10 @@ function Content() {
                       </div>
                       <p className="text-xs text-gray-500">
                         The password is your configuration password.
-                        {jellyfinPersonas.length > 0 &&
-                          ' Add /<user> to sign in as a user.'}
-                        {(jellyfinPersonas.some((p) => p.lock) ||
-                          !!userData.jellyfin?.primary?.lock) &&
-                          ' For a user with a PIN, add /<PIN> to the password.'}
+                        {profiles.length > 1 &&
+                          ' Add /<profile> to sign in as a profile.'}
+                        {profiles.some((p) => p.lock) &&
+                          ' For a profile with a PIN, add /<PIN> to the password.'}
                       </p>
                     </div>
 
@@ -3138,26 +3136,20 @@ function Content() {
                               .
                             </p>
                           </div>
-                          {jellyfinPersonas.length > 0 && (
+                          {profiles.length > 1 && (
                             <Select
                               label="Sign in as"
-                              value={quickConnectPersona || '__account__'}
+                              value={quickConnectPersona || '__owner__'}
                               onValueChange={(value) => {
                                 setQuickConnectPersona(
-                                  value === '__account__' ? '' : value
+                                  value === '__owner__' ? '' : value
                                 );
                                 setQuickConnectPin('');
                               }}
-                              options={[
-                                {
-                                  label: jellyfinAccountName,
-                                  value: '__account__',
-                                },
-                                ...jellyfinPersonas.map((p) => ({
-                                  label: p.name,
-                                  value: p.id,
-                                })),
-                              ]}
+                              options={profiles.map((p) => ({
+                                label: profileLabel(userData, p),
+                                value: p.id || '__owner__',
+                              }))}
                             />
                           )}
                           {quickConnectLocked && (
@@ -3292,7 +3284,7 @@ function Content() {
               {
                 value: 'users',
                 label: 'Users',
-                content: <JellyfinPersonas />,
+                content: <ProfileList />,
               },
               {
                 value: 'trackers',

@@ -8,6 +8,7 @@ import {
   createLogger,
   hyphenless,
   isGuidLike,
+  isOwner,
   sharedBackend,
   SharedTx,
   type ClientInfo,
@@ -136,7 +137,7 @@ onClientOnline((key) => void returned(key).catch(failed));
 /** The primary user controls every user's devices, as an API key does. */
 function controls(ctx: JellyfinRequestContext, d: RemoteDevice): boolean {
   if (d.uuid !== ctx.uuid.toLowerCase()) return false;
-  return !!ctx.apiKey || !ctx.persona || d.userId === ctx.userId;
+  return !!ctx.apiKey || isOwner(ctx.profile) || d.userId === ctx.userId;
 }
 
 /** Devices with a socket open that the caller may send commands to. */
@@ -187,7 +188,7 @@ async function register(
   const sent: RemoteDevice = {
     uuid,
     userId,
-    persona: ctx.persona?.id ?? '',
+    persona: ctx.profile.id,
     client,
     media: listOf(req, 'PlayableMediaTypes'),
     commands: listOf(req, 'SupportedCommands'),
