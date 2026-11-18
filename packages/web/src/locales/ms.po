@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-16 22:40+0000\n"
+"PO-Revision-Date: 2026-11-18 02:59+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -522,7 +522,7 @@ msgstr "Semua medan"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Semua dihidupkan"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
@@ -744,11 +744,11 @@ msgstr "Hitam"
 
 #: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Menggabungkan sari kata pada kad grafik dan bukannya pemproses, yang mengurangkan penggunaan masa pemproses. Hanya untuk video yang dimainkan oleh ExoPlayer. Matikan pilihan ini jika sari kata kelihatan pelik."
 
 #: src/app/settings/player.tsx
 msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
-msgstr ""
+msgstr "Menggabungkan sari kata pada kad grafik dan bukannya pemproses, yang mengambil lebih sedikit masa pemproses. Matikan jika sari kata kelihatan pelik."
 
 #: src/lib/i18n.ts
 msgid "Blue"
@@ -1001,14 +1001,12 @@ msgid "Colour"
 msgstr "Warna"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Colours"
 msgstr "Warna"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Colours, glass and custom CSS"
-msgstr "Warna dan CSS tersuai"
+msgstr "Warna, kaca dan CSS tersuai"
 
 #: src/app/settings/browsing.tsx
 msgid "Combine movie and show results"
@@ -1318,9 +1316,8 @@ msgid "Day"
 msgstr "Hari"
 
 #: src/app/settings/player.tsx
-#, fuzzy
 msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf, under mpv below."
-msgstr "Mendekodkan hampir semua video dalam perisian apabila peranti tiada penyahsulit keras. Menggunakan mpv.conf anda di bawah aplikasi Android."
+msgstr "Menyahkod hampir semua video, menggunakan perisian apabila peranti tidak mempunyai penyahkod untuknya. Menggunakan fail mpv.conf anda, di bawah tetapan mpv di bawah."
 
 #: src/app/settings/player.tsx
 msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
@@ -1480,7 +1477,7 @@ msgstr "Selesai"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Double tap to skip"
-msgstr ""
+msgstr "Ketik dua kali untuk langkau"
 
 #: src/lib/input/actions.ts
 msgid "Down"
@@ -1541,7 +1538,7 @@ msgstr "Muat turun menunggu Wi-Fi atau rangkaian tanpa had bukannya menggunakan 
 
 #: src/app/settings/player.tsx
 msgid "Draw subtitles on the graphics card"
-msgstr ""
+msgstr "Lukis sari kata pada kad grafik"
 
 #: src/lib/i18n.ts
 msgid "Drawer"
@@ -1841,7 +1838,7 @@ msgstr "Umum"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Gestures"
-msgstr ""
+msgstr "Gerak isyarat"
 
 #: src/components/send-report.tsx
 msgid "Give this code to whoever looks into it."
@@ -1849,7 +1846,7 @@ msgstr "Berikan kod ini kepada sesiapa yang menyiasat masalah ini."
 
 #: src/app/settings/theme.tsx
 msgid "Glass"
-msgstr ""
+msgstr "Kaca"
 
 #: src/app/settings/theme.tsx
 msgid "Glass panels"
@@ -1909,7 +1906,7 @@ msgstr "Mempunyai PIN"
 
 #: src/app/settings/player.tsx
 msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
-msgstr ""
+msgstr "Meminta kad grafik menajamkan video semasa membesarkannya untuk memenuhi skrin. Sesetengah kad juga menukar video SDR kepada HDR pada skrin dalam mod HDR, dan sesetengahnya memerlukan ciri ini dihidupkan dalam aplnya sendiri terlebih dahulu. Video HDR kekal seperti sedia ada, dan peningkatan skala Anime akan mengambil alih untuk anime apabila ciri itu dihidupkan. Menggunakan lebih banyak kuasa, dan dimatikan secara automatik untuk video yang tidak mampu ditampung oleh peranti ini."
 
 #: src/app/settings/player.tsx
 msgid "HDR output"
@@ -1949,7 +1946,7 @@ msgstr "Tersembunyi"
 
 #: src/app/settings/browsing.tsx
 msgid "Hidden, channels also leave search and favourites."
-msgstr ""
+msgstr "Tersembunyi, saluran juga dialih keluar daripada carian dan kegemaran."
 
 #: src/features/player/next-episode.tsx
 msgid "Hide"
@@ -1969,9 +1966,8 @@ msgid "Hold"
 msgstr "Tahan"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Hold to speed up"
-msgstr "Kelajuan apabila ditekan"
+msgstr "Tahan untuk mempercepatkan"
 
 #: src/app/settings/apps.tsx src/app/settings/browsing.tsx
 #: src/app/settings/interface.tsx src/components/shell/layout.tsx
@@ -1984,13 +1980,12 @@ msgid "Home and libraries"
 msgstr "Laman utama dan pustaka"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Home, posters, trailers and episodes"
-msgstr "Bahasa, laman utama, grid dan episod"
+msgstr "Laman utama, poster, treler dan episod"
 
 #: src/app/settings/theme.tsx
 msgid "Home, search and catalogs"
-msgstr ""
+msgstr "Laman utama, carian dan katalog"
 
 #: src/features/party/in-party.tsx
 msgid "Host"
@@ -2074,7 +2069,7 @@ msgstr "Dalam muat turun aplikasi"
 
 #: src/app/settings/browsing.tsx
 msgid "In the navigation only"
-msgstr ""
+msgstr "Dalam navigasi sahaja"
 
 #: src/app/item/_components/collection.tsx
 msgid "In this collection"
@@ -2214,9 +2209,8 @@ msgid "Language and how subtitles look"
 msgstr "Bahasa dan penampilan sarikata"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Language and navigation"
-msgstr "Bahasa dan output"
+msgstr "Bahasa dan navigasi"
 
 #: src/app/settings/page.tsx
 msgid "Language and output"
@@ -2327,7 +2321,7 @@ msgstr "Log"
 
 #: src/app/settings/page.tsx
 msgid "Look and feel"
-msgstr ""
+msgstr "Rupa dan rasa"
 
 #: src/features/party/not-in-party.tsx
 msgid "Looking for the party…"
@@ -2509,9 +2503,8 @@ msgid "mpv draws the video, with your mpv.conf and shaders."
 msgstr "mpv paparkan video, dengan mpv.conf dan 'shader' anda."
 
 #: src/app/settings/player.tsx
-#, fuzzy
 msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
-msgstr "mpv di dalam tetingkap ini, dengan kawalan dan tetapan main balik aplikasi ini. mpv.conf, skrip dan shader anda sendiri juga berfungsi di sini: letakkannya dalam folder mpv di bawah Aplikasi Desktop."
+msgstr "mpv di dalam tetingkap ini, dengan kawalan dan tetapan main balik apl ini. Fail mpv.conf, skrip dan shader anda sendiri juga berfungsi di sini: letakkannya dalam folder mpvnya, di bawah tetapan mpv di bawah."
 
 #: src/app/settings/player.tsx
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
@@ -2683,9 +2676,8 @@ msgid "No server answered at that address."
 msgstr "Tiada pelayan memberi maklum balas pada alamat tersebut."
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "No setting matches."
-msgstr "Tiada yang sepadan."
+msgstr "Tiada tetapan yang sepadan."
 
 #: src/lib/subtitles/files.ts
 msgid "No subtitles were found in that file"
@@ -2871,16 +2863,15 @@ msgstr "di {relay}"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "On either side of the video, by the skip length."
-msgstr ""
+msgstr "Di kedua-dua belah video, mengikut tempoh langkau."
 
 #: src/app/settings/browsing.tsx
 msgid "On home and in the navigation"
-msgstr ""
+msgstr "Di laman utama dan dalam navigasi"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
-msgstr "Pada skrin utama semasa sepanduk utama berputar, dan dalam grid. Di dalam grid, dan di bawah tetikus, kad menonjol keluar, manakala kad di sebelahnya kekal di tempatnya."
+msgstr "Di laman utama semasa pelanduk utama berputar, dalam carian dan dalam grid. Di bawah tetikus, kad akan timbul keluar; dengan papan kekunci atau alat kawalan jauh, ia terbuka untuk memaparkan butirannya."
 
 #: src/lib/discord.ts
 msgid "On the calendar"
@@ -3051,7 +3042,7 @@ msgstr "Peranti lain"
 
 #: src/app/settings/theme.tsx
 msgid "Other pages, such as settings"
-msgstr ""
+msgstr "Halaman lain, seperti tetapan"
 
 #: src/app/sign-in/page.tsx
 msgid "Other user"
@@ -3247,9 +3238,8 @@ msgid "PIN or password"
 msgstr "PIN atau kata laluan"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Pinch to fill the screen"
-msgstr "Keluar daripada skrin penuh"
+msgstr "Cubit untuk memenuhi skrin"
 
 #: src/app/settings/theme.tsx
 msgid "Pink"
@@ -3462,9 +3452,8 @@ msgid "Poster size"
 msgstr "Saiz poster"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "Posters and grids"
-msgstr "Laman utama dan grid"
+msgstr "Poster dan grid"
 
 #: src/app/settings/cache.tsx
 msgid "Posters, backdrops, logos and photos."
@@ -3492,9 +3481,8 @@ msgid "Preview"
 msgstr "Pratonton"
 
 #: src/app/settings/browsing.tsx
-#, fuzzy
 msgid "Preview the card you rest on"
-msgstr "Kad yang dipilih"
+msgstr "Pratonton kad yang anda berhenti padanya"
 
 #: src/app/settings/playback.tsx
 msgctxt "Episode segments showing the next episode"
@@ -3980,9 +3968,8 @@ msgid "Search by voice"
 msgstr "Cari guna suara"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Search settings"
-msgstr "Mencari"
+msgstr "Tetapan carian"
 
 #: src/features/player/subtitle-sync.tsx
 msgid "Search the lines"
@@ -4576,24 +4563,23 @@ msgstr "Matahari"
 
 #: src/app/settings/player.tsx
 msgid "Super resolution"
-msgstr ""
+msgstr "Resolusi super"
 
 #: src/lib/i18n.ts
 msgid "Support AIOStreams"
 msgstr "Sokong AIOStreams"
 
 #: src/app/settings/_components/gesture-settings.tsx
-#, fuzzy
 msgid "Swipe across to seek"
-msgstr "Ruang untuk digunakan"
+msgstr "Leret melintang untuk melangkau masa"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the left for brightness"
-msgstr ""
+msgstr "Leret ke atas atau ke bawah di sebelah kiri untuk kecerahan"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "Swipe up or down on the right for volume"
-msgstr ""
+msgstr "Leret ke atas atau ke bawah di sebelah kanan untuk kelantangan"
 
 #: src/app/settings/account.tsx
 msgid "Switch"
@@ -4790,9 +4776,8 @@ msgid "The app's player and its options, such as starting videos in landscape."
 msgstr "Pemain aplikasi dan pilihannya, seperti memulakan video dalam mod melintang."
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
-msgstr "Karya seni tajuk yang anda tonton, dikaburkan dan di gelapkannya, di belakang halaman dan senarai versi."
+msgstr "Karya seni tajuk yang sedang anda lihat, dikaburkan dan digelapkan, di belakang halaman ini. Senarai versi memaparkannya bersama halaman tajuk."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -4881,7 +4866,7 @@ msgstr "Kumpulan sedang menonton <0>{title}</0>"
 
 #: src/app/settings/page.tsx
 msgid "The player and its controls"
-msgstr ""
+msgstr "Pemain dan kawalannya"
 
 #: src/lib/hosts/shell/player.ts
 msgid "the player could not play this version"
@@ -4889,7 +4874,7 @@ msgstr "pemain tidak dapat memainkan versi ini"
 
 #: src/app/settings/page.tsx
 msgid "The player, its controls and video"
-msgstr ""
+msgstr "Pemain, kawalannya dan video"
 
 #: src/app/settings/subtitles.tsx
 msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
@@ -5317,14 +5302,12 @@ msgid "Updates"
 msgstr "Kemas Kini"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates and troubleshooting"
-msgstr "Kemas kini, mpv dan penyelesaian masalah"
+msgstr "Kemas kini dan penyelesaian masalah"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Updates, Discord and troubleshooting"
-msgstr "Kemas kini, Discord, mpv dan penyelesaian masalah"
+msgstr "Kemas kini, Discord dan penyelesaian masalah"
 
 #: src/app/settings/about.tsx src/components/shell/usage-stats.tsx
 msgid "Usage statistics"
@@ -5425,7 +5408,7 @@ msgstr "Versi dimainkan dalam pelayar ini. Pilih pemain lain untuk membukanya di
 
 #: src/app/settings/page.tsx
 msgid "Versions, next episode and skipping"
-msgstr ""
+msgstr "Versi, episod seterusnya dan melangkau"
 
 #: src/app/settings/player.tsx
 msgid "Video"
