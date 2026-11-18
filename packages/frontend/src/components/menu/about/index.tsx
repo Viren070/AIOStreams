@@ -276,6 +276,7 @@ export function AboutContent() {
         onOpenChange={customizeModal.toggle}
         currentName={addonName}
         currentLogo={userData.addonLogo}
+        currentBackground={userData.addonBackground}
         currentDescription={userData.addonDescription}
       />
 

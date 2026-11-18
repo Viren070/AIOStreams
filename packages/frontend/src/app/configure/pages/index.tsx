@@ -449,6 +449,7 @@ function ConfigurationPage() {
         onOpenChange={customize.toggle}
         currentName={addonName}
         currentLogo={userData.addonLogo}
+        currentBackground={userData.addonBackground}
         currentDescription={userData.addonDescription}
       />
     </>

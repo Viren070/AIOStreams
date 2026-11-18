@@ -10,6 +10,7 @@ export const VOLATILE_MANIFEST_FIELDS = [
   'description',
   'name',
   'logo',
+  'background',
   'behaviorHints',
   'stremioAddonsConfig',
 ] as const;
