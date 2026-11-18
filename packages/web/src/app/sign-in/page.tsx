@@ -291,7 +291,7 @@ export function SignInPage({
               >
                 <TextInput
                   label={t`PIN`}
-                  help={t`This user has a PIN.`}
+                  help={t`This profile has a PIN.`}
                   type="password"
                   inputMode="numeric"
                   autoComplete="off"
@@ -557,7 +557,7 @@ export function SignInScreen({
         links={[
           ...(personal
             ? []
-            : [{ label: t`Other user`, onClick: () => setTyping(true) }]),
+            : [{ label: t`Other profile`, onClick: () => setTyping(true) }]),
           ...quickConnectLinks,
         ]}
         onChangeServer={onChangeServer}
@@ -671,7 +671,7 @@ function SecretPrompt({
           {askPassword && (
             <PasswordInput
               label={t`Configuration password`}
-              help={t`Needed to switch to this user.`}
+              help={t`Needed to switch to this profile.`}
               autoFocus
               value={password}
               onValueChange={setPassword}

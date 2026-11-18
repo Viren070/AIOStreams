@@ -488,8 +488,8 @@ msgid "Added to {name}"
 msgstr "Added to {name}"
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
-msgstr "Addons, catalogs and users are set up on the configuration page."
+msgid "Addons, catalogs and profiles are set up on the configuration page."
+msgstr "Addons, catalogs and profiles are set up on the configuration page."
 
 #: src/app/settings/about.tsx
 msgid "Address"
@@ -2641,8 +2641,8 @@ msgid "Navigation"
 msgstr "Navigation"
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
-msgstr "Needed to switch to this user."
+msgid "Needed to switch to this profile."
+msgstr "Needed to switch to this profile."
 
 #: src/app/downloads/page.tsx
 msgid "Needs attention"
@@ -3179,8 +3179,8 @@ msgid "Other pages, such as settings"
 msgstr "Other pages, such as settings"
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
-msgstr "Other user"
+msgid "Other profile"
+msgstr "Other profile"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3675,6 +3675,10 @@ msgstr "Previous trailer"
 #: src/components/media/people.tsx
 msgid "Producer"
 msgstr "Producer"
+
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr "Profile"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -4788,15 +4792,15 @@ msgstr "Swipe up or down on the right for volume"
 msgid "Switch"
 msgstr "Switch"
 
-#: src/app.tsx
-msgid "Switch server"
-msgstr "Switch server"
-
 #: src/app/settings/account.tsx
 #: src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-msgid "Switch user"
-msgstr "Switch user"
+msgid "Switch profile"
+msgstr "Switch profile"
+
+#: src/app.tsx
+msgid "Switch server"
+msgstr "Switch server"
 
 #: src/app/settings/player.tsx
 msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
@@ -5245,6 +5249,10 @@ msgstr "This isn't a .wgsl pass file."
 msgid "This item was not found"
 msgstr "This item was not found"
 
+#: src/app/sign-in/page.tsx
+msgid "This profile has a PIN."
+msgstr "This profile has a PIN."
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr "This season"
@@ -5292,10 +5300,6 @@ msgstr "This trailer didn't play: {failure}"
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
 msgstr "This trailer is gone."
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
-msgstr "This user has a PIN."
 
 #: src/app/player/page.tsx
 msgid "This version is no longer available."
@@ -5574,10 +5578,6 @@ msgstr "Use your user name and PIN, or the configuration’s UUID and its passwo
 msgid "Used when an episode has no credits marked."
 msgstr "Used when an episode has no credits marked."
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr "User"
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr "User name"
@@ -5716,8 +5716,8 @@ msgid "Watch along"
 msgstr "Watch along"
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
-msgstr "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
+msgstr "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 
 #: src/app/settings/playback.tsx
 msgid "Watch parties"

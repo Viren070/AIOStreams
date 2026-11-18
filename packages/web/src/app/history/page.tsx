@@ -777,7 +777,7 @@ function HistoryTable({
               </th>
               {names && (
                 <th className="hidden p-3 sm:table-cell">
-                  <Trans>User</Trans>
+                  <Trans>Profile</Trans>
                 </th>
               )}
               <th className="p-3">

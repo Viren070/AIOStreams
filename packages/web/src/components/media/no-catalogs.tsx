@@ -44,7 +44,7 @@ export function NoCatalogs() {
         </Button>
         {several && (
           <Button intent="gray-subtle" className={button} onClick={switchUser}>
-            <Trans>Switch user</Trans>
+            <Trans>Switch profile</Trans>
           </Button>
         )}
         {changeServer && (

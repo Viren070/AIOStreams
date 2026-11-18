@@ -71,8 +71,8 @@ export function AccountSection() {
         </SettingsRow>
         {several && (
           <SettingsRow
-            label={t`Switch user`}
-            help={t`Watch as someone else on this configuration. A user with a PIN needs it again after switching away.`}
+            label={t`Switch profile`}
+            help={t`Watch as someone else on this configuration. A profile with a PIN needs it again after switching away.`}
           >
             <Button
               intent="gray-outline"
@@ -111,7 +111,7 @@ export function AccountSection() {
         {configure && (
           <SettingsRow
             label={t`Configuration`}
-            help={t`Addons, catalogs and users are set up on the configuration page.`}
+            help={t`Addons, catalogs and profiles are set up on the configuration page.`}
           >
             <Button
               intent="gray-outline"

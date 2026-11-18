@@ -290,7 +290,7 @@ export function WebLayout() {
 
   const switchItem: SidebarItem = {
     id: 'switch-user',
-    name: t`Switch user`,
+    name: t`Switch profile`,
     iconType: BiTransferAlt,
     onClick: switchUser,
   };

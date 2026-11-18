@@ -488,7 +488,7 @@ msgid "Added to {name}"
 msgstr ""
 
 #: src/app/settings/account.tsx
-msgid "Addons, catalogs and users are set up on the configuration page."
+msgid "Addons, catalogs and profiles are set up on the configuration page."
 msgstr ""
 
 #: src/app/settings/about.tsx
@@ -2641,7 +2641,7 @@ msgid "Navigation"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Needed to switch to this user."
+msgid "Needed to switch to this profile."
 msgstr ""
 
 #: src/app/downloads/page.tsx
@@ -3179,7 +3179,7 @@ msgid "Other pages, such as settings"
 msgstr ""
 
 #: src/app/sign-in/page.tsx
-msgid "Other user"
+msgid "Other profile"
 msgstr ""
 
 #: src/app/player/page.tsx
@@ -3674,6 +3674,10 @@ msgstr ""
 
 #: src/components/media/people.tsx
 msgid "Producer"
+msgstr ""
+
+#: src/app/history/page.tsx
+msgid "Profile"
 msgstr ""
 
 #: src/app/settings/_components/shortcut-settings.tsx
@@ -4788,14 +4792,14 @@ msgstr ""
 msgid "Switch"
 msgstr ""
 
-#: src/app.tsx
-msgid "Switch server"
-msgstr ""
-
 #: src/app/settings/account.tsx
 #: src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-msgid "Switch user"
+msgid "Switch profile"
+msgstr ""
+
+#: src/app.tsx
+msgid "Switch server"
 msgstr ""
 
 #: src/app/settings/player.tsx
@@ -5245,6 +5249,10 @@ msgstr ""
 msgid "This item was not found"
 msgstr ""
 
+#: src/app/sign-in/page.tsx
+msgid "This profile has a PIN."
+msgstr ""
+
 #: src/features/downloads/download-button.tsx
 msgid "This season"
 msgstr ""
@@ -5291,10 +5299,6 @@ msgstr ""
 
 #: src/app/trailer/page.tsx
 msgid "This trailer is gone."
-msgstr ""
-
-#: src/app/sign-in/page.tsx
-msgid "This user has a PIN."
 msgstr ""
 
 #: src/app/player/page.tsx
@@ -5574,10 +5578,6 @@ msgstr ""
 msgid "Used when an episode has no credits marked."
 msgstr ""
 
-#: src/app/history/page.tsx
-msgid "User"
-msgstr ""
-
 #: src/app/sign-in/page.tsx
 msgid "User name"
 msgstr ""
@@ -5716,7 +5716,7 @@ msgid "Watch along"
 msgstr ""
 
 #: src/app/settings/account.tsx
-msgid "Watch as someone else on this configuration. A user with a PIN needs it again after switching away."
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
 msgstr ""
 
 #: src/app/settings/playback.tsx
