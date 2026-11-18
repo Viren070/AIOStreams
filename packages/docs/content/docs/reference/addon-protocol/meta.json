@@ -7,6 +7,7 @@
     "collections",
     "similar",
     "streams",
+    "device-capabilities",
     "live-tv",
     "subtitles",
     "watch-state"

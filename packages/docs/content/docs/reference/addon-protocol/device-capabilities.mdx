@@ -1,0 +1,86 @@
+---
+title: Device capabilities
+description: The X-Device-Capabilities header, which tells AIOStreams what the playing device can decode.
+---
+
+One AIOStreams configuration often serves several devices: a phone that plays everything and a TV
+that can't decode Dolby Vision-only files, say. An app can send what the playing device decodes
+with each stream request, and AIOStreams moves streams it can't play to the bottom of the list or
+removes them, for that device only. Stremio doesn't send the header, so nothing changes there.
+
+## Detecting support
+
+AIOStreams declares the highest spec version it reads in its manifest:
+
+```json
+"behaviorHints": { "configurable": true, "deviceCapabilities": 1 }
+```
+
+Send the header only to addons that declare it, at a version no higher than theirs.
+
+## The header
+
+```http
+X-Device-Capabilities: v=1; video=h264,hevc; hdr=hdr10,hlg; dv=8; audio=ac3,eac3; maxres=2160
+```
+
+Pairs of `key=value` separated by `;`. List values are separated by `,`. Keys and values are case
+insensitive and spaces are ignored.
+
+| Key      | Values                                                 | Meaning                              |
+| -------- | ------------------------------------------------------ | ------------------------------------ |
+| `v`      | `1`                                                    | Spec version                         |
+| `video`  | `h264`, `hevc`, `av1`, `vp9`                           | Video codecs the device decodes      |
+| `hdr`    | `hdr10`, `hdr10plus`, `hlg`                            | HDR formats the device displays      |
+| `dv`     | `5`, `7`, `8`                                          | Dolby Vision profiles (`8.1` is `8`) |
+| `audio`  | `aac`, `ac3`, `eac3`, `truehd`, `dts`, `dtshd`, `dtsx` | Audio it decodes or passes through   |
+| `maxres` | `720`, `1080`, `2160`                                  | Highest resolution, in lines         |
+
+- **Missing header:** nothing changes.
+- **Missing key:** unknown. AIOStreams never filters on it, so leave out anything you can't detect.
+- **`none`:** explicitly unsupported, e.g. `dv=none` for a device without Dolby Vision.
+- **Unknown keys or values:** ignored, never an error. A key whose values are all unknown counts as
+  missing.
+
+## When a stream counts as unplayable
+
+AIOStreams decides from the stream's parsed tags, which come from the filename or, when available,
+from a probe of the file.
+
+| Check        | Unplayable when                                                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Video        | Its encode (`AVC`, `HEVC`, `AV1`) isn't in `video`. Other encodes are never filtered.                                            |
+| Dolby Vision | It is DV-only (no HDR10, HDR10+ or HLG layer) and `dv` doesn't list `5`, the profile DV-only files use.                          |
+| HDR          | None of its layers play: DV needs `7` or `8` in `dv`, HDR10+ needs `hdr10plus` or `hdr10`, HDR10 needs `hdr10`, HLG needs `hlg`. |
+| Audio        | None of its audio formats play. DTS-HD and DTS:X fall back to their DTS core.                                                    |
+| Resolution   | It is above `maxres`.                                                                                                            |
+
+A stream with DV and an HDR10 layer plays on a device without Dolby Vision, since it falls back to
+HDR10. SDR streams, and anything without a tag, always play.
+
+## The setting
+
+**Filters → Miscellaneous → Respect Device Capabilities** picks what happens to unplayable streams:
+
+- **Off** (default): every device gets the same list.
+- **Push to bottom:** they stay in the list, below everything else and in their original order.
+  This runs on the cached result, so all devices share one result cache.
+- **Exclude:** they are removed before deduplication, the result limit and failover. The limit
+  then skips streams the rules above mark as unplayable, a playable copy of a file is never dropped
+  as a duplicate of one of them, and failover never switches to one. Each device gets its own
+  result cache.
+
+Only what the rules can detect is filtered. A stream with missing or unrecognised tags counts as
+playable, so it stays in the list and can still be a failover target, even if the device turns
+out not to play it.
+
+Either way, devices sharing a configuration never see each other's lists. To write your own rules,
+stream expressions can read the header as
+[`device.*` constants](/reference/stream-expressions#device-constants).
+
+## Trying it
+
+```bash
+curl -s -H 'X-Device-Capabilities: v=1; dv=none; hdr=hdr10' \
+  'https://your-instance/stremio/<uuid>/<password>/stream/movie/tt0111161.json'
+```

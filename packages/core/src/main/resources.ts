@@ -54,6 +54,15 @@ import {
   type AnalyticsServiceBreakdown,
 } from '../analytics/index.js';
 import type { AddonDispositionMap } from '../streams/fetcher.js';
+import {
+  applyDeviceCapabilities,
+  deduplicateForDevice,
+  playChainScope,
+} from '../streams/device-capabilities.js';
+import {
+  configReadsDevice,
+  deviceCapabilitiesFingerprint,
+} from '../utils/device-capabilities.js';
 
 const logger = createLogger('core');
 
@@ -350,9 +359,24 @@ export async function processStreams(
     processedStreams = await ctx.filterer.filterBlocklisted(processedStreams);
   }
 
+  // "Exclude" drops the device's unplayable streams inside this step, before
+  // dedup picks winners and failover variants. getStreams gives these
+  // requests a per-device cache entry.
   const dedupStart = Date.now();
-  processedStreams = await ctx.deduplicator.deduplicate(processedStreams);
+  const deduped = await deduplicateForDevice(
+    processedStreams,
+    (streams) => ctx.deduplicator.deduplicate(streams),
+    context.deviceCapabilities,
+    ctx.userData.deviceCapabilities
+  );
+  processedStreams = deduped.streams;
   deduplicationMs = Date.now() - dedupStart;
+  if (deduped.unplayable) {
+    logger.debug(
+      { unplayable: deduped.unplayable },
+      'excluded streams the device cannot play'
+    );
+  }
 
   if (isMeta || resolvedResults.hasNewStreams) {
     const skipPerStreamIds =
@@ -369,6 +393,14 @@ export async function processStreams(
   const sortStart = Date.now();
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
   sortMs = Date.now() - sortStart;
+
+  // The chain record follows the same per-device split as the list.
+  const chainScope = playChainScope(
+    userScopeKey(ctx.userData),
+    context.deviceCapabilities,
+    ctx.userData.deviceCapabilities,
+    getSimpleTextHash
+  );
 
   if (failoverOpts?.position === 'beforeSEL') {
     await buildPlayChain(
@@ -387,7 +419,7 @@ export async function processStreams(
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
         onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
-      userScopeKey(ctx.userData)
+      chainScope
     ).catch((error) => {
       logger.error(
         {
@@ -423,7 +455,7 @@ export async function processStreams(
         duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
         onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
       },
-      userScopeKey(ctx.userData)
+      chainScope
     ).catch((error) => {
       logger.error(
         {
@@ -457,7 +489,7 @@ export async function processStreams(
           duplicateStaggerMs: failoverOpts.duplicateStaggerMs,
           onlySameReleaseFailover: failoverOpts.onlySameReleaseFailover,
         },
-        userScopeKey(ctx.userData)
+        chainScope
       ).catch((error) => {
         logger.error(
           {
@@ -728,6 +760,7 @@ export async function getStreams(
   );
 
   const context = await StreamContext.create(type, id, ctx.userData);
+  context.deviceCapabilities = ctx.options?.deviceCapabilities;
   ctx.streamContext = context;
 
   const pipelineTtl = appConfig.resources.cache.pipeline.ttl;
@@ -736,9 +769,20 @@ export async function getStreams(
   // on
   let pipelineCacheKey = '';
   if (usePipelineCache) {
-    pipelineCacheKey = `${getSimpleTextHash(
-      JSON.stringify(ctx.userData)
-    )}:${type}:${id}`;
+    const serialisedUserData = JSON.stringify(ctx.userData);
+    pipelineCacheKey = `${getSimpleTextHash(serialisedUserData)}:${type}:${id}`;
+    // Expressions reading device.* and the "exclude" setting make the pipeline
+    // output depend on the device, so each device gets its own entry. Other
+    // configs keep sharing one entry across devices.
+    if (
+      context.deviceCapabilities &&
+      (ctx.userData.deviceCapabilities === 'exclude' ||
+        configReadsDevice(serialisedUserData))
+    ) {
+      pipelineCacheKey += `:device=${getSimpleTextHash(
+        deviceCapabilitiesFingerprint(context.deviceCapabilities)
+      )}`;
+    }
     const cached = await pipelineResultCache.get(pipelineCacheKey);
     if (cached !== undefined) {
       // The fetch pipeline that normally populates the context's backing fields
@@ -750,7 +794,7 @@ export async function getStreams(
         context.getEpisodeRuntime(),
       ]);
       logger.debug({ type, id }, 'pipeline result cache hit');
-      return cached;
+      return applyDeviceCapabilitiesToResponse(ctx, cached, preCaching);
     }
   }
 
@@ -1039,7 +1083,34 @@ export async function getStreams(
   if (usePipelineCache) {
     await pipelineResultCache.set(pipelineCacheKey, response, pipelineTtl);
   }
-  return response;
+  return applyDeviceCapabilitiesToResponse(ctx, response, preCaching);
+}
+
+/**
+ * Applies the "push to bottom" device capabilities setting to a finished
+ * response. It runs after the pipeline cache read and write, and builds a new
+ * response rather than changing the one that was cached. ("Exclude" runs
+ * inside processStreams instead.)
+ */
+function applyDeviceCapabilitiesToResponse(
+  ctx: AIOStreamsContext,
+  response: StreamsResponse,
+  preCaching: boolean
+): StreamsResponse {
+  const caps = ctx.options?.deviceCapabilities;
+  const mode = ctx.userData.deviceCapabilities;
+  if (preCaching || !caps || mode !== 'deprioritise') return response;
+  const { streams, unplayable } = applyDeviceCapabilities(
+    response.data.streams,
+    caps,
+    mode
+  );
+  logger.debug(
+    { mode, unplayable, total: response.data.streams.length },
+    'applied device capabilities'
+  );
+  if (unplayable === 0) return response;
+  return { ...response, data: { ...response.data, streams } };
 }
 
 export async function getMeta(

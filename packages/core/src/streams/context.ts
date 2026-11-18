@@ -20,6 +20,7 @@ import {
   isNonAnimeAbsoluteEligible,
 } from '../builtins/utils/general.js';
 import { iso6391ToLanguage } from '../utils/languages.js';
+import type { DeviceCapabilities } from '../utils/device-capabilities.js';
 import { config as appConfig } from '../config/index.js';
 
 const logger = createLogger('stream-context');
@@ -63,6 +64,8 @@ export interface ExpressionContext {
   hasSeaDex?: boolean;
   /** Health check results for this request, backing `health('<id>')`. */
   health?: Record<string, boolean>;
+  /** The request's X-Device-Capabilities header, backing `device.*`. */
+  device?: DeviceCapabilities;
 }
 /**
  * StreamContext encapsulates all request-specific data that can be shared
@@ -79,6 +82,9 @@ export class StreamContext {
   public readonly isAnime: boolean;
   public readonly animeEntry: AnimeEntry | null;
   public readonly queryType: string; // 'anime.movie', 'anime.series', 'movie', 'series'
+
+  /** The request's X-Device-Capabilities header, if it sent one. */
+  public deviceCapabilities: DeviceCapabilities | undefined;
 
   // Metadata (fetched from TMDB/TVDB/IMDB)
   private _metadata: ExtendedMetadata | undefined;
@@ -755,6 +761,7 @@ export class StreamContext {
         this._seadex?.allHashes?.size || this._seadex?.allGroups?.size
       ),
       health: this.userData.healthResults,
+      device: this.deviceCapabilities,
     };
   }
 }

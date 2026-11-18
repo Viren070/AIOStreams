@@ -19,3 +19,4 @@ export {
 export type { ExtendedMetadata };
 
 export type { PrecomputeSubTimings } from './precomputer.js';
+export * from './device-capabilities.js';

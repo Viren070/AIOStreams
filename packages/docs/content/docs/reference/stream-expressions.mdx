@@ -98,6 +98,31 @@ nowhere else, and `health()`, which works everywhere.
 | `latestSeason`         | `number`         | `-1`    | Latest season number                                  |
 | `ongoingSeason`        | `boolean`        | `false` | Viewing the latest season with a next episode pending |
 
+#### Device constants
+
+These come from the [`X-Device-Capabilities`](/reference/addon-protocol/device-capabilities) header
+that some apps send. A key the app didn't send reads as fully supported, so check `device.keys`
+when the difference matters.
+
+| Constant         | Type       | Without the header | Description                                                   |
+| ---------------- | ---------- | ------------------ | ------------------------------------------------------------- |
+| `device.present` | `boolean`  | `false`            | Whether the request carried the header                        |
+| `device.version` | `number`   | `0`                | The header's spec version                                     |
+| `device.keys`    | `string[]` | `[]`               | Keys the app sent, e.g. `["video", "dv"]`                     |
+| `device.video`   | `string[]` | every codec        | Video codecs: `h264`, `hevc`, `av1`, `vp9`                    |
+| `device.hdr`     | `string[]` | every format       | HDR formats: `hdr10`, `hdr10plus`, `hlg`                      |
+| `device.dv`      | `string[]` | `["5", "7", "8"]`  | Dolby Vision profiles; `[]` when the device has none          |
+| `device.audio`   | `string[]` | every format       | Audio: `aac`, `ac3`, `eac3`, `truehd`, `dts`, `dtshd`, `dtsx` |
+| `device.maxres`  | `number`   | `4320`             | Highest resolution in lines                                   |
+
+```js
+// On devices without Dolby Vision profile 5, drop DV-only releases
+device.present and not ('5' in device.dv) ? visualTag(streams, 'DV Only') : []
+```
+
+An expression that reads `device.*` gets a separate result cache for each device, so the
+first device to ask never decides the list for the others.
+
 ---
 
 ## Naming Expressions
