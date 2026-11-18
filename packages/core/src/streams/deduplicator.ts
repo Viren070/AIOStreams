@@ -318,8 +318,10 @@ class StreamDeduplicator {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
-        const mode = deduplicator[type as keyof typeof deduplicator] as string;
-        if (mode === 'disabled') {
+        const mode = deduplicator[type as keyof typeof deduplicator] as
+          string | undefined;
+        // Types with no setting of their own, such as archives, are all kept.
+        if (!mode || mode === 'disabled') {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
