@@ -18,12 +18,13 @@ import {
   ownTrackLost,
   readOwnCues,
 } from '@/lib/playback/page-subtitles';
-import type {
-  EngineFactory,
-  EngineFile,
-  EngineState,
-  EngineTrack,
-  VideoFrame,
+import {
+  liveUserAgent,
+  type EngineFactory,
+  type EngineFile,
+  type EngineState,
+  type EngineTrack,
+  type VideoFrame,
 } from '@/lib/playback/engine';
 import type { AvPlay } from '.';
 
@@ -142,7 +143,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
     const sx = 1920 / innerWidth;
     const sy = 1080 / innerHeight;
     const r = frame ?? { x: 0, y: 0, width: innerWidth, height: innerHeight };
-    // It refuses a rect past the screen's edges, so one that runs over moves back onto it.
+    // AVPlay refuses a rect past the screen's edges.
     const width = Math.min(Math.round(r.width * sx), 1920);
     const height = Math.min(Math.round(r.height * sy), 1080);
     av.setDisplayRect(
@@ -360,8 +361,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
       const shown = document.createElement('object');
       object = shown;
       shown.type = 'application/avplayer';
-      // The video shows through whatever lies beneath the object, so it goes under
-      // the page's background (-z-10), whose hole then shows it.
+      // The video shows through all beneath the object, so it sits under the page's background.
       shown.style.cssText =
         'position:fixed;left:0;top:0;width:100%;height:100%;z-index:-20';
       document.body.prepend(shown);
@@ -420,6 +420,8 @@ export const avPlayEngine: EngineFactory = (emit) => {
         });
         place();
         av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+        if (next.source.IsInfiniteStream)
+          av.setStreamingProperty('USER_AGENT', liveUserAgent(next.headers));
         // AVPlay starts a trailer's playlist on its smallest size and stays there.
         if (/^https:\/\/[^/]+\.googlevideo\.com\//.test(next.url))
           av.setStreamingProperty(

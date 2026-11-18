@@ -48,6 +48,20 @@ export interface EngineFile {
   volume: { volume: number; muted: boolean } | null;
 }
 
+/** IPTV panels can refuse a player library's own user agent. */
+const LIVE_USER_AGENT = 'VLC/3.0.21 LibVLC/3.0.21';
+
+const userAgentName = (headers: Record<string, string>) =>
+  Object.keys(headers).find((name) => /^user-agent$/i.test(name));
+
+export const liveUserAgent = (headers: Record<string, string> = {}) =>
+  headers[userAgentName(headers) ?? ''] ?? LIVE_USER_AGENT;
+
+export const liveHeaders = (headers: Record<string, string> = {}) =>
+  userAgentName(headers)
+    ? headers
+    : { ...headers, 'User-Agent': LIVE_USER_AGENT };
+
 export interface EngineStyle {
   subtitleStyle?: SubtitleStyle;
   fit: VideoFit;

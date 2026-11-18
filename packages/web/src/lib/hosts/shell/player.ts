@@ -21,13 +21,14 @@ import {
   type QueuedItem,
   type Track,
 } from '@/lib/playback/controller';
-import type {
-  EngineFactory,
-  EngineFile,
-  EngineState,
-  EngineTrack,
-  ServerSubtitle,
-  VideoFrame,
+import {
+  liveHeaders,
+  type EngineFactory,
+  type EngineFile,
+  type EngineState,
+  type EngineTrack,
+  type ServerSubtitle,
+  type VideoFrame,
 } from '@/lib/playback/engine';
 import { audioCodes } from '@/lib/playback/track-picks';
 import { currentHost } from '..';
@@ -122,11 +123,12 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
 
   const load = (played: PlayedFile, append: boolean) => {
     const prefs = file?.prefs ?? {};
+    const live = !!played.source.IsInfiniteStream;
     send('player-load', {
       url: played.url,
-      headers: played.headers,
+      headers: live ? liveHeaders(played.headers) : played.headers,
       startMs: played.startMs,
-      live: !!played.source.IsInfiniteStream,
+      live,
       append,
       audioLanguages: audioCodes(prefs, played.source),
       subtitleLanguages: subtitleLanguages(prefs),
