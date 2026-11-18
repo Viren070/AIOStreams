@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
 "PO-Revision-Date: 2026-11-18 02:59+0000\n"
-"Last-Translator: Bruno <procopio@users.noreply.hosted.weblate.org>\n"
+"Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
 "MIME-Version: 1.0\n"
@@ -1001,9 +1001,8 @@ msgid "Colour"
 msgstr "Cor"
 
 #: src/app/settings/theme.tsx
-#, fuzzy
 msgid "Colours"
-msgstr "Cor"
+msgstr "Cores"
 
 #: src/app/settings/page.tsx
 #, fuzzy
