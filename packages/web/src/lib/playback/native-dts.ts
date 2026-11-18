@@ -11,12 +11,20 @@ export interface NativeDts {
 }
 
 /* eslint-disable lingui/no-unlocalized-strings -- Native media MIME types and the packaged module filename. */
-/** Direct files on webOS TVs whose player can decode FLAC but cannot decode DTS-HD. */
+/** Direct files on webOS TVs whose player can decode FLAC and need help with DTS-HD or TrueHD. */
 export function canUseNativeDts(el: HTMLVideoElement, file: EngineFile) {
   if (currentHost().name !== 'webos' || file.source.IsInfiniteStream || typeof MediaSource === 'undefined') return false;
-  if (!MediaSource.isTypeSupported('audio/mp4; codecs="flac"') || el.canPlayType('audio/mp4; codecs="dtsl"')) return false;
+  if (!MediaSource.isTypeSupported('audio/mp4; codecs="flac"')) return false;
+  const needsDts = !el.canPlayType('audio/mp4; codecs="dtsl"');
+  const needsTrueHd = !el.canPlayType('audio/mp4; codecs="mlpa"');
+  if (!needsDts && !needsTrueHd) return false;
   const audio = (file.source.MediaStreams ?? []).filter(s => s.Type === 'Audio' && !s.IsExternal);
-  if (audio.length && audio.every(s => s.Codec)) return audio.some(s => /^(dts|dca)/i.test(s.Codec!));
+  if (audio.length && audio.every(s => s.Codec)) {
+    return audio.some(s =>
+      (needsDts && /^(dts|dca)/i.test(s.Codec!)) ||
+      (needsTrueHd && /^truehd$/i.test(s.Codec!))
+    );
+  }
   return /^(mkv|matroska|mp4|m4v)$/i.test(file.source.Container ?? '') || /\.(mkv|mp4|m4v)(?:[?#]|$)/i.test(file.url);
 }
 
