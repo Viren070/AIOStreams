@@ -779,16 +779,19 @@ function PreviewBody({
           (trailer || !ownArt) && 'opacity-0'
         )}
       >
-        <Artwork
-          // A thumb usually has the title in it, which the logo would repeat.
-          src={(width) =>
-            episode
-              ? landscapeUrls(client, artOf, { maxWidth: width })
-              : // As its card drew it, so it opens on that same picture.
-                backdropUrls(client, artOf, { maxWidth: WIDE_ART_WIDTH })
-          }
-          alt=""
-        />
+        {/* Never shown without its own art, so not fetched either. */}
+        {ownArt && (
+          <Artwork
+            // A thumb usually has the title in it, which the logo would repeat.
+            src={(width) =>
+              episode
+                ? landscapeUrls(client, artOf, { maxWidth: width })
+                : // As its card drew it, so it opens on that same picture.
+                  backdropUrls(client, artOf, { maxWidth: WIDE_ART_WIDTH })
+            }
+            alt=""
+          />
+        )}
       </div>
       <div className={cn('absolute -inset-px', fade, quiet && 'opacity-0')}>
         {/* Past the box's clip: at a fractional size the shade can stop a row short. */}
