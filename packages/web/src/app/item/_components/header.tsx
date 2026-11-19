@@ -35,7 +35,8 @@ import {
   untilLabel,
 } from '@/lib/format';
 import { Overview } from '@/components/media/overview';
-import { Scores, scoresOf } from '@/components/media/scores';
+import { ScoreRefresh, Scores, scoresOf } from '@/components/media/scores';
+import { SeasonCount } from '@/components/media/season-count';
 import { ExternalLinks } from '@/components/media/external-links';
 import {
   usePreloadVersions,
@@ -52,6 +53,9 @@ import {
   SecondaryActions,
   useQuickActions,
 } from './actions';
+
+/** The longest a title's header waits for its pictures before showing anyway. */
+const REVEAL_WAIT_MS = 2500;
 
 export function HeaderSkeleton() {
   return (
@@ -74,20 +78,20 @@ function Dot() {
   );
 }
 
-const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
+const MetaRow = React.memo(function MetaRow({
+  item,
+  refreshing = false,
+}: {
+  item: BaseItemDto;
+  /** Fresh details on their way, whose scores may differ. */
+  refreshing?: boolean;
+}) {
   const parts: [string, React.ReactNode][] = [];
   const start = item.ProductionYear;
-  const end = item.EndDate ? new Date(item.EndDate).getFullYear() : null;
-  if (item.Type === 'Series' && start) {
-    parts.push([
-      'year',
-      item.Status === 'Continuing'
-        ? `${start}–`
-        : end && end !== start
-          ? `${start}–${end}`
-          : start,
-    ]);
-  } else if (start) parts.push(['year', start]);
+  // A show says how many seasons it has, not the years it ran.
+  if (item.Type === 'Series')
+    parts.push(['seasons', <SeasonCount series={item} />]);
+  else if (start) parts.push(['year', start]);
   if (item.OfficialRating) {
     parts.push([
       'age-rating',
@@ -100,7 +104,14 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   if (runtime && item.Type !== 'Series') {
     parts.push(['runtime', duration(runtime)]);
   }
-  if (scoresOf(item).length) parts.push(['score', <Scores item={item} />]);
+  // The light under them shows fresh ones on their way; it takes no room.
+  if (scoresOf(item).length)
+    parts.push([
+      'score',
+      <ScoreRefresh active={refreshing}>
+        <Scores item={item} emphasis />
+      </ScoreRefresh>,
+    ]);
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }
@@ -108,7 +119,8 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   return (
     <div
       data-ui="item-meta"
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
+      // One height whether or not its badges or scores have come.
+      className="flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
     >
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
@@ -119,6 +131,30 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
     </div>
   );
 });
+
+/** The episode a show goes on with: its number, title and overview. */
+function NextEpisode({ episode }: { episode: BaseItemDto }) {
+  return (
+    <div data-ui="item-next-episode" className="space-y-1.5">
+      <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold text-white max-sm:justify-center">
+        <span>
+          {episodeCode(episode.ParentIndexNumber, episode.IndexNumber)}
+        </span>
+        {episode.Name && (
+          <>
+            <Dot />
+            <span>{episode.Name}</span>
+          </>
+        )}
+      </p>
+      {episode.Overview && (
+        <p className="line-clamp-4 max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base">
+          {episode.Overview}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** The show's links, with the selected season's own in place of the show's. */
 function linksFor(item: BaseItemDto, season?: BaseItemDto) {
@@ -134,9 +170,15 @@ function linksFor(item: BaseItemDto, season?: BaseItemDto) {
 export function Header({
   item,
   season,
+  pending = false,
+  refreshing = false,
 }: {
   item: BaseItemDto;
   season?: BaseItemDto;
+  /** Only what a list knew so far; parts still to come keep their place. */
+  pending?: boolean;
+  /** Its details are being fetched afresh. */
+  refreshing?: boolean;
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
@@ -144,9 +186,36 @@ export function Header({
   const fetchNextUp = useFetchNextUp();
   // Play holds its place, and focus, while a show's next episode is on its way.
   const nextUpPending = item.Type === 'Series' && nextUp.isPending;
+  // A still-airing show's next episode, asked for while the page holds its
+  // places (when its status isn't known yet too), and waited for with the rest.
+  const continuing = item.Type === 'Series' && item.Status === 'Continuing';
+  const airing = useNextAiring(
+    item,
+    item.Type === 'Series' && (pending || continuing)
+  );
+  const holding = pending || (continuing && airing.loading);
   const logo = logoUrl(client, item, { maxWidth: 416 });
-  const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 320 });
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  // Pictures in, by address; the header waits for them, but not for long.
+  const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
+  const settle = (src: string) => () =>
+    setLoaded((set) => (set.has(src) ? set : new Set(set).add(src)));
+  // One decoded ahead draws as it's placed, so the header shows in that frame.
+  const drawn = (src: string) => (el: HTMLImageElement | null) => {
+    if (el?.complete && el.naturalWidth) settle(src)();
+  };
+  const [late, setLate] = React.useState(false);
+  // Counted once its details are in, so a slow server doesn't use it up.
+  React.useEffect(() => {
+    if (holding) return;
+    const timer = setTimeout(() => setLate(true), REVEAL_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [holding]);
+  const pictured =
+    (!poster || loaded.has(poster)) &&
+    (!logo || logoFailed || loaded.has(logo));
+  const ready = !holding && (pictured || late);
   const links = React.useMemo(() => linksFor(item, season), [item, season]);
   const overviewImage = React.useMemo(
     () => landscapeUrls(client, item, { maxWidth: 480 }),
@@ -161,6 +230,9 @@ export function Header({
         : undefined;
   usePreloadVersions(target);
   const resumeMs = ticksToMs(target?.UserData?.PlaybackPositionTicks);
+  // Not begun: its first episode, none of it watched; the show tells of itself.
+  const started =
+    !!resumeMs || target?.ParentIndexNumber !== 1 || target?.IndexNumber !== 1;
   const code =
     target?.Type === 'Episode'
       ? episodeCode(target.ParentIndexNumber, target.IndexNumber)
@@ -196,222 +268,282 @@ export function Header({
   );
 
   return (
-    <div
-      data-ui="item-header"
-      data-nav-top
-      className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8"
-    >
-      {poster && (
-        <CachedImage
-          data-ui="item-poster"
-          src={poster}
-          alt=""
-          className={cn(
-            'hidden flex-none rounded-xl object-cover shadow-2xl ring-1 ring-white/10 md:block',
-            cardShape(item) === 'poster'
-              ? 'aspect-[2/3] w-48 lg:w-56'
-              : 'aspect-video w-80'
-          )}
-        />
-      )}
-      <div className="min-w-0 max-w-3xl flex-1 space-y-4">
-        <div data-ui="item-heading" className="space-y-4">
-          {logo && !logoFailed ? (
-            <CachedImage
-              data-ui="item-logo"
-              src={logo}
-              alt={item.Name ?? ''}
-              onError={() => setLogoFailed(true)}
-              className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
-            />
-          ) : (
-            <h1
-              data-ui="item-title"
-              className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
-            >
-              {item.Name}
-            </h1>
-          )}
-          {item.Taglines?.[0] && (
-            <p
-              data-ui="item-tagline"
-              className="text-base italic text-gray-300 max-sm:text-center"
-            >
-              {item.Taglines[0]}
-            </p>
-          )}
-          <MetaRow item={item} />
-          {item.Type === 'Series' && item.Status === 'Continuing' && (
-            <NextAiring series={item} />
-          )}
-          {!!item.Genres?.length && (
+    <>
+      {/* Its poster, logo and text show together, once all are in. */}
+      {!ready && <HeaderSkeleton />}
+      <div
+        data-ui="item-header"
+        data-nav-top
+        className={cn(
+          'flex flex-col gap-6 md:flex-row md:items-end md:gap-8',
+          !ready && 'hidden'
+        )}
+      >
+        {poster && (
+          <CachedImage
+            key={poster}
+            data-ui="item-poster"
+            src={poster}
+            alt=""
+            ref={drawn(poster)}
+            onLoad={settle(poster)}
+            onError={settle(poster)}
+            className={cn(
+              'hidden flex-none rounded-xl object-cover shadow-2xl ring-1 ring-white/10 md:block',
+              cardShape(item) === 'poster'
+                ? 'aspect-[2/3] w-48 lg:w-56'
+                : 'aspect-video w-80'
+            )}
+          />
+        )}
+        <div className="min-w-0 max-w-3xl flex-1 space-y-4">
+          <div data-ui="item-heading" className="space-y-4">
+            {logo && !logoFailed ? (
+              <CachedImage
+                key={logo}
+                data-ui="item-logo"
+                src={logo}
+                alt={item.Name ?? ''}
+                ref={drawn(logo)}
+                onLoad={settle(logo)}
+                onError={() => setLogoFailed(true)}
+                className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
+              />
+            ) : pending ? (
+              // A list may know no logo its own details have, so the name waits.
+              <Skeleton
+                data-ui="item-logo-placeholder"
+                className="h-20 w-80 max-w-full max-sm:mx-auto lg:h-28"
+              />
+            ) : (
+              <h1
+                data-ui="item-title"
+                className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+              >
+                {item.Name}
+              </h1>
+            )}
+            {!holding && item.Taglines?.[0] && (
+              <p
+                data-ui="item-tagline"
+                className="text-base italic text-gray-300 max-sm:text-center"
+              >
+                {item.Taglines[0]}
+              </p>
+            )}
+            {holding ? (
+              // The facts, tags and overview held as one block until they come.
+              <Skeleton className="h-5 w-72 max-w-full max-sm:mx-auto" />
+            ) : (
+              <MetaRow item={item} refreshing={refreshing} />
+            )}
+            {!holding && continuing && airing.next && (
+              <NextAiring next={airing.next} />
+            )}
+            {holding && (
+              <div className="flex gap-1.5 max-sm:justify-center">
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+            )}
+            {!holding && !!item.Genres?.length && (
+              <div
+                data-ui="item-genres"
+                className="flex flex-wrap gap-1.5 max-sm:justify-center"
+              >
+                {item.Genres.map((genre) => (
+                  <Badge
+                    key={genre}
+                    data-ui="item-genre"
+                    intent="white"
+                    size="md"
+                  >
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {holding || nextUpPending ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full max-w-2xl" />
+                <Skeleton className="h-4 w-11/12 max-w-2xl" />
+                <Skeleton className="h-4 w-2/3 max-w-xl" />
+              </div>
+            ) : item.Type === 'Series' && target && started ? (
+              // Once begun, a show tells of the episode it goes on with.
+              <NextEpisode episode={target} />
+            ) : (
+              <Overview
+                title={item.Name ?? ''}
+                line={[item.ProductionYear, item.Genres?.slice(0, 3).join(', ')]
+                  .filter(Boolean)
+                  .join(' · ')}
+                overview={item.Overview}
+                image={overviewImage}
+                clampClass="max-h-[4lh]"
+                className="text-sm leading-relaxed text-gray-300 sm:text-base"
+              />
+            )}
+          </div>
+          {holding && (
             <div
-              data-ui="item-genres"
-              className="flex flex-wrap gap-1.5 max-sm:justify-center"
+              aria-hidden
+              className="flex flex-wrap items-center gap-2 max-sm:justify-center"
             >
-              {item.Genres.map((genre) => (
-                <Badge
-                  key={genre}
-                  data-ui="item-genre"
-                  intent="white"
-                  size="md"
-                >
-                  {genre}
-                </Badge>
+              <Skeleton className="h-10 w-36 rounded-full" />
+              <Skeleton className="h-10 w-28 rounded-full" />
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="size-10 rounded-full" />
               ))}
             </div>
           )}
-          <Overview
-            title={item.Name ?? ''}
-            line={[item.ProductionYear, item.Genres?.slice(0, 3).join(', ')]
-              .filter(Boolean)
-              .join(' · ')}
-            overview={item.Overview}
-            image={overviewImage}
-            clampClass="max-h-[4lh]"
-            className="text-sm leading-relaxed text-gray-300 sm:text-base"
-          />
-        </div>
-        <div
-          data-ui="item-actions"
-          className="flex flex-wrap items-center gap-2 max-sm:justify-center"
-        >
-          {(target || nextUpPending) && (
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              <Button
-                data-ui="item-action"
-                data-name="play"
-                data-nav-start
-                intent="white"
-                className={cn(
-                  'flex-1 rounded-full sm:flex-none',
-                  item.Type === 'Series' && 'sm:min-w-[9.5rem]',
-                  quick && 'h-12 text-base'
-                )}
-                leftIcon={<IoPlay className="text-xl" />}
-                onClick={() =>
-                  target
-                    ? picker.play(target, { startMs: resumeMs })
-                    : void fetchNextUp(item.Id!).then(
-                        (episode) =>
-                          episode &&
-                          picker.play(episode, {
-                            startMs: ticksToMs(
-                              episode.UserData?.PlaybackPositionTicks
-                            ),
-                          })
-                      )
-                }
-                {...holdPlay}
-              >
-                {playLabel}
-              </Button>
-              {!!resumeMs && target && (
-                <Tooltip
-                  trigger={
-                    <IconButton
-                      data-ui="item-action"
-                      data-name="restart"
-                      intent="gray-subtle"
-                      size={quick ? 'lg' : 'md'}
-                      className="rounded-full text-2xl"
-                      icon={<LuRotateCcw />}
-                      aria-label={t`Play from the start`}
-                      onClick={() => picker.play(target, { startMs: 0 })}
-                      {...holdRestart}
-                    />
-                  }
-                >
-                  <Trans>Play from the start</Trans>
-                </Tooltip>
-              )}
-            </div>
-          )}
-          {!labelled && (
-            <SecondaryActions
-              item={item}
-              season={season}
-              target={target}
-              resumeMs={resumeMs}
-            />
-          )}
-          {!labelled && !!links?.length && (
-            <span
-              data-ui="item-actions-divider"
-              className="mx-1 hidden h-6 w-px bg-white/10 sm:block"
-              aria-hidden
-            />
-          )}
-          {!labelled && (
-            <div className="basis-full sm:basis-auto">
-              <ExternalLinks links={links} />
-            </div>
-          )}
-        </div>
-        {labelled && (
           <div
-            data-ui="item-quick-actions"
-            className="grid auto-cols-fr grid-flow-col gap-1"
+            data-ui="item-actions"
+            // Hidden, not unmounted, so Play is ready the moment the details come;
+            // the page's start focus waits for it to show.
+            className={cn(
+              'flex flex-wrap items-center gap-2 max-sm:justify-center',
+              holding && 'hidden'
+            )}
           >
-            <QuickShown.Provider value={shown}>
+            {(target || nextUpPending) && (
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <Button
+                  data-ui="item-action"
+                  data-name="play"
+                  data-nav-start
+                  intent="white"
+                  className={cn(
+                    'flex-1 rounded-full sm:flex-none',
+                    item.Type === 'Series' && 'sm:min-w-[9.5rem]',
+                    quick && 'h-12 text-base'
+                  )}
+                  leftIcon={<IoPlay className="text-xl" />}
+                  onClick={() =>
+                    target
+                      ? picker.play(target, { startMs: resumeMs })
+                      : void fetchNextUp(item.Id!).then(
+                          (episode) =>
+                            episode &&
+                            picker.play(episode, {
+                              startMs: ticksToMs(
+                                episode.UserData?.PlaybackPositionTicks
+                              ),
+                            })
+                        )
+                  }
+                  {...holdPlay}
+                >
+                  {playLabel}
+                </Button>
+                {!!resumeMs && target && (
+                  <Tooltip
+                    trigger={
+                      <IconButton
+                        data-ui="item-action"
+                        data-name="restart"
+                        intent="gray-subtle"
+                        size={quick ? 'lg' : 'md'}
+                        className="rounded-full text-2xl"
+                        icon={<LuRotateCcw />}
+                        aria-label={t`Play from the start`}
+                        onClick={() => picker.play(target, { startMs: 0 })}
+                        {...holdRestart}
+                      />
+                    }
+                  >
+                    <Trans>Play from the start</Trans>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+            {!labelled && (
               <SecondaryActions
                 item={item}
                 season={season}
                 target={target}
                 resumeMs={resumeMs}
-                caption="item-quick-action"
               />
-            </QuickShown.Provider>
-            <Captioned
-              ui="item-quick-action"
-              name="more"
-              label={t`More`}
-              order={shown.length}
-            >
-              <IconButton
-                data-ui="item-action"
-                data-name="more"
-                intent="gray-subtle"
-                className="rounded-full"
-                icon={<BiDotsHorizontalRounded />}
-                aria-label={t`More`}
-                onClick={() => setMore(true)}
+            )}
+            {!labelled && !!links?.length && (
+              <span
+                data-ui="item-actions-divider"
+                className="mx-1 hidden h-6 w-px bg-white/10 sm:block"
+                aria-hidden
               />
-            </Captioned>
-          </div>
-        )}
-        {labelled && (
-          <Drawer
-            data-ui="dialog"
-            data-name="item-more"
-            open={more}
-            onOpenChange={setMore}
-            onOpenAutoFocus={focusDialog}
-            title={item.Name ?? ''}
-            side="bottom"
-          >
-            <div
-              ref={moreBox}
-              data-nav-start
-              className="grid grid-cols-4 gap-x-1 gap-y-4 py-2"
-            >
-              <SecondaryActions
-                item={item}
-                season={season}
-                target={target}
-                resumeMs={resumeMs}
-                caption="item-more-action"
-              />
-            </div>
-            {!!links?.length && (
-              <div className="mt-4 border-t border-white/10 pt-4">
+            )}
+            {!labelled && (
+              <div className="basis-full sm:basis-auto">
                 <ExternalLinks links={links} />
               </div>
             )}
-          </Drawer>
-        )}
+          </div>
+          {labelled && (
+            <div
+              data-ui="item-quick-actions"
+              className="grid auto-cols-fr grid-flow-col gap-1"
+            >
+              <QuickShown.Provider value={shown}>
+                <SecondaryActions
+                  item={item}
+                  season={season}
+                  target={target}
+                  resumeMs={resumeMs}
+                  caption="item-quick-action"
+                />
+              </QuickShown.Provider>
+              <Captioned
+                ui="item-quick-action"
+                name="more"
+                label={t`More`}
+                order={shown.length}
+              >
+                <IconButton
+                  data-ui="item-action"
+                  data-name="more"
+                  intent="gray-subtle"
+                  className="rounded-full"
+                  icon={<BiDotsHorizontalRounded />}
+                  aria-label={t`More`}
+                  onClick={() => setMore(true)}
+                />
+              </Captioned>
+            </div>
+          )}
+          {labelled && (
+            <Drawer
+              data-ui="dialog"
+              data-name="item-more"
+              open={more}
+              onOpenChange={setMore}
+              onOpenAutoFocus={focusDialog}
+              title={item.Name ?? ''}
+              side="bottom"
+            >
+              <div
+                ref={moreBox}
+                data-nav-start
+                className="grid grid-cols-4 gap-x-1 gap-y-4 py-2"
+              >
+                <SecondaryActions
+                  item={item}
+                  season={season}
+                  target={target}
+                  resumeMs={resumeMs}
+                  caption="item-more-action"
+                />
+              </div>
+              {!!links?.length && (
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <ExternalLinks links={links} />
+                </div>
+              )}
+            </Drawer>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -419,8 +551,13 @@ export function Header({
  * The next episode of a show still airing, from its latest season, which is
  * where a metadata addon lists what is scheduled.
  */
-function NextAiring({ series }: { series: BaseItemDto }) {
-  const seasons = useSeasons(series.Id!, true);
+/**
+ * A still-airing show's next episode to come, looked up from its latest
+ * season. Started while the page still holds its places, so the line comes
+ * with the rest instead of pushing in after it.
+ */
+function useNextAiring(series: BaseItemDto, enabled: boolean) {
+  const seasons = useSeasons(series.Id!, enabled);
   const latest = React.useMemo(
     () =>
       (seasons.data?.Items ?? [])
@@ -428,10 +565,19 @@ function NextAiring({ series }: { series: BaseItemDto }) {
         .sort((a, b) => (b.IndexNumber ?? 0) - (a.IndexNumber ?? 0))[0],
     [seasons.data]
   );
-  const episodes = useEpisodes(series.Id!, latest?.Id ?? undefined);
+  const episodes = useEpisodes(
+    series.Id!,
+    enabled ? (latest?.Id ?? undefined) : undefined
+  );
   const next = episodes.data?.Items?.find(
     (e) => e.PremiereDate && Date.parse(e.PremiereDate) > Date.now()
   );
+  const loading =
+    enabled && (seasons.isPending || (!!latest && episodes.isPending));
+  return { next, loading };
+}
+
+function NextAiring({ next }: { next: BaseItemDto }) {
   if (!next?.PremiereDate) return null;
   return (
     <p

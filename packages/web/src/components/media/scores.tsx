@@ -1,5 +1,5 @@
 import { t } from '@lingui/core/macro';
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { BiSolidStar } from 'react-icons/bi';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import {
@@ -115,9 +115,32 @@ function lookOf(source: string, share: number): Look {
 }
 /* eslint-enable lingui/no-unlocalized-strings */
 
-function ScoreBadge({ score }: { score: Score }) {
+function ScoreBadge({
+  score,
+  emphasis = false,
+}: {
+  score: Score;
+  /** IMDb's score large and bold, out of 10, as IMDb shows its own. */
+  emphasis?: boolean;
+}) {
   const share = score.value / score.scale;
   const { name, icon: Icon, color, text } = lookOf(score.source, share);
+  if (emphasis && score.source === 'imdb')
+    return (
+      <span
+        data-ui="score"
+        data-source={score.source}
+        title={name}
+        className="inline-flex items-center gap-1.5"
+      >
+        <Icon aria-hidden className="shrink-0 text-[1.4em]" style={{ color }} />
+        <span className="sr-only">{name}</span>
+        <span className="text-lg font-bold leading-none text-white">
+          {text(share)}
+        </span>
+        <span className="text-[--muted]">/10</span>
+      </span>
+    );
   return (
     <span
       data-ui="score"
@@ -132,14 +155,50 @@ function ScoreBadge({ score }: { score: Score }) {
   );
 }
 
-export function Scores({ item, max }: { item: BaseItemDto; max?: number }) {
+export function Scores({
+  item,
+  max,
+  emphasis,
+}: {
+  item: BaseItemDto;
+  max?: number;
+  /** Shows IMDb's score large, out of 10. */
+  emphasis?: boolean;
+}) {
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 max-sm:justify-center">
       {scoresOf(item)
         .slice(0, max)
         .map((score) => (
-          <ScoreBadge key={score.source} score={score} />
+          <ScoreBadge key={score.source} score={score} emphasis={emphasis} />
         ))}
+    </span>
+  );
+}
+
+/**
+ * The scores, with a faint light running along a hairline under them while
+ * fresh ones are fetched; drawn over the row, so nothing around them moves.
+ */
+export function ScoreRefresh({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span className="relative inline-flex">
+      {children}
+      {active && (
+        <span
+          aria-hidden
+          data-ui="score-refresh"
+          className="pointer-events-none absolute inset-x-0 -bottom-1.5 h-px overflow-hidden"
+        >
+          <span className="block h-full w-1/2 animate-[score-refresh_1.6s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        </span>
+      )}
     </span>
   );
 }
