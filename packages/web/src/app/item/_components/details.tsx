@@ -33,14 +33,17 @@ function airsLine(
   return time ? t`Every ${list} at ${time}` : t`Every ${list}`;
 }
 
-export function Details({ item }: { item: BaseItemDto }) {
+/** A title's facts that it has, as name, label and value. */
+export function detailRows(
+  item: BaseItemDto
+): [string, string, React.ReactNode][] {
   const airs = airsLine(item.AirDays, item.AirTime);
   const released = item.PremiereDate
     ? dateFormat({ day: 'numeric', month: 'long', year: 'numeric' }).format(
         new Date(item.PremiereDate)
       )
     : null;
-  const rows: [string, string, React.ReactNode][] = (
+  return (
     [
       ['studios', t`Studios`, item.Studios?.map((s) => s.Name).join(', ')],
       [
@@ -56,6 +59,10 @@ export function Details({ item }: { item: BaseItemDto }) {
       ['country', t`Country`, item.ProductionLocations?.join(', ')],
     ] as [string, string, React.ReactNode][]
   ).filter(([, , value]) => !!value);
+}
+
+export function Details({ item }: { item: BaseItemDto }) {
+  const rows = detailRows(item);
   if (!rows.length) return null;
   return (
     <Section name="details" title={t`Details`}>

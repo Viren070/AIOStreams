@@ -123,7 +123,7 @@ export function PeopleRowSkeleton() {
 const CAST = new Set(['Actor', 'GuestStar']);
 
 /** A crew job by the kinds AIOStreams sends; any other shows as the server names it. */
-function jobLabel(kind: string): string {
+export function jobLabel(kind: string): string {
   switch (kind) {
     case 'Director':
       return t`Director`;

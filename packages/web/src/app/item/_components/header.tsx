@@ -37,6 +37,7 @@ import {
   progressOf,
 } from '@/lib/format';
 import { Overview } from '@/components/media/overview';
+import { TitleAbout } from './about';
 import { PlayProgress } from '@/components/media/play-progress';
 import { ScoreRefresh, Scores, scoresOf } from '@/components/media/scores';
 import { SeasonCount } from '@/components/media/season-count';
@@ -145,7 +146,14 @@ const MetaRow = React.memo(function MetaRow({
 });
 
 /** The episode a show goes on with: its number, title and overview. */
-function NextEpisode({ episode }: { episode: BaseItemDto }) {
+function NextEpisode({
+  episode,
+  onPress,
+}: {
+  episode: BaseItemDto;
+  /** Opens all about the episode, as a title's overview opens all about it. */
+  onPress: () => void;
+}) {
   return (
     <div data-ui="item-next-episode" className="space-y-1.5">
       <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold text-white max-sm:justify-center">
@@ -160,9 +168,14 @@ function NextEpisode({ episode }: { episode: BaseItemDto }) {
         )}
       </p>
       {episode.Overview && (
-        <p className="line-clamp-4 max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base">
-          {episode.Overview}
-        </p>
+        <Overview
+          title={episode.Name ?? ''}
+          overview={episode.Overview}
+          image={[]}
+          clampClass="max-h-[4lh]"
+          onPress={onPress}
+          className="max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base [[data-tv]_&]:max-w-[50vw] [[data-tv]_&]:text-base"
+        />
       )}
     </div>
   );
@@ -211,6 +224,8 @@ export function Header({
     ? posterUrl(client, item, { maxWidth: 320 })
     : null;
   const [logoFailed, setLogoFailed] = React.useState(false);
+  const [about, setAbout] = React.useState(false);
+  const [aboutEpisode, setAboutEpisode] = React.useState(false);
   // Pictures in, by address; the header waits for them, but not for long.
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
   const settle = (src: string) => () =>
@@ -285,6 +300,20 @@ export function Header({
     <>
       {/* Its poster, logo and text show together, once all are in. */}
       {!ready && <HeaderSkeleton />}
+      <TitleAbout
+        item={item}
+        meta={<MetaRow item={item} />}
+        open={about}
+        onOpenChange={setAbout}
+      />
+      {target?.Type === 'Episode' && item.Type === 'Series' && (
+        <TitleAbout
+          item={target}
+          meta={<MetaRow item={target} />}
+          open={aboutEpisode}
+          onOpenChange={setAboutEpisode}
+        />
+      )}
       <div
         data-ui="item-header"
         data-nav-top
@@ -386,7 +415,10 @@ export function Header({
               </div>
             ) : item.Type === 'Series' && target && started ? (
               // Once begun, a show tells of the episode it goes on with.
-              <NextEpisode episode={target} />
+              <NextEpisode
+                episode={target}
+                onPress={() => setAboutEpisode(true)}
+              />
             ) : (
               <Overview
                 title={item.Name ?? ''}
@@ -396,7 +428,8 @@ export function Header({
                 overview={item.Overview}
                 image={overviewImage}
                 clampClass="max-h-[4lh]"
-                className="text-sm leading-relaxed text-gray-300 sm:text-base"
+                onPress={() => setAbout(true)}
+                className="text-sm leading-relaxed text-gray-300 sm:text-base [[data-tv]_&]:max-w-[50vw] [[data-tv]_&]:text-base"
               />
             )}
           </div>

@@ -153,6 +153,31 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
+/*
+ * A TV slides a title's panel alone: solid, with no glass, shadow, edge or
+ * dimmed page behind, each of which it would redraw with every frame. It
+ * leaves at speed and settles slowly, and goes away quicker than it came.
+ */
+:root[data-tv] .title-about-overlay {
+  display: none;
+}
+:root[data-tv] .UI-Drawer__content.title-about {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  background: rgb(16 16 20);
+  backdrop-filter: none;
+  box-shadow: none;
+  border: 0;
+}
+:root[data-tv]
+  .UI-Drawer__content.title-about[data-state='open']:not([data-drawn]) {
+  animation-play-state: paused;
+}
+:root[data-tv] .UI-Drawer__content.title-about[data-state='closed'] {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.7, 0.2);
+}
+
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
   display: none !important;
