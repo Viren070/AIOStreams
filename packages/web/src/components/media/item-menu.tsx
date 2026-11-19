@@ -485,13 +485,15 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
               onSelect={() => {
                 const leaving = leaveRow();
                 const id = item.Id!;
-                clearResume.mutate(id, {
-                  onSuccess: () =>
+                // Its own promise: a second removal's `mutate` would take over
+                // this one's callbacks before it answers.
+                void clearResume.mutateAsync(id).then(
+                  () =>
                     void leaving
                       .go(() => dropFromContinue(id))
                       .finally(() => void refreshAll()),
-                  onError: () => leaving.undo(),
-                });
+                  () => leaving.undo()
+                );
               }}
             >
               <BiReset /> <Trans>Remove from continue watching</Trans>
