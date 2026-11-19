@@ -28,6 +28,9 @@ export const HEADER_PRESETS: Record<string, Record<string, string>> = {
     'Content-Type': 'application/xml',
     'User-Agent': 'NZBHydra2 9.3.1',
   },
+  vlc: {
+    'User-Agent': 'VLC/3.0.21 LibVLC/3.0.21',
+  },
   chrome: {
     'User-Agent':
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36',
