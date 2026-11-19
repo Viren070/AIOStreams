@@ -27,7 +27,7 @@ export interface WashFrame {
 }
 
 const PANELS =
-  '.UI-Popover__root, .UI-DropdownMenu__root, .UI-DropdownMenu__subContent, .UI-ContextMenu__root, .UI-Select__content, .UI-Tooltip__root, .UI-Modal__content, .UI-Drawer__content, .UI-Input__root, [data-ui=settings-card], [data-ui=settings-tab-group], [data-ui=pill-tabs]';
+  '.UI-Popover__root, .UI-DropdownMenu__root, .UI-DropdownMenu__subContent, .UI-ContextMenu__root, .UI-Select__content, .UI-Tooltip__root, .UI-Modal__content, .UI-Drawer__content, .UI-Input__root, [data-ui=settings-card], [data-ui=settings-tab-group], [data-ui=pill-tabs], [data-ui=guide]';
 
 let panelStyle: HTMLStyleElement | null = null;
 
