@@ -29,6 +29,8 @@ import {
 import {
   offersFavourite,
   useClearResume,
+  useDropFromContinue,
+  useRefreshAll,
   useSetFavorite,
   useSetPlayed,
   useSetPlayedUpTo,
@@ -50,8 +52,10 @@ import {
   useVersionPicker,
 } from '@/features/versions/version-picker';
 import { useHeroTarget } from './hero';
-import { useCardPreview } from './card-preview';
+import { closeCardPreview, useCardPreview } from './card-preview';
 import { useArtTarget } from '@/lib/artwork/background';
+import { focusOn } from '@/lib/input';
+import { focusBeforeMenu } from '@/lib/input/restore-focus';
 import { openAddToPlaylist } from '@/features/playlists/playlists';
 import { playable as canPlay } from '@/lib/playlists';
 import { usingKeys } from '@/lib/input';
@@ -197,6 +201,125 @@ export function ItemMenuHost({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** How long a removed card's row may take to be drawn without it. */
+const DRAWN_WITHOUT_MS = 2000;
+
+interface Leaving {
+  /** Its card fades as those after slide over, then `drop` takes it out of the row's data in that same frame. */
+  go(drop: () => void): Promise<void>;
+  /** The server kept it: all stays as it was. */
+  undo(): void;
+}
+
+/**
+ * The card a menu was opened on, by its place in its row. It waits under a
+ * spinner while the server takes it out; then it fades as the cards after
+ * it slide over into its place, the row drops it the frame they arrive,
+ * and the card now there takes focus. Nothing moves before the server has
+ * answered, and nothing jumps as the row is drawn again.
+ */
+function leaveRow(): Leaving {
+  // The card the menu was opened for, which a long press needn't have focused.
+  const owner = document.querySelector('[data-menu-open]');
+  const card =
+    owner?.closest<HTMLElement>('[data-focus="own"]') ??
+    owner?.querySelector<HTMLElement>('[data-focus="own"]') ??
+    focusBeforeMenu()?.closest<HTMLElement>('[data-focus="own"]');
+  const slide = card?.closest<HTMLElement>('[data-ui=media-row-item]');
+  const row = slide?.parentElement;
+  const slides = () =>
+    row
+      ? [...row.children].filter(
+          (el): el is HTMLElement =>
+            el instanceof HTMLElement && el.dataset.ui === 'media-row-item'
+        )
+      : [];
+  closeCardPreview(card);
+  // It keeps from opening again as focus comes back to it from the menu.
+  card?.setAttribute('data-leaving', '');
+  card?.setAttribute('data-removing', '');
+  const moving = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return {
+    async go(drop) {
+      card?.removeAttribute('data-removing');
+      const all = slides();
+      const at = slide ? all.indexOf(slide) : -1;
+      const step =
+        all.length > 1
+          ? Math.abs(all[1].offsetLeft - all[0].offsetLeft)
+          : (slide?.offsetWidth ?? 0);
+      const timing = {
+        duration: moving ? 320 : 0,
+        easing: 'cubic-bezier(0.2, 0, 0, 1)',
+        fill: 'forwards',
+      } as const;
+      const fade = card?.animate([{ opacity: 1 }, { opacity: 0 }], {
+        ...timing,
+        duration: moving ? 220 : 0,
+        easing: 'cubic-bezier(0.4, 0, 1, 1)',
+      });
+      const over =
+        at >= 0
+          ? all
+              .slice(at + 1)
+              .map((each) =>
+                each.animate(
+                  [
+                    { transform: 'none' },
+                    { transform: `translateX(${-step}px)` },
+                  ],
+                  timing
+                )
+              )
+          : [];
+      await Promise.all(
+        [fade, ...over].map((a) => a?.finished.catch(() => undefined))
+      );
+      // The row is drawn without it a task after its data changes. Its cards
+      // stand where they slid to until then, and the moment it's drawn, before
+      // that frame shows, they're let go where the row now draws them.
+      const settle = () => {
+        for (const animation of over) animation.cancel();
+        fade?.cancel();
+        const now = slides();
+        const to = at >= 0 ? now[Math.min(at, now.length - 1)] : undefined;
+        const target = to?.querySelector<HTMLElement>('[data-focus="own"]');
+        const active = document.activeElement;
+        if (
+          target &&
+          (!active ||
+            active === document.body ||
+            !active.isConnected ||
+            active === card)
+        )
+          focusOn(target);
+      };
+      await new Promise<void>((done) => {
+        let ended = false;
+        const finish = () => {
+          if (ended) return;
+          ended = true;
+          observer.disconnect();
+          clearTimeout(giveUp);
+          settle();
+          done();
+        };
+        const observer = new MutationObserver(() => {
+          if (!card?.isConnected) finish();
+        });
+        if (row) observer.observe(row, { childList: true, subtree: true });
+        const giveUp = setTimeout(finish, DRAWN_WITHOUT_MS);
+        drop();
+        if (!card?.isConnected) finish();
+      });
+    },
+    undo() {
+      card?.removeAttribute('data-removing');
+      card?.removeAttribute('data-leaving');
+    },
+  };
+}
+
 let pressTimer = 0;
 
 /** Right click, or a long press on touch, for what a card's item offers. */
@@ -268,7 +391,9 @@ export function ItemMenu({
 function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
   const setPlayed = useSetPlayed();
   const setPlayedUpTo = useSetPlayedUpTo();
-  const clearResume = useClearResume();
+  const clearResume = useClearResume({ refresh: false });
+  const dropFromContinue = useDropFromContinue();
+  const refreshAll = useRefreshAll();
   const setFavorite = useSetFavorite();
   const playable = canPlay(item);
   // A channel keeps no watch state, and has no page or download of its own.
@@ -356,7 +481,17 @@ function ItemMenuContent({ item, onPage, onDetails }: MenuTarget) {
           {resumeMs > 0 && (
             <ContextMenuItem
               data-name="remove-resume"
-              onSelect={() => clearResume.mutate(item.Id!)}
+              onSelect={() => {
+                const leaving = leaveRow();
+                const id = item.Id!;
+                clearResume.mutate(id, {
+                  onSuccess: () =>
+                    void leaving
+                      .go(() => dropFromContinue(id))
+                      .finally(() => void refreshAll()),
+                  onError: () => leaving.undo(),
+                });
+              }}
             >
               <BiReset /> <Trans>Remove from continue watching</Trans>
             </ContextMenuItem>
