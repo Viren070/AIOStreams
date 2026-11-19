@@ -2,6 +2,7 @@ import React from 'react';
 import { themeVariables } from '@aiostreams/ui/utils/palette';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import { useSession } from '@/lib/jellyfin/session';
+import { useCachedItem } from '@/lib/jellyfin/queries';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { usePageShown } from '@/lib/page-shown';
 import { settings, useSetting, type ArtPage } from '@/lib/settings';
@@ -273,6 +274,7 @@ export function useArtBackground(
 /** A card's handlers that put its artwork behind the pages once it is rested on. */
 export function useArtTarget(item: BaseItemDto) {
   const { client } = useSession();
+  const cachedItem = useCachedItem();
   const [pages] = useSetting(settings.theme.artBackground);
   const src = pages.length ? artSrc(client, item) : undefined;
   if (!src) return undefined;
@@ -282,7 +284,10 @@ export function useArtTarget(item: BaseItemDto) {
     restingOn = src;
     restTimer = setTimeout(() => {
       restingOn = undefined;
-      selectedSrc = src;
+      // A list knows a title's poster, its details its backdrop, which its
+      // page shows behind it: by then fetched ahead, so the art doesn't change.
+      const full = item.Id ? cachedItem(item.Id) : undefined;
+      selectedSrc = (full && artSrc(client, full)) || src;
       apply();
     }, REST_MS);
   };
