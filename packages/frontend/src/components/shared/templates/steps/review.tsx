@@ -13,6 +13,8 @@ import { ServiceLogo } from '../../service-logo';
 import { UserDataDiffViewer } from '../../userdata-diff-viewer';
 import { templateRequirements } from '@/lib/templates/summary';
 import { ProcessedTemplate } from '@/lib/templates/types';
+import type { TemplateUpdatePlan } from '@/lib/templates/merge';
+import { UpdateSummary } from './update-summary';
 
 interface ReviewStepProps {
   processedTemplate: ProcessedTemplate;
@@ -21,6 +23,9 @@ interface ReviewStepProps {
   status: StatusResponse | null;
   currentUserData: UserData | null;
   previewUserData: () => any | null;
+  updatePlan: TemplateUpdatePlan | null;
+  keepMine: ReadonlySet<string>;
+  setKeepMine: (field: string, keep: boolean) => void;
 }
 
 function Section({
@@ -53,6 +58,9 @@ export function ReviewStep({
   status,
   currentUserData,
   previewUserData,
+  updatePlan,
+  keepMine,
+  setKeepMine,
 }: ReviewStepProps) {
   const [diffOpen, setDiffOpen] = React.useState(false);
   const { metadata } = processedTemplate.template;
@@ -156,9 +164,21 @@ export function ReviewStep({
         </Section>
       )}
 
+      {updatePlan && (
+        <UpdateSummary
+          plan={updatePlan}
+          keepMine={keepMine}
+          setKeepMine={setKeepMine}
+        />
+      )}
+
       <Alert
         intent="info"
-        description="Applying this replaces the matching parts of your current configuration. Nothing is saved to your account until you save on the Save & Install page."
+        description={
+          updatePlan
+            ? 'Your services are replaced with the ones picked in this setup. Nothing is saved to your account until you save on the Save & Install page.'
+            : 'Applying this replaces the matching parts of your current configuration. Nothing is saved to your account until you save on the Save & Install page.'
+        }
       />
 
       {currentUserData && (
