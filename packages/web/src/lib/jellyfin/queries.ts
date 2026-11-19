@@ -544,6 +544,8 @@ function useShowOptions() {
             userId: user.Id,
             SeriesId: seriesId,
             Limit: 1,
+            // The hero tells of it; stock Jellyfin sends it only when asked.
+            Fields: 'Overview',
           }),
       }),
   };
