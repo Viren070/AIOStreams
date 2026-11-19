@@ -210,7 +210,9 @@ export function Header({
   const holding = pending || (continuing && airing.loading && !late);
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const poster = posterUrl(client, item, { maxWidth: 320 });
-  const [logoFailed, setLogoFailed] = React.useState(false);
+  // By address, so a different logo in the full details still gets its try.
+  const [failedLogo, setFailedLogo] = React.useState<string>();
+  const logoFailed = !!logo && failedLogo === logo;
   // Pictures in, by address; the header waits for them, but not for long.
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
   const settle = (src: string) => () =>
@@ -313,7 +315,7 @@ export function Header({
                 alt={item.Name ?? ''}
                 ref={drawn(logo)}
                 onLoad={settle(logo)}
-                onError={() => setLogoFailed(true)}
+                onError={() => setFailedLogo(logo)}
                 className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
               />
             ) : pending ? (
