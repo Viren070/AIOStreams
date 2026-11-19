@@ -195,7 +195,9 @@ export function thumbnailFeed(
         row = new Map(row);
         for (const p of stale.slice(0, stale.length - ROW_KEPT)) row.delete(p);
       }
-      if (asking?.kept) drop();
+      // A kept picture on its way goes on unless the row now lacks one of its own.
+      const lacking = rowWanted.some((p) => !row.has(p) && !rowSkipped.has(p));
+      if (asking?.kept && lacking) drop();
       askNext();
     },
     row: () => (none ? null : row),
