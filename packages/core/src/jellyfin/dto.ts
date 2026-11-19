@@ -281,7 +281,7 @@ export function sortNameFor(name: string): string {
     .replace(/\d+/g, (digits) => digits.padStart(10, '0'));
 }
 
-function peopleDtos(people: EnrichedPerson[]) {
+export function peopleDtos(people: EnrichedPerson[]) {
   return people.map((p) => {
     const pid = personId(personDescriptorOf(p));
     if (p.photo) rememberImages(pid, { Primary: p.photo });

@@ -39,8 +39,18 @@ export async function titlePreviews(
   tmdb: TMDBMetadata,
   titles: TMDBTitle[]
 ): Promise<MetaPreview[]> {
+  const previews = await titlePreviewsInOrder(engine, tmdb, titles);
+  return previews.filter((p): p is MetaPreview => !!p);
+}
+
+/** As {@link titlePreviews}, one per title in its place, null where nothing opens it. */
+export async function titlePreviewsInOrder(
+  engine: AIOStreams,
+  tmdb: TMDBMetadata,
+  titles: TMDBTitle[]
+): Promise<(MetaPreview | null)[]> {
   const pool = pLimit(ID_LOOKUPS);
-  const previews = await Promise.all(
+  return Promise.all(
     titles.map((title) =>
       pool(async (): Promise<MetaPreview | null> => {
         const type = title.mediaType === 'movie' ? 'movie' : 'series';
@@ -75,7 +85,6 @@ export async function titlePreviews(
       })
     )
   );
-  return previews.filter((p): p is MetaPreview => !!p);
 }
 
 /**

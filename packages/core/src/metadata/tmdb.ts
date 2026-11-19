@@ -203,6 +203,8 @@ const PersonCreditSchema = z.looseObject({
   vote_count: z.number().optional(),
   character: z.string().nullable().optional(),
   job: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  episode_count: z.number().nullable().optional(),
 });
 
 const PersonDetailsSchema = z.looseObject({
@@ -260,9 +262,18 @@ export interface TMDBTitle {
   voteCount: number;
 }
 
+/** One credit on a title: the department, `Acting` for the cast, and the character played or job held. */
+export interface TMDBCreditPart {
+  department: string;
+  role?: string;
+  /** On a show, the episodes this part covered. */
+  episodes?: number;
+}
+
 export interface TMDBPersonCredit extends TMDBTitle {
   /** Characters played and jobs held, one entry per credit. */
   roles: string[];
+  parts: TMDBCreditPart[];
 }
 
 export interface TMDBPersonResult {
@@ -284,6 +295,83 @@ export interface TMDBPerson {
   imdbId?: string;
   department?: string;
   credits: TMDBPersonCredit[];
+}
+
+/** Someone who wrote a title's music, as TMDB credits them. */
+export interface TMDBComposer {
+  tmdbId: number;
+  name: string;
+  profilePath?: string;
+}
+
+/* A movie's crew names one job each; a show's, every job across its episodes. */
+const CrewCreditsSchema = z.object({
+  crew: z
+    .array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        profile_path: z.string().nullish(),
+        job: z.string().nullish(),
+        jobs: z
+          .array(
+            z.object({
+              job: z.string(),
+              episode_count: z.number().nullish(),
+            })
+          )
+          .nullish(),
+      })
+    )
+    .default([]),
+});
+
+/* The score's writers, the theme's after them; a supervisor picks songs. */
+const COMPOSER_JOBS = [
+  'Original Music Composer',
+  'Music',
+  'Composer',
+  'Main Title Theme Composer',
+];
+/* A show's score can change hands every season; the ones it kept longest. */
+const MAX_COMPOSERS = 3;
+
+/** A title's composers from its crew: score before theme, then most episodes. */
+export function composersFrom(
+  crew: z.infer<typeof CrewCreditsSchema>['crew']
+): TMDBComposer[] {
+  const found = new Map<
+    number,
+    { composer: TMDBComposer; rank: number; episodes: number }
+  >();
+  for (const member of crew) {
+    const jobs: { job: string; episode_count?: number | null }[] =
+      member.jobs ?? (member.job ? [{ job: member.job }] : []);
+    for (const { job, episode_count } of jobs) {
+      const rank = COMPOSER_JOBS.indexOf(job);
+      if (rank < 0) continue;
+      const episodes = episode_count ?? 0;
+      const seen = found.get(member.id);
+      if (
+        seen &&
+        (seen.rank < rank || (seen.rank === rank && seen.episodes >= episodes))
+      )
+        continue;
+      found.set(member.id, {
+        composer: {
+          tmdbId: member.id,
+          name: member.name,
+          ...(member.profile_path && { profilePath: member.profile_path }),
+        },
+        rank,
+        episodes,
+      });
+    }
+  }
+  return [...found.values()]
+    .sort((a, b) => a.rank - b.rank || b.episodes - a.episodes)
+    .slice(0, MAX_COMPOSERS)
+    .map((f) => f.composer);
 }
 
 export interface TMDBSeriesSearchResult {
@@ -322,11 +410,17 @@ export class TMDBMetadata {
   private static readonly personSearchCache: Cache<string, TMDBPersonResult[]> =
     Cache.getInstance<string, TMDBPersonResult[]>('tmdb_person_search');
   private static readonly personCache: Cache<string, TMDBPerson> =
-    Cache.getInstance<string, TMDBPerson>('tmdb_person');
+    Cache.getInstance<string, TMDBPerson>('tmdb_person_v2');
   private static readonly recommendationCache: Cache<string, TMDBTitle[]> =
     Cache.getInstance<string, TMDBTitle[]>('tmdb_recommendations');
   private static readonly imdbIdCache: Cache<string, string> =
     Cache.getInstance<string, string>('tmdb_imdb_id');
+  private static readonly composerCache: Cache<
+    string,
+    { composers: TMDBComposer[] }
+  > = Cache.getInstance<string, { composers: TMDBComposer[] }>(
+    'tmdb_composers'
+  );
   public constructor(auth?: { accessToken?: string; apiKey?: string }) {
     if (
       !auth?.accessToken &&
@@ -851,10 +945,12 @@ export class TMDBMetadata {
       ...(data.combined_credits?.cast ?? []).map((c) => ({
         ...c,
         role: c.character,
+        department: 'Acting',
       })),
       ...(data.combined_credits?.crew ?? []).map((c) => ({
         ...c,
         role: c.job,
+        department: c.department || 'Crew',
       })),
     ];
     const byTitle = new Map<string, TMDBPersonCredit>();
@@ -864,9 +960,20 @@ export class TMDBMetadata {
       if (!title) continue;
       const role = credit.role?.trim();
       const titleKey = `${credit.media_type}:${credit.id}`;
+      const part = {
+        department: credit.department,
+        ...(role && { role }),
+        ...(credit.episode_count && { episodes: credit.episode_count }),
+      };
       const existing = byTitle.get(titleKey);
       if (existing) {
         if (role && !existing.roles.includes(role)) existing.roles.push(role);
+        if (
+          !existing.parts.some(
+            (p) => p.department === part.department && p.role === part.role
+          )
+        )
+          existing.parts.push(part);
         continue;
       }
       byTitle.set(titleKey, {
@@ -881,6 +988,7 @@ export class TMDBMetadata {
         popularity: credit.popularity ?? 0,
         voteCount: credit.vote_count ?? 0,
         roles: role ? [role] : [],
+        parts: [part],
       });
     }
     const person: TMDBPerson = {
@@ -935,6 +1043,27 @@ export class TMDBMetadata {
       `${mediaType}:${tmdbId}`,
       RECOMMENDATION_CACHE_TTL
     );
+  }
+
+  /** Who wrote a title's score; a show's across all its episodes. */
+  public async getComposers(
+    mediaType: 'movie' | 'tv',
+    tmdbId: number
+  ): Promise<TMDBComposer[]> {
+    const key = `${mediaType}:${tmdbId}`;
+    // Kept as an object, since the cache would not keep an empty list.
+    const cached = await TMDBMetadata.composerCache.get(key);
+    if (cached) return cached.composers;
+    const json = await this.getJson(
+      mediaType === 'movie'
+        ? `/movie/${tmdbId}/credits`
+        : `/tv/${tmdbId}/aggregate_credits`
+    );
+    const composers = composersFrom(
+      json ? CrewCreditsSchema.parse(json).crew : []
+    );
+    await TMDBMetadata.composerCache.set(key, { composers }, TITLE_CACHE_TTL);
+    return composers;
   }
 
   /** The IMDb id of a movie or show, for meta addons that only take those. */
