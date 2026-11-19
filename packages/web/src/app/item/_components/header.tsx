@@ -12,6 +12,7 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
+import { settings, useSetting } from '@/lib/settings';
 import { useSession } from '@/lib/jellyfin/session';
 import {
   useEpisodes,
@@ -59,10 +60,19 @@ import {
 /** The longest a title's header waits for its pictures before showing anyway. */
 const REVEAL_WAIT_MS = 2500;
 
+/** Whether a title's page shows its poster, by the setting. */
+export function useTitlePoster(): boolean {
+  const [shown] = useSetting(settings.interface.titlePoster);
+  return shown === 'show' || (shown === 'auto' && !currentHost().tv);
+}
+
 export function HeaderSkeleton() {
+  const posterShown = useTitlePoster();
   return (
     <div className="flex items-end gap-8">
-      <Skeleton className="hidden aspect-[2/3] h-auto w-56 rounded-xl md:block" />
+      {posterShown && (
+        <Skeleton className="hidden aspect-[2/3] h-auto w-56 rounded-xl md:block" />
+      )}
       <div className="flex-1 space-y-4">
         <Skeleton className="h-12 w-2/3" />
         <Skeleton className="h-5 w-1/3" />
@@ -197,7 +207,9 @@ export function Header({
   );
   const holding = pending || (continuing && airing.loading);
   const logo = logoUrl(client, item, { maxWidth: 416 });
-  const poster = posterUrl(client, item, { maxWidth: 320 });
+  const poster = useTitlePoster()
+    ? posterUrl(client, item, { maxWidth: 320 })
+    : null;
   const [logoFailed, setLogoFailed] = React.useState(false);
   // Pictures in, by address; the header waits for them, but not for long.
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
