@@ -9,7 +9,6 @@ import {
   shownFirst,
   settleBackdrop,
   useBackdropsSettled,
-  noteShownBackdrop,
 } from '@/lib/artwork/urls';
 import { useArtBackground } from '@/lib/artwork/background';
 import { lacksDetails } from '@/lib/format';
@@ -49,6 +48,14 @@ export function ItemPage({
   // Its own details settle its backdrop, not what the list it came from knew.
   if (data && !item.isPlaceholderData) settleBackdrop(data, 'details');
   useBackdropsSettled();
+  // The picture this visit settled on, kept as its details come; a later
+  // visit opens on what's settled by then.
+  const [kept, setKept] = React.useState<{ id: string; src: string }>();
+  const backdrops = shownFirst(
+    itemId,
+    data ? backdropUrls(client, data, { maxWidth: 1920 }) : []
+  );
+  const lead = kept?.id === itemId ? kept.src : undefined;
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   useArtBackground(data);
   const [season, setSeason] = React.useState<BaseItemDto>();
@@ -92,12 +99,15 @@ export function ItemPage({
     >
       {pickId && <PickOnArrival itemId={pickId} playlist={playlistId} />}
       <Backdrop
-        // The picture it was just shown with, if any, so it opens on the same.
-        onShown={(src) => noteShownBackdrop(itemId, src)}
-        images={shownFirst(
-          itemId,
-          data ? backdropUrls(client, data, { maxWidth: 1920 }) : []
-        )}
+        onShown={(src) =>
+          setKept((was) =>
+            was?.id === itemId && was.src === src ? was : { id: itemId, src }
+          )
+        }
+        // Led by the picture it was just shown with, if any, so it opens on the same.
+        images={
+          lead ? [lead, ...backdrops.filter((url) => url !== lead)] : backdrops
+        }
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
         trailer={trailer.shown}
       />
