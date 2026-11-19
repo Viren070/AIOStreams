@@ -108,7 +108,7 @@ export function BadgeChip({
     <span
       data-ui="version-badge"
       className={cn(
-        'inline-flex h-[1.375rem] flex-none items-center rounded-md border px-1.5 text-[0.6875rem] font-semibold leading-none',
+        'inline-flex h-[1.125rem] flex-none items-center rounded-md border px-1.5 text-[0.6875rem] font-semibold leading-none',
         pictured ? 'border-transparent' : 'border-white/60 text-white',
         className
       )}
@@ -127,7 +127,7 @@ export function BadgeChip({
           onLoad={() => setLoaded(true)}
           onError={() => setBroken(true)}
           className={cn(
-            'block max-h-4 w-auto max-w-[5.5rem] object-contain',
+            'block max-h-3.5 w-auto max-w-[5.5rem] object-contain',
             !pictured && 'hidden'
           )}
         />
