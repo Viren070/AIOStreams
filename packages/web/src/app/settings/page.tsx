@@ -38,6 +38,7 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
 import { navigate, to } from '@/lib/paths';
+import { pageOpening } from '@/lib/page-open';
 import { canPlayWithWebGpu } from '@/lib/playback/player-choice';
 import { BackButton } from '@/components/back-button';
 import { PageBody } from '@/components/shell/page';
@@ -402,13 +403,19 @@ function NarrowSettings({
   onQuery,
   onDonate,
 }: SettingsProps & { picked: Section | undefined }) {
+  // Latched, or a class added on a later render plays the entrance then.
+  const [slidIn] = React.useState(pageOpening);
   if (picked)
     return (
       <PageBody>
         <div
           data-ui="settings-panel"
           data-name={picked.id}
-          className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
+          className={cn(
+            'space-y-6',
+            !slidIn &&
+              'duration-300 animate-in fade-in-0 slide-in-from-bottom-2'
+          )}
         >
           <SettingsPageHeader
             title={picked.label}
@@ -448,7 +455,9 @@ function NarrowSettings({
                     data-ui="settings-tab"
                     data-name={s.id}
                     className="flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
-                    onClick={() => navigate(to.settings(s.id, who))}
+                    onClick={() =>
+                      navigate(to.settings(s.id, who), { over: true })
+                    }
                   >
                     <s.icon className="flex-none text-xl text-[--muted]" />
                     <span className="min-w-0 flex-1">

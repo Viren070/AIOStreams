@@ -90,6 +90,8 @@ interface NavigateOptions {
   replace?: boolean;
   keepScroll?: boolean;
   fromHero?: boolean;
+  /** Slides in over this page, as a title does. */
+  over?: boolean;
 }
 
 type Push = (path: string, opts: NavigateOptions) => void;
@@ -115,7 +117,11 @@ export function navigate(path: string, opts: NavigateOptions = {}) {
     pathname !== location.hash.slice(1).split('?')[0] &&
     !opts.replace &&
     !opts.keepScroll;
-  if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
+  if (opensTitle || opts.over)
+    openPage(() => push(path, opts), {
+      fromHero: opts.fromHero,
+      title: opensTitle,
+    });
   else push(path, opts);
 }
 

@@ -4,7 +4,7 @@ import { pageRtl } from './direction';
 export const UNDER_SHIFT = 0.25;
 export const UNDER_OPACITY = 0.6;
 
-/** How long the old screen may hold while the new page's art gets ready. */
+/** How long the old screen may hold while the new page, and a title's art, get ready. */
 const ART_WAIT_MS = 200;
 const EASE = 'cubic-bezier(0.05, 0.7, 0.1, 1)';
 const ART_MORPH = { duration: 450, easing: EASE };
@@ -36,8 +36,8 @@ const onPage = (selector: string) =>
     .querySelector('main [data-page]:not([inert])')
     ?.querySelector<HTMLElement>(selector) ?? null;
 
-/** Until the new page is open and its art shows. */
-const opened = (before: Element | null) =>
+/** Until the new page is open and, for a title, its art shows. */
+const opened = (before: Element | null, title: boolean) =>
   new Promise<void>((done) => {
     const by = performance.now() + ART_WAIT_MS;
     // Not by frame: none are drawn until the update finishes.
@@ -45,7 +45,8 @@ const opened = (before: Element | null) =>
       const page = document.querySelector('main [data-page]:not([inert])');
       const art = onPage("[data-ui='item-backdrop-image']");
       const shown =
-        page !== before && art && getComputedStyle(art).opacity !== '0';
+        page !== before &&
+        (!title || (art && getComputedStyle(art).opacity !== '0'));
       if (shown || performance.now() > by) done();
       else setTimeout(check, 8);
     };
@@ -97,10 +98,13 @@ const canTransition = () =>
 
 /**
  * Holds the old screen until the new page can draw, which otherwise leaves
- * nothing on screen meanwhile. From the hero, its art and logo carry over as the
- * rest crossfades; otherwise the page slides over.
+ * nothing on screen meanwhile; a title's until its art shows. From the hero,
+ * its art and logo carry over as the rest crossfades; otherwise the page slides over.
  */
-export function openPage(go: () => void, fromHero = false): void {
+export function openPage(
+  go: () => void,
+  { fromHero = false, title = true } = {}
+): void {
   if (!canTransition()) return go();
   const root = document.documentElement;
   const art = fromHero
@@ -123,7 +127,7 @@ export function openPage(go: () => void, fromHero = false): void {
   const before = document.querySelector('main [data-page]:not([inert])');
   const transition = document.startViewTransition(async () => {
     go();
-    await opened(before);
+    await opened(before, title);
     if (fromHero) {
       name(onPage("[data-ui='item-logo']"), LOGO);
       morphArt(art);
