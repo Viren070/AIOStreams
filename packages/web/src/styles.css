@@ -153,6 +153,33 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
+/*
+ * On a TV a page rises into place as the one it came from rose away, on the
+ * compositor; a title's content only, over its still backdrop. Home, kept
+ * beneath, rises from the layout as it shows again. The player opens as it is.
+ */
+@keyframes content-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+[data-tv] [data-ui='item-body'],
+[data-tv]
+  main
+  [data-page]:not([data-page='item'], [data-page='home'], [data-page='play']) {
+  animation: content-rise 320ms cubic-bezier(0, 0, 0.6, 1) backwards;
+}
+:root[data-rise-wait] [data-ui='item-body'],
+:root[data-rise-wait] main [data-page] {
+  animation-play-state: paused;
+}
+
+/* On a TV the cover's picture keeps still, as the title's page showed it. */
+:root[data-tv] [data-ui='player-cover-image'] {
+  animation: none;
+}
+
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
   display: none !important;

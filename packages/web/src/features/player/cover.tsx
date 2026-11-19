@@ -5,6 +5,27 @@ import { backdropUrl, logoUrl } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle } from '@/lib/format';
 import { CachedImage } from '@/components/cached-image';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
+import { takeArtFrom } from '@/lib/page-open';
+
+/** How long the cover's shade takes to come over a backdrop carried from the title's page. */
+const CARRY_MS = 600;
+
+/**
+ * Over a backdrop carried from the title's page, which on a TV shows it as the
+ * cover does, the picture is there at once and only the cover's shade comes in.
+ */
+function useArtCarried() {
+  const image = React.useRef<HTMLImageElement>(null);
+  const shade = React.useRef<HTMLDivElement>(null);
+  const [carried] = React.useState(() => !!takeArtFrom());
+  React.useLayoutEffect(() => {
+    if (!carried) return;
+    const timing = { duration: CARRY_MS, easing: 'ease-out' };
+    image.current?.animate([{ opacity: 0.3 }, { opacity: 0.4 }], timing);
+    shade.current?.animate([{ opacity: 0 }, { opacity: 1 }], timing);
+  }, [carried]);
+  return { image, shade, carried };
+}
 
 /**
  * What shows from the click until the first frame: the title's logo over its
@@ -22,7 +43,9 @@ export function Cover({
 }) {
   const { client } = useSession();
   const [gone, setGone] = React.useState(false);
-  const [backdropShown, setBackdropShown] = React.useState(false);
+  const art = useArtCarried();
+  // Already on screen when it comes from the title's page.
+  const [backdropShown, setBackdropShown] = React.useState(art.carried);
   const [logo, setLogo] = React.useState<'loading' | 'shown' | 'failed'>(
     'loading'
   );
@@ -49,6 +72,7 @@ export function Cover({
     >
       {backdrop && (
         <CachedImage
+          ref={art.image}
           data-ui="player-cover-image"
           src={backdrop}
           alt=""
@@ -59,7 +83,10 @@ export function Cover({
           )}
         />
       )}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgb(0_0_0/0.8)_100%)]" />
+      <div
+        ref={art.shade}
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgb(0_0_0/0.8)_100%)]"
+      />
       <div
         className={cn(
           'absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 transition-transform duration-700 ease-out',

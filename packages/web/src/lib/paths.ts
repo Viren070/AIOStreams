@@ -1,4 +1,4 @@
-import { openPage } from './page-open';
+import { leaveThenOpen, openPage } from './page-open';
 import type { ServerInfo } from './jellyfin/server-info';
 import type { BaseItemDto } from './jellyfin/types';
 
@@ -116,6 +116,9 @@ export function navigate(path: string, opts: NavigateOptions = {}) {
     !opts.replace &&
     !opts.keepScroll;
   if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
+  // Another page leaves as a title's does, the player's too.
+  else if (!opts.replace)
+    leaveThenOpen(() => push(path, opts), pathname.startsWith('/play/'));
   else push(path, opts);
 }
 
@@ -126,12 +129,13 @@ export function startOver(path: string): Promise<void> {
 
 /** Back where the user came from, or to `fallback` on a page opened directly. */
 export function goBack(fallback: string): void {
-  if (window.history.length > 1) window.history.back();
+  if (window.history.length > 1) leaveThenOpen(() => window.history.back());
   else navigate(fallback, { replace: true });
 }
 
 /** As `goBack`, but to `fallback` where back would leave the app, as after a link from another site. */
 export function goBackInApp(fallback: string): void {
-  if ((window.history.state?.__TSR_index ?? 0) > 0) window.history.back();
+  if ((window.history.state?.__TSR_index ?? 0) > 0)
+    leaveThenOpen(() => window.history.back());
   else navigate(fallback, { replace: true });
 }

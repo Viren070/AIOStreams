@@ -33,7 +33,7 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
 import { useLiveTvShown } from '@/features/live-tv/live-tv';
 import { useCanSwitch } from '@/lib/profiles';
-import { pageOpening } from '@/lib/page-open';
+import { artWaiting, CONTENT, pageOpening } from '@/lib/page-open';
 import { navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
@@ -107,6 +107,23 @@ const PAGE_FADE = {
 } as const;
 
 /**
+ * A TV page only fades: what rises there is the content its page sets moving,
+ * over a still backdrop. A title's page shows its backdrop at once, as faded
+ * in whole the artwork behind it shone through first.
+ */
+const fadeFrom = (pathname = '') =>
+  !currentHost().tv
+    ? PAGE_FADE.initial
+    : pathname.startsWith('/item/')
+      ? false
+      : { opacity: 0 };
+/** On a TV, in step with the content's rise and the leaving page's fade. */
+const fadeTiming = () =>
+  currentHost().tv
+    ? { duration: 0.32, ease: [0, 0, 0.6, 1] as const }
+    : PAGE_FADE.transition;
+
+/**
  * The backdrop as one element that never fades with the screens, so a
  * transparent page shows nothing beneath it; the player hides it.
  */
@@ -136,6 +153,57 @@ export function PageBackground({ router }: { router: AnyRouter }) {
       {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
     </div>
   );
+}
+
+/**
+ * On a TV, home kept beneath rises into place as it shows again, as a page
+ * opened does: its content, hidden as it's shown, rises once the frame that
+ * draws it again is out, which takes a TV a while; the hero's picture is there
+ * meanwhile.
+ */
+function useHomeRise(onHome: boolean) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const shown = React.useRef(onHome);
+  React.useLayoutEffect(() => {
+    const back = onHome && !shown.current;
+    shown.current = onHome;
+    const el = ref.current;
+    if (!back || !el || !currentHost().tv) return;
+    const parts = [...el.querySelectorAll<HTMLElement>(CONTENT)];
+    // The hero's picture, filling the screen, comes up from dark with it.
+    const art = [
+      ...el.querySelectorAll<HTMLElement>(
+        "[data-ui='hero'] > [data-ui='hero-art']"
+      ),
+    ];
+    for (const part of [...parts, ...art]) part.style.opacity = '0';
+    const show = () => {
+      for (const part of [...parts, ...art]) part.style.opacity = '';
+    };
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        show();
+        for (const part of parts)
+          part.animate(
+            [
+              { opacity: 0, transform: 'translateY(0.5rem)' },
+              { opacity: 1, transform: 'none' },
+            ],
+            { duration: 450, easing: 'cubic-bezier(0, 0, 0.6, 1)' }
+          );
+        for (const part of art)
+          part.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: 450,
+            easing: 'cubic-bezier(0, 0, 0.6, 1)',
+          });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      show();
+    };
+  }, [onHome]);
+  return ref;
 }
 
 function pageName(pathname: string): string {
@@ -170,6 +238,7 @@ export function WebLayout() {
     select: (s) => s.location.state.__TSR_key ?? s.location.href,
   });
   const onHome = pathname === '/';
+  const home = useHomeRise(onHome);
   // From the match the outlet shows, which can trail the location for a render.
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
@@ -446,8 +515,11 @@ export function WebLayout() {
                       {kept && (
                         <motion.div
                           key={kept}
+                          ref={home}
                           data-page="home"
                           {...PAGE_FADE}
+                          transition={fadeTiming()}
+                          initial={fadeFrom()}
                           inert={!onHome}
                           className={cn(
                             page,
@@ -466,7 +538,13 @@ export function WebLayout() {
                           key={pathname}
                           data-page={pageName(pathname)}
                           {...PAGE_FADE}
-                          initial={pageOpening() ? false : PAGE_FADE.initial}
+                          transition={fadeTiming()}
+                          // The player's cover shows at once when it takes a backdrop over.
+                          initial={
+                            pageOpening() || artWaiting()
+                              ? false
+                              : fadeFrom(pathname)
+                          }
                           className={page}
                         >
                           <Outlet />
