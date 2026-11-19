@@ -277,10 +277,12 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
           else if (!shownRef.current) cancel();
           return;
         }
+        // Not opened under a menu that takes focus late, nor after focus left.
+        cancel();
         // A menu can take focus a frame after the card loses it.
-        const was = pending.current ?? shownRef.current;
+        const was = shownRef.current;
         requestAnimationFrame(() => {
-          if ((pending.current ?? shownRef.current) !== was) return;
+          if (pending.current || shownRef.current !== was) return;
           const active = document.activeElement;
           if (active instanceof HTMLElement && inOverlay(active)) return;
           shut();
