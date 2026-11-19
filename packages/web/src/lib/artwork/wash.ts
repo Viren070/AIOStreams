@@ -5,8 +5,10 @@
 
 export const GRID_W = 96;
 export const GRID_H = 54;
-export const WASH_W = 320;
-export const WASH_H = 180;
+// Its dither, a step either way per pixel, stays finer than the eye at a
+// TV's 1080p; drawn smaller, the stretch blows it up into blotches.
+export const WASH_W = 960;
+export const WASH_H = 540;
 
 /** Three box passes of this radius approximate a Gaussian. */
 const BOX_RADIUS = 8;
