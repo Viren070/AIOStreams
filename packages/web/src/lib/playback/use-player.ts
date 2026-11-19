@@ -571,7 +571,9 @@ export function usePlayer(
       inPip.current = open;
       active.current.setPictureInPicture?.(open);
     },
-    setFrame: engine.setFrame && ((frame) => engine.setFrame!(frame)),
+    setFrame:
+      engine.setFrame &&
+      ((frame, keepMode) => engine.setFrame!(frame, keepMode)),
     chapters: chapters?.length ? chapters : opts.chapters,
     stats: stats && {
       pages: stats.pages,

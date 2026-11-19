@@ -487,11 +487,12 @@ function PlayedPreview({
   );
   const setFrame = useLatest(player.setFrame);
   React.useEffect(() => {
-    if (host) setFrame.current?.(placed);
+    // Full screen, it's still a trailer, for which the display keeps its mode.
+    if (host) setFrame.current?.(placed, true);
   }, [host, placed, setFrame]);
   React.useEffect(
     () => () => {
-      if (host) setFrame.current?.(null);
+      if (host) setFrame.current?.(null, true);
     },
     [host, setFrame]
   );

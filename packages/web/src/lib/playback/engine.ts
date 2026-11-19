@@ -176,8 +176,12 @@ export interface PlayerEngine {
   setStyle?(style: EngineStyle): void;
   /** The page's controls showing over the video, or hidden again. */
   showControls?(shown: boolean): void;
-  /** Draws the video in `frame` over the page, or back behind it filling the window. */
-  setFrame?(frame: VideoFrame | null): void;
+  /**
+   * Draws the video in `frame` over the page, or back behind it filling the
+   * window. `keepMode` keeps the display's mode as it fills the window, as a
+   * trailer does.
+   */
+  setFrame?(frame: VideoFrame | null, keepMode?: boolean): void;
   toggleFullscreen?(): void;
   /** Opens or closes a picture-in-picture window of its own. */
   togglePictureInPicture?(): void;

@@ -345,10 +345,11 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     setFrame:
       external || !shell.miniPlayer
         ? undefined
-        : (frame) =>
+        : (frame, keepMode) =>
             shell.send({
               type: 'player-frame',
               frame: frame && unzoomed(frame),
+              keepMode: !!keepMode,
             }),
     // The user's own player keeps its own look.
     setStyle({ subtitleStyle, fit, height }) {

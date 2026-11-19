@@ -288,7 +288,9 @@ class MainActivity : ComponentActivity() {
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
             "player-frame" -> runOnUiThread {
                 mini.place(message)
-                frameRates.framed = message["frame"] is JsonObject
+                // A trailer keeps the display's mode, even filling the screen.
+                frameRates.framed = message["frame"] is JsonObject ||
+                    message["keepMode"]?.jsonPrimitive?.booleanOrNull == true
             }
             // A TV would blank to switch modes.
             "player-controls" -> if (!onTv()) {
