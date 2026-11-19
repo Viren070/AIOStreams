@@ -139,10 +139,8 @@ export function Artwork({
     setLoadedKey(currentKey);
     if (current) setDrawnSrc(current);
   };
-  const under =
-    !loaded && drawnSrc && drawnSrc !== current
-      ? (drawnArtwork(drawnSrc)?.src ?? drawnSrc)
-      : null;
+  const under = !loaded && drawnSrc && drawnSrc !== current ? drawnSrc : null;
+  const underDrawn = under ? drawnArtwork(under)?.src : undefined;
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
     'absolute inset-0 h-full w-full object-cover [transition-duration:250ms,300ms]',
@@ -172,17 +170,31 @@ export function Artwork({
   }
   return (
     <>
-      {under && (
+      {underDrawn ? (
         <img
           aria-hidden
           alt=""
-          src={under}
+          src={underDrawn}
           draggable={false}
           className={cn(
             'absolute inset-0 h-full w-full object-cover',
             className
           )}
         />
+      ) : (
+        under && (
+          // Its saved copy, as a plain image would download it again.
+          <CachedImage
+            aria-hidden
+            alt=""
+            src={under}
+            draggable={false}
+            className={cn(
+              'absolute inset-0 h-full w-full object-cover',
+              className
+            )}
+          />
+        )
       )}
       {canShrink && plain !== current ? (
         <ShrunkImage
