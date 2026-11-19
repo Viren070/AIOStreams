@@ -224,7 +224,9 @@ export function Header({
   const pictured =
     (!poster || loaded.has(poster)) &&
     (!logo || logoFailed || loaded.has(logo));
-  const ready = !holding && (pictured || late);
+  // A show's next episode decides what its overview tells of, so it's waited
+  // for like the pictures.
+  const ready = !holding && ((pictured && !nextUpPending) || late);
   const links = React.useMemo(() => linksFor(item, season), [item, season]);
   const overviewImage = React.useMemo(
     () => landscapeUrls(client, item, { maxWidth: 480 }),
