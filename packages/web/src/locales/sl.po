@@ -2355,6 +2355,10 @@ msgstr ""
 msgid "Main"
 msgstr ""
 
+#: src/app.tsx
+msgid "Manage servers"
+msgstr ""
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr ""
