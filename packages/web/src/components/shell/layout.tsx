@@ -108,7 +108,11 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     router,
     select: (s) => s.location.pathname,
   });
-  const shown = pages.includes(artPageOf(pathname));
+  // A TV's home shows its hero over the wash as a title's page shows its
+  // backdrop, so the two look alike as one opens the other.
+  const shown =
+    pages.includes(artPageOf(pathname)) ||
+    (pages.length > 0 && !!currentHost().tv && pageName(pathname) === 'home');
   const playing = !!usePlayback();
   React.useEffect(() => setWashPaused(playing), [playing]);
   React.useLayoutEffect(() => setWashVisible(shown), [shown]);
@@ -121,9 +125,14 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     <div
       aria-hidden
       data-ui="page-background"
+      data-on={pageName(pathname)}
       className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
     >
       {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
+      {/* A TV title's backdrop, held still here as its page scrolls, over the wash's layers. */}
+      {currentHost().tv && (
+        <div data-ui="title-art" className="absolute inset-0 z-[2]" />
+      )}
     </div>
   );
 }

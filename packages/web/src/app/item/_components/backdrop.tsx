@@ -1,7 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@aiostreams/ui/core/styling';
 import { BackdropFrame } from '@/components/media/hero';
 import { CachedImage } from '@/components/cached-image';
+import { currentHost } from '@/lib/hosts';
 
 /** Art that arrives within this was never seen missing, so it just appears. */
 const UNSEEN_MS = 250;
@@ -73,7 +75,8 @@ export function Backdrop({
       )}
     />
   );
-  return (
+  const tv = currentHost().tv;
+  const art = (
     <div
       aria-hidden
       data-ui="item-backdrop"
@@ -90,6 +93,22 @@ export function Backdrop({
           {image}
         </BackdropFrame>
       )}
+      {tv && (
+        <>
+          {/* Dimmed as a TV hero is, so the logo and text over it stand out. */}
+          <div
+            data-ui="item-backdrop-shade"
+            data-name="dim"
+            className="absolute inset-0 bg-black/70"
+          />
+          {/* Darker still from the corner under the text. */}
+          <div
+            data-ui="item-backdrop-shade"
+            data-name="text"
+            className="absolute inset-0 bg-gradient-to-tr from-black/60 to-transparent to-60% rtl:bg-gradient-to-tl"
+          />
+        </>
+      )}
       <div
         data-ui="item-backdrop-shade"
         data-name="side"
@@ -102,4 +121,9 @@ export function Backdrop({
       />
     </div>
   );
+  // On a TV it stays still behind the page as it scrolls, in a layer of its own.
+  const still = tv
+    ? document.querySelector<HTMLElement>("[data-ui='title-art']")
+    : null;
+  return still ? createPortal(art, still) : art;
 }
