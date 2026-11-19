@@ -24,10 +24,11 @@ const fetchedAt = new Map<string, { at: number; decoded: boolean }>();
 
 /**
  * Fetches a title's page ahead: its details, a show's next episode, seasons
- * and the episodes it opens on, and its backdrop, logo, poster and first
- * faces at the page's sizes, all kept, so the page opens with them in. With
- * `decode`, its pictures are decoded too, so they draw as the page shows them;
- * that takes memory, so only for the title most likely next.
+ * and the episodes of `seasonId` or the season it opens on, and its backdrop,
+ * logo, poster and first faces at the page's sizes, all kept, so the page
+ * opens with them in. With `decode`, its pictures are decoded too, so they
+ * draw as the page shows them; that takes memory, so only for the title most
+ * likely next.
  * Once in a while per title; settles once its details are in.
  */
 export function useFetchPageAhead() {
@@ -35,7 +36,11 @@ export function useFetchPageAhead() {
   const fetchItem = useFetchItem();
   const fetchNextUp = useFetchNextUp();
   const fetchShowAhead = useFetchShowAhead();
-  return async (id: string, decode = true): Promise<void> => {
+  return async (
+    id: string,
+    seasonId?: string,
+    decode = true
+  ): Promise<void> => {
     const last = fetchedAt.get(id);
     if (
       last &&
@@ -47,10 +52,10 @@ export function useFetchPageAhead() {
     try {
       const full = await fetchItem(id);
       if (full.Type !== 'Movie' && full.Type !== 'Series') return;
-      if (full.Type === 'Series')
-        void fetchNextUp(id)
-          .then((next) => fetchShowAhead(id, next?.SeasonId ?? undefined))
-          .catch(() => undefined);
+      if (full.Type === 'Series') {
+        void fetchNextUp(id).catch(() => undefined);
+        void fetchShowAhead(id, seasonId).catch(() => undefined);
+      }
       const backdrop = backdropUrls(client, full, { maxWidth: 1920 })[0];
       const logo = logoUrl(client, full, { maxWidth: 416 });
       const poster = posterUrl(client, full, { maxWidth: 320 });
@@ -74,8 +79,10 @@ export function usePageAhead(item: BaseItemDto) {
   const fetchPage = useFetchPageAhead();
   const timer = React.useRef<number>(undefined);
   React.useEffect(() => () => window.clearTimeout(timer.current), []);
-  // An episode opens its show's page, as in Continue watching.
+  // An episode opens its show's page on its season, as in Continue watching.
   const id = item.Type === 'Episode' ? item.SeriesId : item.Id;
+  const seasonId =
+    item.Type === 'Episode' ? (item.SeasonId ?? undefined) : undefined;
   if (
     !id ||
     (item.Type !== 'Movie' && item.Type !== 'Series' && item.Type !== 'Episode')
@@ -84,7 +91,10 @@ export function usePageAhead(item: BaseItemDto) {
   return {
     start: () => {
       window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => void fetchPage(id), REST_MS);
+      timer.current = window.setTimeout(
+        () => void fetchPage(id, seasonId),
+        REST_MS
+      );
     },
     stop: () => window.clearTimeout(timer.current),
   };
