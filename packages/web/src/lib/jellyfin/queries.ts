@@ -103,6 +103,65 @@ export function useResume() {
   });
 }
 
+/** Watched this far of its runtime, a title leaves Continue watching. */
+const FINISHED_SHARE = 0.9;
+
+/**
+ * Puts a title at the front of Continue watching as it starts to play, where
+ * the server's next answer puts it, so the row behind the player is already in
+ * order when Back returns to it; as it stops, with where it stopped, or out of
+ * the row once watched to its end. The title's page offers to resume from
+ * there too, rather than from the last time until the server answers again.
+ */
+export function useNoteResumed() {
+  const queryClient = useQueryClient();
+  const key = useKey();
+  return (
+    item: BaseItemDto,
+    positionMs: number,
+    durationMs: number,
+    playing = false
+  ) => {
+    const finished =
+      durationMs > 0 && positionMs / durationMs >= FINISHED_SHARE;
+    const moved = {
+      ...item,
+      UserData: {
+        ...item.UserData,
+        PlaybackPositionTicks: finished ? 0 : Math.round(positionMs * 10_000),
+        // Progress bars read this before the position, so it can't be left
+        // showing the last time's.
+        PlayedPercentage:
+          !finished && durationMs > 0
+            ? (positionMs / durationMs) * 100
+            : undefined,
+        Played: finished || !!item.UserData?.Played,
+        LastPlayedDate: new Date().toISOString(),
+      },
+    } as BaseItemDto;
+    queryClient.setQueryData<BaseItemDtoQueryResult>(
+      [...key, 'resume'],
+      (old) => {
+        if (!old) return old;
+        const rest = (old.Items ?? []).filter((i) => i.Id !== item.Id);
+        if (finished || (!playing && positionMs <= 0))
+          return { ...old, Items: rest };
+        return { ...old, Items: [moved, ...rest] };
+      }
+    );
+    queryClient.setQueryData<BaseItemDto>(
+      [...key, 'item', item.Id],
+      (old) => old && { ...old, UserData: moved.UserData }
+    );
+    // The episode after one watched to its end is the server's to say.
+    if (item.SeriesId && !finished)
+      queryClient.setQueryData<BaseItemDtoQueryResult>(
+        [...key, 'next-up', item.SeriesId],
+        (old) => old && { ...old, Items: [moved] }
+      );
+  };
+}
+
 export function useNextUp() {
   const { client, user } = useSession();
   return useQuery({

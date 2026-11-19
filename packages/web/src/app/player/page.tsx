@@ -16,7 +16,7 @@ import { Button } from '@aiostreams/ui/button';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { useItem } from '@/lib/jellyfin/queries';
+import { useItem, useNoteResumed } from '@/lib/jellyfin/queries';
 import {
   useMaxBitrate,
   usePlaybackInfo,
@@ -461,6 +461,9 @@ function useReporting(
   const refreshAll = useRefreshAll();
   const refresh = React.useRef(refreshAll);
   refresh.current = refreshAll;
+  const noteResumedNow = useNoteResumed();
+  const noteResumed = React.useRef(noteResumedNow);
+  noteResumed.current = noteResumedNow;
   const { started, paused, stream } = player.state;
   const session = stream ? stream.playSessionId : playSessionId;
   const liveStreamId = stream?.liveStreamId;
@@ -498,11 +501,26 @@ function useReporting(
     );
     current.start();
     reporter.current = current;
+    // Moved up front now rather than as it stops, which lands after Back has
+    // put focus on its card and leaves the row scrolled to where it was.
+    if (!live && item.Type !== 'TvChannel')
+      noteResumed.current(
+        item,
+        player.playhead.positionMs,
+        state.current.durationMs,
+        true
+      );
     const onHide = () => void current.stop();
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);
       // The position it leaves is what the pages behind offer to resume; live keeps none.
+      if (!live && item.Type !== 'TvChannel')
+        noteResumed.current(
+          item,
+          player.playhead.positionMs,
+          state.current.durationMs
+        );
       void current.stop().then(() => {
         if (!live) refresh.current();
       });
