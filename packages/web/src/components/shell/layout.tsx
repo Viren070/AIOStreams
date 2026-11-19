@@ -90,10 +90,20 @@ import { TOP_BAR_HEIGHT, TopTabs } from './nav/top-tabs';
 // Kept mounted under every page, so it skips the layout's render on each route change.
 const KeptHome = React.memo(HomePage);
 
+/*
+ * It rises by a whole transform and fades on an eased curve, which the browser
+ * runs off the main thread, so the motion stays smooth while a TV still draws
+ * the page; by `top` it was laid out again every frame. The transform goes
+ * once it's done, as it would place a fixed child by the page.
+ */
 const PAGE_FADE = {
-  initial: { opacity: 0, top: 6 },
-  animate: { opacity: 1, top: 0 },
-  transition: { type: 'spring', damping: 28, stiffness: 260, mass: 0.7 },
+  initial: { opacity: 0, transform: 'translateY(6px)' },
+  animate: {
+    opacity: 1,
+    transform: 'translateY(0px)',
+    transitionEnd: { transform: 'none' },
+  },
+  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
 /**
