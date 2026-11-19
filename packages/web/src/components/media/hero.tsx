@@ -360,8 +360,10 @@ function HeroDetails({
     item.Type === 'Series' ||
     ((item.Type === 'Movie' || item.Type === 'Episode') &&
       item.LocationType !== 'Virtual');
+  // While a show's next episode is asked for again, as after watching one,
+  // Play waits for the answer rather than starting the episode just seen.
   const play = (held?: boolean) =>
-    target
+    target && !(item.Type === 'Series' && nextUp.isFetching)
       ? picker.play(target, { startMs: resumeMs, held })
       : item.Type === 'Series'
         ? void fetchNextUp(item.Id!).then((episode) =>
