@@ -33,8 +33,10 @@ import {
   episodeCode,
   ticksToMs,
   untilLabel,
+  progressOf,
 } from '@/lib/format';
 import { Overview } from '@/components/media/overview';
+import { PlayProgress } from '@/components/media/play-progress';
 import { ScoreRefresh, Scores, scoresOf } from '@/components/media/scores';
 import { SeasonCount } from '@/components/media/season-count';
 import { ExternalLinks } from '@/components/media/external-links';
@@ -435,7 +437,11 @@ export function Header({
                   }
                   {...holdPlay}
                 >
-                  {playLabel}
+                  <PlayProgress
+                    percent={resumeMs && target ? progressOf(target) : null}
+                  >
+                    {playLabel}
+                  </PlayProgress>
                 </Button>
                 {!!resumeMs && target && (
                   <Tooltip
