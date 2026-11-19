@@ -45,7 +45,9 @@ function find(spot: Spot): HTMLElement | null {
           ? addressOf(el) === spot.href
           : labelOf(el) === spot.label) &&
         // Home, kept hidden behind other pages, has many of the same items.
-        !el.closest('[inert]')
+        !el.closest('[inert]') &&
+        // Nor one a stylesheet hides, as the phone bar's, which would keep the page's start from standing in.
+        el.getClientRects().length > 0
     ) ?? null
   );
 }
