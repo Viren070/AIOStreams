@@ -367,7 +367,8 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                   }),
                   ComboboxAnatomy.root({
                     size,
-                  })
+                  }),
+                  className
                 )}
                 {...rest}
               >
