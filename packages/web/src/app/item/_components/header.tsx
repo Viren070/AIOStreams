@@ -105,11 +105,12 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }
-  if (!parts.length) return null;
+  // A film can still have version badges; the row hides while it's empty.
+  if (!parts.length && item.Type !== 'Movie') return null;
   return (
     <div
       data-ui="item-meta"
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 empty:hidden max-sm:justify-center"
     >
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
@@ -118,7 +119,10 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
         </React.Fragment>
       ))}
       {item.Type === 'Movie' && (
-        <TopVersionBadges item={item} separator={<Dot />} />
+        <TopVersionBadges
+          item={item}
+          separator={parts.length ? <Dot /> : undefined}
+        />
       )}
       {item.Type === 'Series' && <NextUpBadges series={item} />}
     </div>
