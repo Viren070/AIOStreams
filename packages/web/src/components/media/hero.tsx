@@ -944,6 +944,8 @@ function FollowBackdrop({
   return (
     <div
       aria-hidden
+      // On a TV its trailer fills the screen, see styles.css.
+      data-ui="follow-backdrop"
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       {box}

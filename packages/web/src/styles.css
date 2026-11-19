@@ -375,7 +375,8 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
  * screen's height across and centred, so a 16:9 video covering it crops the
  * bars a scope trailer carries, above and below.
  */
-:root[data-tv] [data-ui='hero'] > [data-ui='hero-trailer'] {
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-trailer'],
+:root[data-tv] [data-ui='follow-backdrop'] > div > [data-ui='hero-trailer'] {
   inset: 0 auto auto calc(50vw - 119.5vh);
   width: 239vh;
   height: 100vh;
