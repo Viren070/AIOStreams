@@ -285,7 +285,14 @@ function usePassed(ref: React.RefObject<HTMLElement | null>, on: boolean) {
     // The rail opening or the window changing size moves the row's start.
     const observer = new ResizeObserver(measure);
     observer.observe(box);
-    return () => observer.disconnect();
+    // A language read after start can flip the page's direction, which moves
+    // the passed cards to the other side without resizing the row.
+    const flip = new MutationObserver(measure);
+    flip.observe(document.documentElement, { attributeFilter: ['dir'] });
+    return () => {
+      observer.disconnect();
+      flip.disconnect();
+    };
   }, [ref, on]);
   return passed;
 }
