@@ -50,19 +50,21 @@ export function Backdrop({
       src={src}
       alt=""
       // Decoded first, as a large image would otherwise appear a moment after it's shown.
-      onLoad={(e) =>
-        void e.currentTarget
+      onLoad={(e) => {
+        const el = e.currentTarget;
+        void el
           .decode()
           .catch(() => undefined)
           .then(() => {
-            if (!wash) onShown?.(src);
+            // One replaced while it decoded is gone, and isn't what it shows.
+            if (!wash && el.isConnected) onShown?.(src);
             setArrived((was) =>
               was?.src === src
                 ? was
                 : { src, late: performance.now() - opened > UNSEEN_MS }
             );
-          })
-      }
+          });
+      }}
       onError={() =>
         setFailed((f) => ({
           key,
