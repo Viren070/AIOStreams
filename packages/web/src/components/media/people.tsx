@@ -9,6 +9,7 @@ import { MediaRow } from './media-row';
 import type { BaseItemPerson } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
 import { Anchor } from '@/components/anchor';
+import { usePersonAhead } from './person-ahead';
 
 const PERSON_WIDTH = 'basis-[6.5rem] sm:basis-[7.5rem]';
 
@@ -30,6 +31,7 @@ export function PersonCard({
   role?: string;
 }) {
   const { client } = useSession();
+  const ahead = usePersonAhead(person.Id ?? undefined, role);
   // A crew member often comes as a name only; their own item, which their
   // page loads too, has their photo. Asked once the card nears the screen.
   const [frame, near] = useNear<HTMLDivElement>();
@@ -80,6 +82,10 @@ export function PersonCard({
     <Anchor
       data-ui="person-card"
       href={href(to.person(person.Id, role))}
+      onFocus={ahead?.start}
+      onPointerEnter={ahead?.start}
+      onBlur={ahead?.stop}
+      onPointerLeave={ahead?.stop}
       data-focus="own"
       className="group block text-center"
     >

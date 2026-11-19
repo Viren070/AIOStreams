@@ -116,3 +116,43 @@ export function useSavedSrc(
   if (!src || !on) return src;
   return known ?? (found?.src === src ? found.url : undefined);
 }
+
+/** Decoded pictures held, so the browser keeps them ready to draw; the oldest go first. */
+const DECODED = { small: 40, large: 3 };
+const decoded = {
+  small: new Map<string, HTMLImageElement>(),
+  large: new Map<string, HTMLImageElement>(),
+};
+
+function decodeAhead(url: string, size: keyof typeof DECODED) {
+  const held = decoded[size];
+  if (held.has(url)) return;
+  const image = new Image();
+  image.src = url;
+  held.set(url, image);
+  if (held.size > DECODED[size]) held.delete(held.keys().next().value!);
+  image.decode().catch(() => held.delete(url));
+}
+
+/**
+ * Looks `src` up ahead, saved and ready, so an image that shows it later draws
+ * at once; with artwork not saved, the browser's own cache keeps it. With
+ * `decode`, it's decoded too, so it draws in the frame that shows it: few
+ * `large` ones are held, which take the most memory.
+ */
+export function warmImage(src: string, decode?: keyof typeof DECODED): void {
+  if (
+    !settings.cache.enabled.read() ||
+    !settings.cache.categories.artwork.read()
+  ) {
+    if (decode) decodeAhead(src, decode);
+    else new Image().src = src;
+    return;
+  }
+  const known = urls.get(src)?.src;
+  if (known) {
+    if (decode) decodeAhead(known, decode);
+    return;
+  }
+  void lookUp(src).url.then((url) => decode && decodeAhead(url, decode));
+}

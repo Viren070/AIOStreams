@@ -21,6 +21,12 @@ import { ExternalLinks } from '@/components/media/external-links';
 import { Overview } from '@/components/media/overview';
 import { KindTabs, useKindParam } from '@/components/media/kind-tabs';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
+import {
+  ALL_WORK,
+  creditsOf,
+  workShown,
+  type CreditCount,
+} from '@/lib/person-work';
 import { CachedImage } from '@/components/cached-image';
 
 function longDate(iso: string): string {
@@ -113,29 +119,6 @@ function Header({ person }: { person: BaseItemDto }) {
   );
 }
 
-/** How many titles of a kind of work the server counted, by movies and shows. */
-interface CreditCount {
-  type: string;
-  movies: number;
-  series: number;
-}
-
-/** The person's kinds of work with their counts, and the kind TMDB knows them for. */
-function creditsOf(person: BaseItemDto | undefined): {
-  credits: CreditCount[];
-  knownFor?: string;
-} {
-  const extension = (
-    person as
-      | { aiostreams?: { credits?: CreditCount[]; knownFor?: string } }
-      | undefined
-  )?.aiostreams;
-  return {
-    credits: extension?.credits ?? [],
-    knownFor: extension?.knownFor,
-  };
-}
-
 /** A kind of work's name as a filter; any the server names by TMDB's department keeps that. */
 function workLabel(kind: string): string {
   switch (kind) {
@@ -156,39 +139,15 @@ function workLabel(kind: string): string {
   }
 }
 
-/** Crew kinds a title page names that a person's page counts under another. */
-// eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's person kinds
-const SAME_WORK: Record<string, string> = {
-  Creator: 'Writer',
-  GuestStar: 'Actor',
-};
-/** Every kind of work, the filters all off. */
-const ALL_WORK = 'all';
-
 /**
  * The kinds of work shown, kept in the address: the one a link asked for,
  * else the one TMDB knows them for, else their most.
  */
 function useWorkParam(
-  credits: CreditCount[],
-  knownFor: string | undefined
+  person: BaseItemDto | undefined
 ): [string[], (next: string[]) => void] {
   const [param, setParam] = useSearchParam('role');
-  const counted = new Set(credits.map((c) => c.type));
-  const fallback =
-    knownFor && counted.has(knownFor) ? knownFor : credits[0]?.type;
-  const asked = (param ?? '')
-    .split(',')
-    .map((kind) => SAME_WORK[kind] ?? kind)
-    .filter((kind) => counted.has(kind));
-  const shown =
-    !credits.length || param === ALL_WORK
-      ? []
-      : asked.length
-        ? asked
-        : fallback
-          ? [fallback]
-          : [];
+  const { shown, fallback } = workShown(person, param);
   return [
     shown,
     (next) =>
@@ -411,8 +370,8 @@ function Filmography({
   person: BaseItemDto | undefined;
 }) {
   const [types, setTypes] = useKindParam();
-  const { credits, knownFor } = creditsOf(person);
-  const [shown, setShown] = useWorkParam(credits, knownFor);
+  const { credits } = creditsOf(person);
+  const [shown, setShown] = useWorkParam(person);
   // Once the person is in, so the list starts on their kind of work.
   const pages = usePersonItems(personId, types, shown, !!person);
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
