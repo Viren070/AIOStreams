@@ -31,6 +31,10 @@ msgstr "{cleared, plural, one {Removed # title from the history} other {Removed 
 msgid "{count, plural, one {# badge} other {# badges}}"
 msgstr "{count, plural, one {# badge} other {# badges}}"
 
+#: src/app/person/page.tsx
+msgid "{count, plural, one {# episode} other {# episodes}}"
+msgstr "{count, plural, one {# episode} other {# episodes}}"
+
 #: src/app/settings/playback.tsx
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr "{count, plural, one {# minute} other {# minutes}}"
@@ -194,6 +198,11 @@ msgstr "{packCount, plural, one {# pack} other {# packs}}"
 #: src/app/settings/_components/version-settings.tsx
 msgid "{packs} and {own}"
 msgstr "{packs} and {own}"
+
+#. A person’s part on a show and how many episodes it covered
+#: src/app/person/page.tsx
+msgid "{part} ({episodes})"
+msgstr "{part} ({episodes})"
 
 #: src/app/settings/player.tsx
 msgid "{r}×"
@@ -404,6 +413,10 @@ msgstr "Account"
 msgid "Account and server"
 msgstr "Account and server"
 
+#: src/app/person/page.tsx
+msgid "Acting"
+msgstr "Acting"
+
 #: src/app/history/page.tsx
 msgid "Actions"
 msgstr "Actions"
@@ -538,6 +551,10 @@ msgstr "All on"
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
 msgstr "All playlists"
+
+#: src/app/person/page.tsx
+msgid "All work"
+msgstr "All work"
 
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
@@ -1066,10 +1083,6 @@ msgstr "Commentary"
 msgid "Compatibility"
 msgstr "Compatibility"
 
-#: src/components/media/people.tsx
-msgid "Composer"
-msgstr "Composer"
-
 #: src/app/settings/account.tsx
 msgid "Configuration"
 msgstr "Configuration"
@@ -1469,6 +1482,10 @@ msgstr "Died {date}"
 msgid "Died {date} (aged {age})"
 msgstr "Died {date} (aged {age})"
 
+#: src/app/person/page.tsx
+msgid "Directing"
+msgstr "Directing"
+
 #: src/components/media/people.tsx
 msgid "Director"
 msgstr "Director"
@@ -1636,6 +1653,10 @@ msgstr "Each filter shows as a pill above the version list. Its search is words 
 #: src/app/settings/_components/version-settings.tsx
 msgid "Edit"
 msgstr "Edit"
+
+#: src/app/person/page.tsx
+msgid "Editing"
+msgstr "Editing"
 
 #: src/features/player/controls.tsx
 msgid "Ends at {endsAt}"
@@ -2286,6 +2307,10 @@ msgstr "Keyboard shortcuts"
 msgid "Keys, remotes and gamepads"
 msgstr "Keys, remotes and gamepads"
 
+#: src/app/person/page.tsx
+msgid "Kinds of work"
+msgstr "Kinds of work"
+
 #: src/app/settings/_components/version-settings.tsx
 msgid "Label"
 msgstr "Label"
@@ -2624,6 +2649,13 @@ msgstr "mpv inside this window, with this app's controls and playback settings. 
 msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 msgstr "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
 
+#. A crew member’s job: the score
+#. A person’s work on scores
+#: src/app/person/page.tsx
+#: src/components/media/people.tsx
+msgid "Music"
+msgstr "Music"
+
 #: src/features/player/picture-in-picture.tsx
 #: src/features/player/volume.tsx
 #: src/lib/input/actions.ts
@@ -2906,6 +2938,7 @@ msgstr "Nothing marked as a favourite yet."
 
 #: src/app/discover/page.tsx
 #: src/app/live-tv/page.tsx
+#: src/app/person/page.tsx
 #: src/app/settings/_components/licenses.tsx
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/audio.tsx
@@ -3680,6 +3713,10 @@ msgstr "Previous trailer"
 msgid "Producer"
 msgstr "Producer"
 
+#: src/app/person/page.tsx
+msgid "Producing"
+msgstr "Producing"
+
 #: src/app/history/page.tsx
 msgid "Profile"
 msgstr "Profile"
@@ -3755,6 +3792,7 @@ msgstr "Rate"
 msgid "Rate season"
 msgstr "Rate season"
 
+#: src/app/person/page.tsx
 #: src/components/media/scores.tsx
 #: src/components/media/sort-picker.tsx
 msgid "Rating"
@@ -4292,6 +4330,10 @@ msgstr "Shift"
 #: src/app/settings/page.tsx
 msgid "Shortcuts"
 msgstr "Shortcuts"
+
+#: src/app/person/page.tsx
+msgid "Show"
+msgstr "Show"
 
 #. A dot under the banner that brings this title up
 #: src/components/media/hero.tsx
@@ -5353,6 +5395,10 @@ msgstr "Title pages"
 msgid "Titles, synopses and version names stay in the language the server sends."
 msgstr "Titles, synopses and version names stay in the language the server sends."
 
+#: src/app/person/page.tsx
+msgid "To be announced"
+msgstr "To be announced"
+
 #: src/app/calendar/page.tsx
 #: src/app/live-tv/page.tsx
 msgid "Today"
@@ -5952,6 +5998,10 @@ msgstr "Words or /pattern/"
 #: src/components/media/people.tsx
 msgid "Writer"
 msgstr "Writer"
+
+#: src/app/person/page.tsx
+msgid "Writing"
+msgstr "Writing"
 
 #: src/app/settings/browsing.tsx
 msgid "Year"

@@ -254,19 +254,27 @@ export function useLibraryHeads(views: BaseItemDto[], limit: number) {
 }
 
 /**
- * A person's work, newest first. Pages advance by the server's offset, since
- * a title no addon here can open is left out of its page.
+ * A person's work, newest first; with `roles`, only the titles they had that
+ * kind of part in, such as Director. Pages advance by the server's offset,
+ * since a title no addon here can open is left out of its page.
  */
-export function usePersonItems(personId: string, types: string) {
+export function usePersonItems(
+  personId: string,
+  types: string,
+  roles: string[] = [],
+  enabled = true
+) {
   const { client, user } = useSession();
   return useInfiniteQuery({
-    queryKey: [...useKey(), 'person-items', personId, types],
+    queryKey: [...useKey(), 'person-items', personId, types, roles.join(',')],
     meta: { cache: 'titles' },
     initialPageParam: 0,
+    enabled,
     queryFn: ({ pageParam }) =>
       client.get<BaseItemDtoQueryResult>('/Items', {
         userId: user.Id,
         PersonIds: personId,
+        ...(roles.length > 0 && { PersonTypes: roles.join(',') }),
         IncludeItemTypes: types,
         Recursive: true,
         SortBy: 'PremiereDate,ProductionYear,SortName',

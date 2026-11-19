@@ -46,7 +46,9 @@ export const to = {
     return `/discover/${viewId}${query ? `?${query}` : ''}`;
   },
   item: (itemId: string) => `/item/${itemId}`,
-  person: (personId: string) => `/person/${personId}`,
+  /** With `role`, a kind of work such as Director, the page starts on that kind. */
+  person: (personId: string, role?: string) =>
+    `/person/${personId}${role ? `?role=${encodeURIComponent(role)}` : ''}`,
   /** With `playlist`, it plays on through that playlist. */
   play: (itemId: string, sourceId: string, startMs = 0, playlist?: string) =>
     `/play/${itemId}?source=${sourceId}${startMs ? `&start=${Math.round(startMs)}` : ''}${playlist ? `&playlist=${playlist}` : ''}`,
