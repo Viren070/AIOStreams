@@ -1,5 +1,4 @@
 import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { BiInfoCircle } from 'react-icons/bi';
@@ -101,6 +100,19 @@ export function BackdropFrame({
       {children}
     </div>
   );
+}
+
+/** Where the hero's info button goes: an episode's opens its show. */
+function infoLabel(item: BaseItemDto): string {
+  switch (item.Type) {
+    case 'Movie':
+      return t`Go to movie`;
+    case 'Series':
+    case 'Episode':
+      return t`Go to series`;
+    default:
+      return t`More info`;
+  }
 }
 
 function HeroTextSkeleton({ actions = true }: { actions?: boolean }) {
@@ -334,6 +346,13 @@ function HeroDetails({
   const scored = !!rated && scoresOf(rated).length > 0;
   const refreshing = live && fresh.isFetching;
   const resumeMs = ticksToMs(target?.UserData?.PlaybackPositionTicks);
+  // A show begun, past its first episode or partway into one.
+  const nextEpisode =
+    item.Type === 'Series' &&
+    target &&
+    (!!resumeMs || target.ParentIndexNumber !== 1 || target.IndexNumber !== 1)
+      ? target
+      : null;
   const code =
     target?.Type === 'Episode'
       ? episodeCode(target.ParentIndexNumber, target.IndexNumber)
@@ -481,18 +500,45 @@ function HeroDetails({
           )}
         </div>
       )}
-      {item.Overview && (
-        <p
-          key={`overview ${item.Id}`}
+      {nextEpisode ? (
+        // Once begun, a show tells of the episode it goes on with, as its page does.
+        <div
+          key={`next ${item.Id}`}
           data-ui="hero-overview"
-          className={cn(
-            'max-w-xl text-sm text-gray-300',
-            overviewClass,
-            glide(2)
-          )}
+          data-name="next-episode"
+          className={cn('max-w-xl space-y-1 text-sm', glide(2))}
         >
-          {item.Overview}
-        </p>
+          <p className="font-semibold text-white">
+            {[
+              episodeCode(
+                nextEpisode.ParentIndexNumber,
+                nextEpisode.IndexNumber
+              ),
+              nextEpisode.Name,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+          {nextEpisode.Overview && (
+            <p className={cn('text-gray-300', !tv && overviewClass)}>
+              {nextEpisode.Overview}
+            </p>
+          )}
+        </div>
+      ) : (
+        item.Overview && (
+          <p
+            key={`overview ${item.Id}`}
+            data-ui="hero-overview"
+            className={cn(
+              'max-w-xl text-sm text-gray-300',
+              overviewClass,
+              glide(2)
+            )}
+          >
+            {item.Overview}
+          </p>
+        )
       )}
       {actions && (
         <div
@@ -542,7 +588,7 @@ function HeroDetails({
               leftIcon={<BiInfoCircle className="text-xl" />}
               onClick={open}
             >
-              <Trans>More info</Trans>
+              {infoLabel(item)}
             </Button>
           )}
         </div>

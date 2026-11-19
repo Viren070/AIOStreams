@@ -1953,6 +1953,14 @@ msgstr "Go home"
 msgid "Go live"
 msgstr "Go live"
 
+#: src/components/media/hero.tsx
+msgid "Go to movie"
+msgstr "Go to movie"
+
+#: src/components/media/hero.tsx
+msgid "Go to series"
+msgstr "Go to series"
+
 #: src/components/media/item-menu.tsx
 msgid "Go to show"
 msgstr "Go to show"
