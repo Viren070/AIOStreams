@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-18 15:29+0000\n"
+"PO-Revision-Date: 2026-11-19 16:10+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -480,9 +480,8 @@ msgid "Added to {name}"
 msgstr "Aggiunto a {name}"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Addons, catalogs and profiles are set up on the configuration page."
-msgstr "Addon, cataloghi e utenti si configurano nella pagina delle impostazioni."
+msgstr "Addon, cataloghi e profili si impostano nella pagina di configurazione."
 
 #: src/app/settings/about.tsx
 msgid "Address"
@@ -2237,7 +2236,7 @@ msgstr "Lasciare {from} per aprire su {target}?"
 
 #: src/app/servers/page.tsx
 msgid "Leave off the profile picker"
-msgstr ""
+msgstr "Non mostrare la selezione del profilo"
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2358,9 +2357,8 @@ msgid "Main"
 msgstr "Principale"
 
 #: src/app.tsx
-#, fuzzy
 msgid "Manage servers"
-msgstr "Modifica server"
+msgstr "Gestisci i server"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
@@ -2540,9 +2538,8 @@ msgid "Navigation"
 msgstr "Navigazione"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Needed to switch to this profile."
-msgstr "È necessario passare a questo utente."
+msgstr "Necessario per passare a questo profilo."
 
 #: src/app/downloads/page.tsx
 msgid "Needs attention"
@@ -3057,9 +3054,8 @@ msgid "Other pages, such as settings"
 msgstr "Altre pagine, come le impostazioni"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Other profile"
-msgstr "Altra app"
+msgstr "Altro profilo"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3534,7 +3530,7 @@ msgstr "Produttore"
 
 #: src/app/history/page.tsx
 msgid "Profile"
-msgstr ""
+msgstr "Profilo"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -3935,7 +3931,7 @@ msgstr "Salvato in {folder}"
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to this profile, on every device it signs in on."
-msgstr ""
+msgstr "Salvato in questo profilo, su ogni dispositivo in cui accede."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
@@ -4089,9 +4085,8 @@ msgid "Settings"
 msgstr "Impostazioni"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Settings for"
-msgstr "Impostazioni"
+msgstr "Impostazioni per"
 
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
@@ -4143,9 +4138,8 @@ msgid "Show messages over the video"
 msgstr "Mostra i messaggi sopra il video"
 
 #: src/app/servers/page.tsx
-#, fuzzy
 msgid "Show on the profile picker"
-msgstr "Mostra la richiesta"
+msgstr "Mostra nella selezione del profilo"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
@@ -4610,9 +4604,8 @@ msgstr "Cambia"
 
 #: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-#, fuzzy
 msgid "Switch profile"
-msgstr "Cambia server"
+msgstr "Cambia profilo"
 
 #: src/app.tsx
 msgid "Switch server"
@@ -4805,11 +4798,11 @@ msgstr "Mostra la copertina del titolo selezionato, sfocata e resa più scura, s
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every device. A device that changes it keeps its own."
-msgstr ""
+msgstr "Il valore predefinito per ogni dispositivo. Un dispositivo che lo modifica mantiene il proprio."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every profile. A profile that changes it keeps its own."
-msgstr ""
+msgstr "Il valore predefinito per ogni profilo. Un profilo che lo modifica mantiene il proprio."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5065,9 +5058,8 @@ msgid "This item was not found"
 msgstr "Elemento non trovato"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "This profile has a PIN."
-msgstr "Questo utente richiede un PIN."
+msgstr "Questo profilo richiede un PIN."
 
 #: src/features/downloads/download-button.tsx
 msgid "This season"
@@ -5517,9 +5509,8 @@ msgid "Watch along"
 msgstr "Guarda in compagnia"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
-msgstr "Guarda come un altro utente su questa configurazione. Un utente con PIN dovrà inserirlo nuovamente dopo aver cambiato profilo."
+msgstr "Guarda come un altro utente su questa configurazione. Un profilo con PIN dovrà inserirlo nuovamente dopo aver cambiato profilo."
 
 #: src/app/settings/playback.tsx
 msgid "Watch parties"
@@ -5606,9 +5597,8 @@ msgid "What you can send from a party's chat."
 msgstr "Contenuti che puoi inviare all'interno della chat di un watch party."
 
 #: src/app/settings/apps.tsx
-#, fuzzy
 msgid "What your Discord profile shows."
-msgstr "Le informazioni mostrate nel tuo profilo Discord. Salvate su questo dispositivo."
+msgstr "Le informazioni mostrate nel tuo profilo Discord."
 
 #: src/app/settings/audio.tsx
 msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."
