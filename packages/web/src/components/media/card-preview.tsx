@@ -74,6 +74,8 @@ export function useCardPreview(item: BaseItemDto) {
   return {
     // Not on enter, which rows scrolling under a still pointer also send.
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      // A leaving card isn't opened again by the pointer either.
+      if ((e.target as Element).closest('[data-leaving]')) return;
       if (e.pointerType === 'mouse')
         previews.rest({ item, card: e.currentTarget, byFocus: false });
     },
