@@ -139,6 +139,16 @@ export function useNoteResumed() {
         LastPlayedDate: new Date().toISOString(),
       },
     } as BaseItemDto;
+    // An answer asked for before this, as the server's pushes during playback
+    // ask, would land after it with the last position. Cancelling puts back
+    // what was there at once, so the writes below still go over it.
+    const written = [['resume'], ['item', item.Id]];
+    if (item.SeriesId && !finished) written.push(['next-up', item.SeriesId]);
+    for (const sub of written)
+      void queryClient.cancelQueries({
+        queryKey: [...key, ...sub],
+        exact: true,
+      });
     queryClient.setQueryData<BaseItemDtoQueryResult>(
       [...key, 'resume'],
       (old) => {
