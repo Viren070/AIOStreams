@@ -350,7 +350,8 @@ function HeroDetails({
   // The size the title's page asks for, so it's in memory when that opens.
   // A list often knows no logo; the title's own details do, so the name waits.
   const pictured = live ? (fresh.data ?? item) : item;
-  const waiting = live ? !fresh.data : pending;
+  // Only while they're on their way: if they fail, the list's name shows.
+  const waiting = live ? fresh.isPending : pending;
   const logo = logoUrl(client, pictured, { maxWidth: 416 });
   // By address, since the hero swaps items under the same details.
   const [failedLogo, setFailedLogo] = React.useState<string>();
@@ -397,7 +398,7 @@ function HeroDetails({
         <ScoreRefresh active={refreshing}>
           <Scores item={rated} max={3} />
         </ScoreRefresh>
-      ) : live && !fresh.data ? (
+      ) : live && fresh.isPending ? (
         // Its place held, so the line doesn't shift when they come.
         <Skeleton className="inline-block h-4 w-20 align-middle" />
       ) : null,
@@ -1206,7 +1207,7 @@ function FollowDetails({ item }: { item: BaseItemDto }) {
       actions={!currentHost().tv}
       // Without its buttons it needn't find what they'd play for each card.
       live={!currentHost().tv}
-      pending={!details.data}
+      pending={details.isPending}
     />
   );
 }
