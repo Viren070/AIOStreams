@@ -7,10 +7,12 @@ TVs play through the page's `<video>` element, Samsung TVs through Samsung's own
 drawn beneath the page. The web app finds out which TV it's on from what the TV injects
 (`window.webOSSystem` or `window.tizen`); see `src/lib/hosts/webos/` and `tizen/` there.
 
-On LG TVs that play FLAC but lack DTS-HD support, the native player can use the
-optional DTS module supplied beside the WebGPU player assets. It keeps the
-selected file's video and plays the decoded sound through the same video element.
-The TV speakers receive a stereo mix that includes dialogue from the center channel.
+On LG TVs with FLAC support, the native player can decode DTS, DTS-HD and TrueHD
+when webOS cannot play the selected track. It uses the audio module supplied with
+the player package and keeps the original video. This works with seekable MKV,
+MP4, MOV and MPEG transport stream files whose video the TV can play through
+Media Source Extensions. The TV speakers receive a stereo mix that includes
+dialogue from the center channel.
 
 The webOS package also carries a small JS service (`webos-service/`). It fetches for the page what
 CORS keeps from it: a video's own subtitle tracks and fonts from hosts that send no CORS headers,
