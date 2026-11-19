@@ -33,7 +33,7 @@ import {
 import {
   clock,
   dayLabel,
-  duration,
+  runtimeText,
   episodeCode,
   ticksToMs,
   untilLabel,
@@ -103,7 +103,7 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   }
   const runtime = ticksToMs(item.RunTimeTicks);
   if (runtime && item.Type !== 'Series') {
-    parts.push(['runtime', duration(runtime)]);
+    parts.push(['runtime', runtimeText(runtime)]);
   }
   if (scoresOf(item).length) parts.push(['score', <Scores item={item} />]);
   if (item.Type === 'Series' && item.Status) {
