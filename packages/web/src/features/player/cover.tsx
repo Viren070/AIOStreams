@@ -1,4 +1,5 @@
 import React from 'react';
+import { IoCheckmarkCircle } from 'react-icons/io5';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import { backdropUrl, logoUrl } from '@/lib/artwork/urls';
@@ -15,10 +16,13 @@ export function Cover({
   item,
   hidden = false,
   status,
+  done = false,
 }: {
   item?: BaseItemDto;
   hidden?: boolean;
   status?: string;
+  /** What the status waited for has come, so it ends with a tick and fades. */
+  done?: boolean;
 }) {
   const { client } = useSession();
   const [gone, setGone] = React.useState(false);
@@ -29,6 +33,10 @@ export function Cover({
   React.useEffect(() => {
     if (!hidden) setGone(false);
   }, [hidden]);
+  // The last status, kept a moment past its end to show it was met.
+  const [last, setLast] = React.useState(status);
+  if (status && status !== last) setLast(status);
+  const met = !status && done && !!last;
   if (gone) return null;
 
   const backdrop = item ? backdropUrl(client, item, { maxWidth: 1920 }) : null;
@@ -105,10 +113,22 @@ export function Cover({
           </div>
           <p
             data-ui="player-cover-status"
+            data-met={met || undefined}
             role="status"
-            className="absolute left-1/2 top-full mt-4 w-max max-w-[80vw] -translate-x-1/2 text-center text-sm text-gray-300 sm:text-base"
+            className={cn(
+              'absolute left-1/2 top-full mt-4 flex w-max max-w-[80vw] -translate-x-1/2 items-center gap-2 text-center text-sm text-gray-300 sm:text-base',
+              // Met, it holds a moment with its tick, then fades away.
+              met &&
+                'animate-out fade-out-0 fill-mode-forwards [animation-delay:700ms] [animation-duration:600ms]'
+            )}
           >
-            {status}
+            {status ?? (met ? last : null)}
+            {met && (
+              <IoCheckmarkCircle
+                aria-hidden
+                className="flex-none text-[1.25em] text-green-400 animate-in fade-in-0 [animation-duration:300ms]"
+              />
+            )}
           </p>
         </div>
       </div>
