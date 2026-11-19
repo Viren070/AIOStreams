@@ -637,8 +637,11 @@ function HeroTrailer({
         <TrailerPreview
           item={item}
           spot={spot}
-          within={spot.parentElement ?? undefined}
-          soft
+          // A TV's fills the screen, past the hero's box and unfaded.
+          within={
+            currentHost().tv ? undefined : (spot.parentElement ?? undefined)
+          }
+          soft={!currentHost().tv}
           onShown={(on) => {
             setShown(on);
             onShown(on);

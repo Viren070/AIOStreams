@@ -183,7 +183,8 @@ export function useItemTrailer(item: BaseItemDto | undefined) {
           item={item}
           spot={spot}
           full={full}
-          soft
+          // A TV's fills the screen, with no edge fading into the wash.
+          soft={!currentHost().tv}
           onShown={(on, trailer) => {
             setShown(on);
             setName(trailer.name);

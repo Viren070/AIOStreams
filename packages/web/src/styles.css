@@ -370,6 +370,67 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   outline-color: transparent !important;
 }
 
+/*
+ * On a TV a trailer fills the screen, under the rail. Cinema-wide, the
+ * screen's height across and centred, so a 16:9 video covering it crops the
+ * bars a scope trailer carries, above and below.
+ */
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-trailer'] {
+  inset: 0 auto auto calc(50vw - 119.5vh);
+  width: 239vh;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+:root[data-tv] .sidebar-slim [data-ui='hero'] > [data-ui='hero-trailer'] {
+  inset-inline-start: calc(50vw - 119.5vh - 5rem);
+}
+:root[data-tv] .sidebar-sm [data-ui='hero'] > [data-ui='hero-trailer'] {
+  inset-inline-start: calc(50vw - 119.5vh - 12rem);
+}
+:root[data-tv] [data-ui='item-trailer'] {
+  inset: 0 auto auto calc(50vw - 119.5vh);
+  width: 239vh;
+  height: 100vh;
+}
+/* Its edges don't fade into the page there. */
+:root[data-tv]
+  [data-ui='hero-trailer']
+  > div
+  > div:not([data-ui='trailer-veil']) {
+  display: none;
+}
+/*
+ * Over a TV's trailer, a dark veil from the corner under the text, opening
+ * out towards the far top corner, so what's written over it still reads.
+ * Not once it's opened whole.
+ */
+:root[data-tv]:not(.playing)
+  :is([data-ui='hero-trailer'], [data-ui='item-trailer'])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top right,
+      rgb(0 0 0 / 0.9),
+      rgb(0 0 0 / 0.55) 45%,
+      transparent 85%
+    ),
+    rgb(0 0 0 / 0.3);
+}
+:root[data-tv][dir='rtl']:not(.playing)
+  :is([data-ui='hero-trailer'], [data-ui='item-trailer'])::after {
+  background:
+    linear-gradient(
+      to top left,
+      rgb(0 0 0 / 0.9),
+      rgb(0 0 0 / 0.55) 45%,
+      transparent 85%
+    ),
+    rgb(0 0 0 / 0.3);
+}
+
 /* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
 [data-ui='hero'] :focus-visible:not([data-focus='own']):not(input),

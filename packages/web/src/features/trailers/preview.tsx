@@ -260,6 +260,7 @@ function fadeMask(frame: Box, hole: Box): React.CSSProperties {
 export function TrailerVeil({ shown }: { shown: boolean }) {
   return (
     <div
+      data-ui="trailer-veil"
       className={cn(
         // A layer made as a fade starts can draw nothing for a frame.
         'absolute inset-0 bg-[--background] transition-opacity duration-500 will-change-[opacity]',
