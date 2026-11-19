@@ -21,6 +21,7 @@ import {
   logoUrl,
   noteShownBackdrop,
   settleBackdrop,
+  useBackdropsSettled,
 } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
@@ -918,6 +919,8 @@ function FollowBackdrop({
   trailer: { box: React.ReactNode; shown: boolean };
 }) {
   const { client } = useSession();
+  // Kept behind a title's page, which settles its backdrop on its details.
+  useBackdropsSettled();
   const src = item && backdropSrc(client, item);
   const fade = cn(
     'transition-opacity duration-700',
