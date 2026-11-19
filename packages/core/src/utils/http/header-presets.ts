@@ -58,6 +58,9 @@ export const HEADER_PRESETS = {
     Connection: 'Keep-Alive',
     'Accept-Encoding': 'gzip',
   },
+  vlc: {
+    'User-Agent': 'VLC/3.0.21 LibVLC/3.0.21',
+  },
   chrome: {
     Host: host,
     Connection: 'keep-alive',
