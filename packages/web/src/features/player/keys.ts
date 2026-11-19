@@ -51,6 +51,7 @@ interface PlayerKeys {
   /** Whether the controls show, which Back hides first on a TV. */
   visible(): boolean;
   wake(): void;
+  stir?: () => void;
   glancing(): boolean;
   hide(): void;
   notice(text: string): void;
@@ -295,6 +296,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         const outcome = run(input, repeat);
         if (outcome === false) return false;
         if (outcome !== 'quiet') k().wake();
+        else k().stir?.();
       })
     );
     // A focused control keeps its key.
