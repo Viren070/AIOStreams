@@ -244,9 +244,10 @@ function leaveRow(): Leaving {
       card?.removeAttribute('data-removing');
       const all = slides();
       const at = slide ? all.indexOf(slide) : -1;
+      // Signed, so a right-to-left row's cards slide right into its place.
       const step =
         all.length > 1
-          ? Math.abs(all[1].offsetLeft - all[0].offsetLeft)
+          ? all[1].offsetLeft - all[0].offsetLeft
           : (slide?.offsetWidth ?? 0);
       const timing = {
         duration: moving ? 320 : 0,
