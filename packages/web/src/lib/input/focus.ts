@@ -811,6 +811,8 @@ let lastMove: { from: HTMLElement; to: HTMLElement; dir: Direction } | null =
  * side returns to, whatever lies that way.
  */
 const cameFrom = new WeakMap<Element, HTMLElement>();
+/** A `data-nav-exit` box Back brought focus into, which the next Back goes on from rather than out of. */
+let backedInto: Element | null = null;
 
 /**
  * From a page the navigation leads to, its entry there, which Back moves onto
@@ -916,15 +918,22 @@ export function backOut(): boolean {
       : null;
   const came = box ? cameFrom.get(box) : undefined;
   const dir = navSide(box?.dataset.navExit);
-  if (!box || !dir || !came?.isConnected || !canFocus(came)) return false;
+  if (
+    !box ||
+    box === backedInto ||
+    !dir ||
+    !came?.isConnected ||
+    !canFocus(came)
+  )
+    return false;
   moveTo(came, dir);
   lastMove = null;
   return true;
 }
 
-/** Forgets where focus came into `box` from, as Back brought it there and goes on from it. */
-export function forgetCameFrom(box: Element): void {
-  cameFrom.delete(box);
+/** Marks `box` as entered by Back, which goes on from it; a move out its exit still returns where focus came from. */
+export function enteredByBack(box: Element): void {
+  backedInto = box;
 }
 
 /** Focuses `to` as a move `dir` would, so the other way comes back. */
@@ -936,7 +945,11 @@ export function moveTo(to: HTMLElement, dir: Direction): void {
   }
   const box = to.closest<HTMLElement>('[data-nav-exit]');
   const exit = box && !box.contains(from) && navSide(box.dataset.navExit);
-  if (exit) cameFrom.set(box, from);
+  if (exit) {
+    cameFrom.set(box, from);
+    // Come in by a move, Back leads out again.
+    backedInto = null;
+  }
   // Into such a box, only its exit leads back.
   lastMove = { from, to, dir: exit ? OPPOSITE[exit] : dir };
   focusOn(to);

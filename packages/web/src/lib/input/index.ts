@@ -30,8 +30,8 @@ export {
 export {
   activate,
   backOut,
+  enteredByBack,
   focusOn,
-  forgetCameFrom,
   isTextField,
   keyboardFocus,
   move,

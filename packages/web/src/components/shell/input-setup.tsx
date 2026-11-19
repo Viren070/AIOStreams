@@ -9,7 +9,7 @@ import {
   actionText,
   activate,
   backOut,
-  forgetCameFrom,
+  enteredByBack,
   groupActions,
   groupLabel,
   isTextField,
@@ -60,7 +60,7 @@ function toNavigation(): boolean {
   moveTo(back.entry, back.dir);
   // Brought there by Back, the next Back goes on from it rather than out.
   const box = back.entry.closest('[data-nav-exit]');
-  if (box) forgetCameFrom(box);
+  if (box) enteredByBack(box);
   return true;
 }
 
