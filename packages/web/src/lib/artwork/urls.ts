@@ -125,6 +125,12 @@ export function cardImages(
   ].filter((url): url is string => !!url);
 }
 
+/**
+ * One size for a wide card's backdrop and its opened preview's, so opening
+ * it shows the very picture already drawn rather than loading it again.
+ */
+export const WIDE_ART_WIDTH = 960;
+
 /** A landscape still: an episode's own, else a thumb or backdrop. */
 export function landscapeUrl(
   client: JellyfinClient,
