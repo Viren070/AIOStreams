@@ -319,16 +319,17 @@ function HeroDetails({
   const fetchNextUp = useFetchNextUp();
   // What Play plays, as on the title's page: a show's next episode, else itself.
   const nextUp = useNextUpFor(item.Id!, live && item.Type === 'Series');
+  // The title's own details, fetched afresh and kept, for scores that match
+  // its page's; a list's rough score waits behind a spinner until they come.
+  const fresh = useItem(live ? (item.Id ?? '') : '');
+  // Its own details where they've come, as a list's watch state can be older.
   const target =
     item.Type === 'Series'
       ? nextUp.data?.Items?.[0]
       : item.Type === 'Movie' || item.Type === 'Episode'
-        ? item
+        ? (fresh.data ?? item)
         : undefined;
   usePreloadVersions(live ? target : undefined);
-  // The title's own details, fetched afresh and kept, for scores that match
-  // its page's; a list's rough score waits behind a spinner until they come.
-  const fresh = useItem(live ? (item.Id ?? '') : '');
   // Off show, the item as given: a follower hero passes its own details.
   const rated = live ? fresh.data : item;
   const scored = !!rated && scoresOf(rated).length > 0;
