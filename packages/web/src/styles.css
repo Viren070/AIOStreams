@@ -397,7 +397,8 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 :root[data-tv]
   [data-ui='hero-trailer']
   > div
-  > div:not([data-ui='trailer-veil']) {
+  > div:not([data-ui='trailer-veil']),
+:root[data-tv] [data-ui='item-trailer'] > div:not([data-ui='trailer-veil']) {
   display: none;
 }
 /*
