@@ -1,6 +1,7 @@
 import type { AnyRouter, ParsedLocation } from '@tanstack/react-router';
 import { usingKeys } from './dispatch';
 import { focusOn, inOverlay, startOf } from './focus';
+import { jumpingTo } from './glide';
 
 interface Spot {
   row: string | null;
@@ -99,7 +100,8 @@ export function returnFocus(
       const el =
         (spot && find(spot)) ||
         (!spot || performance.now() >= gone ? startOf() : null);
-      if (el?.getClientRects().length) focusOn(el);
+      // Back where it was, not scrolled there from the page's top.
+      if (el?.getClientRects().length) jumpingTo(() => focusOn(el));
       else if (performance.now() < until) frame = requestAnimationFrame(look);
     };
     look();
