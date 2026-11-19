@@ -112,6 +112,9 @@ let paused = false;
 let making: string | undefined;
 
 let frame: WashFrame | null = null;
+/** Until the next frame: the last went at once, as another title's, not faded. */
+let cut = false;
+export const washCut = () => cut;
 /** False on a page the user keeps it from. */
 let visible = true;
 const listeners = new Set<() => void>();
@@ -173,6 +176,17 @@ export const useWashShown = () =>
 const newest = (over: boolean) =>
   shown.filter((entry) => entry.over === over).pop()?.src;
 
+/** Clears the wash without a fade, as it showed another title's art. */
+function dropAtOnce() {
+  const was = frame;
+  frame = null;
+  cut = true;
+  markRoot();
+  paintPanels(null);
+  for (const listener of listeners) listener();
+  if (was?.image instanceof ImageBitmap) was.image.close();
+}
+
 /** A dialog's title over the card rested on, over the page's own. */
 function apply() {
   const src = newest(true) ?? selectedSrc ?? newest(false);
@@ -189,6 +203,7 @@ function apply() {
     }
     const was = frame;
     frame = next;
+    cut = false;
     markRoot();
     paintPanels(next.panel);
     // The layers draw it as they hear of it, so the last can go.
@@ -239,7 +254,12 @@ export function useArtBackground(
     const arriving = !last.current;
     last.current = src;
     if (!src) return;
-    if (arriving && !over) selectedSrc = undefined;
+    if (arriving && !over) {
+      selectedSrc = undefined;
+      // Another title's art, kept from before, goes at once, so it doesn't
+      // show over this page while its own is made.
+      if (frame && frame.src !== src) dropAtOnce();
+    }
     const entry: Shown = { src, over };
     shown.push(entry);
     apply();
