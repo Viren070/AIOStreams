@@ -26,10 +26,10 @@
       animation-timeline: scroll(root);
       animation-range: 0 100vh;
     }
-    /* Home under a back swipe follows its own scroll, not the page's above it. */
-    [data-page='home'][data-peek] [data-ui='hero-backdrops'] {
+    /* A page under a back swipe follows its own scroll, not the page's above it. */
+    [data-peek] :is([data-ui='item-backdrop'], [data-ui='hero-backdrops']) {
       animation: none;
-      transform: translateY(calc(min(var(--home-y), 100vh) / 2));
+      transform: translateY(calc(min(var(--peek-at), 1) * 50vh));
     }
     /* What's over a phone's hero or a title's art fades as it scrolls away. */
     @media (max-width: 639px) {
@@ -49,17 +49,19 @@
       [data-ui='item-heading'] {
         animation-range: 25vh 60vh;
       }
-      [data-page='home'][data-peek]
-        :is([data-ui='hero-content'], [data-ui='hero-dots']) {
+      [data-peek] :is([data-ui='hero-content'], [data-ui='hero-dots']) {
         animation: none;
-        opacity: var(--home-fade);
+        opacity: clamp(0, (0.5 - var(--peek-at)) / 0.4, 1);
+      }
+      [data-peek] [data-ui='item-heading'] {
+        animation: none;
+        opacity: clamp(0, (0.6 - var(--peek-at)) / 0.35, 1);
       }
     }
   }
 }
-/* Only while inert, so it ends in the same frame Home returns to its place. */
-[data-page='home'][inert][data-peek],
-[data-back-under][inert][data-peek] {
+/* Only while inert, so it ends in the same frame the page returns to its place. */
+[data-page][inert][data-peek] {
   visibility: visible;
   content-visibility: visible;
   margin-top: var(--peek-top);

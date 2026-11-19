@@ -30,13 +30,22 @@ let opening = false;
 /** The page then needs no entrance of its own. */
 export const pageOpening = (): boolean => opening;
 
-const artShown = () =>
+/** The open page's, not those of the pages kept hidden behind it. */
+const onPage = (selector: string) =>
+  document
+    .querySelector('main [data-page]:not([inert])')
+    ?.querySelector<HTMLElement>(selector) ?? null;
+
+/** Until the new page is open and its art shows. */
+const opened = (before: Element | null) =>
   new Promise<void>((done) => {
     const by = performance.now() + ART_WAIT_MS;
     // Not by frame: none are drawn until the update finishes.
     const check = () => {
-      const art = document.querySelector("[data-ui='item-backdrop-image']");
-      const shown = art && getComputedStyle(art).opacity !== '0';
+      const page = document.querySelector('main [data-page]:not([inert])');
+      const art = onPage("[data-ui='item-backdrop-image']");
+      const shown =
+        page !== before && art && getComputedStyle(art).opacity !== '0';
       if (shown || performance.now() > by) done();
       else setTimeout(check, 8);
     };
@@ -45,7 +54,7 @@ const artShown = () =>
 
 /** Both cover by height from the top, so scaled to the hero's height the art frames the picture as the hero does. */
 function morphArt(from: DOMRect | undefined) {
-  const el = document.querySelector("[data-ui='item-backdrop']");
+  const el = onPage("[data-ui='item-backdrop']");
   const to = el?.getBoundingClientRect();
   if (!el || !to?.height || !from) return;
   el.animate(
@@ -95,30 +104,28 @@ export function openPage(go: () => void, fromHero = false): void {
   if (!canTransition()) return go();
   const root = document.documentElement;
   const art = fromHero
-    ? document
-        .querySelector("[data-ui='hero-backdrops']")
-        ?.getBoundingClientRect()
+    ? onPage("[data-ui='hero-backdrops']")?.getBoundingClientRect()
     : undefined;
   const named: HTMLElement[] = [];
-  const name = (selector: string, viewTransitionName: string) => {
-    const el = document.querySelector<HTMLElement>(selector);
+  const name = (el: HTMLElement | null, viewTransitionName: string) => {
     if (!el) return;
     el.style.viewTransitionName = viewTransitionName;
     named.push(el);
   };
-  const nameAll = (names: Record<string, string>) =>
-    Object.entries(names).forEach(([selector, each]) => name(selector, each));
-  nameAll(BARS);
+  for (const [selector, each] of Object.entries(BARS))
+    name(document.querySelector<HTMLElement>(selector), each);
   if (fromHero) {
-    nameAll(HERO_LEAVING);
-    name("[data-slide='0'] [data-ui='hero-logo']", LOGO);
+    for (const [selector, each] of Object.entries(HERO_LEAVING))
+      name(onPage(selector), each);
+    name(onPage("[data-slide='0'] [data-ui='hero-logo']"), LOGO);
   } else root.toggleAttribute('data-sliding-open', true);
   opening = true;
+  const before = document.querySelector('main [data-page]:not([inert])');
   const transition = document.startViewTransition(async () => {
     go();
-    await artShown();
+    await opened(before);
     if (fromHero) {
-      name("[data-ui='item-logo']", LOGO);
+      name(onPage("[data-ui='item-logo']"), LOGO);
       morphArt(art);
     }
   });
