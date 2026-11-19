@@ -598,6 +598,29 @@ export function useShowAhead(
     .catch(() => {});
 }
 
+/**
+ * As `useShowAhead`, when asked: a show's seasons, then the episodes of
+ * `seasonId` or the one its page opens on, and of its latest season, where its
+ * page looks for the next airing.
+ */
+export function useFetchShowAhead() {
+  const queryClient = useQueryClient();
+  const show = useShowOptions();
+  return (seriesId: string, seasonId?: string) =>
+    queryClient.fetchQuery(show.seasons(seriesId)).then((result) => {
+      const seasons = result.Items ?? [];
+      const latest = seasons
+        .filter((s) => (s.IndexNumber ?? 0) > 0)
+        .sort((a, b) => (b.IndexNumber ?? 0) - (a.IndexNumber ?? 0))[0]?.Id;
+      const ids = new Set([seasonId ?? openingSeason(seasons)?.Id, latest]);
+      return Promise.all(
+        [...ids]
+          .filter((id): id is string => !!id)
+          .map((id) => queryClient.prefetchQuery(show.episodes(seriesId, id)))
+      );
+    });
+}
+
 export function useSimilar(itemId: string, enabled: boolean) {
   const { client, user } = useSession();
   return useQuery({

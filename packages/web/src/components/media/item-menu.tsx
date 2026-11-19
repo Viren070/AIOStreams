@@ -50,6 +50,7 @@ import {
   useVersionPicker,
 } from '@/features/versions/version-picker';
 import { useHeroTarget } from './hero';
+import { usePageAhead } from './page-ahead';
 import { useCardPreview } from './card-preview';
 import { useArtTarget } from '@/lib/artwork/background';
 import { openAddToPlaylist } from '@/features/playlists/playlists';
@@ -207,24 +208,29 @@ export function ItemMenu({
   const heroTarget = useHeroTarget(target.item);
   const preview = useCardPreview(target.item);
   const art = useArtTarget(target.item);
+  const ahead = usePageAhead(target.item);
   const open = React.useContext(OpenMenu);
   const watched = {
+    onPointerEnter: () => ahead?.start(),
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
       heroTarget?.onPointerMove(e);
       preview?.onPointerMove(e);
       art?.onPointerMove(e);
     },
     onPointerLeave: () => {
+      ahead?.stop();
       heroTarget?.onPointerLeave();
       preview?.onPointerLeave();
       art?.onPointerLeave();
     },
     onFocus: (e: React.FocusEvent<HTMLElement>) => {
+      ahead?.start();
       heroTarget?.onFocus();
       preview?.onFocus(e);
       art?.onFocus(e);
     },
     onBlur: () => {
+      ahead?.stop();
       preview?.onBlur();
       art?.onBlur();
     },
