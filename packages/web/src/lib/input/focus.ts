@@ -290,6 +290,33 @@ function candidates(
 }
 
 /** In a `data-nav-row`, whose cards lie in their order, the next one that way. */
+/**
+ * Where `el` comes to rest once the slides under way in its row end, as the
+ * cards after an opening one, which a move measured mid-slide would pass over.
+ */
+function resting(el: HTMLElement, r: DOMRect, row: Element): DOMRect {
+  let dx = 0;
+  let dy = 0;
+  for (
+    let box: Element | null = el;
+    box && box !== row;
+    box = box.parentElement
+  ) {
+    const moving = box
+      .getAnimations()
+      .some(
+        ({ effect }) =>
+          effect instanceof KeyframeEffect &&
+          effect.getKeyframes().some((frame) => 'transform' in frame)
+      );
+    if (!moving) continue;
+    const { m41, m42 } = new DOMMatrixReadOnly(getComputedStyle(box).transform);
+    dx += m41;
+    dy += m42;
+  }
+  return dx || dy ? shifted(r, -dx, -dy) : r;
+}
+
 function along(
   from: HTMLElement,
   rect: DOMRect,
@@ -300,11 +327,13 @@ function along(
   const all = [...row.querySelectorAll<HTMLElement>(FOCUSABLE)];
   const at = all.indexOf(from);
   if (at < 0) return null;
+  const here = resting(from, rect, row);
   const step = dir === 'right' ? 1 : -1;
   for (let i = at + step; i >= 0 && i < all.length; i += step) {
     if (ruledOut(all[i])) continue;
     const to = rectOf(all[i]);
-    return distance(rect, to, dir)?.inLine && canFocus(all[i], to)
+    return distance(here, resting(all[i], to, row), dir)?.inLine &&
+      canFocus(all[i], to)
       ? all[i]
       : null;
   }
