@@ -32,7 +32,12 @@ import {
   preWarmLibraryCaches,
   refreshLibraryCacheForService,
 } from './catalog.js';
-import { parseLibraryId, fetchItem, buildMeta } from './meta.js';
+import {
+  parseLibraryId,
+  fetchItem,
+  buildMeta,
+  resolveItemArtwork,
+} from './meta.js';
 import { createLibraryStream, createRefreshStream } from './streams.js';
 import { searchTorrents, searchNzbs } from './matching.js';
 import { cleanTitle } from '../../parser/utils.js';
@@ -44,6 +49,8 @@ export const LibraryAddonConfigSchema = BaseDebridConfigSchema.extend({
   skipProcessing: z.boolean().optional(),
   showRefreshActions: z.array(z.enum(['catalog', 'stream'])).optional(),
   hideStreams: z.boolean().default(false).optional(),
+  showPosters: z.boolean().optional(),
+  nameFormat: z.enum(['release', 'title']).optional(),
 });
 export type LibraryAddonConfig = z.infer<typeof LibraryAddonConfigSchema>;
 
@@ -138,7 +145,11 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       sort,
       sortDirection,
       genre,
-      search
+      search,
+      {
+        showPosters: this.userData.showPosters,
+        nameFormat: this.userData.nameFormat,
+      }
     );
   }
 
@@ -219,7 +230,18 @@ export class LibraryAddon extends BaseDebridAddon<LibraryAddonConfig> {
       this.clientIp
     );
 
-    return buildMeta(id, item, service, narrowedItemType);
+    const artwork =
+      this.userData.showPosters !== false
+        ? await resolveItemArtwork(item.name)
+        : undefined;
+    return buildMeta(
+      id,
+      item,
+      service,
+      narrowedItemType,
+      artwork,
+      this.userData.nameFormat
+    );
   }
 
   /**
