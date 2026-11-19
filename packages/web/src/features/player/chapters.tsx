@@ -66,9 +66,9 @@ export function ChaptersSheet({
   // The player can fetch the chapter in focus before it's picked.
   const onAim = React.useCallback(
     (startMs: number) => {
-      // The chapter playing, focused as the list opens, lies behind the playhead.
-      if (startMs === currentStartMs.current) return;
       const { prepareSeek, thumbnails } = latest.current;
+      // The chapter playing, focused as the list opens, lies behind the playhead; back on it, the one aimed before is let go.
+      if (startMs === currentStartMs.current) return prepareSeek?.(null);
       prepareSeek?.(chapterSeekMs(startMs, thumbnails));
     },
     [latest]
