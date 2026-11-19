@@ -19,7 +19,11 @@ import {
   useFetchNextUp,
   useSeasons,
 } from '@/lib/jellyfin/queries';
+import { usePlaybackInfo } from '@/lib/jellyfin/playback-info';
 import { offersFavourite } from '@/lib/jellyfin/watch-state';
+import { playableSources } from '@/lib/playback/sources';
+import { versionText } from '@/lib/versions';
+import { matchBadges } from '@/lib/badges';
 import {
   cardShape,
   landscapeUrls,
@@ -41,6 +45,7 @@ import {
   usePreloadVersions,
   useVersionPicker,
 } from '@/features/versions/version-picker';
+import { BadgeChip, useBadges } from '@/features/versions/version-badges';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { useHold } from '@/hooks/use-hold';
 import { focusDialog, useDialogStart } from '@/lib/input';
@@ -116,9 +121,48 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
           <span data-name={name}>{part}</span>
         </React.Fragment>
       ))}
+      {item.Type === 'Movie' && <TopVersionBadges item={item} />}
     </div>
   );
 });
+
+/**
+ * The badges of the version the list shows first, once its versions are
+ * found: as the page opens with that setting on, or by an earlier list.
+ */
+function TopVersionBadges({ item }: { item: BaseItemDto }) {
+  const badges = useBadges();
+  // Only watches the list's own answer, so opening the list reuses it.
+  const info = usePlaybackInfo(item.Id!, { enabled: false });
+  const top = playableSources(info.data)[0];
+  const shown = React.useMemo(
+    () => (top ? matchBadges(versionText(top), badges) : []),
+    [top, badges]
+  );
+  if (!badges.length || (!info.isLoading && !shown.length)) return null;
+  return (
+    <>
+      <Dot />
+      {info.isLoading ? (
+        <Skeleton data-name="badges" className="h-5 w-16 rounded-md" />
+      ) : (
+        <span
+          data-name="badges"
+          className="flex flex-wrap items-center gap-1 duration-300 animate-in fade-in-0 max-sm:justify-center"
+        >
+          {shown.map((badge) => (
+            // As tall as the row's text, so the row keeps its height.
+            <BadgeChip
+              key={badge.image ?? badge.label}
+              badge={badge}
+              className="h-5"
+            />
+          ))}
+        </span>
+      )}
+    </>
+  );
+}
 
 /** The show's links, with the selected season's own in place of the show's. */
 function linksFor(item: BaseItemDto, season?: BaseItemDto) {
