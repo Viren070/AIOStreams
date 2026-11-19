@@ -73,8 +73,9 @@ export function HeaderSkeleton() {
 }
 
 function Dot() {
+  // No dot after a part that came to nothing.
   return (
-    <span data-ui="meta-separator" className="text-gray-500">
+    <span data-ui="meta-separator" className="text-gray-500 [:empty+&]:hidden">
       •
     </span>
   );
@@ -127,7 +128,10 @@ const MetaRow = React.memo(function MetaRow({
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
           {i > 0 && <Dot />}
-          <span data-name={name}>{part}</span>
+          {/* A show of only specials counts no seasons, so its part goes. */}
+          <span data-name={name} className="empty:hidden">
+            {part}
+          </span>
         </React.Fragment>
       ))}
     </div>
