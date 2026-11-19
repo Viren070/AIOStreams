@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSession } from '@/lib/jellyfin/session';
 import {
+  useCachedItem,
   useFetchItem,
   useFetchNextUp,
   useFetchShowAhead,
@@ -18,9 +19,9 @@ import type { BaseItemDto } from '@/lib/jellyfin/types';
 const REST_MS = 150;
 /** Faces of its cast and crew fetched ahead, the first with photos. */
 const FACES = 12;
-/** A title fetched ahead isn't fetched again for this long, unless now to be decoded too. */
+/** A title fetched ahead isn't fetched again for this long, while its details are in. */
 const AGAIN_MS = 5 * 60_000;
-const fetchedAt = new Map<string, { at: number; decoded: boolean }>();
+const fetchedAt = new Map<string, number>();
 
 /**
  * Fetches a title's page ahead: its details, a show's next episode, seasons
@@ -34,8 +35,17 @@ const fetchedAt = new Map<string, { at: number; decoded: boolean }>();
 export function useFetchPageAhead() {
   const { client, user } = useSession();
   const fetchItem = useFetchItem();
+  const cachedItem = useCachedItem();
   const fetchNextUp = useFetchNextUp();
   const fetchShowAhead = useFetchShowAhead();
+  const warmArtwork = (full: BaseItemDto, decode: boolean) => {
+    const backdrop = backdropUrls(client, full, { maxWidth: 1920 })[0];
+    const logo = logoUrl(client, full, { maxWidth: 416 });
+    const poster = posterUrl(client, full, { maxWidth: 320 });
+    if (backdrop) warmImage(backdrop, decode ? 'large' : undefined);
+    if (logo) warmImage(logo, decode ? 'small' : undefined);
+    if (poster) warmImage(poster, decode ? 'small' : undefined);
+  };
   return async (
     id: string,
     seasonId?: string,
@@ -43,14 +53,17 @@ export function useFetchPageAhead() {
   ): Promise<void> => {
     // Per server and profile, as its details are, and per season it opens on.
     const key = [client.base, user.Id, id, seasonId].join(' ');
-    const last = fetchedAt.get(key);
-    if (
-      last &&
-      performance.now() - last.at < AGAIN_MS &&
-      (last.decoded || !decode)
-    )
+    const at = fetchedAt.get(key);
+    const known =
+      at !== undefined && performance.now() - at < AGAIN_MS
+        ? cachedItem(id)
+        : undefined;
+    if (known) {
+      // Decoded again from the details in, as only a few pictures are held.
+      if (decode) warmArtwork(known, true);
       return;
-    fetchedAt.set(key, { at: performance.now(), decoded: decode });
+    }
+    fetchedAt.set(key, performance.now());
     try {
       const full = await fetchItem(id);
       if (full.Type !== 'Movie' && full.Type !== 'Series') return;
@@ -58,12 +71,7 @@ export function useFetchPageAhead() {
         void fetchNextUp(id).catch(() => undefined);
         void fetchShowAhead(id, seasonId).catch(() => undefined);
       }
-      const backdrop = backdropUrls(client, full, { maxWidth: 1920 })[0];
-      const logo = logoUrl(client, full, { maxWidth: 416 });
-      const poster = posterUrl(client, full, { maxWidth: 320 });
-      if (backdrop) warmImage(backdrop, decode ? 'large' : undefined);
-      if (logo) warmImage(logo, decode ? 'small' : undefined);
-      if (poster) warmImage(poster, decode ? 'small' : undefined);
+      warmArtwork(full, decode);
       for (const person of (full.People ?? [])
         .filter((p) => p.PrimaryImageTag)
         .slice(0, FACES)) {

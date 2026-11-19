@@ -117,7 +117,7 @@ export function useSavedSrc(
   return known ?? (found?.src === src ? found.url : undefined);
 }
 
-/** Decoded pictures held, so the browser keeps them ready to draw; the oldest go first. */
+/** Decoded pictures held, so the browser keeps them ready to draw; those warmed longest ago go first. */
 const DECODED = { small: 40, large: 3 };
 const decoded = {
   small: new Map<string, HTMLImageElement>(),
@@ -126,7 +126,12 @@ const decoded = {
 
 function decodeAhead(url: string, size: keyof typeof DECODED) {
   const held = decoded[size];
-  if (held.has(url)) return;
+  const had = held.get(url);
+  if (had) {
+    held.delete(url);
+    held.set(url, had);
+    return;
+  }
   const image = new Image();
   image.src = url;
   held.set(url, image);

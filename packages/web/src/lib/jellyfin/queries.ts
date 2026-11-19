@@ -489,6 +489,13 @@ export function useFetchItem() {
   return (itemId: string) => queryClient.fetchQuery(options(itemId));
 }
 
+/** A title's details already in, however old, without asking for them. */
+export function useCachedItem() {
+  const queryClient = useQueryClient();
+  const options = useItemOptions();
+  return (itemId: string) => queryClient.getQueryData(options(itemId).queryKey);
+}
+
 export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   const { client, user } = useSession();
   const queryClient = useQueryClient();
