@@ -117,9 +117,11 @@ export function Cover({
             role="status"
             className={cn(
               'absolute left-1/2 top-full mt-4 flex w-max max-w-[80vw] -translate-x-1/2 items-center gap-2 text-center text-sm text-gray-300 sm:text-base',
-              // Met, it holds a moment with its tick, then fades away.
-              met &&
-                'animate-out fade-out-0 fill-mode-forwards [animation-delay:700ms] [animation-duration:600ms]'
+              // Met, it holds a moment with its tick, then fades away. A
+              // transition, not an animation: it leaves the centring
+              // transform alone, and a cover that comes back mounts it
+              // already faded instead of playing the tick again.
+              met && 'opacity-0 transition-opacity delay-700 duration-[600ms]'
             )}
           >
             {status ?? (met ? last : null)}
