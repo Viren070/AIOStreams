@@ -422,8 +422,9 @@ export function Header({
                 <Skeleton className="h-4 w-11/12 max-w-2xl" />
                 <Skeleton className="h-4 w-2/3 max-w-xl" />
               </div>
-            ) : item.Type === 'Series' && target && started ? (
-              // Once begun, a show tells of the episode it goes on with.
+            ) : item.Type === 'Series' && target?.Overview && started ? (
+              // Once begun, a show tells of the episode it goes on with; one
+              // with no overview of its own keeps the show's in place.
               <NextEpisode
                 episode={target}
                 onPress={() => setAboutEpisode(true)}
