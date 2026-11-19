@@ -11,12 +11,15 @@ import { playerSupport } from '@/lib/playback/player-choice';
 import { deviceProfile } from '@/lib/playback/device-profile';
 import { settings, useSetting } from '@/lib/settings';
 import { mayConvert } from '@/lib/playback/quality';
+import { textSubtitles } from '@/lib/subtitles/tracks';
 import type {
   MediaSegmentDtoQueryResult,
+  MediaStream,
   PlaybackInfoResponse,
   SourceInfo,
 } from './types';
 import { useKey } from './queries';
+import { useServerInfo } from './server-info';
 
 /** The quality cap, where the user may have the server convert. */
 export function useMaxBitrate(): number | undefined {
@@ -46,10 +49,6 @@ const LISTED_FIELDS = [
 ];
 /* eslint-enable lingui/no-unlocalized-strings */
 
-/**
- * Naming a version also gets its subtitles from subtitle addons, as does a
- * download's list, which saves the first version's.
- */
 export async function requestPlaybackInfo(
   client: JellyfinClient,
   userId: string,
@@ -65,6 +64,7 @@ export async function requestPlaybackInfo(
     purpose?: Purpose;
     full?: boolean;
     maxBitrate?: number;
+    addonSubtitles?: boolean;
   } = {}
 ): Promise<PlaybackInfoResponse> {
   const support = opts.support ?? playerSupport();
@@ -72,6 +72,7 @@ export async function requestPlaybackInfo(
     !opts.sourceId && !opts.full && opts.purpose !== 'download'
       ? { MediaSourceFields: LISTED_FIELDS.join(',') }
       : {};
+  const addonSubtitles = opts.addonSubtitles ?? opts.purpose === 'download';
   const ask = (extra?: object) =>
     client.post<PlaybackInfoResponse>(
       `/Items/${itemId}/PlaybackInfo`,
@@ -83,8 +84,7 @@ export async function requestPlaybackInfo(
         ...(opts.sourceId
           ? { MediaSourceId: opts.sourceId }
           : !opts.kept && { Fresh: true }),
-        ...(!opts.sourceId &&
-          opts.purpose !== 'download' && { SkipSubtitles: true }),
+        ...(!addonSubtitles && { SkipSubtitles: true }),
         ...(opts.refresh && { Refresh: true }),
         AllVersions: true,
         ...(support.headers && { EnableRequiredHttpHeaders: true }),
@@ -119,6 +119,7 @@ function usePlaybackInfoRequest() {
         kept?: boolean;
         purpose?: Purpose;
         full?: boolean;
+        addonSubtitles?: boolean;
       } = {}
     ) =>
       requestPlaybackInfo(client, user.Id!, itemId, {
@@ -138,7 +139,7 @@ export function usePlaybackInfoOptions() {
     (
       itemId: string,
       sourceId?: string,
-      opts: { purpose?: Purpose; full?: boolean } = {}
+      opts: { purpose?: Purpose; full?: boolean; addonSubtitles?: boolean } = {}
     ) =>
       queryOptions({
         queryKey: [
@@ -148,6 +149,7 @@ export function usePlaybackInfoOptions() {
           sourceId ?? null,
           ...(opts.purpose ? [opts.purpose] : []),
           ...(opts.full ? ['full'] : []),
+          ...(opts.addonSubtitles ? ['addon-subtitles'] : []),
           ...(sourceId && maxBitrate ? [maxBitrate] : []),
         ],
         queryFn: () => request(itemId, { sourceId, ...opts }),
@@ -194,6 +196,39 @@ export function usePlaybackInfo(
       : true,
     enabled: opts.enabled ?? true,
   });
+}
+
+const NO_STREAMS: MediaStream[] = [];
+
+/**
+ * The server lists the addons' subtitles after a version's own, and a probe
+ * meanwhile can renumber every stream, so these are numbered on from it.
+ */
+export function useLaterSubtitles(
+  itemId: string,
+  source: SourceInfo,
+  enabled: boolean
+): MediaStream[] {
+  const options = usePlaybackInfoOptions();
+  const { stock } = useServerInfo();
+  const { data } = useQuery({
+    ...options(itemId, source.Id ?? undefined, { addonSubtitles: true }),
+    enabled: enabled && !stock && !!source.Id,
+    // A new list can replace the one it came from.
+    gcTime: 0,
+  });
+  return React.useMemo(() => {
+    const later = data?.MediaSources?.find((s) => s.Id === source.Id);
+    const added = later
+      ? textSubtitles(later).slice(textSubtitles(source).length)
+      : [];
+    if (!added.length) return NO_STREAMS;
+    const last = Math.max(
+      -1,
+      ...(source.MediaStreams ?? []).map((s) => s.Index ?? -1)
+    );
+    return added.map((s, i) => ({ ...s, Index: last + 1 + i }));
+  }, [data, source]);
 }
 
 export function useRefreshPlaybackInfo(itemId: string, purpose?: Purpose) {

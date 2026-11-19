@@ -110,6 +110,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
   const report = (state: EngineState) => emit({ type: 'state', state });
 
   let file: EngineFile | null = null;
+  let subtitles: ServerSubtitle[] = [];
   let tracks: AppTrack[] = [];
   /** Files the user added, by the name the player lists them under. */
   const added = new Map<string, string>();
@@ -150,7 +151,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       visualImpaired: t.visualImpaired,
       default: t.default,
       external: t.external,
-      server: file?.subtitles.find((s) => subtitleAddress(s) === t.url)?.id,
+      server: subtitles.find((s) => subtitleAddress(s) === t.url)?.id,
     }));
 
   const exoPlayerStats = exoStats();
@@ -165,6 +166,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
       unsubscribe();
       if (!external) loadedBy = self;
       file = next;
+      subtitles = next.subtitles;
       tracks = [];
       added.clear();
       moved = false;
@@ -319,7 +321,7 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
     setRate: (speed) => send('player-set', { speed }),
     setAudio: (audio) => send('player-set', { audio }),
     setSubtitle(id) {
-      const server = file?.subtitles.find((s) => s.id === id);
+      const server = subtitles.find((s) => s.id === id);
       if (!server) return send('player-set', { subtitle: id });
       // Fetched again on each pick: an addon may still be writing it.
       const url = subtitleAddress(server);
@@ -330,6 +332,9 @@ export const appEngine: EngineFactory = (emit, { launched }) => {
         language: server.lang ?? '',
         ...(loaded && { replace: Number(loaded.id) }),
       });
+    },
+    setSubtitles(next) {
+      subtitles = next;
     },
     setSubtitleDelay: (subtitleDelayMs) =>
       send('player-set', { subtitleDelayMs }),
