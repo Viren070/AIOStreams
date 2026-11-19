@@ -3,8 +3,10 @@ import path from 'node:path';
 import {
   appConfig,
   downloadManager,
+  GrabHttpError,
   NotAnNzbError,
   NzbTooLargeError,
+  RateLimitedError,
 } from '../../utils/index.js';
 import { getDataFolder } from '../../utils/general.js';
 import { createLogger } from '../../logging/logger.js';
@@ -224,6 +226,46 @@ export async function canonicaliseNzbHash(
   return nzb.hash;
 }
 
+const INDEXER_LIMIT_TEXT = /\blimit\b|too many requests/i;
+
+/**
+ * Classify an indexer's refusal to hand out an NZB. Newznab codes: 100 bad
+ * credentials, 101 suspended, 102 not permitted
+ * (https://newznab.readthedocs.io/en/latest/misc/api.html#newznab-error-codes);
+ * 429 is nZEDb's request limit (`showApiError` in nzedb/utility/Misc.php).
+ * {@link RateLimitedError} is our own cooldown refusing the request up front.
+ */
+function classifyIndexerRefusal(
+  err: unknown
+): Pick<DebridError, 'code' | 'statusCode' | 'statusText'> | undefined {
+  const httpStatus = err instanceof GrabHttpError ? err.status : undefined;
+  const doc = err instanceof NotAnNzbError ? err.indexerError : undefined;
+  const code = doc?.code?.trim();
+  if (
+    err instanceof RateLimitedError ||
+    httpStatus === 429 ||
+    code === '429' ||
+    (doc?.description && INDEXER_LIMIT_TEXT.test(doc.description))
+  ) {
+    return {
+      code: 'TOO_MANY_REQUESTS',
+      statusCode: 429,
+      statusText: 'Too Many Requests',
+    };
+  }
+  if (httpStatus === 401 || code === '100') {
+    return {
+      code: 'UNAUTHORIZED',
+      statusCode: 401,
+      statusText: 'Unauthorized',
+    };
+  }
+  if (httpStatus === 403 || code === '101' || code === '102') {
+    return { code: 'FORBIDDEN', statusCode: 403, statusText: 'Forbidden' };
+  }
+  return undefined;
+}
+
 /**
  * Fetch raw NZB XML for a source URL. Directly-uploaded NZBs
  * (`local-nzb://<hash>`) are read from disk; everything else is grabbed via the
@@ -254,6 +296,17 @@ export async function fetchNzb(
   try {
     return await downloadManager.fetchNzb(url, { signal });
   } catch (err) {
+    const refusal = classifyIndexerRefusal(err);
+    if (refusal) {
+      throw new DebridError(`${new URL(url).host}: ${(err as Error).message}`, {
+        ...refusal,
+        headers: {},
+        body: null,
+        type: 'upstream_error',
+        cause: err,
+        indexerScoped: true,
+      });
+    }
     if (err instanceof NotAnNzbError) {
       throw new DebridError(err.message, {
         statusCode: 502,

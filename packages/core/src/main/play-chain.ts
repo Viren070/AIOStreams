@@ -405,9 +405,10 @@ export async function getPlayChain(
 /**
  * Whether a resolve error warrants moving on to the next chain item. Auth and
  * quota failures are terminal for that service, so they stop the chain; a
- * legal block is one file's, so the next may play.
+ * legal block or an indexer-scoped failure is not, so the next may play.
  */
 export function isFailoverRetryableError(error: DebridError | Error): boolean {
+  if ((error as DebridError).indexerScoped) return true;
   const code = (error as any).code;
   switch (code) {
     case 'UNAUTHORIZED':

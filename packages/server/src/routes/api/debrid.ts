@@ -255,7 +255,14 @@ router.get(
             );
             return;
           }
-          logger.error({ err }, `error during debrid resolve: ${err.message}`);
+          if (err.indexerScoped) {
+            logger.warn({ code: err.code }, `nzb grab refused: ${err.message}`);
+          } else {
+            logger.error(
+              { err },
+              `error during debrid resolve: ${err.message}`
+            );
+          }
           res.redirect(307, `/static/${mapDebridErrorToStaticFile(err.code)}`);
           return;
         }
