@@ -26,7 +26,7 @@ export function canUseNativeDts(el: HTMLVideoElement, file: EngineFile) {
       (needsTrueHd && /^truehd$/i.test(s.Codec!))
     );
   }
-  return /^(mkv|matroska|mp4|m4v)$/i.test(file.source.Container ?? '') || /\.(mkv|mp4|m4v)(?:[?#]|$)/i.test(file.url);
+  return /^(mkv|matroska|mp4|m4v|ts|mpegts|m2ts|mts|m2t)$/i.test(file.source.Container ?? '') || /\.(mkv|mp4|m4v|ts|m2ts|mts|m2t)(?:[?#]|$)/i.test(file.url);
 }
 
 export async function prepareNativeDts(el: HTMLVideoElement, file: EngineFile, signal: AbortSignal,
