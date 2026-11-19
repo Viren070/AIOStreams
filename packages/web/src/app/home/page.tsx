@@ -24,6 +24,7 @@ import {
   cardShape,
   landscapeUrls,
   animatedPosterOf,
+  wideCardUrls,
 } from '@/lib/artwork/urls';
 import {
   dayLabel,
@@ -264,9 +265,7 @@ function EpisodeRow({
                 if (straight(item, startMs)) picker.play(item, { startMs });
                 else navigate(versionsPath(item));
               }}
-              image={(width) =>
-                landscapeUrls(client, item, { maxWidth: width })
-              }
+              image={(width) => wideCardUrls(client, item, { maxWidth: width })}
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
               meta={

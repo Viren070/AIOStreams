@@ -11,7 +11,7 @@ import {
 } from '@/lib/artwork/drawn';
 import { canShrink, shrinkArtwork } from '@/lib/artwork/shrink';
 import { currentHost } from '@/lib/hosts';
-import { drawnRatio } from '@/lib/artwork/urls';
+import { drawnRatio, useBackdropsSettled } from '@/lib/artwork/urls';
 import { settings, useSetting } from '@/lib/settings';
 import { CachedImage } from '@/components/cached-image';
 import { Anchor } from '@/components/anchor';
@@ -102,6 +102,8 @@ export function Artwork({
   standIn?: React.ReactNode;
 }) {
   const [box, measure] = useBox();
+  // A title's backdrop settled on a finer one redraws it here too.
+  useBackdropsSettled();
   const resolved =
     typeof src === 'function' ? (box ? src(box.width) : undefined) : src;
   const sources = Array.isArray(resolved)
@@ -128,11 +130,19 @@ export function Artwork({
   const current = sources[attempt];
   const currentKey = current && artworkKey(current);
   const loaded = currentKey ? loadedKey === currentKey : !!early;
+  // The last picture drawn stays under a new one for the same card until it's
+  // in, as a finer backdrop settled for the title swaps it.
+  const [drawnSrc, setDrawnSrc] = React.useState<string | null>(null);
   const onLoad = (el: Element | null) => {
     if (!currentKey) return;
     setUnseen(!!el && !onScreen(el));
     setLoadedKey(currentKey);
+    if (current) setDrawnSrc(current);
   };
+  const under =
+    !loaded && drawnSrc && drawnSrc !== current
+      ? (drawnArtwork(drawnSrc)?.src ?? drawnSrc)
+      : null;
   const imageClass = cn(
     // A focus's scale keeps up with focus; a loaded image fades in slower.
     'absolute inset-0 h-full w-full object-cover [transition-duration:250ms,300ms]',
@@ -162,6 +172,18 @@ export function Artwork({
   }
   return (
     <>
+      {under && (
+        <img
+          aria-hidden
+          alt=""
+          src={under}
+          draggable={false}
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover',
+            className
+          )}
+        />
+      )}
       {canShrink && plain !== current ? (
         <ShrunkImage
           src={current}

@@ -3,7 +3,14 @@ import { t } from '@lingui/core/macro';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem, useShowAhead } from '@/lib/jellyfin/queries';
-import { backdropUrls, posterUrl } from '@/lib/artwork/urls';
+import {
+  backdropUrls,
+  posterUrl,
+  shownFirst,
+  settleBackdrop,
+  useBackdropsSettled,
+  noteShownBackdrop,
+} from '@/lib/artwork/urls';
 import { useArtBackground } from '@/lib/artwork/background';
 import { lacksDetails } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
@@ -39,6 +46,9 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
   const data = item.data;
+  // Its own details settle its backdrop, not what the list it came from knew.
+  if (data && !item.isPlaceholderData) settleBackdrop(data, 'details');
+  useBackdropsSettled();
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   useArtBackground(data);
   const [season, setSeason] = React.useState<BaseItemDto>();
@@ -82,7 +92,12 @@ export function ItemPage({
     >
       {pickId && <PickOnArrival itemId={pickId} playlist={playlistId} />}
       <Backdrop
-        images={data ? backdropUrls(client, data, { maxWidth: 1920 }) : []}
+        // The picture it was just shown with, if any, so it opens on the same.
+        onShown={(src) => noteShownBackdrop(itemId, src)}
+        images={shownFirst(
+          itemId,
+          data ? backdropUrls(client, data, { maxWidth: 1920 }) : []
+        )}
         poster={data ? posterUrl(client, data, { maxWidth: 160 }) : null}
         trailer={trailer.shown}
       />

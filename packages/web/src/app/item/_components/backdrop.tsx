@@ -11,9 +11,12 @@ export function Backdrop({
   images,
   poster,
   trailer,
+  onShown,
 }: {
   images: string[];
   poster: string | null;
+  /** The picture it settled on, which it keeps as the title's details come. */
+  onShown?: (src: string) => void;
   /** A trailer plays in its place, behind the whole page. */
   trailer?: boolean;
 }) {
@@ -51,13 +54,14 @@ export function Backdrop({
         void e.currentTarget
           .decode()
           .catch(() => undefined)
-          .then(() =>
+          .then(() => {
+            if (!wash) onShown?.(src);
             setArrived((was) =>
               was?.src === src
                 ? was
                 : { src, late: performance.now() - opened > UNSEEN_MS }
-            )
-          )
+            );
+          })
       }
       onError={() =>
         setFailed((f) => ({
