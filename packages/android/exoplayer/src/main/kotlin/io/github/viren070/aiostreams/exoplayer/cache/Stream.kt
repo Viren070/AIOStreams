@@ -132,6 +132,8 @@ internal class Stream(
     fun shrink(): Boolean = lock.withLock {
         if (budget <= MIN_BYTES) return false
         budget = (budget / 2).coerceAtLeast(MIN_BYTES) / BLOCK * BLOCK
+        // What the heading keeps from eviction shrinks with the budget, or it could fill it.
+        heading = heading?.let { it.first..min(it.last, it.first + budget / HEADING_SHARE - 1) }
         while (blocks.count * BLOCK > budget && evict(-1)) Unit
         AppLog.i(TAG, "memory is short, holding ${budget shr 20} MB at most")
         true
@@ -211,6 +213,8 @@ internal class Stream(
     private fun moveReader(position: Long) {
         val jumped = abs(position - readAt) > BLOCK
         if (position < readAt || position > runHint) runHint = -1
+        // Once read past, where the page headed is like any other bytes.
+        if (heading?.let { readAt <= it.last && position > it.last } == true) heading = null
         readAt = position
         if (jumped || position >= wakeAt) changed.signalAll()
     }
@@ -370,14 +374,14 @@ internal class Stream(
 
     /** Fetches where the page heads from the first byte not held, unless another side fetch is running. */
     private fun fetchHeading() {
-        val range = lock.withLock {
+        lock.withLock {
             val target = heading ?: return
             if (side != null) return
             val from = blocks.end(target.first)
             if (from > target.last) return
-            from..target.last
+            // Under the same lock, so a heading let go meanwhile finds its fetch to give up.
+            fetchSide(from..target.last, "stream-cache-heading", yields = false, givesWay = true)
         }
-        fetchSide(range, "stream-cache-heading", yields = false, givesWay = true)
     }
 
     /** Bytes held of the next landing beyond what the reader reads on to. */
