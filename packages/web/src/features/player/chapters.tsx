@@ -17,10 +17,8 @@ import { nearestFirst } from '@/lib/playback/thumbnails';
 import { useLatest } from '@/hooks/use-latest';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 
-/** Chapters pictured before the list opens; the rest wait for it. */
-const AHEAD = 24;
-/** Past the start, once the player has settled. */
-const AHEAD_AFTER_MS = 30_000;
+/** Past the start, once the player has settled, every chapter is pictured, nearest first. */
+const AHEAD_AFTER_MS = 1_500;
 
 const still = () => () => {};
 const nothing = () => null;
@@ -124,7 +122,7 @@ export function ChaptersSheet({
   );
 }
 
-/** All while the list is open, else the nearest `AHEAD`; none while the player buffers. */
+/** All, nearest the list's or the playback's place first; none while the player buffers. */
 function useChapterPictures(player: PlayerController, open: boolean) {
   const feed = player.thumbnails;
   const { started, waiting } = player.state;
@@ -148,7 +146,7 @@ function useChapterPictures(player: PlayerController, open: boolean) {
     const all = starts.split(',').map(Number);
     if (open) feed.keep(all, latest.current.playhead.positionMs);
     else if (aheadAt === null || waiting) feed.keep([]);
-    else feed.keep(nearestFirst(all, aheadAt).slice(0, AHEAD), aheadAt);
+    else feed.keep(nearestFirst(all, aheadAt), aheadAt);
   }, [feed, starts, open, aheadAt, waiting, latest]);
 }
 
