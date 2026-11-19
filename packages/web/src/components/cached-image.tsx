@@ -47,7 +47,13 @@ export function SteadyImage({
   const next = src !== shown ? src : undefined;
   return (
     <>
-      <CachedImage {...props} src={shown} onError={onError} />
+      <CachedImage
+        {...props}
+        src={shown}
+        // The caller's handler names the current address, so only its own
+        // failure is reported, not that of the picture it replaces.
+        onError={shown === src ? onError : undefined}
+      />
       {next && (
         <CachedImage
           key={next}
