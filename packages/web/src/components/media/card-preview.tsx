@@ -11,6 +11,7 @@ import { appBridge } from '@/lib/hosts/shell/bridge';
 import { settings, useSetting } from '@/lib/settings';
 import { pageRtl } from '@/lib/direction';
 import { easeLayers, GLIDE_MS } from '@/lib/input/glide';
+import { inOverlay } from '@/lib/input/focus';
 import {
   backdropUrls,
   cardImages,
@@ -62,7 +63,8 @@ interface Previews {
   rest(target: Target): void;
   /** Cancels only a waiting preview: an open one covers its card, so leaving the card enters it. */
   leave(): void;
-  blur(): void;
+  /** `to` is where focus went, if known. */
+  blur(to: EventTarget | null): void;
 }
 
 const PreviewContext = React.createContext<Previews | null>(null);
@@ -81,7 +83,8 @@ export function useCardPreview(item: BaseItemDto) {
       if ((e.target as Element).matches(':focus-visible'))
         previews.rest({ item, card: e.currentTarget, byFocus: true });
     },
-    onBlur: previews.blur,
+    onBlur: (e: React.FocusEvent<HTMLElement>) =>
+      previews.blur(e.relatedTarget),
   };
 }
 
@@ -263,7 +266,25 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
         );
       },
       leave: cancel,
-      blur: shut,
+      // Focus gone into a menu the card opened, such as a held OK's, comes back
+      // to it, so it stays open meanwhile. Gone to another card, it closes at
+      // once, before the row moves to that card by its width.
+      blur(to) {
+        if (to instanceof Element) {
+          if (!inOverlay(to)) shut();
+          // Kept open for a menu over it, but not opened under one.
+          else if (!shownRef.current) cancel();
+          return;
+        }
+        // A menu can take focus a frame after the card loses it.
+        const was = pending.current ?? shownRef.current;
+        requestAnimationFrame(() => {
+          if ((pending.current ?? shownRef.current) !== was) return;
+          const active = document.activeElement;
+          if (active instanceof HTMLElement && inOverlay(active)) return;
+          shut();
+        });
+      },
     };
   }, []);
   React.useEffect(
