@@ -44,6 +44,21 @@ describe('composersFrom', () => {
     );
   });
 
+  it('ranks a show’s score composers by episodes whatever their job is called', () => {
+    const found = composersFrom([
+      ...[1, 2, 3].map((episodes) => ({
+        id: episodes,
+        name: `Score ${episodes}`,
+        jobs: [{ job: 'Original Music Composer', episode_count: episodes }],
+      })),
+      { id: 4, name: 'Music I', jobs: [{ job: 'Music', episode_count: 100 }] },
+    ]);
+    assert.deepEqual(
+      found.map((c) => c.name),
+      ['Music I', 'Score 3', 'Score 2']
+    );
+  });
+
   it('names each person once, with their photo', () => {
     const found = composersFrom([
       { id: 4, name: 'G', job: 'Music', profile_path: '/g.jpg' },

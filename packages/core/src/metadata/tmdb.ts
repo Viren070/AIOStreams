@@ -336,13 +336,31 @@ const COMPOSER_JOBS = [
 /* A show's score can change hands every season; the ones it kept longest. */
 const MAX_COMPOSERS = 3;
 
+interface ComposerStanding {
+  rank: number;
+  episodes: number;
+}
+
+/**
+ * Score before theme, then most episodes: a show credits its score under any
+ * of the score's jobs, so the job only breaks a tie, as on a film.
+ */
+function byStanding(a: ComposerStanding, b: ComposerStanding): number {
+  const theme = COMPOSER_JOBS.length - 1;
+  return (
+    Number(a.rank === theme) - Number(b.rank === theme) ||
+    b.episodes - a.episodes ||
+    a.rank - b.rank
+  );
+}
+
 /** A title's composers from its crew: score before theme, then most episodes. */
 export function composersFrom(
   crew: z.infer<typeof CrewCreditsSchema>['crew']
 ): TMDBComposer[] {
   const found = new Map<
     number,
-    { composer: TMDBComposer; rank: number; episodes: number }
+    ComposerStanding & { composer: TMDBComposer }
   >();
   for (const member of crew) {
     const jobs: { job: string; episode_count?: number | null }[] =
@@ -352,11 +370,7 @@ export function composersFrom(
       if (rank < 0) continue;
       const episodes = episode_count ?? 0;
       const seen = found.get(member.id);
-      if (
-        seen &&
-        (seen.rank < rank || (seen.rank === rank && seen.episodes >= episodes))
-      )
-        continue;
+      if (seen && byStanding(seen, { rank, episodes }) <= 0) continue;
       found.set(member.id, {
         composer: {
           tmdbId: member.id,
@@ -369,7 +383,7 @@ export function composersFrom(
     }
   }
   return [...found.values()]
-    .sort((a, b) => a.rank - b.rank || b.episodes - a.episodes)
+    .sort(byStanding)
     .slice(0, MAX_COMPOSERS)
     .map((f) => f.composer);
 }
