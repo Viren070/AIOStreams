@@ -199,7 +199,15 @@ export function Header({
     item,
     item.Type === 'Series' && (pending || continuing)
   );
-  const holding = pending || (continuing && airing.loading);
+  const [late, setLate] = React.useState(false);
+  // Counted once its details are in, so a slow server doesn't use it up; a
+  // slow schedule doesn't hold the header past it either.
+  React.useEffect(() => {
+    if (pending) return;
+    const timer = setTimeout(() => setLate(true), REVEAL_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [pending]);
+  const holding = pending || (continuing && airing.loading && !late);
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const poster = posterUrl(client, item, { maxWidth: 320 });
   const [logoFailed, setLogoFailed] = React.useState(false);
@@ -211,13 +219,6 @@ export function Header({
   const drawn = (src: string) => (el: HTMLImageElement | null) => {
     if (el?.complete && el.naturalWidth) settle(src)();
   };
-  const [late, setLate] = React.useState(false);
-  // Counted once its details are in, so a slow server doesn't use it up.
-  React.useEffect(() => {
-    if (holding) return;
-    const timer = setTimeout(() => setLate(true), REVEAL_WAIT_MS);
-    return () => clearTimeout(timer);
-  }, [holding]);
   const pictured =
     (!poster || loaded.has(poster)) &&
     (!logo || logoFailed || loaded.has(logo));
