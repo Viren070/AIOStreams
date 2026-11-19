@@ -30,6 +30,7 @@ export function PillTabs<T>({
       data-name={name}
       {...tabList}
       className={cn(
+        'art-glass',
         'flex w-fit max-w-full flex-none gap-1 overflow-x-auto rounded-full bg-gray-900 p-1 [scrollbar-width:none]',
         className
       )}

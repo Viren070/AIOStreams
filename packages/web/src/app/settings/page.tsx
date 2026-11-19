@@ -342,7 +342,7 @@ function SearchResults({
             key={s.id}
             data-ui="settings-panel"
             data-name={s.id}
-            className="space-y-6"
+            className="over-art space-y-6"
           >
             <SettingsPageHeader
               title={s.label}
@@ -439,7 +439,7 @@ function NarrowSettings({
                   <Card
                     data-ui="settings-tab-group"
                     data-name={group}
-                    className="divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
+                    className="art-glass divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
                   >
                     {items.map((s) => (
                       <button
@@ -474,7 +474,7 @@ function NarrowSettings({
             <div
               data-ui="settings-panel"
               data-name={picked.id}
-              className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
+              className="over-art space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
             >
               <SettingsPageHeader
                 title={picked.label}
@@ -551,7 +551,7 @@ function WideSettings({
                 key={group}
                 data-ui="settings-tab-group"
                 data-name={group}
-                className="border border-white/10 bg-gray-950/70 p-2"
+                className="art-glass border border-white/10 bg-gray-950/70 p-2"
               >
                 <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
                   {groupLabel(group)}
@@ -594,7 +594,7 @@ function WideSettings({
                 tabIndex={-1}
                 data-ui="settings-panel"
                 data-name={s.id}
-                className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
+                className="over-art space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
               >
                 {s.id === shown && <SectionPanel section={s} />}
               </TabsContent>
