@@ -191,6 +191,40 @@ const TEXT_DELAYS = [
   'motion-safe:[animation-delay:140ms]',
 ] as const;
 
+/** When a new title's text has slid in, the last of it 140ms late. */
+const LABELS_AFTER_MS = 640;
+/** And its backdrop, which slides the longest, so the next turn may start. */
+const TURN_SETTLE_MS = 700;
+
+interface HeroLabels {
+  play: string;
+  progress: number | null;
+  info: string;
+}
+
+/**
+ * Turned to a new title, its buttons keep the last one's words until its text
+ * has slid in above them, then change at once.
+ */
+function useHeldLabels(
+  id: string | undefined,
+  holdMs: number,
+  now: HeroLabels
+): HeroLabels {
+  const [settled, setSettled] = React.useState(id);
+  const [held, setHeld] = React.useState(now);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setSettled(id), holdMs);
+    return () => clearTimeout(timer);
+  }, [id, holdMs]);
+  const current = !holdMs || settled === id;
+  const { play, progress, info } = now;
+  React.useEffect(() => {
+    if (current) setHeld({ play, progress, info });
+  }, [current, play, progress, info]);
+  return current ? now : held;
+}
+
 let nextLayer = 0;
 /** Fading layers kept at once, as each holds a whole decoded backdrop. */
 const MAX_LAYERS = 4;
@@ -365,6 +399,26 @@ function HeroDetails({
     : code
       ? t`Play ${code}`
       : t`Play`;
+  const labels = useHeldLabels(item.Id, enter ? LABELS_AFTER_MS : 0, {
+    play: playLabel,
+    progress: resumeMs && target ? progressOf(target) : null,
+    info: infoLabel(item),
+  });
+  // As they change, focus on the info button goes down to Play, which a turn
+  // to a new title is most often for.
+  React.useEffect(() => {
+    // A TV's buttons stand in a column; side by side, a turn lands where it means to.
+    if (!enter || !live || !currentHost().tv) return;
+    const timer = setTimeout(() => {
+      const info = document.activeElement;
+      if (!info?.matches("[data-ui='hero-action'][data-name='info']")) return;
+      const play = info.parentElement?.querySelector<HTMLElement>(
+        "[data-ui='hero-action'][data-name='play']"
+      );
+      if (play) focusOn(play);
+    }, LABELS_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [item.Id, enter, live]);
   // The size the title's page asks for, so it's in memory when that opens.
   // A list often knows no logo; the title's own details do, so the name waits.
   const pictured = live ? (fresh.data ?? item) : item;
@@ -377,22 +431,28 @@ function HeroDetails({
     item.Type === 'Series' ||
     ((item.Type === 'Movie' || item.Type === 'Episode') &&
       item.LocationType !== 'Virtual');
+  // While the buttons still show the last title's words, Play waits, so it
+  // never starts this one under the last one's Resume.
+  const labelsHeld =
+    labels.play !== playLabel || labels.info !== infoLabel(item);
   const play = (held?: boolean) =>
-    target
-      ? picker.play(target, { startMs: resumeMs, held })
-      : item.Type === 'Series'
-        ? void fetchNextUp(item.Id!).then((episode) =>
-            episode
-              ? picker.play(episode, {
-                  startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
-                  held,
-                })
-              : navigate(itemPath(item))
-          )
-        : picker.play(item, {
-            startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-            held,
-          });
+    labelsHeld
+      ? undefined
+      : target
+        ? picker.play(target, { startMs: resumeMs, held })
+        : item.Type === 'Series'
+          ? void fetchNextUp(item.Id!).then((episode) =>
+              episode
+                ? picker.play(episode, {
+                    startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
+                    held,
+                  })
+                : navigate(itemPath(item))
+            )
+          : picker.play(item, {
+              startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+              held,
+            });
   const holdPlay = useHold(() => play(true));
   const phone = useMediaQuery('(max-width: 639px)');
   // Seen from across a room, the button with focus lights up instead of taking a ring.
@@ -561,10 +621,8 @@ function HeroDetails({
               onClick={() => play()}
               {...holdPlay}
             >
-              <PlayProgress
-                percent={resumeMs && target ? progressOf(target) : null}
-              >
-                {playLabel}
+              <PlayProgress percent={labels.progress}>
+                {labels.play}
               </PlayProgress>
             </Button>
           )}
@@ -588,7 +646,7 @@ function HeroDetails({
               leftIcon={<BiInfoCircle className="text-xl" />}
               onClick={open}
             >
-              {infoLabel(item)}
+              {labels.info}
             </Button>
           )}
         </div>
@@ -994,17 +1052,26 @@ export function Hero({
 
   /** The button focus lands on in the next title; -1 is the last. */
   const landing = React.useRef<number | null>(null);
+  /** Until a turn's title has slid in, its buttons changed, the next waits. */
+  const settledAt = React.useRef(0);
   const turn = (step: 1 | -1) => {
     const actions = [
       ...(section.current?.querySelectorAll<HTMLElement>(
         '[data-ui=hero-action]'
       ) ?? []),
     ];
-    const at = actions.indexOf(keyboardFocus()!);
+    // A TV's start focus, placed by the page rather than a key, may not
+    // count as the keyboard's, yet a remote is all a TV has.
+    const at = actions.indexOf(
+      (keyboardFocus() ??
+        (tv ? (document.activeElement as HTMLElement | null) : null))!
+    );
     // From the first title, Left leaves for the navigation. Side by side,
     // Left and Right go along the buttons before they turn the title.
     if (at < 0 || (!tv && actions[at + step]) || (step < 0 && !index))
       return false;
+    if (performance.now() < settledAt.current) return true;
+    settledAt.current = performance.now() + TURN_SETTLE_MS;
     // A TV's buttons stand in a column, and focus stays on the same one.
     landing.current = tv ? at : step > 0 ? 0 : -1;
     setChosen(true);
