@@ -84,8 +84,9 @@ export function HeaderSkeleton() {
 }
 
 function Dot() {
+  // No dot after a part that came to nothing.
   return (
-    <span data-ui="meta-separator" className="text-gray-500">
+    <span data-ui="meta-separator" className="text-gray-500 [:empty+&]:hidden">
       •
     </span>
   );
@@ -138,7 +139,10 @@ const MetaRow = React.memo(function MetaRow({
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
           {i > 0 && <Dot />}
-          <span data-name={name}>{part}</span>
+          {/* A show of only specials counts no seasons, so its part goes. */}
+          <span data-name={name} className="empty:hidden">
+            {part}
+          </span>
         </React.Fragment>
       ))}
     </div>
@@ -218,12 +222,22 @@ export function Header({
     item,
     item.Type === 'Series' && (pending || continuing)
   );
-  const holding = pending || (continuing && airing.loading);
+  const [late, setLate] = React.useState(false);
+  // Counted once its details are in, so a slow server doesn't use it up; a
+  // slow schedule doesn't hold the header past it either.
+  React.useEffect(() => {
+    if (pending) return;
+    const timer = setTimeout(() => setLate(true), REVEAL_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [pending]);
+  const holding = pending || (continuing && airing.loading && !late);
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const poster = useTitlePoster()
     ? posterUrl(client, item, { maxWidth: 320 })
     : null;
-  const [logoFailed, setLogoFailed] = React.useState(false);
+  // By address, so a different logo in the full details still gets its try.
+  const [failedLogo, setFailedLogo] = React.useState<string>();
+  const logoFailed = !!logo && failedLogo === logo;
   const [about, setAbout] = React.useState(false);
   const [aboutEpisode, setAboutEpisode] = React.useState(false);
   // Pictures in, by address; the header waits for them, but not for long.
@@ -234,17 +248,12 @@ export function Header({
   const drawn = (src: string) => (el: HTMLImageElement | null) => {
     if (el?.complete && el.naturalWidth) settle(src)();
   };
-  const [late, setLate] = React.useState(false);
-  // Counted once its details are in, so a slow server doesn't use it up.
-  React.useEffect(() => {
-    if (holding) return;
-    const timer = setTimeout(() => setLate(true), REVEAL_WAIT_MS);
-    return () => clearTimeout(timer);
-  }, [holding]);
   const pictured =
     (!poster || loaded.has(poster)) &&
     (!logo || logoFailed || loaded.has(logo));
-  const ready = !holding && (pictured || late);
+  // A show's next episode decides what its overview tells of, so it's waited
+  // for like the pictures.
+  const ready = !holding && ((pictured && !nextUpPending) || late);
   const links = React.useMemo(() => linksFor(item, season), [item, season]);
   const overviewImage = React.useMemo(
     () => landscapeUrls(client, item, { maxWidth: 480 }),
@@ -349,7 +358,7 @@ export function Header({
                 alt={item.Name ?? ''}
                 ref={drawn(logo)}
                 onLoad={settle(logo)}
-                onError={() => setLogoFailed(true)}
+                onError={() => setFailedLogo(logo)}
                 className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
               />
             ) : pending ? (
@@ -624,8 +633,9 @@ function useNextAiring(series: BaseItemDto, enabled: boolean) {
   const next = episodes.data?.Items?.find(
     (e) => e.PremiereDate && Date.parse(e.PremiereDate) > Date.now()
   );
+  // Episodes are only asked for a season with an id, so only those are waited on.
   const loading =
-    enabled && (seasons.isPending || (!!latest && episodes.isPending));
+    enabled && (seasons.isPending || (!!latest?.Id && episodes.isPending));
   return { next, loading };
 }
 
