@@ -154,5 +154,10 @@ export function warmImage(src: string, decode?: keyof typeof DECODED): void {
     if (decode) decodeAhead(known, decode);
     return;
   }
-  void lookUp(src).url.then((url) => decode && decodeAhead(url, decode));
+  void lookUp(src).url.then((url) => {
+    if (decode) decodeAhead(url, decode);
+    // Not saved, as a host that refuses the page a read still lets an image
+    // load it, so the browser's own cache keeps it instead.
+    else if (url === src) new Image().src = src;
+  });
 }
