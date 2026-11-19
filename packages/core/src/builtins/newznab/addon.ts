@@ -17,8 +17,7 @@ import {
   NabAddonConfig,
   parseNabParsedFileInfo,
 } from '../base/nab/addon.js';
-import { ageInHoursSince } from '../utils/general.js';
-import { BuiltinProxy, createProxy } from '../../proxy/index.js';
+import { ageInHoursSince, proxyNzbs } from '../utils/general.js';
 import type { BuiltinServiceId } from '../../utils/index.js';
 import type { Stream } from '../../db/index.js';
 
@@ -238,31 +237,7 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
     }
 
     if (this.userData.proxyAuth) {
-      const auth = this.userData.proxyAuth;
-      BuiltinProxy.validateAuth(auth);
-      const proxy = createProxy({
-        id: constants.BUILTIN_SERVICE,
-        url: appConfig.bootstrap.baseUrl,
-        credentials: auth,
-      });
-      const nzbsToProxy = nzbs.map((nzb) => ({
-        url: nzb.nzb,
-        filename: nzb.title,
-      }));
-      const proxiedUrls = await proxy.generateUrls(
-        nzbsToProxy.map(({ url, filename }) => ({
-          url,
-          filename: filename || url.split('/').pop(),
-          type: 'nzb',
-        })),
-        false // don't encrypt NZB URLs to make sure the URLs stay the same.
-      );
-      if (!proxiedUrls || 'error' in proxiedUrls) {
-        throw new Error('Failed to proxy NZBs: ' + proxiedUrls?.error || '');
-      }
-      for (let i = 0; i < nzbs.length; i++) {
-        nzbs[i].nzb = proxiedUrls[i];
-      }
+      await proxyNzbs(nzbs, this.userData.proxyAuth);
     }
     return nzbs;
   }
