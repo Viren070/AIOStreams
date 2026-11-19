@@ -24,7 +24,7 @@ import { ItemMenu } from '@/components/media/item-menu';
 import { SeasonPills } from '@/components/media/season-pills';
 import { RatingButton } from './rating';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
-import { navWait, tab, tabList } from '@/lib/input';
+import { navWait, tab, tabList, usingKeys } from '@/lib/input';
 import { CachedImage } from '@/components/cached-image';
 import { Section } from './section';
 
@@ -96,7 +96,9 @@ export function Seasons({
 
   const focused = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (episodes.data && focusEpisodeId) {
+    // With keys, focus starts on Play at the top, which would scroll back up;
+    // the row starts at the episode either way.
+    if (episodes.data && focusEpisodeId && !usingKeys()) {
       focused.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [episodes.data, focusEpisodeId]);
