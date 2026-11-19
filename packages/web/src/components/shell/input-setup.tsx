@@ -8,6 +8,8 @@ import { currentHost } from '@/lib/hosts';
 import {
   actionText,
   activate,
+  backOut,
+  forgetCameFrom,
   groupActions,
   groupLabel,
   isTextField,
@@ -36,6 +38,8 @@ interface History {
 
 /** Back where no page takes it: into a TV's navigation, out of a field, out of full screen, then a page back. */
 function back(history: History): boolean {
+  // Out of the rail Left led into, back to what had focus on the page.
+  if (backOut()) return true;
   if (toNavigation()) return true;
   const el = document.activeElement;
   if (isTextField(el)) {
@@ -52,8 +56,12 @@ function back(history: History): boolean {
 
 function toNavigation(): boolean {
   const back = navigationBack();
-  if (back) moveTo(back.entry, back.dir);
-  return !!back;
+  if (!back) return false;
+  moveTo(back.entry, back.dir);
+  // Brought there by Back, the next Back goes on from it rather than out.
+  const box = back.entry.closest('[data-nav-exit]');
+  if (box) forgetCameFrom(box);
+  return true;
 }
 
 /**

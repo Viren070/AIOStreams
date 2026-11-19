@@ -29,7 +29,9 @@ export {
 } from './dispatch';
 export {
   activate,
+  backOut,
   focusOn,
+  forgetCameFrom,
   isTextField,
   keyboardFocus,
   move,

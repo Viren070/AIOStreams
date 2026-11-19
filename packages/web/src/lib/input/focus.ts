@@ -904,6 +904,29 @@ export function move(dir: Direction): boolean {
   return true;
 }
 
+/**
+ * From a `data-nav-exit` box a move brought focus into, as Left into the TV
+ * rail, back to where it came from; false when focus didn't come in so.
+ */
+export function backOut(): boolean {
+  const from = document.activeElement;
+  const box =
+    from instanceof HTMLElement
+      ? from.closest<HTMLElement>('[data-nav-exit]')
+      : null;
+  const came = box ? cameFrom.get(box) : undefined;
+  const dir = navSide(box?.dataset.navExit);
+  if (!box || !dir || !came?.isConnected || !canFocus(came)) return false;
+  moveTo(came, dir);
+  lastMove = null;
+  return true;
+}
+
+/** Forgets where focus came into `box` from, as Back brought it there and goes on from it. */
+export function forgetCameFrom(box: Element): void {
+  cameFrom.delete(box);
+}
+
 /** Focuses `to` as a move `dir` would, so the other way comes back. */
 export function moveTo(to: HTMLElement, dir: Direction): void {
   const from = document.activeElement;
