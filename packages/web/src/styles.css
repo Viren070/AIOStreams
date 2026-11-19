@@ -270,21 +270,26 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
     transform: translateX(1.5%);
   }
 }
-:root[data-tv] [data-ui='hero-backdrop'][data-from='right'] {
-  animation: hero-art-in-right 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
-}
-:root[data-tv] [data-ui='hero-backdrop'][data-from='left'] {
-  animation: hero-art-in-left 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
-}
-:root[data-tv]
-  [data-ui='hero-backdrop']:has(
-    ~ [data-ui='hero-backdrop'][data-from='right']
-  ) {
-  animation: hero-art-out-left 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
-}
-:root[data-tv]
-  [data-ui='hero-backdrop']:has(~ [data-ui='hero-backdrop'][data-from='left']) {
-  animation: hero-art-out-right 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+/* Asked for less motion, a turn only fades, as above. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-tv] [data-ui='hero-backdrop'][data-from='right'] {
+    animation: hero-art-in-right 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
+  }
+  :root[data-tv] [data-ui='hero-backdrop'][data-from='left'] {
+    animation: hero-art-in-left 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
+  }
+  :root[data-tv]
+    [data-ui='hero-backdrop']:has(
+      ~ [data-ui='hero-backdrop'][data-from='right']
+    ) {
+    animation: hero-art-out-left 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  }
+  :root[data-tv]
+    [data-ui='hero-backdrop']:has(
+      ~ [data-ui='hero-backdrop'][data-from='left']
+    ) {
+    animation: hero-art-out-right 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  }
 }
 /*
  * Dimmed in itself as a title's backdrop is, all over and more towards the
