@@ -11,6 +11,14 @@ import android.webkit.WebView
 
 /** The page's WebView: keyboard completions for its focused field, and native field types on a TV. */
 class AppWebView(context: Context, private val tv: Boolean) : WebView(context) {
+    init {
+        // A remote scrolls a TV's pages; the bar the view flashes as they move only gets in the way.
+        if (tv) {
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
+        }
+    }
+
     fun showCompletions(names: List<String>) {
         val completions = names.mapIndexed { i, name -> CompletionInfo(i.toLong(), i, name) }.toTypedArray()
         context.getSystemService(InputMethodManager::class.java).displayCompletions(this, completions)

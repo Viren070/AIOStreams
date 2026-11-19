@@ -142,6 +142,7 @@ export function SecondaryActions({
       {offered.random && (
         <Captioned ui={caption} name="random" label={t`Random`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -165,6 +166,7 @@ export function SecondaryActions({
           label={inParty ? t`Watch party` : t`Watch together`}
         >
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -196,6 +198,7 @@ export function SecondaryActions({
       {target && offered['play-on'] && (
         <Captioned ui={caption} name="play-on" label={t`Play on`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -217,6 +220,7 @@ export function SecondaryActions({
       {offered['add-to-playlist'] && (
         <Captioned ui={caption} name="add-to-playlist" label={t`Playlist`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -285,6 +289,7 @@ const ItemToggles = React.memo(function ItemToggles({
       {type !== 'BoxSet' && (
         <Captioned ui={caption} name="watched" label={t`Watched`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -306,6 +311,7 @@ const ItemToggles = React.memo(function ItemToggles({
       {offersFavourite(type, favorite) && (
         <Captioned ui={caption} name="favourite" label={t`Favourite`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"
@@ -329,6 +335,7 @@ const ItemToggles = React.memo(function ItemToggles({
       {canDrop && type === 'Series' && (
         <Captioned ui={caption} name="drop" label={t`Drop`}>
           <Tooltip
+            className="item-action-tip"
             trigger={
               <IconButton
                 data-ui="item-action"

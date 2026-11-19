@@ -153,6 +153,105 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
+/* Read from across a room, a TV title's facts, tags and actions are larger. */
+[data-tv] [data-ui='item-meta'] {
+  font-size: 0.9375rem;
+}
+[data-tv] [data-ui='item-genre'] {
+  font-size: 0.8125rem;
+}
+[data-tv] [data-ui='item-action'] {
+  height: 3rem;
+  font-size: 1.0625rem;
+}
+[data-tv] [data-ui='item-action'],
+[data-tv] [data-ui='item-action']:focus-visible {
+  border: 0;
+  border-radius: 0.5rem;
+  outline: none !important;
+  box-shadow: none;
+  transition: none;
+}
+[data-tv] [data-ui='item-action'][data-name='play'] {
+  padding-inline: 1.5rem;
+}
+/*
+ * Play waits in grey; the rest are their icons alone. Focused, one turns
+ * white and, the icons, opens out to its name.
+ */
+[data-tv] [data-ui='item-action']:not(:focus) {
+  border-color: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+[data-tv] [data-ui='item-action'][data-name='play']:not(:focus) {
+  background-color: rgb(110 110 118 / 0.55);
+}
+[data-tv] [data-ui='item-action']:not([data-name='play']):not(:focus) {
+  background-color: transparent;
+}
+[data-tv] [data-ui='item-action']:focus {
+  background-color: #fff;
+  color: #000;
+}
+/* Its name shows in it, so it needs no tooltip. */
+:root[data-tv] .item-action-tip {
+  display: none;
+}
+/*
+ * In one line whose size is its own, so a button opening out moves only its
+ * neighbours, never the page below.
+ */
+[data-tv] [data-ui='item-actions'] {
+  flex-wrap: nowrap;
+  width: 100%;
+  height: 3rem;
+  contain: size layout style;
+}
+[data-tv] [data-ui='item-action'].UI-IconButton__root {
+  min-width: 3rem;
+  width: auto;
+  padding-inline: 0.6875rem;
+  font-size: 1.625rem;
+}
+[data-tv] [data-ui='item-action'].UI-IconButton__root::after,
+[data-tv]
+  [data-ui='item-action']:not([data-name='play']):not(.UI-IconButton__root)
+  > :not(.UI-Button__icon) {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 0;
+  margin-inline-start: 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+[data-tv] [data-ui='item-action'].UI-IconButton__root::after {
+  content: attr(aria-label);
+}
+[data-tv]
+  [data-ui='item-action']:not([data-name='play']):not(.UI-IconButton__root) {
+  padding-inline: 0.75rem;
+}
+[data-tv]
+  [data-ui='item-action']:not([data-name='play']):not(.UI-IconButton__root)
+  > .UI-Button__icon {
+  margin: 0;
+}
+[data-tv] [data-ui='item-action']:not([data-name='play']):focus {
+  padding-inline: 0.875rem 1.25rem;
+}
+[data-tv] [data-ui='item-action'].UI-IconButton__root:focus::after,
+[data-tv]
+  [data-ui='item-action']:not([data-name='play']):not(
+    .UI-IconButton__root
+  ):focus
+  > :not(.UI-Button__icon) {
+  max-width: 11rem;
+  margin-inline-start: 0.5rem;
+}
+
 /*
  * A TV slides a title's panel alone: solid, with no glass, shadow, edge or
  * dimmed page behind, each of which it would redraw with every frame. It
@@ -333,10 +432,15 @@ body::-webkit-scrollbar {
     scrollbar-color: rgb(128 128 128 / 0.4) transparent;
   }
 }
-/* A TV has nothing to drag a scrollbar with. */
+/* A TV has nothing to drag a scrollbar with. Where scrollbar-width is set
+   the pseudo-element is dropped, so that is set too. */
 [data-tv]::-webkit-scrollbar,
 [data-tv] ::-webkit-scrollbar {
   display: none;
+}
+:root[data-tv],
+:root[data-tv] * {
+  scrollbar-width: none;
 }
 
 /* One focus mark everywhere, in the accent, over the shared components' faint

@@ -490,6 +490,7 @@ export function Header({
                 </Button>
                 {!!resumeMs && target && (
                   <Tooltip
+                    className="item-action-tip"
                     trigger={
                       <IconButton
                         data-ui="item-action"
