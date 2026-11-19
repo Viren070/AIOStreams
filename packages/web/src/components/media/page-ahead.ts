@@ -32,7 +32,7 @@ const fetchedAt = new Map<string, { at: number; decoded: boolean }>();
  * Once in a while per title; settles once its details are in.
  */
 export function useFetchPageAhead() {
-  const { client } = useSession();
+  const { client, user } = useSession();
   const fetchItem = useFetchItem();
   const fetchNextUp = useFetchNextUp();
   const fetchShowAhead = useFetchShowAhead();
@@ -41,14 +41,16 @@ export function useFetchPageAhead() {
     seasonId?: string,
     decode = true
   ): Promise<void> => {
-    const last = fetchedAt.get(id);
+    // Per server and profile, as its details are, and per season it opens on.
+    const key = [client.base, user.Id, id, seasonId].join(' ');
+    const last = fetchedAt.get(key);
     if (
       last &&
       performance.now() - last.at < AGAIN_MS &&
       (last.decoded || !decode)
     )
       return;
-    fetchedAt.set(id, { at: performance.now(), decoded: decode });
+    fetchedAt.set(key, { at: performance.now(), decoded: decode });
     try {
       const full = await fetchItem(id);
       if (full.Type !== 'Movie' && full.Type !== 'Series') return;
@@ -69,7 +71,7 @@ export function useFetchPageAhead() {
         if (face) warmImage(face);
       }
     } catch {
-      fetchedAt.delete(id);
+      fetchedAt.delete(key);
     }
   };
 }
