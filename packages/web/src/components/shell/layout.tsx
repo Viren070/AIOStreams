@@ -168,7 +168,14 @@ function useHomeRise(onHome: boolean) {
     const back = onHome && !shown.current;
     shown.current = onHome;
     const el = ref.current;
-    if (!back || !el || !currentHost().tv) return;
+    // With reduced motion home shows at once, as the page that left it didn't move.
+    if (
+      !back ||
+      !el ||
+      !currentHost().tv ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
     const parts = [...el.querySelectorAll<HTMLElement>(CONTENT)];
     // The hero's picture, filling the screen, comes up from dark with it.
     const art = [

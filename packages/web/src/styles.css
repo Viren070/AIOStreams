@@ -164,11 +164,17 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
     transform: translateY(0.5rem);
   }
 }
-[data-tv] [data-ui='item-body'],
-[data-tv]
-  main
-  [data-page]:not([data-page='item'], [data-page='home'], [data-page='play']) {
-  animation: content-rise 320ms cubic-bezier(0, 0, 0.6, 1) backwards;
+@media (prefers-reduced-motion: no-preference) {
+  [data-tv] [data-ui='item-body'],
+  [data-tv]
+    main
+    [data-page]:not(
+      [data-page='item'],
+      [data-page='home'],
+      [data-page='play']
+    ) {
+    animation: content-rise 320ms cubic-bezier(0, 0, 0.6, 1) backwards;
+  }
 }
 :root[data-rise-wait] [data-ui='item-body'],
 :root[data-rise-wait] main [data-page] {
