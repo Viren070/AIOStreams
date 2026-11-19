@@ -125,8 +125,10 @@ export function thumbnailFeed(
     if (asking || none || stopped) return;
     const forRow = rowWanted.find((p) => !row.has(p) && !rowSkipped.has(p));
     if (forRow !== undefined) return ask(forRow, false);
-    // Kept pictures wait, so they never slow down the ones being looked at.
-    if (wanted !== null || rowWanted.length) return;
+    // Kept pictures wait, so they never slow down the ones being looked at:
+    // the seek bar's, and a row's still missing (asked for above). A row with
+    // all its pictures in doesn't hold them up.
+    if (wanted !== null) return;
     const toKeep = keptWanted.find(
       (p) => !keptDone.has(p) && !keptSkipped.has(p)
     );
