@@ -54,7 +54,6 @@ export function useBadges(): CompiledBadge[] {
 
 /** Badge pictures loaded ahead, held so the browser keeps them decoded. */
 const warmed = new Map<string, HTMLImageElement>();
-const decoded = new Set<string>();
 /** After the first screen's own pictures. */
 const WARM_DELAY_MS = 2000;
 
@@ -76,10 +75,7 @@ export function WarmBadges() {
         img.referrerPolicy = 'no-referrer';
         img.src = src;
         warmed.set(src, img);
-        img
-          .decode()
-          .then(() => decoded.add(src))
-          .catch(() => undefined);
+        img.decode().catch(() => undefined);
       }
     }, WARM_DELAY_MS);
     return () => clearTimeout(timer);
@@ -97,13 +93,17 @@ export function BadgeChip({
   const [broken, setBroken] = React.useState(false);
   const image = broken ? undefined : badge.image;
   // Its label stands in until the picture can be drawn, rather than an empty chip.
-  const [loaded, setLoaded] = React.useState(
-    () => !!image && decoded.has(image)
+  // It holds the address that loaded, so a changed picture waits for its own.
+  const [loaded, setLoaded] = React.useState<string>();
+  // Runs before the first paint, so a picture the warm-up left ready shows
+  // straight away; whether it is ready is asked of this chip's own image.
+  const ready = React.useCallback(
+    (el: HTMLImageElement | null) => {
+      if (el?.complete && el.naturalWidth) setLoaded(image);
+    },
+    [image]
   );
-  const ready = React.useCallback((el: HTMLImageElement | null) => {
-    if (el?.complete && el.naturalWidth) setLoaded(true);
-  }, []);
-  const pictured = !!image && loaded;
+  const pictured = !!image && loaded === image;
   return (
     <span
       data-ui="version-badge"
@@ -124,7 +124,7 @@ export function BadgeChip({
           src={image}
           alt={badge.label}
           referrerPolicy="no-referrer"
-          onLoad={() => setLoaded(true)}
+          onLoad={() => setLoaded(image)}
           onError={() => setBroken(true)}
           className={cn(
             'block max-h-3.5 w-auto max-w-[5.5rem] object-contain',
