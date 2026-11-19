@@ -1,3 +1,4 @@
+import { HEADER_PRESETS } from '@aiostreams/core/src/utils/header-presets';
 import type { SubtitleStyle, VideoFit } from '@/lib/settings';
 import type { Span } from '@/lib/subtitles/align';
 import type {
@@ -49,7 +50,7 @@ export interface EngineFile {
 }
 
 /** IPTV panels can refuse a player library's own user agent. */
-const LIVE_USER_AGENT = 'VLC/3.0.21 LibVLC/3.0.21';
+const LIVE_USER_AGENT = HEADER_PRESETS.vlc['User-Agent'];
 
 const userAgentName = (headers: Record<string, string>) =>
   Object.keys(headers).find((name) => /^user-agent$/i.test(name));
