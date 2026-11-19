@@ -50,20 +50,16 @@ export function matchOverride<T>(
   return global;
 }
 
-/**
- * Resolve the override headers to apply to a request for `url` in an optional
- * `context`. Reads `hostnameUserAgentOverrides`: the matched value is either a
- * literal user-agent (→ `{ 'User-Agent': value }`) or a `{preset}` reference
- * expanded to its full header set (see `header-presets.ts`). Returns an empty
- * object when nothing matches.
- */
-export function resolveOverrideHeaders(
+export function resolveHeaderOverride(
   url: URL,
   context?: string
-): Record<string, string> {
+): { headers: Record<string, string>; preset: boolean } | undefined {
   const map = appConfig.http.hostnameUserAgentOverrides;
-  if (!map || Object.keys(map).length === 0) return {};
+  if (!map || Object.keys(map).length === 0) return undefined;
   const value = matchOverride(map, url.hostname, context);
-  if (value === undefined || value === '') return {};
-  return resolveHeaderPreset(value) ?? { 'User-Agent': value };
+  if (value === undefined || value === '') return undefined;
+  const preset = resolveHeaderPreset(value);
+  return preset
+    ? { headers: preset, preset: true }
+    : { headers: { 'User-Agent': value }, preset: false };
 }

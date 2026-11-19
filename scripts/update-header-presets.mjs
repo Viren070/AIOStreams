@@ -7,7 +7,7 @@
  *   - the app version;
  *   - the `(alpine X.Y.Z)` suffix on the *arr presets, which is the OS the
  *     LinuxServer container reports.
- *   - Chrome's `Sec-Ch-Ua`, whose GREASE brand, version and ordering are all
+ *   - Chrome's `sec-ch-ua`, whose GREASE brand, version and ordering are all
  *     derived from the major version and change together.
  */
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -240,7 +240,7 @@ if (chromeMajor) {
     content,
     'chrome',
     'sec-ch-ua',
-    /'Sec-Ch-Ua':\s*'([^']*)'/,
+    /'sec-ch-ua':\s*'([^']*)'/,
     secChUa(chromeMajor)
   );
 }

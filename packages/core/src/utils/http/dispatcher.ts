@@ -20,15 +20,21 @@ export function getProxyAgent(proxyUrl: string): Dispatcher | undefined {
       proxyUrlObj.protocol === 'socks5:' ||
       proxyUrlObj.protocol === 'socks5h:'
     ) {
-      proxyAgent = socksDispatcher({
-        type: 5,
-        port: parseInt(proxyUrlObj.port),
-        host: proxyUrlObj.hostname,
-        userId: proxyUrlObj.username || undefined,
-        password: proxyUrlObj.password || undefined,
-      });
+      proxyAgent = socksDispatcher(
+        {
+          type: 5,
+          port: parseInt(proxyUrlObj.port),
+          host: proxyUrlObj.hostname,
+          userId: proxyUrlObj.username || undefined,
+          password: proxyUrlObj.password || undefined,
+        },
+        { connect: { allowH2: false } }
+      );
     } else {
-      proxyAgent = new ProxyAgent(proxyUrl);
+      proxyAgent = new ProxyAgent({
+        uri: proxyUrl,
+        requestTls: { allowH2: false },
+      });
     }
     proxyAgents.set(proxyUrl, proxyAgent);
   }

@@ -4,12 +4,14 @@ import {
   HEADERS_FOR_IP_FORWARDING,
   INTERNAL_SECRET_HEADER,
 } from '../index.js';
-import { BodyInit, fetch, Headers, HeadersInit, RequestInit } from 'undici';
+import { BodyInit, Dispatcher, HeadersInit, request } from 'undici';
 import { config as appConfig } from '../../config/index.js';
 import { createLogger } from '../../logging/logger.js';
+import { encodeBody, releaseBody, toResponse } from './body.js';
 import { checkCooldown, recordCooldown } from './cooldown.js';
 import { resolveDispatcher } from './dispatcher.js';
-import { resolveOverrideHeaders, type FetchContext } from './overrides.js';
+import { headersFor, RequestHeaders } from './headers.js';
+import type { FetchContext } from './overrides.js';
 import { PrivateAddressError } from './private-addresses.js';
 import {
   CROSS_ORIGIN_SENSITIVE_HEADERS,
@@ -18,6 +20,7 @@ import {
   REQUEST_BODY_HEADERS,
 } from './redirects.js';
 import {
+  isBadPort,
   makeUrlLogSafe,
   rewriteRequestUrl,
   takeBasicAuthFromUrl,
@@ -47,14 +50,24 @@ export interface RequestOptions {
   body?: BodyInit;
   forceProxy?: string;
   context?: FetchContext;
-  rawOptions?: RequestInit;
+  redirect?: 'follow' | 'manual';
   /** Still arms 429 cooldowns, but is never refused by one. */
   ignoreCooldown?: boolean;
 }
 
+const STANDARD_METHODS = ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'];
+
 export async function makeRequest(url: string, options: RequestOptions) {
+  const requested = options.method ?? 'GET';
+  let method = STANDARD_METHODS.includes(requested.toUpperCase())
+    ? requested.toUpperCase()
+    : requested;
+  if (options.body != null && (method === 'GET' || method === 'HEAD')) {
+    throw new TypeError('Request with GET/HEAD method cannot have body.');
+  }
+
   let urlObj = rewriteRequestUrl(new URL(url));
-  const headers = new Headers(options.headers);
+  const headers = new RequestHeaders(options.headers);
   if (options.forwardIp) {
     for (const header of HEADERS_FOR_IP_FORWARDING) {
       headers.set(header, options.forwardIp);
@@ -92,15 +105,16 @@ export async function makeRequest(url: string, options: RequestOptions) {
 
   // One signal for the whole redirect chain.
   const signal = options.signal ?? AbortSignal.timeout(options.timeout);
-  const { redirect: redirectMode, ...rawOptions } = options.rawOptions ?? {};
-  let method = options.method ?? 'GET';
-  let body = options.body;
+  let body = await encodeBody(options.body, headers);
 
   // Redirects are followed manually so the proxy ruleset, override headers,
   // URL rewrites and internal-secret handling are re-evaluated on every hop.
   for (let redirects = 0; ; redirects++) {
     if (redirects > 0) {
       cooldown = await checkCooldown(urlObj, headers, options);
+    }
+    if (isBadPort(urlObj)) {
+      throw new Error(`Requests to port ${urlObj.port} are blocked`);
     }
 
     const { dispatcher, useProxy, proxyIndex } = resolveDispatcher(
@@ -122,19 +136,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
       headers.delete(INTERNAL_SECRET_HEADER);
     }
 
-    // Apply per-host / per-[context] override headers
-    const overrideHeaders = resolveOverrideHeaders(urlObj, options.context);
-    for (const [name, value] of Object.entries(overrideHeaders)) {
-      headers.set(name, value);
-    }
-
-    if (
-      ['none', 'false', '', 'undefined'].includes(
-        (headers.get('User-Agent') ?? '').toLowerCase().trim()
-      )
-    ) {
-      headers.delete('User-Agent');
-    }
+    const sent = headersFor(headers, urlObj, options.context).toObject();
 
     logger.debug(
       {
@@ -147,7 +149,7 @@ export async function makeRequest(url: string, options: RequestOptions) {
           : 'false',
         ...(appConfig.logging.logSensitiveInfo
           ? {
-              headers: Object.fromEntries(headers.entries()),
+              headers: sent,
               dispatcher:
                 options.forceProxy ??
                 (useProxy ? appConfig.http.addonProxy[proxyIndex] : undefined),
@@ -157,39 +159,38 @@ export async function makeRequest(url: string, options: RequestOptions) {
       'http request'
     );
 
-    let response;
+    let data: Dispatcher.ResponseData;
     const sentAt = Date.now();
     try {
-      response = await fetch(urlObj.toString(), {
-        ...rawOptions,
-        method,
+      data = await request(urlObj, {
+        method: method as Dispatcher.HttpMethod,
+        headers: sent,
         body,
-        headers: headers,
-        dispatcher: dispatcher,
+        dispatcher,
         signal,
-        redirect: redirectMode ?? 'manual',
       });
     } catch (err) {
-      if (err instanceof Error && err.cause instanceof PrivateAddressError) {
-        throw err.cause;
-      }
       if (
         err instanceof Error &&
-        err.name === 'TypeError' &&
-        err.message === 'fetch failed' &&
-        err.cause
+        !signal.aborted &&
+        !(err instanceof PrivateAddressError)
       ) {
-        const cause = { ...(err.cause as Record<string, any>) };
-        delete cause.stack;
-        logger.error({ cause }, 'fetch failed due to network error');
+        logger.error(
+          { cause: { ...err, message: err.message } },
+          'request failed due to network error'
+        );
       }
       throw err;
     }
 
+    if (data.statusCode === 407) {
+      releaseBody(data.body);
+      throw new Error('Proxy authentication required');
+    }
+    const response = toResponse(method, data);
     await recordCooldown(cooldown, sentAt, response);
 
-    // Callers that set rawOptions.redirect handle redirects themselves.
-    if (redirectMode) {
+    if (options.redirect === 'manual') {
       return response;
     }
 

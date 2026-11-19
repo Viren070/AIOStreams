@@ -4,9 +4,10 @@ import {
   formatDurationAsText,
   getSimpleTextHash,
 } from '../index.js';
-import type { Headers, Response } from 'undici';
+import type { Response } from 'undici';
 import { createLogger } from '../../logging/logger.js';
 import { shouldProxy } from './dispatcher.js';
+import type { HeaderReader } from './headers.js';
 import type { FetchContext } from './overrides.js';
 import { makeUrlLogSafe, takeBasicAuthFromUrl } from './url.js';
 
@@ -69,7 +70,7 @@ const INDEXER_CONTEXTS: (FetchContext | undefined)[] = [
 // indexer under its own path with one API key.
 export function cooldownKey(
   urlObj: URL,
-  headers: Headers,
+  headers: HeaderReader,
   egress: string,
   context?: FetchContext
 ): CooldownKey {
@@ -108,7 +109,7 @@ function getEgress(urlObj: URL, options: CooldownOptions): string {
 
 export async function checkCooldown(
   urlObj: URL,
-  headers: Headers,
+  headers: HeaderReader,
   options: CooldownOptions
 ): Promise<CooldownKey> {
   const cooldown = cooldownKey(

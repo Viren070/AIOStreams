@@ -143,7 +143,7 @@ export class TorrentGrabber {
       // User-agent comes from a `[torrent_grabs]` (or per-host) entry in
       // REQUEST_HEADER_OVERRIDES, applied inside makeRequest.
       context: 'torrent_grabs',
-      rawOptions: { redirect: 'manual' },
+      redirect: 'manual',
     });
 
     let metadata: TorrentMetadata;

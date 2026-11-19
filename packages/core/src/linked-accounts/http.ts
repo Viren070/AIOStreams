@@ -86,13 +86,10 @@ export async function requestJson<T = any>(
       ...init.headers,
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    rawOptions: { redirect: 'manual' },
+    redirect: 'manual',
   });
 
-  const redirected =
-    (response.status >= 300 && response.status < 400) ||
-    // A manual redirect can also arrive filtered to an opaque status-0 response.
-    response.status === 0;
+  const redirected = response.status >= 300 && response.status < 400;
 
   const text = redirected ? '' : await response.text();
   let json: T | null = null;
