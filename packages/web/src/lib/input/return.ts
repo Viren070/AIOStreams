@@ -40,7 +40,14 @@ function find(spot: Spot): HTMLElement | null {
           : labelOf(el) === spot.label) &&
         // Home, kept hidden behind other pages, has many of the same items.
         !el.closest('[inert]')
-    ) ?? null
+    ) ??
+    // Gone from its row, as a title watched to its end leaves Continue
+    // watching: the row's first card, rather than the page's start.
+    (row && !row.closest('[inert]')
+      ? row.querySelector<HTMLElement>(
+          '[data-ui=media-row-item] [data-focus=own]'
+        )
+      : null)
   );
 }
 
@@ -77,8 +84,19 @@ export function returnFocus(router: AnyRouter): () => void {
       if (active && active !== document.body && !active.closest('[inert]'))
         return;
       const el = spot ? find(spot) : startOf();
-      if (el?.getClientRects().length) focusOn(el);
-      else if (performance.now() < until) frame = requestAnimationFrame(look);
+      if (el?.getClientRects().length) {
+        focusOn(el);
+        if (spot) frame = requestAnimationFrame(() => hold(el));
+      } else if (performance.now() < until) frame = requestAnimationFrame(look);
+    };
+    // A card can still leave its row just after, as a title watched to its end
+    // leaves Continue watching, taking focus with it.
+    const hold = (el: HTMLElement) => {
+      if (performance.now() >= until) return;
+      if (el.isConnected) {
+        if (document.activeElement === el)
+          frame = requestAnimationFrame(() => hold(el));
+      } else look();
     };
     look();
   });

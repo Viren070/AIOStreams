@@ -259,6 +259,8 @@ function EpisodeRow({
         return (
           <ItemMenu key={item.Id} item={item}>
             <WideCard
+              // Its time left changes as it plays, so Back finds it by this.
+              address={itemPath(item)}
               onClick={() => {
                 const startMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
                 if (straight(item, startMs)) picker.play(item, { startMs });
