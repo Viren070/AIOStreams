@@ -182,17 +182,34 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   top: 34vh;
   height: 66vh;
 }
-:root[data-tv]
-  .sidebar-slim
-  [data-ui='hero']
-  > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
-  inset-inline-start: -5rem;
-}
-:root[data-tv]
-  .sidebar-sm
-  [data-ui='hero']
-  > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
-  inset-inline-start: -12rem;
+/*
+ * Back over the gutter a wide page leaves for the nav: a docked rail's column,
+ * or the 2.5rem the top tabs and the corner button leave in its place. The
+ * hero already reaches under a floating rail.
+ */
+@media (min-width: 1024px) {
+  :root[data-tv]
+    .with-sidebar.sidebar-slim
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -5rem;
+  }
+  :root[data-tv]
+    .with-sidebar.sidebar-sm
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -12rem;
+  }
+  :root[data-tv][data-nav='tv-top']
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']),
+  :root[data-tv]
+    [data-ui='corner-menu']
+    ~ *
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -2.5rem;
+  }
 }
 /*
  * Nothing may reach past a TV's screen: a web view zooms the whole page out
