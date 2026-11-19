@@ -587,8 +587,9 @@ function useNextAiring(series: BaseItemDto, enabled: boolean) {
   const next = episodes.data?.Items?.find(
     (e) => e.PremiereDate && Date.parse(e.PremiereDate) > Date.now()
   );
+  // Episodes are only asked for a season with an id, so only those are waited on.
   const loading =
-    enabled && (seasons.isPending || (!!latest && episodes.isPending));
+    enabled && (seasons.isPending || (!!latest?.Id && episodes.isPending));
   return { next, loading };
 }
 
