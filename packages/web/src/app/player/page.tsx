@@ -351,7 +351,7 @@ export function PlayerPage({
           />
         </VersionPickerProvider>
       ) : loading ? null : (
-        <Failure itemId={itemId} message={failed} zap={zap} />
+        <Failure itemId={itemId} item={item.data} message={failed} zap={zap} />
       )}
     </>
   );
