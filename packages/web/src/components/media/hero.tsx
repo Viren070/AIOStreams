@@ -952,6 +952,8 @@ export function Hero({
 
   /** The button focus lands on in the next title; -1 is the last. */
   const landing = React.useRef<number | null>(null);
+  /** On a TV, the name of the button focus was on, to land on it again. */
+  const landingName = React.useRef<string | undefined>(undefined);
   const turn = (step: 1 | -1) => {
     const actions = [
       ...(section.current?.querySelectorAll<HTMLElement>(
@@ -965,6 +967,7 @@ export function Hero({
       return false;
     // A TV's buttons stand in a column, and focus stays on the same one.
     landing.current = tv ? at : step > 0 ? 0 : -1;
+    landingName.current = tv ? actions[at].dataset.name : undefined;
     setChosen(true);
     setFrom(sideOf(step));
     setIndex((i) => (i + step + featured.length) % featured.length);
@@ -976,13 +979,16 @@ export function Hero({
   useAction('nav.left', () => turn(left), turning);
   React.useLayoutEffect(() => {
     const to = landing.current;
+    const name = landingName.current;
     landing.current = null;
+    landingName.current = undefined;
     const actions = section.current?.querySelectorAll<HTMLElement>(
       '[data-ui=hero-action]'
     );
     if (to === null || !actions?.length) return;
-    // A title that can't play has fewer buttons.
+    // The same button by name, as a title that can't play has fewer.
     const el =
+      [...actions].find((a) => name && a.dataset.name === name) ??
       actions[to < 0 ? actions.length - 1 : Math.min(to, actions.length - 1)];
     focusOn(el);
   }, [index]);
