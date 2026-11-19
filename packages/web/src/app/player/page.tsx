@@ -482,6 +482,9 @@ function useReporting(
   const live = !!source.IsInfiniteStream;
   React.useEffect(() => {
     if (!started) return;
+    // Taken now, as the cleanup runs after a render that may have moved the
+    // ref on to another user's cache.
+    const note = noteResumed.current;
     const current = new PlaybackReporter(
       client,
       {
@@ -504,23 +507,14 @@ function useReporting(
     // Moved up front now rather than as it stops, which lands after Back has
     // put focus on its card and leaves the row scrolled to where it was.
     if (!live && item.Type !== 'TvChannel')
-      noteResumed.current(
-        item,
-        player.playhead.positionMs,
-        state.current.durationMs,
-        true
-      );
+      note(item, player.playhead.positionMs, state.current.durationMs, true);
     const onHide = () => void current.stop();
     window.addEventListener('pagehide', onHide);
     return () => {
       window.removeEventListener('pagehide', onHide);
       // The position it leaves is what the pages behind offer to resume; live keeps none.
       if (!live && item.Type !== 'TvChannel')
-        noteResumed.current(
-          item,
-          player.playhead.positionMs,
-          state.current.durationMs
-        );
+        note(item, player.playhead.positionMs, state.current.durationMs);
       void current.stop().then(() => {
         if (!live) refresh.current();
       });
