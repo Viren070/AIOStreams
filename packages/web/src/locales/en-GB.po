@@ -35,6 +35,10 @@ msgstr "{count, plural, one {# badge} other {# badges}}"
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr "{count, plural, one {# minute} other {# minutes}}"
 
+#: src/components/media/season-count.tsx
+msgid "{count, plural, one {# season} other {# seasons}}"
+msgstr "{count, plural, one {# season} other {# seasons}}"
+
 #: src/app/settings/_components/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# second} other {# seconds}}"
@@ -3399,6 +3403,7 @@ msgid "Play"
 msgstr "Play"
 
 #: src/app/item/_components/header.tsx
+#: src/components/media/hero.tsx
 msgid "Play {code}"
 msgstr "Play {code}"
 
@@ -3984,6 +3989,7 @@ msgid "Resume"
 msgstr "Resume"
 
 #: src/app/item/_components/header.tsx
+#: src/components/media/hero.tsx
 msgid "Resume {code}"
 msgstr "Resume {code}"
 
@@ -3992,6 +3998,7 @@ msgid "Resume all"
 msgstr "Resume all"
 
 #: src/app/item/_components/header.tsx
+#: src/components/media/hero.tsx
 #: src/features/versions/version-list.tsx
 #: src/lib/playback/use-player.ts
 msgid "Resume from {resumeAt}"
