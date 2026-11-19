@@ -246,9 +246,9 @@ export function backdropUrl(
   size?: Size
 ): string | null {
   settleBackdrop(item);
-  const own = item.BackdropImageTags?.[0];
-  if (own)
-    return image(client, item.Id, 'Backdrop', settledTag(item.Id) ?? own, size);
+  // One settled elsewhere still holds where this copy of the title has none.
+  const own = settledTag(item.Id) ?? item.BackdropImageTags?.[0];
+  if (own) return image(client, item.Id, 'Backdrop', own, size);
   // An episode's is its show's, the same as the show's own wherever it shows.
   const show = item.ParentBackdropItemId;
   return image(
