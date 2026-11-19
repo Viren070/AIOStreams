@@ -8,7 +8,7 @@ import {
 } from '../db/index.js';
 import { createLogger } from '../logging/logger.js';
 import { redactUrlParams } from '../logging/redact.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 
 const logger = createLogger('app-reports');
 

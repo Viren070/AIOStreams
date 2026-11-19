@@ -5,7 +5,7 @@ import {
   bootstrap,
   config as appConfig,
   settingsStore,
-} from '../config/index.js';
+} from '../../config/index.js';
 import { isBlockedAddress } from './url-safety.js';
 
 const DEFAULT_PORTS: Record<string, string> = {

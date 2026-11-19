@@ -15,7 +15,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PRESETS_PATH = join(ROOT, 'packages/core/src/utils/header-presets.ts');
+const PRESETS_PATH = join(
+  ROOT,
+  'packages/core/src/utils/http/header-presets.ts'
+);
 const CHECK_ONLY = process.argv.includes('--check');
 const USER_AGENT = 'AIOStreams-header-preset-updater';
 

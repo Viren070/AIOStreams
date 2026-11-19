@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Cache } from '../utils/cache.js';
 import { appConfig, HEADER_PRESETS } from '../utils/index.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 import { createLogger } from '../logging/logger.js';
 import { Metadata } from './utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';

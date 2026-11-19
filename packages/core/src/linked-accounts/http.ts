@@ -1,6 +1,6 @@
 import { APIError, ErrorCode } from '../utils/constants.js';
-import { makeRequest } from '../utils/http.js';
-import { isRefusedUrl } from '../utils/private-addresses.js';
+import { makeRequest } from '../utils/http/index.js';
+import { isRefusedUrl } from '../utils/http/private-addresses.js';
 
 const TIMEOUT_MS = 15000;
 
