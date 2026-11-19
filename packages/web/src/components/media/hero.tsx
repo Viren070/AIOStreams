@@ -276,11 +276,8 @@ function HeroDetails({
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
       : ['year', item.ProductionYear],
-    // As a title's page shows it; a show's runtime is an episode's.
-    [
-      'runtime',
-      item.Type === 'Series' ? null : runtimeText(ticksToMs(item.RunTimeTicks)),
-    ],
+    // As a title's page shows it; a show's is how long an episode runs.
+    ['runtime', runtimeText(ticksToMs(item.RunTimeTicks))],
     ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
     ['genres', item.Genres?.slice(0, 3).join(', ')],
   ];

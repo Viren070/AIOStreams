@@ -102,7 +102,8 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
     ]);
   }
   const runtime = ticksToMs(item.RunTimeTicks);
-  if (runtime && item.Type !== 'Series') {
+  // A show's is how long an episode runs, as IMDb gives it.
+  if (runtime) {
     parts.push(['runtime', runtimeText(runtime)]);
   }
   if (scoresOf(item).length) parts.push(['score', <Scores item={item} />]);
