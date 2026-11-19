@@ -1,5 +1,6 @@
 import { ParsedStream, UserData } from '../db/schemas.js';
 import { MetadataService } from '../metadata/service.js';
+import type { MetaHint } from '../metadata/hint.js';
 import { Metadata } from '../metadata/utils.js';
 import { ReleaseDate, TMDBMetadata } from '../metadata/tmdb.js';
 import {
@@ -74,6 +75,7 @@ export class StreamContext {
   public readonly type: string;
   public readonly id: string;
   public readonly parsedId: ParsedId | null;
+  public readonly metaHint: MetaHint | undefined;
 
   // Anime-related data (cached from AnimeDatabase)
   public readonly isAnime: boolean;
@@ -118,12 +120,14 @@ export class StreamContext {
       isAnime: boolean;
       animeEntry: AnimeEntry | null;
       queryType: string;
+      metaHint?: MetaHint;
     }
   ) {
     this.type = type;
     this.id = id;
     this.userData = userData;
     this.parsedId = options.parsedId;
+    this.metaHint = options.metaHint;
     this.isAnime = options.isAnime;
     this.animeEntry = options.animeEntry;
     this.queryType = options.queryType;
@@ -136,7 +140,8 @@ export class StreamContext {
   public static async create(
     type: string,
     id: string,
-    userData: UserData
+    userData: UserData,
+    metaHint?: MetaHint
   ): Promise<StreamContext> {
     const start = Date.now();
     const parsedId = IdParser.parse(id, type);
@@ -169,6 +174,7 @@ export class StreamContext {
         isAnime,
         hasAnimeEntry: !!animeEntry,
         queryType,
+        metaHint,
         took: Date.now() - start,
       },
       'stream context created'
@@ -179,6 +185,7 @@ export class StreamContext {
       isAnime,
       animeEntry,
       queryType,
+      metaHint,
     });
   }
 
@@ -201,7 +208,8 @@ export class StreamContext {
 
         const metadata = await service.getMetadata(
           this.parsedId!,
-          this.type as any
+          this.type as any,
+          this.metaHint
         );
 
         // Calculate absolute episode for anime and eligible non-anime titles
@@ -554,6 +562,7 @@ export class StreamContext {
    * Get episode air date, waiting for fetch if needed.
    */
   public async getEpisodeAirDate(): Promise<string | undefined> {
+    if (this.metaHint?.released) return this.metaHint.released;
     if (this._episodeDetails !== undefined) {
       return this._episodeDetails.airDate;
     }
@@ -615,9 +624,10 @@ export class StreamContext {
 
   private computeAgeInDays(): number | undefined {
     const episodeDate =
-      this.type === 'series'
+      this.metaHint?.released ||
+      (this.type === 'series'
         ? this._episodeDetails?.airDate || this._metadata?.episodeReleased
-        : undefined;
+        : undefined);
     if (episodeDate) {
       return this.getDaysSince(episodeDate);
     } else if (this._metadata?.releaseDate) {
