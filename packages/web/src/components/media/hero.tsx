@@ -327,6 +327,7 @@ function HeroDetails({
       {actions && (
         <div
           data-ui="hero-actions"
+          data-nav-start
           className="flex flex-wrap gap-2 max-sm:justify-center"
         >
           {playable && (

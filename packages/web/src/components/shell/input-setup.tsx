@@ -77,7 +77,7 @@ export function InputSetup({ router }: { router: AnyRouter }) {
       startInput(),
       startGamepads(),
       startSubmitButtons(),
-      returnFocus(router),
+      returnFocus(router, { remote: !!currentHost().tv }),
       onAction('nav.up', () => step('up'), fallback),
       onAction('nav.down', () => step('down'), fallback),
       onAction('nav.left', () => step('left'), fallback),
