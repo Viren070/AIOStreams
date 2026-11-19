@@ -120,7 +120,11 @@ export class StremioTransformer {
             : undefined,
         videoHash: stream.videoHash,
         videoSize: stream.size,
-        filename: stream.filename,
+        filename:
+          stream.type === constants.P2P_STREAM_TYPE &&
+          stream.addon.preset.type === 'comet'
+            ? undefined
+            : stream.filename,
       },
       streamData: options?.provideStreamData
         ? {
