@@ -161,6 +161,7 @@ export function leaveThenOpen(
   if (!page || still() || !document.documentElement.hasAttribute('data-tv'))
     return go();
   leaving = true;
+  const from = location.hash.slice(1).split('?')[0];
   // A cover's carried backdrop is for the player this opens, not a later one.
   if (!toPlayer) artFrom = null;
   // It fades; its content rises away as the title's will rise into place,
@@ -211,6 +212,7 @@ export function leaveThenOpen(
       ];
   const done = () => {
     observer.disconnect();
+    removeEventListener('popstate', settle);
     clearTimeout(giveUp);
     leaving = false;
     for (const each of fades) each.cancel();
@@ -227,6 +229,11 @@ export function leaveThenOpen(
   // A page not kept is taken out instead.
   if (page.parentElement)
     observer.observe(page.parentElement, { childList: true });
+  // Back to the same page with another query keeps it, so it comes back at once.
+  const settle = () => {
+    if (location.hash.slice(1).split('?')[0] === from) done();
+  };
+  addEventListener('popstate', settle);
   const giveUp = setTimeout(done, LEAVE_GIVE_UP_MS);
   // Drawn first, so the fade is under way before the new page holds the thread.
   const open = () => {

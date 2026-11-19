@@ -110,14 +110,16 @@ export function setNavigator(fn: Push, fresh: Restart): void {
 
 export function navigate(path: string, opts: NavigateOptions = {}) {
   const pathname = path.split('?')[0];
+  const samePage = pathname === location.hash.slice(1).split('?')[0];
   const opensTitle =
     pathname.startsWith(to.item('')) &&
-    pathname !== location.hash.slice(1).split('?')[0] &&
+    !samePage &&
     !opts.replace &&
     !opts.keepScroll;
   if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
-  // Another page leaves as a title's does, the player's too.
-  else if (!opts.replace)
+  // Another page leaves as a title's does, the player's too; the same page
+  // with another query stays, so it has nothing to leave.
+  else if (!opts.replace && !samePage)
     leaveThenOpen(() => push(path, opts), pathname.startsWith('/play/'));
   else push(path, opts);
 }
