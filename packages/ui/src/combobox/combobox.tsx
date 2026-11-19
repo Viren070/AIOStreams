@@ -451,7 +451,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               {...commandProps}
             >
               <CommandInput
-                data-on-filter={onFilter || undefined}
+                containerProps={{ 'data-on-filter': onFilter || undefined }}
                 placeholder={placeholder}
                 onValueChange={onTextChange}
               />
