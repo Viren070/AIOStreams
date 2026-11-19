@@ -382,11 +382,28 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   height: 100vh;
   aspect-ratio: auto;
 }
-:root[data-tv] .sidebar-slim [data-ui='hero'] > [data-ui='hero-trailer'] {
-  inset-inline-start: calc(50vw - 119.5vh - 5rem);
-}
-:root[data-tv] .sidebar-sm [data-ui='hero'] > [data-ui='hero-trailer'] {
-  inset-inline-start: calc(50vw - 119.5vh - 12rem);
+/* Centred on the screen, back over the gutter a wide page leaves for the nav. */
+@media (min-width: 1024px) {
+  :root[data-tv]
+    .with-sidebar.sidebar-slim
+    [data-ui='hero']
+    > [data-ui='hero-trailer'] {
+    inset-inline-start: calc(50vw - 119.5vh - 5rem);
+  }
+  :root[data-tv]
+    .with-sidebar.sidebar-sm
+    [data-ui='hero']
+    > [data-ui='hero-trailer'] {
+    inset-inline-start: calc(50vw - 119.5vh - 12rem);
+  }
+  :root[data-tv][data-nav='tv-top'] [data-ui='hero'] > [data-ui='hero-trailer'],
+  :root[data-tv]
+    [data-ui='corner-menu']
+    ~ *
+    [data-ui='hero']
+    > [data-ui='hero-trailer'] {
+    inset-inline-start: calc(50vw - 119.5vh - 2.5rem);
+  }
 }
 :root[data-tv] [data-ui='item-trailer'] {
   inset: 0 auto auto calc(50vw - 119.5vh);
