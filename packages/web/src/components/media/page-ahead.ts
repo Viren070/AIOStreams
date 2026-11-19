@@ -88,6 +88,8 @@ export function useFetchPageAhead() {
 export function usePageAhead(item: BaseItemDto) {
   const fetchPage = useFetchPageAhead();
   const timer = React.useRef<number>(undefined);
+  // Focus and the pointer each hold the card; it's let go once neither does.
+  const holding = React.useRef(new Set<'focus' | 'pointer'>());
   React.useEffect(() => () => window.clearTimeout(timer.current), []);
   // An episode opens its show's page on its season, as in Continue watching.
   const id = item.Type === 'Episode' ? item.SeriesId : item.Id;
@@ -99,13 +101,17 @@ export function usePageAhead(item: BaseItemDto) {
   )
     return undefined;
   return {
-    start: () => {
+    start: (by: 'focus' | 'pointer') => {
+      holding.current.add(by);
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(
         () => void fetchPage(id, seasonId),
         REST_MS
       );
     },
-    stop: () => window.clearTimeout(timer.current),
+    stop: (by: 'focus' | 'pointer') => {
+      holding.current.delete(by);
+      if (!holding.current.size) window.clearTimeout(timer.current);
+    },
   };
 }

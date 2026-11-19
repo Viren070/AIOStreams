@@ -211,26 +211,26 @@ export function ItemMenu({
   const ahead = usePageAhead(target.item);
   const open = React.useContext(OpenMenu);
   const watched = {
-    onPointerEnter: () => ahead?.start(),
+    onPointerEnter: () => ahead?.start('pointer'),
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
       heroTarget?.onPointerMove(e);
       preview?.onPointerMove(e);
       art?.onPointerMove(e);
     },
     onPointerLeave: () => {
-      ahead?.stop();
+      ahead?.stop('pointer');
       heroTarget?.onPointerLeave();
       preview?.onPointerLeave();
       art?.onPointerLeave();
     },
     onFocus: (e: React.FocusEvent<HTMLElement>) => {
-      ahead?.start();
+      ahead?.start('focus');
       heroTarget?.onFocus();
       preview?.onFocus(e);
       art?.onFocus(e);
     },
     onBlur: () => {
-      ahead?.stop();
+      ahead?.stop('focus');
       preview?.onBlur();
       art?.onBlur();
     },
