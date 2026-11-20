@@ -857,6 +857,9 @@ fn fetch(
                     .truncate(have == 0)
                     .open(&part)
                     .map_err(fail)?;
+                if resumed && whole {
+                    report(0, total);
+                }
                 let mut reader = response.into_body().into_reader();
                 let mut buffer = vec![0u8; 256 * 1024];
                 let mut written = 0u64;
@@ -1098,6 +1101,7 @@ mod range_tests {
                     offset += body.len();
                 }
             });
+            let first_progress = std::cell::Cell::new(None);
             let progress = std::cell::Cell::new(None);
             let result = fetch(
                 &agent(),
@@ -1105,8 +1109,16 @@ mod range_tests {
                 &BTreeMap::new(),
                 &path,
                 &AtomicBool::new(false),
-                |bytes, total| progress.set(Some((bytes, total))),
+                |bytes, total| {
+                    if first_progress.get().is_none() {
+                        first_progress.set(Some((bytes, total)));
+                    }
+                    progress.set(Some((bytes, total)));
+                },
             );
+            if case == "range ignored" {
+                assert_eq!(first_progress.get(), Some((0, Some(3))));
+            }
             if let Some(expected) = want {
                 assert!(result.is_ok(), "{case}");
                 assert_eq!(fs::read(&path).unwrap(), expected.as_bytes(), "{case}");
