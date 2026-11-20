@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-19 16:10+0000\n"
+"PO-Revision-Date: 2026-11-20 14:23+0000\n"
 "Last-Translator: Nicola Bortoletto <translate@nicolabortoletto.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/aiostreams/web-app/it/>\n"
 "Language: it\n"
@@ -530,7 +530,7 @@ msgstr "Tutte le playlist"
 
 #: src/lib/downloads/index.ts
 msgid "Already downloaded or on the way"
-msgstr "Già scaricato o in arrivo"
+msgstr "Già scaricato o in corso"
 
 #: src/features/playlists/playlists.tsx
 msgid "Already in {name}"
@@ -2411,7 +2411,7 @@ msgstr "Menu, elenchi, campi e schede sopra la copertina poggiano su una superfi
 
 #: src/app/settings/browsing.tsx
 msgid "Merge continue watching and next up"
-msgstr "Unisci continua a guardare con in arrivo"
+msgstr "Unisci continua a guardare con a seguire"
 
 #: src/features/party/chat.tsx
 msgid "Message"
@@ -2602,7 +2602,7 @@ msgstr "Trailer successivo"
 
 #: src/app/home/page.tsx src/app/settings/browsing.tsx
 msgid "Next up"
-msgstr "In arrivo"
+msgstr "A seguire"
 
 #: src/app/settings/audio.tsx src/features/player/options.tsx
 msgid "Night mode"
@@ -3215,6 +3215,7 @@ msgid "Pick the version to download."
 msgstr "Scegli la versione da scaricare."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Picture-in-picture"
 

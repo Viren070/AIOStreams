@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-18 15:29+0000\n"
+"PO-Revision-Date: 2026-11-20 14:23+0000\n"
 "Last-Translator: AIO sama <aio-sama@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Malay <https://hosted.weblate.org/projects/aiostreams/web-app/ms/>\n"
 "Language: ms\n"
@@ -480,9 +480,8 @@ msgid "Added to {name}"
 msgstr "Ditambah ke {name}"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Addons, catalogs and profiles are set up on the configuration page."
-msgstr "Addon, katalog dan pengguna ditetapkan pada halaman konfigurasi."
+msgstr "Addon, katalog dan profil ditetapkan pada halaman konfigurasi."
 
 #: src/app/settings/about.tsx
 msgid "Address"
@@ -2237,7 +2236,7 @@ msgstr "Tinggalkan {from} untuk membuka ini di {target}?"
 
 #: src/app/servers/page.tsx
 msgid "Leave off the profile picker"
-msgstr ""
+msgstr "Langkau pemilih profil"
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2358,9 +2357,8 @@ msgid "Main"
 msgstr "Utama"
 
 #: src/app.tsx
-#, fuzzy
 msgid "Manage servers"
-msgstr "Tukar pelayan"
+msgstr "Urus pelayan"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
@@ -2540,9 +2538,8 @@ msgid "Navigation"
 msgstr "Navigasi"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Needed to switch to this profile."
-msgstr "Diperlukan untuk beralih ke pengguna ini."
+msgstr "Diperlukan untuk bertukar ke profil ini."
 
 #: src/app/downloads/page.tsx
 msgid "Needs attention"
@@ -3057,9 +3054,8 @@ msgid "Other pages, such as settings"
 msgstr "Halaman lain, seperti tetapan"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Other profile"
-msgstr "Aplikasi lain"
+msgstr "Profil lain"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3219,6 +3215,7 @@ msgid "Pick the version to download."
 msgstr "Pilih versi untuk dimuat turun."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Gambar dalam Gambar (PiP)"
 
@@ -3534,7 +3531,7 @@ msgstr "Penerbit"
 
 #: src/app/history/page.tsx
 msgid "Profile"
-msgstr ""
+msgstr "Profil"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -3935,7 +3932,7 @@ msgstr "Disimpan ke {folder}"
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to this profile, on every device it signs in on."
-msgstr ""
+msgstr "Disimpan pada profil ini, pada setiap peranti yang dilog masuk menggunakan profil ini."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
@@ -4089,9 +4086,8 @@ msgid "Settings"
 msgstr "Tetapan"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Settings for"
-msgstr "Tetapan"
+msgstr "Tetapan untuk"
 
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
@@ -4143,9 +4139,8 @@ msgid "Show messages over the video"
 msgstr "Paparkan mesej di atas video"
 
 #: src/app/servers/page.tsx
-#, fuzzy
 msgid "Show on the profile picker"
-msgstr "Tunjukkan arahan"
+msgstr "Papar pada pemilih profil"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
@@ -4610,9 +4605,8 @@ msgstr "Beralih"
 
 #: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-#, fuzzy
 msgid "Switch profile"
-msgstr "Beralih pelayan"
+msgstr "Tukar profil"
 
 #: src/app.tsx
 msgid "Switch server"
@@ -4805,11 +4799,11 @@ msgstr "Karya seni tajuk yang sedang anda lihat, dikaburkan dan digelapkan, di b
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every device. A device that changes it keeps its own."
-msgstr ""
+msgstr "Tetapan lalai untuk setiap peranti. Peranti yang mengubahnya akan mengekalkan tetapan tersendiri."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every profile. A profile that changes it keeps its own."
-msgstr ""
+msgstr "Tetapan lalai untuk setiap profil. Profil yang mengubahnya akan mengekalkan tetapan tersendiri."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5065,9 +5059,8 @@ msgid "This item was not found"
 msgstr "Item ini tidak ditemui"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "This profile has a PIN."
-msgstr "Pengguna ini mempunyai PIN."
+msgstr "Profil ini mempunyai PIN."
 
 #: src/features/downloads/download-button.tsx
 msgid "This season"
@@ -5517,9 +5510,8 @@ msgid "Watch along"
 msgstr "Tonton bersama"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
-msgstr "Tonton sebagai pengguna lain pada konfigurasi ini. Pengguna yang mempunyai PIN memerlukannya semula selepas bertukar."
+msgstr "Tonton sebagai orang lain pada konfigurasi ini. Profil dengan PIN memerlukannya semula selepas ditukar."
 
 #: src/app/settings/playback.tsx
 msgid "Watch parties"
@@ -5606,9 +5598,8 @@ msgid "What you can send from a party's chat."
 msgstr "Apa yang boleh anda hantar daripada sembang sesi."
 
 #: src/app/settings/apps.tsx
-#, fuzzy
 msgid "What your Discord profile shows."
-msgstr "Apa yang dipaparkan pada profil Discord anda."
+msgstr "Perkara yang dipaparkan oleh profil Discord anda."
 
 #: src/app/settings/audio.tsx
 msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."

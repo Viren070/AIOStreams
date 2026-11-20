@@ -3229,6 +3229,7 @@ msgid "Pick the version to download."
 msgstr "Elige la versión para descargar."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Imagen en imagen"
 
