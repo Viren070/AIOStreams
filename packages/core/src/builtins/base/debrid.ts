@@ -41,7 +41,7 @@ import {
 import {
   processTorrents,
   processNZBs,
-  filterUnprocessedTorrentsPreDownload,
+  filterTorrentsFailingValidation,
 } from '../utils/debrid.js';
 import {
   calculateAbsoluteEpisode,
@@ -261,9 +261,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       ];
     }
 
-    const torrentsToDownload = filterUnprocessedTorrentsPreDownload(
+    const torrentsToDownload = filterTorrentsFailingValidation(
       torrentResults.filter((t) => !t.hash && t.downloadUrl),
-      searchMetadata
+      searchMetadata,
+      '.torrent download'
     );
     torrentResults = torrentResults.filter((t) => t.hash);
     if (torrentsToDownload.length > 0) {
@@ -314,10 +315,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       nzbResults.length > 0 &&
       !(
         // allow no true nzb service if all have easynewsUrl and easynews is present as service.
-        (
-          nzbResults.every((nzb) => (nzb.easynewsUrl ? true : false)) &&
-          this.userData.services.some((s) => s.id === 'easynews')
-        )
+        nzbResults.every((nzb) => (nzb.easynewsUrl ? true : false)) &&
+        this.userData.services.some((s) => s.id === 'easynews')
       )
     ) {
       errorStreams.push(

@@ -87,11 +87,13 @@ function getValidationFailureReason(
   return null;
 }
 
-// Runs before .torrent download to skip resolving results that
-// processTorrents would discard anyway.
-export function filterUnprocessedTorrentsPreDownload<
-  T extends UnprocessedTorrent,
->(torrents: T[], metadata?: Metadata): T[] {
+// Drops what the validation in processTorrentsForDebridService would discard
+// anyway, before work that it would waste: a .torrent download, a debrid check.
+export function filterTorrentsFailingValidation<T extends UnprocessedTorrent>(
+  torrents: T[],
+  metadata: Metadata | undefined,
+  stage: string
+): T[] {
   if (!metadata || torrents.length === 0) return torrents;
 
   const parsedTitlesMap = new Map<string, ParsedResult>();
@@ -118,7 +120,7 @@ export function filterUnprocessedTorrentsPreDownload<
   });
 
   if (filtered.length < torrents.length) {
-    logger.debug(`Filtered torrents before .torrent download`, {
+    logger.debug(`Filtered torrents before ${stage}`, {
       before: torrents.length,
       after: filtered.length,
     });
@@ -163,6 +165,15 @@ export async function processTorrents(
       sharedParsedTitlesMap.set(key, parseTorrentTitleCached(key));
     }
   }
+
+  // Releases of another title, season or episode would be dropped after
+  // their hashes were checked with every service, and a search can return
+  // hundreds of them.
+  torrents = filterTorrentsFailingValidation(
+    torrents,
+    metadata,
+    'debrid check'
+  );
 
   // Run all service checks in parallel and collect both results and errors
   const servicePromises = debridServices.map(async (service) => {
