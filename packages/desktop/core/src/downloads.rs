@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex, TryLockError, Weak};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -24,6 +24,8 @@ const REQUEST_LIMIT: Duration = Duration::from_secs(90);
 const RETRY_SECONDS: &[u64] = &[2, 5, 15, 30, 60];
 const MAX_REDIRECTS: usize = 10;
 const MAX_CONCURRENT: u32 = 4;
+type DestinationLocks = HashMap<PathBuf, Weak<Mutex<()>>>;
+static DESTINATION_LOCKS: LazyLock<Mutex<DestinationLocks>> = LazyLock::new(Mutex::default);
 const EXTENSIONS: &[&str] = &[
     "mkv", "mp4", "m4v", "avi", "mov", "webm", "ts", "m2ts", "wmv", "flv", "mpg", "mpeg", "ogv",
     "3gp", "srt", "vtt", "ass", "ssa", "sub", "sup", "idx", "ttml", "jpg", "jpeg", "png", "webp",
@@ -731,6 +733,18 @@ fn rollback_partial(file: fs::File, path: &Path, length: u64) -> std::io::Result
     OpenOptions::new().write(true).open(path)?.set_len(length)
 }
 
+// Jobs for different episodes can share the same artwork and partial file.
+fn destination_lock(path: &Path) -> Arc<Mutex<()>> {
+    let mut locks = DESTINATION_LOCKS.lock().unwrap();
+    locks.retain(|_, lock| lock.strong_count() != 0);
+    if let Some(lock) = locks.get(path).and_then(Weak::upgrade) {
+        return lock;
+    }
+    let lock = Arc::new(Mutex::new(()));
+    locks.insert(path.to_path_buf(), Arc::downgrade(&lock));
+    lock
+}
+
 fn fetch(
     agent: &ureq::Agent,
     url: &str,
@@ -739,6 +753,17 @@ fn fetch(
     stop: &AtomicBool,
     report: impl Fn(u64, Option<u64>),
 ) -> Result<(), Failure> {
+    let lock = destination_lock(path);
+    let _destination = loop {
+        if stop.load(Ordering::Relaxed) {
+            return Err(Failure::Stopped);
+        }
+        match lock.try_lock() {
+            Ok(guard) => break guard,
+            Err(TryLockError::WouldBlock) => thread::sleep(Duration::from_millis(200)),
+            Err(TryLockError::Poisoned(error)) => break error.into_inner(),
+        }
+    };
     if let Ok(meta) = fs::metadata(path) {
         report(meta.len(), Some(meta.len()));
         return Ok(());
@@ -825,6 +850,7 @@ fn fetch(
                         Ok(n) => {
                             if expected.is_some_and(|length| n as u64 > length - written) {
                                 rollback_partial(file, &part, have).map_err(fail)?;
+                                report(have, total);
                                 return Err(Failure::Error(
                                     "The answer exceeds its declared length".into(),
                                 ));
@@ -839,6 +865,7 @@ fn fetch(
                 file.flush().map_err(fail)?;
                 if ended.is_none() && expected.is_some_and(|length| written != length) {
                     rollback_partial(file, &part, have).map_err(fail)?;
+                    report(have, total);
                     return Err(Failure::Error(
                         "The answer ended before its declared length".into(),
                     ));
@@ -884,6 +911,46 @@ fn fetch(
 mod range_tests {
     use super::*;
     use std::net::TcpListener;
+
+    #[test]
+    fn fetch_waits_for_the_other_owner_before_checking_the_destination() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let dir = std::env::temp_dir().join(format!(
+            "aio-destination-{}-{}",
+            std::process::id(),
+            listener.local_addr().unwrap().port()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("poster.jpg");
+        fs::write(&path, b"poster").unwrap();
+        let lock = destination_lock(&path);
+        let owner = lock.lock().unwrap();
+        let (started, starting) = mpsc::channel();
+        let (finished, finishing) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            started.send(()).unwrap();
+            let result = fetch(
+                &agent(),
+                "",
+                &BTreeMap::new(),
+                &path,
+                &AtomicBool::new(false),
+                |bytes, total| {
+                    assert_eq!((bytes, total), (6, Some(6)));
+                },
+            );
+            finished.send(result.is_ok()).unwrap();
+        });
+        starting.recv().unwrap();
+        assert_eq!(
+            finishing.recv_timeout(Duration::from_millis(250)),
+            Err(RecvTimeoutError::Timeout)
+        );
+        drop(owner);
+        assert!(finishing.recv_timeout(Duration::from_secs(5)).unwrap());
+        worker.join().unwrap();
+        fs::remove_dir_all(dir).unwrap();
+    }
 
     #[test]
     fn validates_range_offsets_totals_and_body_lengths() {
@@ -979,13 +1046,14 @@ mod range_tests {
                     offset += body.len();
                 }
             });
+            let progress = std::cell::Cell::new(None);
             let result = fetch(
                 &agent(),
                 &url,
                 &BTreeMap::new(),
                 &path,
                 &AtomicBool::new(false),
-                |_, _| {},
+                |bytes, total| progress.set(Some((bytes, total))),
             );
             if let Some(expected) = want {
                 assert!(result.is_ok(), "{case}");
@@ -994,6 +1062,9 @@ mod range_tests {
                 assert!(result.is_err(), "{case}");
                 assert!(!path.exists(), "{case}");
                 assert_eq!(fs::read(part_of(&path)).unwrap(), b"abc", "{case}");
+                if case == "short body" {
+                    assert_eq!(progress.get(), Some((3, Some(6))));
+                }
             }
             server.join().unwrap();
             fs::remove_dir_all(dir).unwrap();
