@@ -735,13 +735,22 @@ fn rollback_partial(file: fs::File, path: &Path, length: u64) -> std::io::Result
 
 // Jobs for different episodes can share the same artwork and partial file.
 fn destination_lock(path: &Path) -> Arc<Mutex<()>> {
+    let key = path
+        .parent()
+        .zip(path.file_name())
+        .and_then(|(parent, name)| fs::canonicalize(parent).ok().map(|dir| dir.join(name)))
+        .unwrap_or_else(|| path.to_path_buf());
+    // The file may not exist yet. Use a conservative case-insensitive key on
+    // platforms where the destination volume commonly ignores case.
+    #[cfg(any(windows, target_os = "macos"))]
+    let key = PathBuf::from(key.to_string_lossy().to_uppercase());
     let mut locks = DESTINATION_LOCKS.lock().unwrap();
     locks.retain(|_, lock| lock.strong_count() != 0);
-    if let Some(lock) = locks.get(path).and_then(Weak::upgrade) {
+    if let Some(lock) = locks.get(&key).and_then(Weak::upgrade) {
         return lock;
     }
     let lock = Arc::new(Mutex::new(()));
-    locks.insert(path.to_path_buf(), Arc::downgrade(&lock));
+    locks.insert(key, Arc::downgrade(&lock));
     lock
 }
 
@@ -753,6 +762,13 @@ fn fetch(
     stop: &AtomicBool,
     report: impl Fn(u64, Option<u64>),
 ) -> Result<(), Failure> {
+    if stop.load(Ordering::Relaxed) {
+        return Err(Failure::Stopped);
+    }
+    let fail = |e: std::io::Error| Failure::Error(e.to_string());
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir).map_err(fail)?;
+    }
     let lock = destination_lock(path);
     let _destination = loop {
         if stop.load(Ordering::Relaxed) {
@@ -767,10 +783,6 @@ fn fetch(
     if let Ok(meta) = fs::metadata(path) {
         report(meta.len(), Some(meta.len()));
         return Ok(());
-    }
-    let fail = |e: std::io::Error| Failure::Error(e.to_string());
-    if let Some(dir) = path.parent() {
-        fs::create_dir_all(dir).map_err(fail)?;
     }
     let part = part_of(path);
     // Later ranges go to where the first request was sent on to; an address
@@ -950,6 +962,19 @@ mod range_tests {
         assert!(finishing.recv_timeout(Duration::from_secs(5)).unwrap());
         worker.join().unwrap();
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn destination_lock_normalizes_path_aliases() {
+        let folder = std::env::temp_dir();
+        let lower = destination_lock(&folder.join("poster.jpg"));
+        let alias = destination_lock(&folder.join(".").join("poster.jpg"));
+        let upper = destination_lock(&folder.join("Poster.jpg"));
+        assert!(Arc::ptr_eq(&lower, &alias));
+        assert_eq!(
+            Arc::ptr_eq(&lower, &upper),
+            cfg!(any(windows, target_os = "macos"))
+        );
     }
 
     #[test]
