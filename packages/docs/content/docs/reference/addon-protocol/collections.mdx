@@ -30,13 +30,15 @@ library.
 
 ## Members
 
-A collection's members are its `items`, then each of its `sources` in turn. A title listed twice
-is kept where it first appears.
+A collection's members are its `items`, then its `sources`, all of one before the next unless
+`merge` says otherwise. A title listed twice is kept where it first appears.
 
 | Field     | Meaning                                                                                                                                                           |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `items`   | Catalog entries as a catalog would return them. `id` and `type` are required.                                                                                     |
 | `sources` | Catalogs whose entries are members, read a page at a time like a library, up to [`JELLYFIN_MAX_CATALOG_ITEMS`](/configuration/environment-variables) per catalog. |
+| `merge`   | `sequential` (the default) reads each source to its end before the next, `interleaved` takes one title from each source in turn, `alternating` 20 at a time.      |
+| `shuffle` | `true` shuffles the titles within each page a client is sent.                                                                                                     |
 
 A member is the same title it is anywhere else: a series opens to its seasons, plays, and keeps its
 watch state. Use `items` for a short fixed list and `sources` for anything long or changing.

@@ -1620,6 +1620,8 @@ const CollectionSchema = z.object({
     .nullish(),
   layout: z.string().nullish(),
   showAll: z.boolean().nullish(),
+  merge: z.string().nullish(),
+  shuffle: z.boolean().nullish(),
 });
 
 /** Documented in `reference/addon-protocol/metadata`. */
