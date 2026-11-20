@@ -536,6 +536,7 @@ function ServiceModal({
             }
           />
         ))}
+        <ServiceConnectionTest serviceId={serviceId} values={localValues} />
         <div className="flex gap-2">
           <Button
             type="button"
@@ -551,5 +552,94 @@ function ServiceModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/**
+ * Services whose credentials can be probed from the config dialog with
+ * its current (possibly unsaved) values.
+ */
+const SERVICE_TEST_ENDPOINTS: Partial<Record<ServiceId, string>> = {
+  qbittorrent: '/api/v1/qbittorrent/test',
+};
+
+function ServiceConnectionTest({
+  serviceId,
+  values,
+}: {
+  serviceId: ServiceId;
+  values: Record<string, any>;
+}) {
+  const endpoint = SERVICE_TEST_ENDPOINTS[serviceId];
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<
+    { ok: boolean; message: string } | null
+  >(null);
+
+  if (!endpoint) return null;
+
+  const runTest = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: values.url,
+          username: values.username,
+          password: values.password,
+        }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        throw new Error(
+          json.detail || json.error?.message || 'Could not run the test'
+        );
+      }
+      const data = json.data;
+      setResult(
+        data.ok
+          ? {
+              ok: true,
+              message: data.torrentCount
+                ? `Connected (${data.torrentCount} AIOStreams torrents)`
+                : 'Connected',
+            }
+          : {
+              ok: false,
+              message: data.error?.message || 'Could not connect',
+            }
+      );
+    } catch (error) {
+      setResult({
+        ok: false,
+        message: error instanceof Error ? error.message : 'Could not run the test',
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        className="w-full"
+        intent="primary-outline"
+        onClick={runTest}
+        disabled={testing || !values.url || !values.username}
+      >
+        {testing ? 'Testing…' : 'Test connection'}
+      </Button>
+      {result && (
+        <div
+          className={`text-xs ${result.ok ? 'text-[--success]' : 'text-[--danger]'}`}
+        >
+          {result.message}
+        </div>
+      )}
+    </div>
   );
 }
