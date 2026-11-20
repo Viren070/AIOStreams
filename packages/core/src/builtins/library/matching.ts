@@ -25,13 +25,24 @@ const TITLE_MATCH_THRESHOLD = 0.85;
 const MATCH_SLICE_MS = 8;
 
 /**
+ * Preserve existing library comparisons for punctuation and ampersands:
+ * S.W.A.T. matches SWAT, and Law & Order matches Law and Order. Search queries
+ * instead use spaces for these separators.
+ */
+function cleanLibraryTitle(title: string): string {
+  return cleanTitle(
+    title.replace(/[.,‐‑–—…：；／＼｜＿．]/gu, '').replaceAll('&', 'and')
+  );
+}
+
+/**
  * Matches title-based criteria against a download item name.
  */
 export function isItemMatch(
   itemName: string,
   metadata: SearchMetadata,
   parsedId: ParsedId,
-  cleanedTitles: string[] = metadata.titles.map((title) => cleanTitle(title))
+  cleanedTitles: string[] = metadata.titles.map(cleanLibraryTitle)
 ): boolean {
   const parsed = parseTorrentTitleCached(itemName);
   const preprocessedTitle = preprocessTitle(
@@ -41,8 +52,9 @@ export function isItemMatch(
   );
 
   // Title match
+
   if (
-    !titleMatch(cleanTitle(preprocessedTitle), cleanedTitles, {
+    !titleMatch(cleanLibraryTitle(preprocessedTitle), cleanedTitles, {
       threshold: TITLE_MATCH_THRESHOLD,
     })
   ) {
@@ -104,7 +116,7 @@ export async function matchTorrents(
   sourceServiceId?: BuiltinServiceId
 ): Promise<UnprocessedTorrent[]> {
   const results: UnprocessedTorrent[] = [];
-  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
+  const cleanedTitles = metadata.titles.map(cleanLibraryTitle);
   let sliceStart = performance.now();
 
   for (const item of items) {
@@ -140,7 +152,7 @@ export async function matchNzbs(
   sourceServiceId?: BuiltinServiceId
 ): Promise<NZB[]> {
   const results: NZB[] = [];
-  const cleanedTitles = metadata.titles.map((title) => cleanTitle(title));
+  const cleanedTitles = metadata.titles.map(cleanLibraryTitle);
   let sliceStart = performance.now();
 
   for (const item of items) {
