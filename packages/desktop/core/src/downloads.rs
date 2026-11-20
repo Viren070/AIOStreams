@@ -239,7 +239,7 @@ impl Queue {
                 Ok(Event::Progress { id, bytes, total }) => {
                     if let Some(job) = self.jobs.iter_mut().find(|j| j.spec.id == id) {
                         job.bytes = bytes;
-                        job.total = total.or(job.total);
+                        job.total = total;
                     }
                 }
                 Ok(Event::Finished { id, result }) => self.finished(&id, result),
@@ -833,7 +833,9 @@ fn fetch(
                             && resource_length == Some(have)
                             && total.is_none_or(|t| t == have)
                         {
-                            return fs::rename(&part, path).map_err(fail);
+                            fs::rename(&part, path).map_err(fail)?;
+                            report(have, Some(have));
+                            return Ok(());
                         }
                         return Err(Failure::Error(
                             "The server's range total does not match the partial file".into(),
@@ -886,7 +888,10 @@ fn fetch(
                     ended.is_none() && (total == Some(have + written) || whole && total.is_none());
                 if complete {
                     drop(file);
-                    return fs::rename(&part, path).map_err(fail);
+                    fs::rename(&part, path).map_err(fail)?;
+                    let size = have + written;
+                    report(size, Some(size));
+                    return Ok(());
                 }
                 if written > 0 && (!whole || !resumed) {
                     failures = 0;
@@ -1038,6 +1043,14 @@ mod range_tests {
                 vec![("200 OK", None, Some(3), "def")],
                 Some("def"),
             ),
+            (
+                "unknown-length replacement supersedes the old total",
+                vec![
+                    partial("bytes 3-4/6", "de"),
+                    ("200 OK", None, None, "new file"),
+                ],
+                Some("new file"),
+            ),
         ] {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
             let url = format!("http://{}", listener.local_addr().unwrap());
@@ -1083,6 +1096,8 @@ mod range_tests {
             if let Some(expected) = want {
                 assert!(result.is_ok(), "{case}");
                 assert_eq!(fs::read(&path).unwrap(), expected.as_bytes(), "{case}");
+                let size = expected.len() as u64;
+                assert_eq!(progress.get(), Some((size, Some(size))), "{case}");
             } else {
                 assert!(result.is_err(), "{case}");
                 assert!(!path.exists(), "{case}");
