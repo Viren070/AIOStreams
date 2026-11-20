@@ -7,7 +7,7 @@ import { IdParser } from '../../../utils/id-parser.js';
 import { NewznabAddon, NewznabAddonConfigSchema } from '../../newznab/addon.js';
 import type { SearchMetadata } from '../debrid.js';
 import { NabApiError } from './api.js';
-import type { NewznabSearchResultItem } from './api.js';
+import type { NewznabSearchResultItem, SearchResponse } from './api.js';
 import type { NabAddonConfig } from './addon.js';
 import { parseNabParsedFileInfo } from './addon.js';
 
@@ -43,14 +43,16 @@ class TestAddon extends NewznabAddon {
 }
 
 function fixture(
-  replies: (NewznabSearchResultItem[] | Error)[],
-  strategy: NabAddonConfig['seasonEpisodeStrategy'] = 'episodeFirst'
+  replies: (NewznabSearchResultItem[] | SearchResponse<'newznab'> | Error)[],
+  strategy: NabAddonConfig['seasonEpisodeStrategy'] = 'episodeFirst',
+  paginate = false
 ) {
   const addon = new TestAddon(
     NewznabAddonConfigSchema.parse({
       url: 'https://example.org',
       services: [],
       seasonEpisodeStrategy: strategy,
+      paginate,
     })
   );
   addon.api.getCapabilities = async () => ({
@@ -70,11 +72,12 @@ function fixture(
     calls.push([
       String(params.season),
       ...(params.ep === undefined ? [] : [String(params.ep)]),
+      ...(params.offset === undefined ? [] : [`offset=${params.offset}`]),
     ]);
     const reply = replies.shift();
     assert.ok(reply, 'unexpected indexer request');
     if (reply instanceof Error) throw reply;
-    return { results: reply };
+    return Array.isArray(reply) ? { results: reply } : reply;
   };
   return { run: (meta = metadata) => addon.searchEpisode(meta), calls };
 }
@@ -100,6 +103,33 @@ describe('daily Newznab searches', () => {
     const { run, calls } = fixture([[item]]);
     assert.deepEqual((await run()).results, [item]);
     assert.deepEqual(calls, [daily]);
+  });
+
+  it('retains a daily hit if a later page is rejected, with and without a total', async () => {
+    const item = release('Daily.Show.2024.10.25');
+    for (const total of [2, undefined]) {
+      const { run, calls } = fixture(
+        [{ results: [item], total }, invalid],
+        'episode',
+        true
+      );
+      assert.deepEqual((await run()).results, [item]);
+      assert.deepEqual(calls, [daily, [...daily, 'offset=1']]);
+    }
+  });
+
+  it('retries numerically after a partial daily result has no matching air date', async () => {
+    const { run, calls } = fixture(
+      [
+        { results: [release('Daily.Show.2024.10.24')], total: 2 },
+        invalid,
+        { results: [pack], total: 1 },
+      ],
+      'season',
+      true
+    );
+    assert.deepEqual((await run()).results, [pack]);
+    assert.deepEqual(calls, [daily, [...daily, 'offset=1'], season]);
   });
 
   it('retries with mapped TVDB numbering and then the season for episodeFirst', async () => {

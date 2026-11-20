@@ -345,22 +345,30 @@ export abstract class BaseNabAddon<
     const queryLimit = createQueryLimit();
     const maxPages = appConfig.builtins.nab.maxPages;
 
-    let initialResponse: SearchResponse<A['namespace']>;
-    try {
-      initialResponse = await this.api.search(searchFunction, params);
-    } catch (error) {
-      // 201 means incorrect parameter. Some indexers return the same
-      // description with code 200, which normally means missing parameter.
-      if (
-        daily &&
-        error instanceof NabApiError &&
-        (error.code === 201 ||
-          (error.code === 200 &&
-            /^incorrect parameter\b/i.test(error.description)))
-      )
-        return [];
-      throw error;
-    }
+    const fetchPage = async (
+      offset?: number
+    ): Promise<SearchResponse<A['namespace']> | undefined> => {
+      try {
+        return await this.api.search(
+          searchFunction,
+          offset === undefined ? params : { ...params, offset: String(offset) }
+        );
+      } catch (error) {
+        // 201 means incorrect parameter. Some indexers return the same
+        // description with code 200, which normally means missing parameter.
+        if (
+          daily &&
+          error instanceof NabApiError &&
+          (error.code === 201 ||
+            (error.code === 200 &&
+              /^incorrect parameter\b/i.test(error.description)))
+        )
+          return undefined;
+        throw error;
+      }
+    };
+    const initialResponse = await fetchPage();
+    if (!initialResponse) return [];
     let allResults = [...initialResponse.results];
 
     this.logger.debug('Initial search response', {
@@ -420,17 +428,12 @@ export abstract class BaseNabAddon<
           // Create requests for all remaining pages in parallel
           const pagePromises = Array.from({ length: pagesToFetch }, (_, i) => {
             const offset = initialOffset + limit * (i + 1);
-            return queryLimit(
-              () =>
-                this.api.search(searchFunction, {
-                  ...params,
-                  offset: offset.toString(),
-                }) as Promise<SearchResponse<A['namespace']>>
-            );
+            return queryLimit(() => fetchPage(offset));
           });
 
           const pageResponses = await Promise.all(pagePromises);
           for (const response of pageResponses) {
+            if (!response) continue;
             if (areResultsDuplicate(allResults, response.results)) {
               this.logger.warn(
                 'Detected duplicate results in paginated response. Indexer may not support offset parameter despite claiming support. Stopping pagination.'
@@ -457,15 +460,8 @@ export abstract class BaseNabAddon<
       });
 
       while (pageCount < maxPages) {
-        const response: SearchResponse<A['namespace']> = await this.api.search(
-          searchFunction,
-          {
-            ...params,
-            offset: currentOffset.toString(),
-          }
-        );
-
-        if (response.results.length === 0) {
+        const response = await fetchPage(currentOffset);
+        if (!response || response.results.length === 0) {
           this.logger.debug('Received empty page, stopping pagination');
           break;
         }
