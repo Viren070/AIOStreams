@@ -14,6 +14,7 @@ import {
 } from '../debrid.js';
 import {
   BaseNabApi,
+  NabApiError,
   Capabilities,
   SearchResponse,
   SearchResultItem,
@@ -50,9 +51,17 @@ export function parseNabLanguages(
 export function parseNabParsedFileInfo(args: {
   audioLanguages?: string | number | boolean;
   subtitleLanguages?: string | number | boolean;
+  explicitAudioLanguages?: string | number | boolean;
+  explicitSubtitleLanguages?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
-  const languages = parseNabLanguages(args.audioLanguages);
-  const subtitles = parseNabLanguages(args.subtitleLanguages);
+  const audio = parseNabLanguages(args.explicitAudioLanguages);
+  const subs = parseNabLanguages(args.explicitSubtitleLanguages);
+  const languages = audio.length
+    ? audio
+    : parseNabLanguages(args.audioLanguages);
+  const subtitles = subs.length
+    ? subs
+    : parseNabLanguages(args.subtitleLanguages);
   return normaliseParsedMediaInfo({
     mediaInfoQuality: 'indexer',
     languages: languages.length ? languages : undefined,
@@ -184,31 +193,11 @@ export abstract class BaseNabAddon<
     )
       queryParams.year = metadata.year.toString();
 
-    // date-based shows: numeric season/ep params return nothing, the Sonarr
-    // daily convention (season=YYYY&ep=MM/DD) is what indexers understand
-    const isDailySearch =
-      parsedId.mediaType === 'series' &&
-      metadata.isDateBased &&
-      metadata.episodeAirDate &&
-      queryParams.season !== undefined &&
-      queryParams.ep !== undefined;
-    // preserve the numeric season/ep so we can fall back to them if the daily
-    // search misses
-    let numericFallbackParams: Record<string, string> | undefined;
-    if (isDailySearch) {
-      // queryParams still holds the numeric season/ep here
-      numericFallbackParams = { ...queryParams };
-      const [yyyy, mm, dd] = metadata.episodeAirDate!.split('-');
-      queryParams.season = yyyy;
-      queryParams.ep = `${mm}/${dd}`;
-    }
-
     queryParams.extended = '1';
 
     const canApplySeasonPackStrategy =
       parsedId.mediaType === 'series' &&
       !this.userData.forceQuerySearch &&
-      !isDailySearch &&
       searchCapabilities.supportedParams.includes('season') &&
       queryParams.season &&
       queryParams.ep;
@@ -250,55 +239,55 @@ export abstract class BaseNabAddon<
       });
       searchType = 'query';
     }
-    let results: SearchResultItem<A['namespace']>[] = [];
-    if (queries.length > 0) {
-      const runQueries = (params: Record<string, string>) => {
-        this.logger.debug('Performing queries', { queries });
-        return Promise.all(
-          queries.map((q) =>
-            queryLimit(() =>
-              this.fetchResults(searchFunction, { ...params, q })
-            )
+    const runSearch = (params: Record<string, string>, daily = false) => {
+      if (!queries.length)
+        return this.fetchResults(searchFunction, params, daily);
+      this.logger.debug('Performing queries', { queries });
+      return Promise.all(
+        queries.map((q) =>
+          queryLimit(() =>
+            this.fetchResults(searchFunction, { ...params, q }, daily)
           )
-        ).then((allResults) => allResults.flat());
-      };
+        )
+      ).then((allResults) => allResults.flat());
+    };
 
-      results = await runQueries(primaryParams);
-      if (results.length === 0 && fallbackParams) {
-        this.logger.debug(
-          'No results for initial queries, retrying with alternate season/episode params',
-          { season: queryParams.season, episode: queryParams.ep }
-        );
-        results = await runQueries(fallbackParams);
-      }
-    } else {
-      results = await this.fetchResults(searchFunction, primaryParams);
-      if (results.length === 0 && fallbackParams) {
-        this.logger.debug(
-          'No results for initial search, retrying with alternate season/episode params',
-          { season: queryParams.season, episode: queryParams.ep }
-        );
-        results = await this.fetchResults(searchFunction, fallbackParams);
-      }
+    let results: SearchResultItem<A['namespace']>[] = [];
+    if (
+      parsedId.mediaType === 'series' &&
+      metadata.isDateBased &&
+      metadata.episodeAirDate &&
+      queryParams.season !== undefined &&
+      queryParams.ep !== undefined
+    ) {
+      const [year, month, day] = metadata.episodeAirDate.split('-');
+      results = await runSearch(
+        { ...queryParams, season: year, ep: `${month}/${day}` },
+        true
+      );
       if (
-        isDailySearch &&
-        numericFallbackParams &&
         !results.some((r) =>
           titleContainsAirDate(r.title, metadata.airDates ?? [])
         )
       ) {
         this.logger.debug(
-          'No air-date match for daily search, retrying with numeric season/episode params',
+          'No air-date match, retrying with numeric season/episode params',
           {
             airDate: metadata.episodeAirDate,
-            season: numericFallbackParams.season,
-            episode: numericFallbackParams.ep,
+            season: queryParams.season,
+            episode: queryParams.ep,
           }
         );
-        results = await this.fetchResults(
-          searchFunction,
-          numericFallbackParams
+        results = [];
+      }
+    }
+    if (!results.length) {
+      results = await runSearch(primaryParams);
+      if (!results.length && fallbackParams) {
+        this.logger.debug(
+          'No episode results, retrying with season-only params'
         );
+        results = await runSearch(fallbackParams);
       }
     }
     this.logger.info(
@@ -350,13 +339,21 @@ export abstract class BaseNabAddon<
 
   private async fetchResults(
     searchFunction: string,
-    params: Record<string, string>
+    params: Record<string, string>,
+    daily = false
   ): Promise<SearchResultItem<A['namespace']>[]> {
     const queryLimit = createQueryLimit();
     const maxPages = appConfig.builtins.nab.maxPages;
 
-    const initialResponse: SearchResponse<A['namespace']> =
-      await this.api.search(searchFunction, params);
+    let initialResponse: SearchResponse<A['namespace']>;
+    try {
+      initialResponse = await this.api.search(searchFunction, params);
+    } catch (error) {
+      // Some indexers accept numeric ep but reject the daily MM/DD form.
+      if (daily && error instanceof NabApiError && error.code === 200)
+        return [];
+      throw error;
+    }
     let allResults = [...initialResponse.results];
 
     this.logger.debug('Initial search response', {

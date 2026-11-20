@@ -83,6 +83,8 @@ const NEWZNAB_PROFILE: NabScanProfile = {
   attrs: new Map<string, NabAttrType>([
     ['zyclopsHealth', 'string'],
     ['usenetdate', 'string'],
+    ['language-audio', 'string'],
+    ['language-subs', 'string'],
     ['language', 'string'],
     ['subs', 'string'],
     ['sourceIndexerName', 'string'],
