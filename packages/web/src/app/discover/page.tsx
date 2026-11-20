@@ -244,7 +244,10 @@ export function DiscoverPage({
   // and filters it.
   const untyped = all.some((v) => !kindOf(v));
   const siblings = all.filter(
-    (v) => kindOf(v) === current || !kindOf(v) || v.Id === viewId
+    (v) =>
+      kindOf(v) === current ||
+      (!kindOf(v) && current !== 'BoxSet') ||
+      v.Id === viewId
   );
   const offered = KINDS.filter(
     (k) =>
