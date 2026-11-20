@@ -6,6 +6,8 @@
 /* The room the floating nav bar takes, which pages keep free. */
 :root {
   --nav-bar: calc(5rem + env(safe-area-inset-bottom));
+  /* Home's hero on large screens. */
+  --hero-height: max(36rem, 53vh);
 }
 @media (min-width: 1024px) {
   :root:not([data-nav='bar']) {

@@ -1631,6 +1631,7 @@ const metaExtensionFields = {
   tagline: z.string().nullish(),
   landscapePoster: z.string().nullish(),
   animatedPoster: z.string().nullish(),
+  backgroundVideo: z.string().nullish(),
   people: z.array(MetaPersonSchema).nullish(),
   certification: z.string().nullish(),
   certificationLocal: z.string().nullish(),
