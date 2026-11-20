@@ -148,16 +148,26 @@ export function ShowDownloadMenu({
   const [range, setRange] = React.useState<BaseItemDto[] | null>(null);
   const [start, setStart] = React.useState(0);
   const [end, setEnd] = React.useState(0);
-  const chooseRange = () => {
-    void episodes(series.Id!, { seasonId: season?.Id }).then(
-      (items) => {
-        if (!items.length) return toast(t`No episodes to download there`);
-        setStart(0);
-        setEnd(items.length - 1);
-        setRange(items);
-      },
-      () => toast.error(t`Could not list the episodes`)
-    );
+  const loadingRange = React.useRef(false);
+  const chooseRange = async () => {
+    if (loadingRange.current) return;
+    loadingRange.current = true;
+    const notice = toast.loading(t`Loading episodes…`);
+    try {
+      const items = await episodes(series.Id!, { seasonId: season?.Id });
+      if (!items.length) {
+        toast(t`No episodes to download there`);
+        return;
+      }
+      setStart(0);
+      setEnd(items.length - 1);
+      setRange(items);
+    } catch {
+      toast.error(t`Could not list the episodes`);
+    } finally {
+      toast.dismiss(notice);
+      loadingRange.current = false;
+    }
   };
   if (!mayDownload) return null;
   const run = (opts: { seasonId?: string; unwatched?: boolean }) =>
