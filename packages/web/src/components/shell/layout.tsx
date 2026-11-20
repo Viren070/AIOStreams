@@ -108,7 +108,8 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     <div
       aria-hidden
       data-ui="page-background"
-      className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
+      // The tallest the viewport gets: a browser's bars slide away mid-scroll before it grows to match.
+      className="page-background pointer-events-none fixed inset-x-0 top-0 -z-10 h-screen bg-[--background]"
     >
       {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
     </div>
