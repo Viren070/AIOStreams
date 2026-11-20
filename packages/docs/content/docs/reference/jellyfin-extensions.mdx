@@ -192,6 +192,39 @@ A title no addon in the configuration has details for still opens, named by its 
 `Overview` saying so, and carries `"aiostreams": { "noMeta": true }`. The app shows a page asking for
 a metadata addon in place of the title's own, with Play kept for a movie.
 
+## Collections
+
+A `BoxSet` whose members come from two or more places carries them as parts, with the layout its
+addon asked for:
+
+```json
+"aiostreams": {
+  "layout": "rows",
+  "sources": [
+    { "id": "…", "name": "Latest Netflix Movies", "collectionType": "movies" },
+    { "id": "…", "name": "Drama series", "collectionType": "tvshows" }
+  ]
+}
+```
+
+| Field     | Shape           | What the web app does with it                                                             |
+| --------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `sources` | list of parts   | A row or tab per part                                                                     |
+| `layout`  | `rows` or none  | A row per part; without it, a tab per part after **All**, which lists the `BoxSet` itself |
+| `showAll` | `false` or none | Leaves out the **All** tab                                                                |
+
+Each part:
+
+| Field            | Shape                                   | Meaning                                                                                                                                       |
+| ---------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | item id                                 | Listed with `/Items?ParentId={id}`                                                                                                            |
+| `name`           | string                                  | The row's or tab's name                                                                                                                       |
+| `collectionType` | `movies`, `tvshows`, `boxsets`, or none | The kind of title it holds, as its library's would be, shown beside the name                                                                  |
+| `genre`          | string or none                          | Added to the listing as `Genres={genre}`, for a server whose part `id` is a whole library. AIOStreams' own part ids already hold their genre. |
+
+Tabs that don't fit as pills show as rows instead. With fewer than two parts, the app lists the
+members as one list.
+
 ## Episodes
 
 With `fillers`, a filler episode carries `"aiostreams": { "filler": true }` and a recap

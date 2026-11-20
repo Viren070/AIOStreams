@@ -79,6 +79,7 @@ export function withQualifiedCollection<T extends MetaPreview>(
             type: source.type,
             catalogId: `${owner}.${source.catalogId}`,
             genre: source.genre,
+            name: source.name,
           },
         ]
       : [];

@@ -19,9 +19,10 @@ library.
       "items": [{ "id": "tt0903747", "type": "series", "name": "Breaking Bad", "poster": "https://…" }],
       "sources": [
         { "type": "movie", "catalogId": "netflix-movies" },
-        { "type": "series", "catalogId": "netflix-series", "genre": "Drama" },
-        { "addonId": "com.example.lists", "type": "movie", "catalogId": "top-netflix" }
-      ]
+        { "type": "series", "catalogId": "netflix-series", "genre": "Drama", "name": "Drama series" },
+        { "addonId": "com.example.lists", "type": "movie", "catalogId": "top-netflix", "name": "Top 10" }
+      ],
+      "layout": "rows"
     }
   }
 }
@@ -48,8 +49,23 @@ watch state. Use `items` for a short fixed list and `sources` for anything long 
 | `catalogId` | Required. The catalog's `id` in its manifest.                                                                       |
 | `genre`     | A genre to filter the catalog by. The catalog must declare a `genre` extra.                                         |
 | `addonId`   | Another addon's manifest `id` or URL. Omit it for your own addon. A source whose addon is not installed is skipped. |
+| `name`      | What the source's row or tab is called. The catalog's name when absent, with its `genre` after it.                  |
 
 A catalog does not need to be shown anywhere to be a source.
+
+## Layout
+
+In the AIOStreams apps, a collection with two or more sources, or with listed titles and a source,
+shows in parts: its listed titles under its own name, then each source.
+
+| Field     | Meaning                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| `layout`  | `tabs` (the default) for a tab per part, after an **All** tab of every member, or `rows` for a row per part. |
+| `showAll` | `false` leaves out the **All** tab.                                                                          |
+
+Each part shows its name beside the kind of title it holds, as a library does on Home. Tabs whose
+names don't fit show as rows instead. Collections in `items` keep a row of their own above the parts,
+and other Jellyfin clients always get every member in one list.
 
 ## Marking catalog entries
 

@@ -16,7 +16,7 @@ import { useExternalReturn } from '@/lib/playback/external-return';
 import { Backdrop } from './_components/backdrop';
 import { Header, HeaderSkeleton } from './_components/header';
 import { Seasons } from './_components/seasons';
-import { Members, SubCollections } from './_components/collection';
+import { Collection } from './_components/collection';
 import { Details } from './_components/details';
 import { Similar } from './_components/similar';
 import { ItemTrailerContext, useItemTrailer } from './_components/trailer';
@@ -105,8 +105,7 @@ export function ItemPage({
                 onSeason={setSeason}
               />
             )}
-            {data.Type === 'BoxSet' && <SubCollections parent={data} />}
-            {data.Type === 'BoxSet' && <Members parent={data} />}
+            {data.Type === 'BoxSet' && <Collection parent={data} />}
             <CastAndCrew people={data.People} />
             <Details item={data} />
             {(data.Type === 'Movie' || data.Type === 'Series') && (

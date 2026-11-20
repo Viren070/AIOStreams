@@ -1614,9 +1614,12 @@ const CollectionSchema = z.object({
         type: z.string(),
         catalogId: z.string(),
         genre: z.string().nullish(),
+        name: z.string().nullish(),
       })
     )
     .nullish(),
+  layout: z.string().nullish(),
+  showAll: z.boolean().nullish(),
 });
 
 /** Documented in `reference/addon-protocol/metadata`. */

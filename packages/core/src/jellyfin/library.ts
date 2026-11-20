@@ -389,6 +389,60 @@ export async function getCatalogPage(
   return { items: out, total, hasMore: !done, keys: seenKeys };
 }
 
+type CollectionBlock = NonNullable<Meta['collection']>;
+type CollectionSource = NonNullable<CollectionBlock['sources']>[number];
+type SourceRef = Pick<CollectionSource, 'type' | 'catalogId' | 'genre'>;
+
+export const sourceKey = (source: SourceRef) =>
+  `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
+
+export interface CollectionPart {
+  /** Absent for the collection's own listed titles. */
+  source?: CollectionSource;
+  name?: string;
+  kind?: CollectionType;
+}
+
+/** Each named and typed as its source's library is. */
+export async function collectionParts(
+  engine: AIOStreams,
+  meta: Pick<Meta, 'collection'>
+): Promise<CollectionPart[]> {
+  const block = meta.collection;
+  const parts: CollectionPart[] = [];
+  if (block?.items?.some((entry) => !entry.collection)) parts.push({});
+  const seen = new Set<string>();
+  for (const source of block?.sources ?? []) {
+    const declared = engine.findAddonCatalog(source.type, source.catalogId);
+    const key = sourceKey(source);
+    if (!declared || seen.has(key)) continue;
+    seen.add(key);
+    const catalog =
+      findCatalog(engine, source.type, source.catalogId) ?? declared;
+    // A catalog that requires a genre offers "None" for all of it.
+    const genre = source.genre && source.genre !== 'None' ? source.genre : null;
+    const evidence = await cachedEvidence(engine.getUserData(), catalog);
+    parts.push({
+      source,
+      name:
+        source.name || (genre ? `${catalog.name} · ${genre}` : catalog.name),
+      kind: viewCollectionType(catalog, evidence?.types ?? []),
+    });
+  }
+  return parts;
+}
+
+/** Without a source, the collection's listed titles. */
+export function collectionPart(
+  block: CollectionBlock,
+  source?: SourceRef
+): CollectionBlock | null {
+  if (!source)
+    return { items: block.items?.filter((entry) => !entry.collection) };
+  const found = block.sources?.find((s) => sourceKey(s) === sourceKey(source));
+  return found ? { sources: [found] } : null;
+}
+
 /**
  * A page of a collection's members: listed items, then each source in turn, a
  * title kept where it first appears. A source is read once those before it end.
@@ -430,10 +484,10 @@ export async function collectionMembers(
         keys: [],
       };
     const catalog = engine.findAddonCatalog(source.type, source.catalogId);
+    const key = sourceKey(source);
     // A repeated source adds nothing and would share the first one's cursor.
-    const sourceKey = `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
-    if (!catalog || walked.has(sourceKey)) continue;
-    walked.add(sourceKey);
+    if (!catalog || walked.has(key)) continue;
+    walked.add(key);
     const narrowed =
       !!opts.kinds &&
       !(opts.kinds.includes('movie') && opts.kinds.includes('series'));
