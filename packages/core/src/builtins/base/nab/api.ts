@@ -240,7 +240,7 @@ export class BaseNabApi<N extends NabNamespace> {
   private readonly searchCache: Cache<string, SearchResponse<N>>;
   private readonly profile: NabScanProfile;
   private readonly logger: Logger;
-  private readonly params: Record<string, string>;
+  private readonly params: Record<string, string> = {};
   private readonly userAgent: string;
   private readonly httpProxy: string | undefined;
 
@@ -249,15 +249,11 @@ export class BaseNabApi<N extends NabNamespace> {
     logger: Logger,
     private readonly baseUrl: string,
     private readonly apiKey?: string,
-    private readonly apiPath: string = '/api',
-    params: Record<string, string | number | boolean> = {}
+    private readonly apiPath: string = '/api'
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
     this.apiPath = this.removeTrailingSlash(apiPath);
-    this.params = Object.fromEntries(
-      Object.entries(params).map(([key, value]) => [key, String(value)])
-    );
     const apiPathUrl = new URL(this.baseUrl + this.apiPath);
     // append any search params from the apiPath to this.params
     if (apiPathUrl.search) {

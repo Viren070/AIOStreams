@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ParsedId } from '../../utils/id-parser.js';
-import { appConfig, constants, createLogger } from '../../utils/index.js';
+import { constants, createLogger } from '../../utils/index.js';
 import { Torrent, NZB } from '../../debrid/index.js';
 import { SearchMetadata } from '../base/debrid.js';
 import { hashNzbUrl } from '../../debrid/utils.js';
@@ -17,13 +17,8 @@ import { ageInHoursSince, proxyNzbs } from '../utils/general.js';
 const logger = createLogger('newznab');
 
 class NewznabApi extends BaseNabApi<'newznab'> {
-  constructor(
-    baseUrl: string,
-    apiKey?: string,
-    apiPath?: string,
-    extraParams?: Record<string, string | number | boolean>
-  ) {
-    super('newznab', logger, baseUrl, apiKey, apiPath, extraParams);
+  constructor(baseUrl: string, apiKey?: string, apiPath?: string) {
+    super('newznab', logger, baseUrl, apiKey, apiPath);
   }
 }
 
