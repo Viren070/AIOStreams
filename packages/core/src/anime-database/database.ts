@@ -36,6 +36,7 @@ import {
 import { mergeSources, type SourceBatch } from './merger.js';
 import { filterCandidatesBySeasonType, selectBestRecord } from './selector.js';
 import { buildAnimeEntry } from './builder.js';
+import { getSiblingTitles } from './sibling-titles.js';
 
 const logger = createLogger('anime-database');
 
@@ -380,7 +381,30 @@ export class AnimeDatabase {
     }
 
     const candidates = await AnimeRepository.findCandidates(idType, idValue);
-    const entry = chooseEntry(candidates, idType, idValue, season, episode);
+    const chosen = chooseRecord(candidates, idType, idValue, season, episode);
+    const entry = chosen ? buildSelectedEntry(chosen, idType, idValue) : null;
+    if (chosen && entry && episode !== undefined) {
+      const related = await Promise.all(
+        (['imdbId', 'thetvdbId', 'themoviedbId'] as const)
+          .filter((key) => key !== idType && entry.mappings?.[key])
+          .map((key) =>
+            AnimeRepository.findCandidates(key, entry.mappings![key]!).catch(
+              (error) => {
+                logger.warn(
+                  { error, key },
+                  'failed to load anime sibling titles'
+                );
+                return [];
+              }
+            )
+          )
+      );
+      const titles = getSiblingTitles(chosen, [
+        ...candidates,
+        ...related.flat(),
+      ]);
+      if (titles.length) entry.siblingTitles = titles;
+    }
 
     this.cache.set(key, entry);
     if (this.cache.size > CACHE_MAX_ENTRIES) {
@@ -388,6 +412,15 @@ export class AnimeDatabase {
       if (!oldest.done) this.cache.delete(oldest.value);
     }
     return entry;
+  }
+
+  public async hasSiblingRecords(
+    idType: IdType,
+    idValue: IdValue
+  ): Promise<boolean> {
+    if (this.disabled) return false;
+    const candidates = await AnimeRepository.findCandidates(idType, idValue);
+    return candidates.length > 1;
   }
 
   /** Many season/episode lookups on one id, from one read of its candidates. */
@@ -402,13 +435,13 @@ export class AnimeDatabase {
   }
 }
 
-function chooseEntry(
+function chooseRecord(
   candidates: AnimeRecord[],
   idType: IdType,
   idValue: IdValue,
   season?: number,
   episode?: number
-): AnimeEntry | null {
+): AnimeRecord | null {
   if (idType === 'imdbId') {
     const imdbId = String(idValue);
     if (!season) {
@@ -425,18 +458,35 @@ function chooseEntry(
     }
   }
   if (!candidates.length) return null;
-  const chosen = selectBestRecord(
+  return selectBestRecord(
     filterCandidatesBySeasonType(candidates, season, idType),
     idType,
     idValue,
     season,
     episode
   );
-  if (!chosen) return null;
+}
+
+function buildSelectedEntry(
+  chosen: AnimeRecord,
+  idType: IdType,
+  idValue: IdValue
+): AnimeEntry {
   const entry = buildAnimeEntry(chosen);
   // match keys follow this id, so a hint-found entry must not carry another
   if (idType === 'imdbId') {
     entry.mappings = { ...entry.mappings, imdbId: String(idValue) };
   }
   return entry;
+}
+
+function chooseEntry(
+  candidates: AnimeRecord[],
+  idType: IdType,
+  idValue: IdValue,
+  season?: number,
+  episode?: number
+): AnimeEntry | null {
+  const chosen = chooseRecord(candidates, idType, idValue, season, episode);
+  return chosen ? buildSelectedEntry(chosen, idType, idValue) : null;
 }
