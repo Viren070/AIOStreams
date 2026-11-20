@@ -629,16 +629,50 @@ fn write_text(path: &Path, text: &str) -> Result<(), String> {
     fs::write(path, text).map_err(|e| e.to_string())
 }
 
-/// `bytes a-b/total`, or the length of a whole answer.
-fn total_of(response: &ureq::http::Response<ureq::Body>, offset: u64) -> Option<u64> {
-    let header = |name| response.headers().get(name)?.to_str().ok();
-    if let Some(range) = header("content-range") {
-        return range.rsplit('/').next()?.parse().ok();
+fn response_header<'a>(
+    response: &'a ureq::http::Response<ureq::Body>,
+    name: &str,
+) -> Option<&'a str> {
+    response.headers().get(name)?.to_str().ok()
+}
+
+fn range_number(value: &str) -> Option<u64> {
+    if !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
     }
-    header("content-length")?
-        .parse::<u64>()
-        .ok()
-        .map(|n| n + offset)
+    value.parse().ok()
+}
+
+fn byte_range(value: &str) -> Option<&str> {
+    let (unit, range) = value.split_once(' ')?;
+    unit.eq_ignore_ascii_case("bytes").then_some(range)
+}
+
+/// Returns the number of bytes in this response and the length of the resource, if known.
+fn partial_range(range: Option<&str>, offset: u64) -> Option<(u64, Option<u64>)> {
+    let (span, total) = byte_range(range?)?.split_once('/')?;
+    let (start, end) = span.split_once('-')?;
+    let start = range_number(start)?;
+    let end = range_number(end)?;
+    let total = if total == "*" {
+        None
+    } else {
+        Some(range_number(total)?)
+    };
+    if start != offset || end == u64::MAX || total.is_some_and(|length| end >= length) {
+        return None;
+    }
+    Some((end.checked_sub(start)? + 1, total))
+}
+
+fn checked_status(
+    response: ureq::http::Response<ureq::Body>,
+) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
+    let code = response.status().as_u16();
+    if code >= 400 && code != 416 {
+        return Err(ureq::Error::StatusCode(code));
+    }
+    Ok(response)
 }
 
 /// With headers, follows redirects itself, as ureq drops `Authorization` and `Cookie` on the way.
@@ -650,17 +684,33 @@ fn get(
 ) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
     let mut address = url.to_string();
     for _ in 0..=MAX_REDIRECTS {
-        let mut request = agent.get(&address);
+        let mut request = agent.get(&address).header("Accept-Encoding", "identity");
         if from > 0 {
             request = request.header("Range", format!("bytes={from}-"));
         }
         if headers.is_empty() {
-            return request.call();
+            return checked_status(
+                request
+                    .config()
+                    .http_status_as_error(false)
+                    .build()
+                    .call()?,
+            );
         }
         for (name, value) in headers {
-            request = request.header(name, value);
+            if !name.eq_ignore_ascii_case("accept-encoding") && !name.eq_ignore_ascii_case("range")
+            {
+                request = request.header(name, value);
+            }
         }
-        let response = request.config().max_redirects(0).build().call()?;
+        let response = checked_status(
+            request
+                .config()
+                .http_status_as_error(false)
+                .max_redirects(0)
+                .build()
+                .call()?,
+        )?;
         let location = response.headers().get("location");
         let Some(location) = location.filter(|_| response.status().is_redirection()) else {
             return Ok(response);
@@ -673,6 +723,12 @@ fn get(
         address = next.into();
     }
     Err(ureq::Error::TooManyRedirects)
+}
+
+fn rollback_partial(file: fs::File, path: &Path, length: u64) -> std::io::Result<()> {
+    // Windows requires a write handle without append access to set the length.
+    drop(file);
+    OpenOptions::new().write(true).open(path)?.set_len(length)
 }
 
 fn fetch(
@@ -697,20 +753,58 @@ fn fetch(
     let mut address = url.to_string();
     let mut failures = 0;
     let mut total = None;
-    loop {
+    'download: loop {
         if stop.load(Ordering::Relaxed) {
             return Err(Failure::Stopped);
         }
         let mut have = fs::metadata(&part).map(|m| m.len()).unwrap_or(0);
-        if total.is_some_and(|t| have >= t) {
-            return fs::rename(&part, path).map_err(fail);
-        }
+        let resumed = have > 0;
         let error = match get(agent, &address, headers, have) {
             Ok(response) => {
-                if response.status() == 200 && have > 0 {
-                    have = 0;
-                }
-                total = total_of(&response, have).or(total);
+                let range = response_header(&response, "content-range");
+                let content_length = response_header(&response, "content-length")
+                    .and_then(|value| value.parse::<u64>().ok());
+                let expected = match response.status().as_u16() {
+                    200 => {
+                        have = 0;
+                        total = content_length;
+                        content_length
+                    }
+                    206 => {
+                        let (length, resource_length) =
+                            partial_range(range, have).ok_or_else(|| {
+                                Failure::Error(
+                                    "The server answered with an invalid Content-Range".into(),
+                                )
+                            })?;
+                        if content_length.is_some_and(|value| value != length)
+                            || total.is_some_and(|old| {
+                                resource_length.is_some_and(|new| old != new) || have + length > old
+                            })
+                        {
+                            return Err(Failure::Error("The range lengths do not match".into()));
+                        }
+                        total = resource_length.or(total);
+                        Some(length)
+                    }
+                    416 => {
+                        let resource_length = range
+                            .and_then(byte_range)
+                            .and_then(|value| value.strip_prefix("*/"))
+                            .and_then(range_number);
+                        if have > 0
+                            && resource_length == Some(have)
+                            && total.is_none_or(|t| t == have)
+                        {
+                            return fs::rename(&part, path).map_err(fail);
+                        }
+                        return Err(Failure::Error(
+                            "The server's range total does not match the partial file".into(),
+                        ));
+                    }
+                    code => return Err(Failure::Error(format!("The server answered {code}"))),
+                };
+                let whole = response.status() == 200;
                 address = response.get_uri().to_string();
                 let mut file = OpenOptions::new()
                     .create(true)
@@ -729,6 +823,12 @@ fn fetch(
                     match reader.read(&mut buffer) {
                         Ok(0) => break None,
                         Ok(n) => {
+                            if expected.is_some_and(|length| n as u64 > length - written) {
+                                rollback_partial(file, &part, have).map_err(fail)?;
+                                return Err(Failure::Error(
+                                    "The answer exceeds its declared length".into(),
+                                ));
+                            }
                             file.write_all(&buffer[..n]).map_err(fail)?;
                             written += n as u64;
                             report(have + written, total);
@@ -737,21 +837,23 @@ fn fetch(
                     }
                 };
                 file.flush().map_err(fail)?;
-                let complete = match total {
-                    Some(t) => have + written >= t,
-                    None => ended.is_none(),
-                };
+                if ended.is_none() && expected.is_some_and(|length| written != length) {
+                    rollback_partial(file, &part, have).map_err(fail)?;
+                    return Err(Failure::Error(
+                        "The answer ended before its declared length".into(),
+                    ));
+                }
+                let complete =
+                    ended.is_none() && (total == Some(have + written) || whole && total.is_none());
                 if complete {
+                    drop(file);
                     return fs::rename(&part, path).map_err(fail);
                 }
-                if written > 0 {
+                if written > 0 && (!whole || !resumed) {
                     failures = 0;
-                    continue;
+                    continue 'download;
                 }
                 ended.unwrap_or_else(|| "the answer ended early".into())
-            }
-            Err(ureq::Error::StatusCode(416)) if have > 0 => {
-                return fs::rename(&part, path).map_err(fail);
             }
             Err(ureq::Error::StatusCode(code @ (401 | 403 | 404 | 410))) if address != url => {
                 log::info!("download address expired ({code}), asking again");
@@ -774,6 +876,127 @@ fn fetch(
                 return Err(Failure::Stopped);
             }
             thread::sleep(Duration::from_millis(200));
+        }
+    }
+}
+
+#[cfg(test)]
+mod range_tests {
+    use super::*;
+    use std::net::TcpListener;
+
+    #[test]
+    fn validates_range_offsets_totals_and_body_lengths() {
+        let partial = |range, body| ("206 Partial Content", Some(range), None, body);
+        let unsatisfied = |range| ("416 Range Not Satisfiable", Some(range), Some(0), "");
+        for (case, responses, want) in [
+            ("wrong offset", vec![partial("bytes 0-2/6", "def")], None),
+            (
+                "wrong declared length",
+                vec![("206 Partial Content", Some("bytes 3-4/6"), Some(3), "def")],
+                None,
+            ),
+            ("overlong body", vec![partial("bytes 3-4/6", "def")], None),
+            ("short body", vec![partial("bytes 3-5/6", "de")], None),
+            (
+                "wrong unsatisfied total",
+                vec![unsatisfied("bytes */4")],
+                None,
+            ),
+            (
+                "missing unsatisfied total",
+                vec![("416 Range Not Satisfiable", None, Some(0), "")],
+                None,
+            ),
+            (
+                "matching unsatisfied total",
+                vec![unsatisfied("bytes */3")],
+                Some("abc"),
+            ),
+            (
+                "matching unsatisfied total with uppercase range unit",
+                vec![unsatisfied("BYTES */3")],
+                Some("abc"),
+            ),
+            (
+                "valid range",
+                vec![partial("bytes 3-5/6", "def")],
+                Some("abcdef"),
+            ),
+            (
+                "valid range with mixed-case range unit",
+                vec![partial("Bytes 3-5/6", "def")],
+                Some("abcdef"),
+            ),
+            (
+                "unknown range followed by another range",
+                vec![partial("bytes 3-4/*", "de"), partial("bytes 5-5/6", "f")],
+                Some("abcdef"),
+            ),
+            (
+                "interrupted range resumes at the bytes actually received",
+                vec![
+                    ("206 Partial Content", Some("bytes 3-5/6"), Some(3), "d"),
+                    partial("bytes 4-5/6", "ef"),
+                ],
+                Some("abcdef"),
+            ),
+            (
+                "range ignored",
+                vec![("200 OK", None, Some(3), "def")],
+                Some("def"),
+            ),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let url = format!("http://{}", listener.local_addr().unwrap());
+            let dir = std::env::temp_dir().join(format!(
+                "aio-range-{}-{}",
+                std::process::id(),
+                listener.local_addr().unwrap().port()
+            ));
+            let path = dir.join("video.mp4");
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(part_of(&path), b"abc").unwrap();
+            let server = thread::spawn(move || {
+                let mut offset = 3;
+                for (status, range, length, body) in responses {
+                    let (mut stream, _) = listener.accept().unwrap();
+                    let mut request = [0; 4096];
+                    let bytes = stream.read(&mut request).unwrap();
+                    let request = String::from_utf8_lossy(&request[..bytes]).to_ascii_lowercase();
+                    assert!(request.contains(&format!("range: bytes={offset}-")));
+                    assert!(request.contains("accept-encoding: identity"));
+                    let mut response = format!("HTTP/1.1 {status}\r\nConnection: close\r\n");
+                    if let Some(range) = range {
+                        response.push_str(&format!("Content-Range: {range}\r\n"));
+                    }
+                    if let Some(length) = length {
+                        response.push_str(&format!("Content-Length: {length}\r\n"));
+                    }
+                    response.push_str("\r\n");
+                    response.push_str(body);
+                    stream.write_all(response.as_bytes()).unwrap();
+                    offset += body.len();
+                }
+            });
+            let result = fetch(
+                &agent(),
+                &url,
+                &BTreeMap::new(),
+                &path,
+                &AtomicBool::new(false),
+                |_, _| {},
+            );
+            if let Some(expected) = want {
+                assert!(result.is_ok(), "{case}");
+                assert_eq!(fs::read(&path).unwrap(), expected.as_bytes(), "{case}");
+            } else {
+                assert!(result.is_err(), "{case}");
+                assert!(!path.exists(), "{case}");
+                assert_eq!(fs::read(part_of(&path)).unwrap(), b"abc", "{case}");
+            }
+            server.join().unwrap();
+            fs::remove_dir_all(dir).unwrap();
         }
     }
 }
