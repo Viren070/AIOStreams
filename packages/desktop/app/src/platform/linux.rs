@@ -639,6 +639,34 @@ pub fn os_version() -> String {
     }
 }
 
+/// WebKitGTK 6 aborts when bwrap can't start its sandbox, as where AppArmor blocks user namespaces.
+/// The Flatpak's WebKit sandboxes through flatpak-spawn instead.
+pub fn check_web_sandbox() {
+    const DISABLE: &str = "WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS";
+    if Path::new("/.flatpak-info").exists() || std::env::var_os(DISABLE).is_some() {
+        return;
+    }
+    let probe = std::process::Command::new("bwrap")
+        .args([
+            "--ro-bind",
+            "/",
+            "/",
+            "--unshare-pid",
+            "--unshare-uts",
+            "true",
+        ])
+        .stdin(std::process::Stdio::null())
+        .output();
+    let reason = match probe {
+        Ok(out) if out.status.success() => return,
+        Ok(out) => String::from_utf8_lossy(&out.stderr).trim().to_string(),
+        Err(e) => e.to_string(),
+    };
+    log::warn!("web sandbox off, bwrap failed: {reason}");
+    // SAFETY: set before the web view starts, which is what reads it.
+    unsafe { std::env::set_var(DISABLE, "1") };
+}
+
 pub fn libmpv_candidates() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(p) = std::env::var("AIOSTREAMS_LIBMPV") {
