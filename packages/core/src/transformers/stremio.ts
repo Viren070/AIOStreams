@@ -19,7 +19,11 @@ import {
   ParsedMeta,
 } from '../db/index.js';
 import { createFormatter, FormatterContext } from '../formatters/index.js';
-import { AIOStreamsError, AIOStreamsResponse } from '../main/types.js';
+import {
+  AIOStreamsError,
+  AIOStreamsResponse,
+  StatEntry,
+} from '../main/types.js';
 import { Cache, createLogger, getTimeTakenSincePoint } from '../utils/index.js';
 import { generateBingeGroup } from './utils.js';
 
@@ -159,7 +163,7 @@ export class StremioTransformer {
   async transformStreams(
     response: AIOStreamsResponse<{
       streams: ParsedStream[];
-      statistics: { title: string; description: string; forced?: boolean }[];
+      statistics: StatEntry[];
     }>,
     formatterContext: FormatterContext,
     options?: { provideStreamData?: boolean; disableAutoplay?: boolean }
@@ -188,22 +192,7 @@ export class StremioTransformer {
       `Transformed ${streams.length} streams using ${this.userData.formatter.id} formatter in ${getTimeTakenSincePoint(start)}`
     );
 
-    // add errors to the end (if this.userData.hideErrors is false  or the resource is not in this.userData.hideErrorsForResources)
-    if (this.showError('stream', errors)) {
-      transformedStreams.push(
-        ...errors.map((error) =>
-          StremioTransformer.createErrorStream({
-            errorTitle: error.title,
-            errorDescription: error.description,
-          })
-        )
-      );
-    }
-
-    const toStatisticStream = (statistic: {
-      title: string;
-      description: string;
-    }) => ({
+    const toStatisticStream = (statistic: StatEntry) => ({
       name: statistic.title,
       description: statistic.description,
       externalUrl: 'https://github.com/Viren070/AIOStreams',
@@ -212,27 +201,46 @@ export class StremioTransformer {
       },
     });
 
-    const forcedStats = statistics.filter((s) => s.forced);
-    const userStats = statistics.filter((s) => !s.forced);
-
     const position = this.userData.statistics?.position || 'bottom';
+    const errorPosition = this.userData.statistics?.errorPosition ?? 'default';
 
-    // Forced stats always surface regardless of user config, but respect position
-    if (forcedStats.length > 0) {
-      if (position === 'bottom') {
-        transformedStreams.push(...forcedStats.map(toStatisticStream));
-      } else {
-        transformedStreams.unshift(...forcedStats.map(toStatisticStream));
-      }
+    const forcedStats = statistics.filter((s) => s.forced);
+    const userStats = this.userData.statistics?.enabled
+      ? statistics.filter((s) => !s.forced)
+      : [];
+    const isRouted = (s: StatEntry) =>
+      errorPosition !== 'default' && s.kind === 'error';
+
+    // add errors (if this.userData.hideErrors is false or the resource is not in this.userData.hideErrorsForResources)
+    const errorStreams = [
+      ...(this.showError('stream', errors)
+        ? errors.map((error) =>
+            StremioTransformer.createErrorStream({
+              errorTitle: error.title,
+              errorDescription: error.description,
+            })
+          )
+        : []),
+      ...userStats.filter(isRouted).map(toStatisticStream),
+    ];
+    if (errorPosition !== 'top') {
+      transformedStreams.push(...errorStreams);
     }
 
-    if (this.userData.statistics?.enabled) {
-      const statisticStreams = userStats.map(toStatisticStream);
-      if (position === 'bottom') {
-        transformedStreams.push(...statisticStreams);
-      } else {
-        transformedStreams.unshift(...statisticStreams);
-      }
+    // Forced stats always surface regardless of user config, but respect position
+    const plainStats = userStats.filter((s) => !isRouted(s));
+    if (position === 'bottom') {
+      transformedStreams.push(
+        ...[...forcedStats, ...plainStats].map(toStatisticStream)
+      );
+    } else {
+      transformedStreams.unshift(
+        ...[...plainStats, ...forcedStats].map(toStatisticStream)
+      );
+    }
+
+    if (errorPosition === 'top') {
+      transformedStreams.unshift(...errorStreams);
     }
 
     return {

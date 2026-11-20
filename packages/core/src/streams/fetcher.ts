@@ -5,6 +5,7 @@ import {
   getAddonName,
   getTimeTakenSincePoint,
 } from '../utils/index.js';
+import type { StatEntry } from '../main/types.js';
 import { Wrapper } from '../main/wrapper.js';
 import {
   ExitConditionEvaluator,
@@ -75,10 +76,7 @@ class StreamFetcher {
       title?: string;
       description?: string;
     }[];
-    statistics: {
-      title: string;
-      description: string;
-    }[];
+    statistics: StatEntry[];
     /** Per-addon outcome map used by per-user analytics. */
     dispositions: AddonDispositionMap;
     /** Summed across addon groups. */
@@ -93,10 +91,7 @@ class StreamFetcher {
       title: string;
       description: string;
     }[] = [];
-    const allStatisticStreams: {
-      title: string;
-      description: string;
-    }[] = [];
+    const allStatisticStreams: StatEntry[] = [];
     let allStreams: ParsedStream[] = [];
     let mediaInfoMs = 0;
     const start = Date.now();
@@ -183,7 +178,8 @@ class StreamFetcher {
           );
         }
 
-        const statisticStream = {
+        const statisticStream: StatEntry = {
+          kind: errorStreams.length > 0 ? 'error' : undefined,
           title: `${errorStreams.length > 0 ? '🟠' : '🟢'} [${getAddonName(addon)}] Scrape Summary`,
           description: `✔ Status      : ${errorStreams.length > 0 ? 'PARTIAL SUCCESS' : 'SUCCESS'}
 📦 Streams    : ${streams.length}

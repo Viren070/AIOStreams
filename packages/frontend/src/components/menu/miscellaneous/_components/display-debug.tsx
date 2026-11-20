@@ -48,6 +48,25 @@ export function DisplayDebug() {
             }));
           }}
         />
+        <Select
+          label="Error Position"
+          help="Where to show error streams and partial-failure summaries. Default keeps error streams at the bottom and shows summaries with the other statistics."
+          options={[
+            { label: 'Default', value: 'default' },
+            { label: 'Top', value: 'top' },
+            { label: 'Bottom', value: 'bottom' },
+          ]}
+          value={userData.statistics?.errorPosition || 'default'}
+          onValueChange={(value) => {
+            setUserData((prev) => ({
+              ...prev,
+              statistics: {
+                ...prev.statistics,
+                errorPosition: value as 'default' | 'top' | 'bottom',
+              },
+            }));
+          }}
+        />
         <Combobox
           label="Statistics to Show"
           options={['addon', 'filter', 'timing'].map((statistic) => ({
