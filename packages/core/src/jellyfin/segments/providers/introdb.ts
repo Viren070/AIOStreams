@@ -79,6 +79,10 @@ export const introDbProvider: SegmentProvider = {
         },
       }
     );
+    // A miss is a 200 with null fields. A rate limit or a server error is
+    // thrown so it is not remembered as one.
+    if (response.status === 429 || response.status >= 500)
+      throw new Error(`IntroDB answered ${response.status}`);
     if (!response.ok) return [];
     const body = (await response.json()) as IntroDbResponse;
     const stingerMs = msOf(
