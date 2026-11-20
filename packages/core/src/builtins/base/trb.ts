@@ -48,7 +48,7 @@ export abstract class TrbBaseAddon<
 
     const queries = this.buildQueries(parsedId, metadata, {
       titleLanguages: getTitleLanguagesForUrl(
-        this.site.getConfig().url,
+        this.site.getConfig().url[0],
         this.id
       ),
     });

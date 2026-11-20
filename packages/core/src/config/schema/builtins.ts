@@ -7,6 +7,7 @@ import {
   positiveInt,
   seconds,
   serviceTimeMap,
+  urlOrUrlList,
   urlString,
 } from './helpers.js';
 import type { RuntimeConfigSection } from '../types.js';
@@ -14,6 +15,9 @@ import type { RuntimeConfigSection } from '../types.js';
 const nullableString = z.string().nullable();
 const nullableUrl = z.union([urlString, z.null()]);
 const stringList = z.array(z.string());
+const urlListRequired = urlOrUrlList.refine((urls) => urls.length > 0, {
+  message: 'At least one URL is required',
+});
 
 const titleLangSpecs = z
   .union([z.array(z.string()), z.string().transform((s) => s.split(','))])
@@ -1001,13 +1005,19 @@ export const builtinsSchema = {
   },
   torrentGalaxy: {
     url: {
-      schema: urlString,
-      default: 'https://torrentgalaxy.online',
-      label: 'Torrent Galaxy URL',
+      schema: urlListRequired,
+      // Jackett: https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/torrentgalaxyclone.yml
+      default: [
+        'https://torrentgalaxy.online',
+        'https://torrentgalaxy.info',
+      ] as string[],
+      label: 'Torrent Galaxy URL(s)',
       env: 'BUILTIN_TORRENT_GALAXY_URL',
-      description: 'Base URL for the Torrent Galaxy built-in addon.',
+      description:
+        'Base URL(s) for the Torrent Galaxy built-in addon, tried in order when one fails. Multiple URLs as a JSON array.',
       requiresRestart: false,
       secret: false,
+      ui: { kind: 'list' },
     },
     defaultTimeout: {
       schema: optionalPositiveInt,
@@ -1049,13 +1059,22 @@ export const builtinsSchema = {
   },
   eztv: {
     url: {
-      schema: urlString,
-      default: 'https://eztvx.to',
-      label: 'EZTV URL',
+      schema: urlListRequired,
+      // Jackett: https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/eztv.yml
+      default: [
+        'https://eztvx.to',
+        'https://eztv.wf',
+        'https://eztv.tf',
+        'https://eztv.yt',
+        'https://eztv1.xyz',
+      ] as string[],
+      label: 'EZTV URL(s)',
       env: 'BUILTIN_EZTV_URL',
-      description: 'Base URL for the EZTV built-in addon.',
+      description:
+        'Base URL(s) for the EZTV built-in addon, tried in order when one fails. Multiple URLs as a JSON array.',
       requiresRestart: false,
       secret: false,
+      ui: { kind: 'list' },
     },
     defaultTimeout: {
       schema: optionalPositiveInt,
@@ -1096,13 +1115,16 @@ export const builtinsSchema = {
   },
   therarbg: {
     url: {
-      schema: urlString,
-      default: 'https://therarbg.to',
-      label: 'TheRARBG URL',
+      schema: urlListRequired,
+      // Jackett: https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/therarbg.yml
+      default: ['https://therarbg.to', 'https://therarbg.com'] as string[],
+      label: 'TheRARBG URL(s)',
       env: 'BUILTIN_THERARBG_URL',
-      description: 'Base URL for the TheRARBG built-in addon.',
+      description:
+        'Base URL(s) for the TheRARBG built-in addon, tried in order when one fails. Multiple URLs as a JSON array.',
       requiresRestart: false,
       secret: false,
+      ui: { kind: 'list' },
     },
     defaultTimeout: {
       schema: optionalPositiveInt,
