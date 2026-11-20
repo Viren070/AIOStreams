@@ -1,8 +1,14 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 // Use the normal core entry point to initialise the builtins' dependency graph.
 import '../../index.js';
 import { BaseDebridAddon } from './debrid.js';
+import { calculateAbsoluteEpisode } from '../utils/general.js';
+import { MetadataService } from '../../metadata/service.js';
+import { AnimeDatabase } from '../../anime-database/index.js';
+import { StreamContext } from '../../streams/context.js';
+import { settingsStore } from '../../config/index.js';
+import { SettingsRepository } from '../../db/repositories/settings.js';
 import StreamParser from '../../parser/streams.js';
 import type { Stream, ParsedStream } from '../../db/schemas.js';
 import type {
@@ -77,5 +83,125 @@ describe('BaseDebridAddon seeder metadata', () => {
       },
       undefined
     );
+  });
+});
+
+describe('Issue #1685: calculateAbsoluteEpisode with split-cour and missing seasons', () => {
+  before(async () => {
+    mock.method(SettingsRepository, 'getAll', async () => []);
+    mock.method(SettingsRepository, 'getVersion', async () => 0);
+    await settingsStore.initialise();
+  });
+
+  it('calculates absolute episode normally when the requested season exists in seasons', () => {
+    const seasons = [
+      { number: '0', episodes: 8 },
+      { number: '1', episodes: 13 },
+      { number: '2', episodes: 12 },
+    ];
+    assert.equal(calculateAbsoluteEpisode('2', '1', seasons), '14');
+    assert.equal(calculateAbsoluteEpisode('1', '5', seasons), '5');
+  });
+
+  it('uses animeEntry fromEpisode offset when the requested season is missing from Cinemeta seasons (Fate/Zero S2E1)', () => {
+    const cinemetaSeasons = [
+      { number: '0', episodes: 8 },
+      { number: '1', episodes: 25 },
+    ];
+    const fateZeroS2Entry = {
+      imdb: { seasonNumber: 1, fromEpisode: 14 },
+      tmdb: { seasonNumber: 1, fromEpisode: 14 },
+      tvdb: { seasonNumber: 2, fromEpisode: 1 },
+    };
+
+    assert.equal(
+      calculateAbsoluteEpisode('2', '1', cinemetaSeasons, fateZeroS2Entry),
+      '14'
+    );
+    assert.equal(
+      calculateAbsoluteEpisode('2', '5', cinemetaSeasons, fateZeroS2Entry),
+      '18'
+    );
+  });
+
+  it('adds episodes before the mapped season when fromEpisode maps into a later season', () => {
+    const seasons = [
+      { number: '1', episodes: 24 },
+      { number: '2', episodes: 25 },
+    ];
+    const entry = {
+      imdb: { seasonNumber: 2, fromEpisode: 14 },
+    };
+
+    assert.equal(calculateAbsoluteEpisode('3', '2', seasons, entry), '39');
+  });
+
+  it('returns undefined instead of summing all seasons when season is absent and no mapping applies', () => {
+    const cinemetaSeasons = [{ number: '1', episodes: 25 }];
+    assert.equal(calculateAbsoluteEpisode('2', '1', cinemetaSeasons), undefined);
+    assert.equal(
+      calculateAbsoluteEpisode('2', '1', cinemetaSeasons, {
+        tvdb: { seasonNumber: 2, fromEpisode: 1 },
+      }),
+      undefined
+    );
+  });
+
+  it('resolves absoluteEpisode = 14 (not 26) in BaseDebridAddon._getSearchMetadata and StreamContext for Fate/Zero S2E1', async () => {
+    const fateZeroEntry: any = {
+      animeSeason: { year: 2012 },
+      imdb: { seasonNumber: 1, fromEpisode: 14 },
+      tmdb: { seasonNumber: 1, fromEpisode: 14 },
+      tvdb: { seasonNumber: 2, fromEpisode: 1 },
+      trakt: { seasonNumber: 2 },
+    };
+
+    mock.method(MetadataService.prototype, 'getMetadata', async () => ({
+      title: 'Fate/Zero',
+      titles: ['Fate/Zero'],
+      year: 2011,
+      originalLanguage: 'ja',
+      seasons: [
+        { season_number: 0, episode_count: 8 },
+        { season_number: 1, episode_count: 25 },
+      ],
+    }));
+    mock.method(AnimeDatabase, 'getInstance', () => ({
+      getEntryById: async () => fateZeroEntry,
+    }));
+
+    const searchAddon = Object.create(BaseDebridAddon.prototype);
+    searchAddon.userData = {};
+    searchAddon.logger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    };
+
+    const searchMeta = await searchAddon._getSearchMetadata(
+      {
+        type: 'imdbId',
+        value: 'tt2051178',
+        season: '2',
+        episode: '1',
+      },
+      'series'
+    );
+
+    assert.equal(searchMeta.absoluteEpisode, 14);
+    assert.equal(searchMeta.relativeAbsoluteEpisode, undefined);
+
+    const ctx = await StreamContext.create(
+      'series',
+      'tt2051178:2:1',
+      {} as any
+    );
+    ctx.startMetadataFetch();
+    const ctxMeta = await ctx.getMetadata();
+    assert.equal(ctxMeta?.absoluteEpisode, 14);
+    assert.equal(ctxMeta?.relativeAbsoluteEpisode, undefined);
+
+    mock.restoreAll();
   });
 });
