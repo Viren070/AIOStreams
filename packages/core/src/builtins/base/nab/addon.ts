@@ -176,13 +176,8 @@ export abstract class BaseNabAddon<
       searchEpisode
     )
       queryParams.ep = searchEpisode.toString();
-    if (
-      !this.userData.forceQuerySearch &&
-      searchCapabilities.supportedParams.includes('year') &&
-      metadata.year &&
-      parsedId.mediaType === 'movie'
-    )
-      queryParams.year = metadata.year.toString();
+    // No `year` param: Prowlarr never sends one. An id search does not need
+    // it, and a title search carries the year in `q` instead.
 
     // date-based shows: numeric season/ep params return nothing, the Sonarr
     // daily convention (season=YYYY&ep=MM/DD) is what indexers understand
@@ -237,8 +232,7 @@ export abstract class BaseNabAddon<
       metadata.primaryTitle
     ) {
       queries = this.buildQueries(parsedId, metadata, {
-        // add year if it is not already in the query params
-        addYear: !queryParams.year,
+        addYear: true,
         // add season and episode if they are not already in the query params
         // some endpoints won't return results with season/ep in query
         addSeasonEpisode: forceIncludeSeasonEpInParams.includes(
