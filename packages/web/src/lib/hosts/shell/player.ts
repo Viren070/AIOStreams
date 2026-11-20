@@ -18,6 +18,7 @@ import { upscalingOn } from '@/lib/playback/upscaling';
 import type { Span } from '@/lib/subtitles/align';
 import {
   ownTrackLabel,
+  type PlayerFeature,
   type QueuedItem,
   type Track,
 } from '@/lib/playback/controller';
@@ -100,6 +101,16 @@ function unzoomed(frame: VideoFrame): VideoFrame {
     bottomRadius: frame.bottomRadius * zoom,
   };
 }
+
+export const shellFeatures = (): PlayerFeature[] => [
+  'audio',
+  'chapters',
+  'stats',
+  'headers',
+  'upscaling',
+  'anyFormat',
+  ...(appBridge()?.pip ? ['pictureInPicture' as const] : []),
+];
 
 export const appEngine: EngineFactory = (emit, { launched }) => {
   const external = !!launched;

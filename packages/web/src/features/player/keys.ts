@@ -275,6 +275,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.faster': () => stepRate(1),
       'player.normalSpeed': () => changeRate(1),
       'player.fullscreen': () => call(player().toggleFullscreen),
+      'player.pictureInPicture': () =>
+        !currentHost().tv && call(player().togglePictureInPicture),
       'player.stats': () => {
         const { stats } = player();
         if (!stats) return false;

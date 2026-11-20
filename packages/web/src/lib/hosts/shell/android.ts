@@ -5,7 +5,7 @@ import { onSettingsChange, settings, type PlayerEngine } from '@/lib/settings';
 import { backGesture, backPressed } from './back-slide';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
-import { appEngine, setEngine } from './player';
+import { appEngine, setEngine, shellFeatures } from './player';
 import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
@@ -120,14 +120,9 @@ export const androidHost: Host = {
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: [
-    'audio',
-    'chapters',
-    'stats',
-    'headers',
-    'upscaling',
-    'anyFormat',
-  ],
+  get playerFeatures() {
+    return shellFeatures();
+  },
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : androidDownloads;

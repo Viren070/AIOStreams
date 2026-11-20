@@ -60,16 +60,28 @@ export interface PlayerState {
 /** What some players add to what a browser's video can do. */
 /** `anyFormat`: opens any container and codec. */
 export type PlayerFeature =
-  'audio' | 'chapters' | 'stats' | 'headers' | 'upscaling' | 'anyFormat';
+  | 'audio'
+  | 'chapters'
+  | 'stats'
+  | 'headers'
+  | 'upscaling'
+  | 'anyFormat'
+  | 'pictureInPicture';
 
 /** Engines that list a file's audio tracks let the page's own video switch them. */
-export const browserFeatures: readonly PlayerFeature[] =
-  'audioTracks' in HTMLMediaElement.prototype ? ['audio'] : [];
+export const browserFeatures: readonly PlayerFeature[] = [
+  ...('audioTracks' in HTMLMediaElement.prototype ? ['audio' as const] : []),
+  ...(document.pictureInPictureEnabled ? ['pictureInPicture' as const] : []),
+];
 
 export const webGpuFeatures: readonly PlayerFeature[] = [
   'audio',
   'stats',
   'upscaling',
+  ...(document.pictureInPictureEnabled &&
+  'captureStream' in HTMLCanvasElement.prototype
+    ? ['pictureInPicture' as const]
+    : []),
 ];
 
 /** What lining an added subtitle up with the file's own found; `asked` when the user asked for it. */
