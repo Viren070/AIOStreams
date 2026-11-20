@@ -12,6 +12,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "macos")]
+use unicode_normalization::UnicodeNormalization;
 use ureq::ResponseExt;
 
 use crate::bridge::{DownloadJob, DownloadStatus, FileKind, Outbound};
@@ -740,6 +742,9 @@ fn destination_lock(path: &Path) -> Arc<Mutex<()>> {
         .zip(path.file_name())
         .and_then(|(parent, name)| fs::canonicalize(parent).ok().map(|dir| dir.join(name)))
         .unwrap_or_else(|| path.to_path_buf());
+    // APFS treats canonically equivalent filename spellings as aliases.
+    #[cfg(target_os = "macos")]
+    let key = PathBuf::from(key.to_string_lossy().nfd().collect::<String>());
     // The file may not exist yet. Use a conservative case-insensitive key on
     // platforms where the destination volume commonly ignores case.
     #[cfg(any(windows, target_os = "macos"))]
@@ -980,6 +985,15 @@ mod range_tests {
             Arc::ptr_eq(&lower, &upper),
             cfg!(any(windows, target_os = "macos"))
         );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn destination_lock_matches_apfs_unicode_aliases() {
+        let folder = std::env::temp_dir();
+        let composed = destination_lock(&folder.join("caf\u{e9}.jpg"));
+        let decomposed = destination_lock(&folder.join("cafe\u{301}.jpg"));
+        assert!(Arc::ptr_eq(&composed, &decomposed));
     }
 
     #[test]
