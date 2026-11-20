@@ -379,6 +379,7 @@ const STREMIO_NNTP_SERVICE = 'stremio_nntp';
 const STREMTHRU_NEWZ_SERVICE = 'stremthru_newz';
 const AIOSTREAMS_SERVICE = 'aiostreams';
 const TORRIN_SERVICE = 'torrin';
+const HIGHWAY_SERVICE = 'highway';
 
 const SERVICES = [
   REALDEBRID_SERVICE,
@@ -399,6 +400,7 @@ const SERVICES = [
   STREMTHRU_NEWZ_SERVICE,
   AIOSTREAMS_SERVICE,
   TORRIN_SERVICE,
+  HIGHWAY_SERVICE,
 ] as const;
 
 export const BUILTIN_SUPPORTED_SERVICES = [
@@ -957,6 +959,23 @@ const SERVICE_DETAILS: Record<
         name: 'API Key',
         description:
           'Your Torrin API key (begins with `tr_`). Obtain it from [torrin.app/app/settings](https://torrin.app/app/settings).',
+        type: 'password',
+        required: true,
+      },
+    ],
+  },
+  [HIGHWAY_SERVICE]: {
+    id: HIGHWAY_SERVICE,
+    name: 'HighWay',
+    shortName: 'HW',
+    knownNames: ['HW', 'HighWay', 'High-Way'],
+    signUpText: "Don't have an account? [Sign up here](https://high-way.me/)",
+    credentials: [
+      {
+        id: 'apiKey',
+        name: 'API Token',
+        description:
+          'Your HighWay API token. Create one in the [Download Center](https://cloud.high-way.me/#sessions) under "Sitzungen" (sessions). It needs read and write access to torrents.',
         type: 'password',
         required: true,
       },
@@ -1794,6 +1813,7 @@ export {
   DEBRIDLINK_SERVICE,
   TORBOX_SERVICE,
   TORRIN_SERVICE,
+  HIGHWAY_SERVICE,
   EASYDEBRID_SERVICE,
   DEBRIDER_SERVICE,
   PUTIO_SERVICE,
