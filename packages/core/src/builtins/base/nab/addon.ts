@@ -349,8 +349,15 @@ export abstract class BaseNabAddon<
     try {
       initialResponse = await this.api.search(searchFunction, params);
     } catch (error) {
-      // Some indexers accept numeric ep but reject the daily MM/DD form.
-      if (daily && error instanceof NabApiError && error.code === 200)
+      // 201 means incorrect parameter. Some indexers return the same
+      // description with code 200, which normally means missing parameter.
+      if (
+        daily &&
+        error instanceof NabApiError &&
+        (error.code === 201 ||
+          (error.code === 200 &&
+            /^incorrect parameter\b/i.test(error.description)))
+      )
         return [];
       throw error;
     }

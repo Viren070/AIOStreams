@@ -120,6 +120,16 @@ describe('daily Newznab searches', () => {
     assert.deepEqual(calls, [daily, season]);
   });
 
+  it('retries a standard incorrect-parameter response with a numeric episode', async () => {
+    const item = release('Daily.Show.S02E03');
+    const { run, calls } = fixture(
+      [new NabApiError(201, 'Invalid ep'), [item]],
+      'episode'
+    );
+    assert.deepEqual((await run()).results, [item]);
+    assert.deepEqual(calls, [daily, numeric]);
+  });
+
   it('uses an episode request for an ongoing season in dynamic mode', async () => {
     const { run, calls } = fixture([[], []], 'dynamic');
     assert.deepEqual(
@@ -141,6 +151,7 @@ describe('daily Newznab searches', () => {
   it('propagates auth, transport and numeric parameter errors', async () => {
     for (const error of [
       new NabApiError(100, 'Incorrect credentials'),
+      new NabApiError(200, 'Missing parameter: key'),
       new Error('HTTP 429'),
     ]) {
       const { run, calls } = fixture([error]);
