@@ -174,10 +174,22 @@ export class MetadataService {
               const ownId = animeEntry?.mappings?.imdbId?.toString();
               promises.push(
                 (async () => {
-                  const meta = await imdbMetadata.getCinemetaData(
-                    hintedId,
-                    type
-                  );
+                  let meta: Meta;
+                  try {
+                    meta = await imdbMetadata.getCinemetaData(hintedId, type, {
+                      season: id.season,
+                      episode: id.episode,
+                    });
+                  } catch (error) {
+                    // A failed/stale hinted show must not hide an already
+                    // cached episode on the anime entry's own IMDb record.
+                    if (!ownId || ownId === hintedId || !id.episode)
+                      throw error;
+                    return imdbMetadata.getCinemetaData(ownId, type, {
+                      season: id.season,
+                      episode: id.episode,
+                    });
+                  }
                   // hints can name an IMDb entry Cinemeta has no aired episode for
                   const hasEpisode = meta?.videos?.some(
                     (v) =>
@@ -192,9 +204,12 @@ export class MetadataService {
                     id.episode &&
                     !hasEpisode
                   ) {
-                    return (
-                      (await imdbMetadata.getCinemetaData(ownId, type)) ?? meta
-                    );
+                    return imdbMetadata
+                      .getCinemetaData(ownId, type, {
+                        season: id.season,
+                        episode: id.episode,
+                      })
+                      .catch(() => meta);
                   }
                   return meta;
                 })()
