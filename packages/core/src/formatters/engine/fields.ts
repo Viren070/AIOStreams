@@ -20,6 +20,7 @@ export const FIELD_REGISTRY: Readonly<Record<string, readonly string[]>> = {
     'dubbed',
     'languages',
     'mediaInfoQuality',
+    'mediaInfoSource',
     'uLanguages',
     'subtitles',
     'uSubtitles',

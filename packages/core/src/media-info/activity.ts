@@ -23,7 +23,7 @@ function current(now: number): Hour {
   return last;
 }
 
-function sourceOf(origin: string): string {
+export function sourceOf(origin: string): string {
   return origin.startsWith(REMOTE_ORIGIN_PREFIX) ? 'remote' : origin;
 }
 
