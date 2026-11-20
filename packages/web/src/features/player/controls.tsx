@@ -852,6 +852,8 @@ function ControlsLayer({
   useWindowButtons(visible);
   useFocusInside(root, visible, rest.wake);
   useLiftSubtitles(player, bottomBar, visible);
+  // A touch on hidden controls leaves them hidden, focus included.
+  const quietTouch = React.useRef(false);
   return (
     <ControlsShown.Provider value={shown}>
       <div
@@ -865,14 +867,19 @@ function ControlsLayer({
           'group/controls peer fixed inset-0 z-10 select-none',
           !visible && 'cursor-none'
         )}
-        onFocus={rest.wake}
-        onPointerMove={rest.wake}
+        onFocus={() => {
+          if (!quietTouch.current) rest.wake();
+        }}
+        onPointerMove={(e) => {
+          if (e.pointerType !== 'touch' || visible) rest.wake();
+        }}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           onPointerType(e.pointerType);
           // A tap on hidden controls must not press what appears under it.
-          if (e.pointerType !== 'touch' || visible) rest.wake();
-          else rest.stir();
+          quietTouch.current = e.pointerType === 'touch' && !visible;
+          if (quietTouch.current) rest.stir();
+          else rest.wake();
         }}
       >
         {under}
