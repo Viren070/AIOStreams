@@ -3219,6 +3219,7 @@ msgid "Pick the version to download."
 msgstr "Επίλεξε την έκδοση για λήψη."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Εικόνα μέσα σε εικόνα"
 
