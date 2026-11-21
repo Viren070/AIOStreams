@@ -135,6 +135,8 @@ interface Layer {
   /** Shown at once, off screen. */
   still?: boolean;
   gone?: boolean;
+  /** The side it comes in from: 1 the right, -1 the left. */
+  from?: number;
 }
 
 let nextLayer = 0;
@@ -153,12 +155,16 @@ const fadeAll = (all: Layer[]) =>
 function Backdrops({
   current,
   fade = true,
+  from = 0,
 }: {
   current: string | undefined;
   fade?: boolean;
+  /** The side a new backdrop comes in from, or 0 to only fade. */
+  from?: number;
 }) {
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
   const [layers, setLayers] = React.useState<Layer[]>([]);
+  const side = useLatest(from);
   React.useEffect(() => {
     if (!current) return setLayers(fadeAll);
     if (!loaded.has(current)) {
@@ -172,7 +178,12 @@ function Backdrops({
         return [{ src: current, id: nextLayer++, quick: false, still: true }];
       return [
         ...all.slice(1 - MAX_LAYERS),
-        { src: current, id: nextLayer++, quick: all.every((l) => l.gone) },
+        {
+          src: current,
+          id: nextLayer++,
+          quick: all.every((l) => l.gone),
+          from: side.current || undefined,
+        },
       ];
     });
   }, [current, loaded, fade]);
@@ -199,6 +210,10 @@ function Backdrops({
         <CachedImage
           key={layer.id}
           data-ui="hero-backdrop"
+          // On a TV it slides in from this side, see styles.css.
+          data-from={
+            layer.from ? (layer.from > 0 ? 'right' : 'left') : undefined
+          }
           src={layer.src}
           alt=""
           onAnimationEnd={(e) => {
@@ -650,6 +665,9 @@ function HeroTrailer({
   );
 }
 
+/** The side a step's title comes in from; right to left, the next lies to the left. */
+const sideOf = (step: number) => (pageRtl() ? -step : step);
+
 /** A rotating feature of a few titles at the top of the home page. */
 export function Hero({
   items,
@@ -661,6 +679,8 @@ export function Hero({
   const { client } = useSession();
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
+  /** The side the title on show came in from: 1 the right, -1 the left, 0 by a swipe or at first. */
+  const [from, setFrom] = React.useState(0);
   useArtBackground(featured[index]);
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
@@ -676,6 +696,8 @@ export function Hero({
   }, [chosen, index]);
   const swipe = useSwipeFade((step) => {
     setChosen(true);
+    // The swipe has faded it in already.
+    setFrom(0);
     setIndex((i) => (i + step + featured.length) % featured.length);
     setSlots(([prev, main, next]) =>
       step > 0 ? [main, next, prev] : [next, prev, main]
@@ -696,7 +718,10 @@ export function Hero({
     if (el && swipeable) return claimSideSwipes(el);
   }, [loading, swipeable]);
 
-  React.useEffect(() => setIndex(0), [featured.length]);
+  React.useEffect(() => {
+    setIndex(0);
+    setFrom(0);
+  }, [featured.length]);
   React.useEffect(() => {
     if (
       paused ||
@@ -707,10 +732,10 @@ export function Hero({
       featured.length < 2
     )
       return;
-    const timer = setTimeout(
-      () => setIndex((i) => (i + 1) % featured.length),
-      seconds * 1000
-    );
+    const timer = setTimeout(() => {
+      setFrom(sideOf(1));
+      setIndex((i) => (i + 1) % featured.length);
+    }, seconds * 1000);
     return () => clearTimeout(timer);
   }, [
     index,
@@ -735,6 +760,7 @@ export function Hero({
     if (at < 0 || actions[at + step] || (step < 0 && !index)) return false;
     landing.current = step > 0 ? 'first' : 'last';
     setChosen(true);
+    setFrom(sideOf(step));
     setIndex((i) => (i + step + featured.length) % featured.length);
   };
   const turning = focused && featured.length > 1;
@@ -802,6 +828,7 @@ export function Hero({
       {trailer.box}
       <div
         data-ui="hero-art"
+        data-trailer={trailer.shown || undefined}
         // Fades out at its edge, where some GPUs draw the art's last row past
         // the shade. Not on the art's own box, which moves as the page scrolls.
         className="absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_2px)]"
@@ -820,7 +847,11 @@ export function Hero({
               className={cn(slideClass(role), role && 'z-[1]')}
             >
               <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(var(--hero-height)*2.6)]">
-                <Backdrops current={backdropSrc(client, item)} fade={!role} />
+                <Backdrops
+                  current={backdropSrc(client, item)}
+                  fade={!role}
+                  from={role ? 0 : from}
+                />
               </BackdropFrame>
             </div>
           ))}
@@ -859,6 +890,7 @@ export function Hero({
               aria-label={dotLabel(f)}
               onClick={() => {
                 setChosen(true);
+                if (i !== index) setFrom(sideOf(i > index ? 1 : -1));
                 setIndex(i);
               }}
               className={cn(
