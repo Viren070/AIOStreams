@@ -988,7 +988,10 @@ export function mediaSourcesFrom(
       }).token;
   let ordered =
     opts.offered ??
-    offeredSources(memo.sources, opts.support ?? {}, maxVersionsFor(ctx));
+    offeredSources(memo.sources, opts.support ?? {}, maxVersionsFor(ctx), {
+      profile: opts.profile,
+      mode: ctx.userData.deviceCapabilities,
+    });
   if (opts.requestedMsid) {
     const idx = ordered.findIndex((s) => s.msid === opts.requestedMsid);
     if (idx > 0)

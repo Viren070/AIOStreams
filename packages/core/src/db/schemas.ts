@@ -81,6 +81,15 @@ const PassthroughSchema = z.union([
 export type PassthroughValue = z.infer<typeof PassthroughSchema>;
 export type PassthroughStage = z.infer<typeof PassthroughStages>;
 
+export const DeviceCapabilitiesModeSchema = z.enum([
+  'off',
+  'deprioritise',
+  'exclude',
+]);
+export type DeviceCapabilitiesMode = z.infer<
+  typeof DeviceCapabilitiesModeSchema
+>;
+
 const SortCriterion = z.object({
   key: z.enum(constants.SORT_CRITERIA),
   direction: z.enum(constants.SORT_DIRECTIONS),
@@ -848,6 +857,9 @@ export const UserDataSchema = z.object({
       showInfoOnFilter: z.boolean().optional(),
     })
     .optional(),
+  // How to treat versions/streams the client's device profile says it can't
+  // direct-play. Applied per request after the shared pipeline/memo cache.
+  deviceCapabilities: DeviceCapabilitiesModeSchema.optional(),
   enableSeadex: z.boolean().optional(),
   excludeSeasonPacks: z.boolean().optional(),
   excludeCached: z.boolean().optional(),

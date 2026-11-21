@@ -192,7 +192,16 @@ export interface JellyfinMediaSource {
   [key: string]: unknown;
 }
 
+export interface DirectPlayProfile {
+  Type?: string;
+  Container?: string;
+  VideoCodec?: string;
+  AudioCodec?: string;
+}
+
 export interface DeviceProfile {
+  MaxStreamingBitrate?: number;
+  DirectPlayProfiles?: DirectPlayProfile[];
   SubtitleProfiles?: { Format?: string; Method?: string }[];
   [key: string]: unknown;
 }

@@ -3,6 +3,7 @@ export * from './ids.js';
 export * from './images.js';
 export * from './enrichment.js';
 export * from './dto.js';
+export * from './device-profile.js';
 export * from './media.js';
 export * from './track-defaults.js';
 export * from './subtitles.js';

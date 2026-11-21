@@ -1,4 +1,9 @@
-import type { MediaTrack, ParsedFile, ParsedStream } from '../db/schemas.js';
+import type {
+  DeviceCapabilitiesMode,
+  MediaTrack,
+  ParsedFile,
+  ParsedStream,
+} from '../db/schemas.js';
 import { constants, getSimpleTextHash, hasTrackLists } from '../utils/index.js';
 import type { TitleMetadata } from '../debrid/base.js';
 import { withPlayPath } from '../debrid/utils.js';
@@ -9,6 +14,7 @@ import { streamReleaseKey } from '../release-blocklist/stream-keys.js';
 import { probeBeforePlay } from '../media-info/play.js';
 import type { ContributionIds } from '../media-info/contribute.js';
 import { languageToIso6392 } from '../utils/languages.js';
+import { AUDIO_CODEC, ENCODE_CODEC, directPlayable } from './device-profile.js';
 import { subtitleLanguage } from './enrichment.js';
 import {
   defaultTrackIndexes,
@@ -23,6 +29,7 @@ import {
 } from './subtitles.js';
 import type {
   AiostreamsSourceExtension,
+  DeviceProfile,
   JellyfinMediaSource,
   JellyfinMediaStream,
   MediaSourceRecord,
@@ -42,35 +49,6 @@ type AudioTag = (typeof constants.AUDIO_TAGS)[number];
 type AudioChannels = (typeof constants.AUDIO_CHANNELS)[number];
 type Resolution = (typeof constants.RESOLUTIONS)[number];
 type VisualTag = (typeof constants.VISUAL_TAGS)[number];
-
-/* ffmpeg codec names, what Jellyfin clients compare their device profiles against */
-const ENCODE_CODEC = {
-  AV1: 'av1',
-  HEVC: 'hevc',
-  AVC: 'h264',
-  'VC-1': 'vc1',
-  XviD: 'mpeg4',
-  DivX: 'mpeg4',
-  'MPEG-4': 'mpeg4',
-  Unknown: undefined,
-} satisfies Record<Encode, string | undefined>;
-
-const AUDIO_CODEC = {
-  Atmos: 'truehd',
-  TrueHD: 'truehd',
-  'DTS:X': 'dts',
-  'DTS-HD MA': 'dts',
-  'DTS-HD': 'dts',
-  'DTS-ES': 'dts',
-  DTS: 'dts',
-  'DD+': 'eac3',
-  DD: 'ac3',
-  PCM: 'pcm_s16le',
-  OPUS: 'opus',
-  FLAC: 'flac',
-  AAC: 'aac',
-  Unknown: undefined,
-} satisfies Record<AudioTag, string | undefined>;
 
 const CHANNEL_COUNT = {
   '2.0': 2,
@@ -273,15 +251,29 @@ export function isPlayable(
   return need === undefined || (need !== null && !!support[need]);
 }
 
+export interface OfferedDeviceOptions {
+  profile?: DeviceProfile;
+  mode?: DeviceCapabilitiesMode;
+}
+
 export function offeredSources(
   sources: MediaSourceRecord[],
   support: PlaySupport,
-  max: number
+  max: number,
+  device?: OfferedDeviceOptions
 ): MediaSourceRecord[] {
-  const playable = sources
-    .filter((s) => !s.notice && (!s.needs || support[s.needs]))
-    .slice(0, max);
-  return [...playable, ...sources.filter((s) => s.notice)];
+  let playable = sources.filter(
+    (s) => !s.notice && (!s.needs || support[s.needs])
+  );
+  if (device?.mode && device.mode !== 'off' && device.profile) {
+    const ok: MediaSourceRecord[] = [];
+    const not: MediaSourceRecord[] = [];
+    for (const s of playable) {
+      (directPlayable(s, device.profile) ? ok : not).push(s);
+    }
+    playable = device.mode === 'exclude' ? ok : [...ok, ...not];
+  }
+  return [...playable.slice(0, max), ...sources.filter((s) => s.notice)];
 }
 
 function fileKey(stream: ParsedStream): string {
