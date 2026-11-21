@@ -1,5 +1,5 @@
 import { createLogger } from '../logging/logger.js';
-import { makeRequest } from './http.js';
+import { makeRequest } from './http/index.js';
 import { config as appConfig } from '../config/index.js';
 import { onShareInvalidation } from '../shares/invalidation.js';
 

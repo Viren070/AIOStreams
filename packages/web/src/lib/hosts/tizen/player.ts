@@ -24,6 +24,7 @@ import {
   type EngineFile,
   type EngineState,
   type EngineTrack,
+  type ServerSubtitle,
   type VideoFrame,
 } from '@/lib/playback/engine';
 import type { AvPlay } from '.';
@@ -104,6 +105,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
   const audioControl = window.tizen?.tvaudiocontrol;
   const report = (state: EngineState) => emit({ type: 'state', state });
   let file: EngineFile | null = null;
+  let subtitles: ServerSubtitle[] = [];
   let position = 0;
   // When AVPlay last said where it was, and whether it was playing on.
   let positionAt = 0;
@@ -277,7 +279,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
       {
         own: ownTracks ?? [],
         embedded: reading,
-        server: file?.subtitles ?? [],
+        server: subtitles,
       },
       surface,
       { delayMs, height: liftHeight },
@@ -322,6 +324,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
     load(next) {
       teardown();
       file = next;
+      subtitles = next.subtitles;
       position = next.startMs;
       delayMs = next.subtitleDelayMs;
       subtitle = null;
@@ -506,6 +509,9 @@ export const avPlayEngine: EngineFactory = (emit) => {
     },
     setAudio: (id) => run(() => av.setSelectTrack('AUDIO', Number(id))),
     setSubtitle,
+    setSubtitles(next) {
+      subtitles = next;
+    },
     setSubtitleDelay(ms) {
       delayMs = ms;
       showText();

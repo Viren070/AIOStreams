@@ -199,11 +199,14 @@ function linksFor(item: BaseItemDto, season?: BaseItemDto) {
 export function Header({
   item,
   season,
+  hero,
   pending = false,
   refreshing = false,
 }: {
   item: BaseItemDto;
   season?: BaseItemDto;
+  /** The page has art across its top. */
+  hero: boolean;
   /** Only what a list knew so far; parts still to come keep their place. */
   pending?: boolean;
   /** Its details are being fetched afresh. */
@@ -232,9 +235,8 @@ export function Header({
   }, [pending]);
   const holding = pending || (continuing && airing.loading && !late);
   const logo = logoUrl(client, item, { maxWidth: 416 });
-  const poster = useTitlePoster()
-    ? posterUrl(client, item, { maxWidth: 320 })
-    : null;
+  const cover = posterUrl(client, item, { maxWidth: 320 });
+  const poster = useTitlePoster() ? cover : null;
   // By address, so a different logo in the full details still gets its try.
   const [failedLogo, setFailedLogo] = React.useState<string>();
   const logoFailed = !!logo && failedLogo === logo;
@@ -248,12 +250,43 @@ export function Header({
   const drawn = (src: string) => (el: HTMLImageElement | null) => {
     if (el?.complete && el.naturalWidth) settle(src)();
   };
+  const collection = item.Type === 'BoxSet';
+  // A collection's cover by its name isn't the poster the setting leaves off.
+  const badge = collection && !hero && !(logo && !logoFailed) ? cover : null;
+  // A collection has no poster here, and its badge can come once the header
+  // has shown, when the art across the page fails, so neither is waited for.
   const pictured =
-    (!poster || loaded.has(poster)) &&
+    (!poster || collection || loaded.has(poster)) &&
     (!logo || logoFailed || loaded.has(logo));
   // A show's next episode decides what its overview tells of, so it's waited
   // for like the pictures.
   const ready = !holding && ((pictured && !nextUpPending) || late);
+  const name =
+    logo && !logoFailed ? (
+      <CachedImage
+        key={logo}
+        data-ui="item-logo"
+        src={logo}
+        alt={item.Name ?? ''}
+        ref={drawn(logo)}
+        onLoad={settle(logo)}
+        onError={() => setFailedLogo(logo)}
+        className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
+      />
+    ) : pending ? (
+      // A list may know no logo its own details have, so the name waits.
+      <Skeleton
+        data-ui="item-logo-placeholder"
+        className="h-20 w-80 max-w-full max-sm:mx-auto lg:h-28"
+      />
+    ) : (
+      <h1
+        data-ui="item-title"
+        className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+      >
+        {item.Name}
+      </h1>
+    );
   const links = React.useMemo(() => linksFor(item, season), [item, season]);
   const overviewImage = React.useMemo(
     () => landscapeUrls(client, item, { maxWidth: 480 }),
@@ -331,7 +364,7 @@ export function Header({
           !ready && 'hidden'
         )}
       >
-        {poster && (
+        {poster && !collection && (
           <CachedImage
             key={poster}
             data-ui="item-poster"
@@ -350,30 +383,26 @@ export function Header({
         )}
         <div className="min-w-0 max-w-3xl flex-1 space-y-4">
           <div data-ui="item-heading" className="space-y-4">
-            {logo && !logoFailed ? (
-              <CachedImage
-                key={logo}
-                data-ui="item-logo"
-                src={logo}
-                alt={item.Name ?? ''}
-                ref={drawn(logo)}
-                onLoad={settle(logo)}
-                onError={() => setFailedLogo(logo)}
-                className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
-              />
-            ) : pending ? (
-              // A list may know no logo its own details have, so the name waits.
-              <Skeleton
-                data-ui="item-logo-placeholder"
-                className="h-20 w-80 max-w-full max-sm:mx-auto lg:h-28"
-              />
-            ) : (
-              <h1
-                data-ui="item-title"
-                className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+            {badge ? (
+              <div
+                data-ui="item-name"
+                className="flex items-center gap-4 max-sm:justify-center"
               >
-                {item.Name}
-              </h1>
+                <CachedImage
+                  data-ui="item-badge"
+                  src={badge}
+                  alt=""
+                  className={cn(
+                    'flex-none rounded-lg object-cover ring-1 ring-white/10',
+                    cardShape(item) === 'poster'
+                      ? 'aspect-[2/3] h-20'
+                      : 'aspect-video h-14 lg:h-16'
+                  )}
+                />
+                {name}
+              </div>
+            ) : (
+              name
             )}
             {!holding && item.Taglines?.[0] && (
               <p

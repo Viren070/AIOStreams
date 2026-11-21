@@ -14,6 +14,9 @@ const RETRY_MS = 5000;
 const keyOf = (location: ParsedLocation) =>
   location.state.__TSR_key ?? location.href;
 
+const pageOf = (location: ParsedLocation | undefined) =>
+  location?.pathname.split('/')[1];
+
 const labelOf = (el: Element) =>
   (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
 
@@ -29,17 +32,21 @@ function spotOf(el: HTMLElement): Spot {
   };
 }
 
+// Pages kept hidden behind this one can have the same rows and items.
+const shown = (el: Element) => !el.closest('[inert]');
+
 function find(spot: Spot): HTMLElement | null {
   const row =
-    spot.row && document.querySelector(`[data-row="${CSS.escape(spot.row)}"]`);
+    spot.row &&
+    [...document.querySelectorAll(`[data-row="${CSS.escape(spot.row)}"]`)].find(
+      shown
+    );
   return (
     [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find(
       (el) =>
         (spot.href
           ? addressOf(el) === spot.href
-          : labelOf(el) === spot.label) &&
-        // Home, kept hidden behind other pages, has many of the same items.
-        !el.closest('[inert]')
+          : labelOf(el) === spot.label) && shown(el)
     ) ?? null
   );
 }
@@ -65,23 +72,33 @@ export function returnFocus(router: AnyRouter): () => void {
     else if (onPage?.isConnected)
       spots.set(keyOf(fromLocation), spotOf(onPage));
   });
-  const arrive = router.subscribe('onRendered', ({ toLocation }) => {
-    cancelAnimationFrame(frame);
-    const spot = spots.get(keyOf(toLocation));
-    if (!spot && !usingKeys()) return;
-    const until = performance.now() + RETRY_MS;
-    // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
-    const look = () => {
-      const active = document.activeElement;
-      // Focus left on a page kept hidden (inert) is on its way out.
-      if (active && active !== document.body && !active.closest('[inert]'))
-        return;
-      const el = spot ? find(spot) : startOf();
-      if (el?.getClientRects().length) focusOn(el);
-      else if (performance.now() < until) frame = requestAnimationFrame(look);
-    };
-    look();
-  });
+  const arrive = router.subscribe(
+    'onRendered',
+    ({ fromLocation, toLocation }) => {
+      cancelAnimationFrame(frame);
+      const spot = spots.get(keyOf(toLocation));
+      if (!spot && !usingKeys()) return;
+      // A new entry of the same kind of page keeps the keys on the same control, where it has one.
+      const same =
+        !spot &&
+        onPage?.isConnected &&
+        pageOf(fromLocation) === pageOf(toLocation)
+          ? spotOf(onPage)
+          : undefined;
+      const until = performance.now() + RETRY_MS;
+      // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
+      const look = () => {
+        const active = document.activeElement;
+        // Focus left on a page now kept hidden (inert) counts as none.
+        if (active && active !== document.body && !active.closest('[inert]'))
+          return;
+        const el = spot ? find(spot) : ((same && find(same)) ?? startOf());
+        if (el?.getClientRects().length) focusOn(el);
+        else if (performance.now() < until) frame = requestAnimationFrame(look);
+      };
+      look();
+    }
+  );
   return () => {
     document.removeEventListener('focusin', track);
     leave();

@@ -133,7 +133,8 @@ export function PlayerControls({
   const tv = !!currentHost().tv;
   const root = React.useRef<HTMLDivElement>(null);
   const bottomBar = React.useRef<HTMLDivElement>(null);
-  const rest = useIdle(IDLE_MS);
+  // Where no pause screen takes over, the controls stay while paused.
+  const rest = useIdle(IDLE_MS, () => state.paused && !pauseScreenFits);
   const { wake, hide, soon, brief } = rest;
   const [shown] = React.useState(() => createLive(false));
   // Some TVs' web views report a coarse pointer.
@@ -172,23 +173,20 @@ export function PlayerControls({
     listing ||
     channels ||
     scrub?.resume !== undefined;
-  const view = (idle: boolean, hidden: boolean) => {
-    const pauseScreen =
-      ready &&
-      !player.external &&
-      !locked &&
-      state.paused &&
-      idle &&
-      !busy &&
-      !state.error &&
-      !offeringNext &&
-      steps !== 'trailer';
+  const pauseScreenFits =
+    ready &&
+    !player.external &&
+    !locked &&
+    state.paused &&
+    !busy &&
+    !state.error &&
+    !offeringNext &&
+    steps !== 'trailer';
+  const view = (shownNow: boolean, idle: boolean) => {
+    const pauseScreen = pauseScreenFits && idle;
     const visible =
       !!player.external ||
-      (ready &&
-        !locked &&
-        !hidden &&
-        (!idle || busy || (state.paused && !pauseScreen)));
+      (ready && !locked && (busy || (shownNow && !pauseScreen)));
     return { visible, pauseScreen };
   };
   // The video appears without the controls, unless it opens paused.
@@ -202,8 +200,10 @@ export function PlayerControls({
   React.useEffect(() => {
     if (!ready) return;
     if (wasPaused.current && !state.paused) soon(BRIEF_IDLE_MS);
+    // The pause screen waits from the pause, which can leave the controls as they were.
+    if (wasPaused.current === false && state.paused) rest.stir();
     wasPaused.current = state.paused;
-  }, [ready, state.paused, soon]);
+  }, [ready, state.paused, soon, rest]);
 
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
@@ -358,6 +358,7 @@ export function PlayerControls({
     live,
     visible: shown.get,
     wake,
+    stir: rest.stir,
     glancing: () => brief.current,
     hide,
     notice: showNotice,
@@ -830,8 +831,8 @@ function ControlsLayer({
   rest: Rest;
   shown: LiveWriter<boolean>;
   view(
-    idle: boolean,
-    hidden: boolean
+    shown: boolean,
+    idle: boolean
   ): { visible: boolean; pauseScreen: boolean };
   root: React.RefObject<HTMLDivElement | null>;
   bottomBar: React.RefObject<HTMLDivElement | null>;
@@ -843,13 +844,16 @@ function ControlsLayer({
   under: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const idle = useLive(rest.idle);
-  const hidden = useLive(rest.hidden);
-  const { visible, pauseScreen } = view(idle, hidden);
+  const { visible, pauseScreen } = view(
+    useLive(rest.shown),
+    useLive(rest.idle)
+  );
   React.useLayoutEffect(() => shown.set(visible), [shown, visible]);
   useWindowButtons(visible);
   useFocusInside(root, visible, rest.wake);
   useLiftSubtitles(player, bottomBar, visible);
+  // A touch on hidden controls leaves them hidden, focus included.
+  const quietTouch = React.useRef(false);
   return (
     <ControlsShown.Provider value={shown}>
       <div
@@ -863,13 +867,19 @@ function ControlsLayer({
           'group/controls peer fixed inset-0 z-10 select-none',
           !visible && 'cursor-none'
         )}
-        onFocus={rest.wake}
-        onPointerMove={rest.wake}
+        onFocus={() => {
+          if (!quietTouch.current) rest.wake();
+        }}
+        onPointerMove={(e) => {
+          if (e.pointerType !== 'touch' || visible) rest.wake();
+        }}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           onPointerType(e.pointerType);
           // A tap on hidden controls must not press what appears under it.
-          if (e.pointerType !== 'touch' || visible) rest.wake();
+          quietTouch.current = e.pointerType === 'touch' && !visible;
+          if (quietTouch.current) rest.stir();
+          else rest.wake();
         }}
       >
         {under}

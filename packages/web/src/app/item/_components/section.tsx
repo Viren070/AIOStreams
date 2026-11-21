@@ -8,7 +8,7 @@ export function Section({
 }: {
   name: string;
   /** Left out when the first row carries it. */
-  title?: string;
+  title?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {

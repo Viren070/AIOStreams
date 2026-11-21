@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLatest } from '@/hooks/use-latest';
+import { usePageShown } from '@/lib/page-shown';
 import { action, actionsFor, type ActionId } from './actions';
 import {
   activate,
@@ -45,16 +46,18 @@ export function onAction(
   return () => void entries.delete(entry);
 }
 
+/** Off on a page kept hidden behind another. */
 export function useAction(
   id: ActionId,
   run: ActionHandler,
   enabled = true
 ): void {
   const latest = useLatest(run);
+  const on = enabled && usePageShown();
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!on) return;
     return onAction(id, (input, repeat) => latest.current(input, repeat));
-  }, [id, enabled, latest]);
+  }, [id, on, latest]);
 }
 
 function runHandlers(

@@ -3355,6 +3355,7 @@ msgstr ""
 
 #: src/app/settings/player.tsx
 #: src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr ""
 

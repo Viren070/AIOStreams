@@ -20,6 +20,7 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  ServerSubtitle,
 } from './engine';
 import { ownTrackLabel } from './controller';
 import {
@@ -127,6 +128,19 @@ interface FileTrack {
   text: string;
 }
 
+function trackElement(
+  video: HTMLVideoElement,
+  subtitle: ServerSubtitle
+): HTMLTrackElement {
+  const track = document.createElement('track');
+  track.kind = 'subtitles';
+  track.src = subtitle.url;
+  track.label = subtitle.label;
+  if (subtitle.lang) track.srclang = subtitle.lang;
+  video.append(track);
+  return track;
+}
+
 /**
  * The page's own `<video>`. Styled scripts and a file's own pictures draw in
  * layers over it; text shows as its text tracks.
@@ -136,6 +150,7 @@ export function videoEngine(
 ): EngineFactory {
   return (emit) => {
     let file: EngineFile | null = null;
+    let subtitles: ServerSubtitle[] = [];
     let elements: HTMLTrackElement[] = [];
     let files: FileTrack[] = [];
     let delayMs = 0;
@@ -259,14 +274,14 @@ export function videoEngine(
       shiftCues();
     };
     const setSubtitle = (id: string | null) => {
-      const at = file?.subtitles.findIndex((s) => s.id === id) ?? -1;
+      const at = subtitles.findIndex((s) => s.id === id);
       layer?.destroy();
       layer = null;
       hideOwnText();
       const el = video.current;
       const picked = drawSubtitle(
         id,
-        { own: ownTracks, embedded, server: file?.subtitles ?? [] },
+        { own: ownTracks, embedded, server: subtitles },
         el && videoSurface(el),
         { delayMs, height },
         {
@@ -291,7 +306,7 @@ export function videoEngine(
       }
       elements.forEach((e, i) => {
         e.track.mode =
-          !layer && file?.subtitles[i]?.id === id ? 'showing' : 'disabled';
+          !layer && subtitles[i]?.id === id ? 'showing' : 'disabled';
       });
       for (const f of files)
         f.track.mode = f.id === id ? 'showing' : 'disabled';
@@ -318,16 +333,9 @@ export function videoEngine(
         dropHls();
         removeElements();
         file = next;
+        subtitles = next.subtitles;
         delayMs = next.subtitleDelayMs;
-        elements = next.subtitles.map((s) => {
-          const track = document.createElement('track');
-          track.kind = 'subtitles';
-          track.src = s.url;
-          track.label = s.label;
-          if (s.lang) track.srclang = s.lang;
-          el.append(track);
-          return track;
-        });
+        elements = subtitles.map((s) => trackElement(el, s));
         if (next.volume) {
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
@@ -478,6 +486,16 @@ export function videoEngine(
         set({ audio: id });
       },
       setSubtitle,
+      setSubtitles(next) {
+        const el = video.current;
+        if (!file || !el) return;
+        for (const s of next.slice(subtitles.length)) {
+          const track = trackElement(el, s);
+          track.addEventListener('load', onTrackLoad);
+          elements.push(track);
+        }
+        subtitles = next;
+      },
       setSubtitleDelay(ms) {
         delayMs = ms;
         shiftCues();

@@ -19,7 +19,7 @@ export function PillTabs<T>({
   className,
 }: {
   name: string;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; note?: string }[];
   value: T;
   onChange: (value: T) => void;
   className?: string;
@@ -38,7 +38,7 @@ export function PillTabs<T>({
         const selected = option.value === value;
         return (
           <Button
-            key={option.label}
+            key={String(option.value)}
             data-ui="pill-tab"
             data-selected={selected || undefined}
             size="xs"
@@ -48,6 +48,11 @@ export function PillTabs<T>({
             onClick={() => onChange(option.value)}
           >
             {option.label}
+            {option.note && (
+              <span data-ui="pill-tab-note" className="ms-1.5 opacity-60">
+                {option.note}
+              </span>
+            )}
           </Button>
         );
       })}
