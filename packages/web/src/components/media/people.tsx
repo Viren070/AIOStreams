@@ -1,4 +1,6 @@
 import { t } from '@lingui/core/macro';
+import { Skeleton } from '@aiostreams/ui/skeleton';
+import { cn } from '@aiostreams/ui/core/styling';
 import { formatLocale } from '@/lib/i18n';
 import { useSession } from '@/lib/jellyfin/session';
 import { personImageUrl } from '@/lib/artwork/urls';
@@ -97,6 +99,23 @@ export function PeopleRow({
         />
       ))}
     </MediaRow>
+  );
+}
+
+/** A row of people blocked out, held while a title's own details come. */
+export function PeopleRowSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      <Skeleton className="h-6 w-16" />
+      <div className="flex gap-4 overflow-hidden">
+        {Array.from({ length: 10 }, (_, i) => (
+          <div key={i} className={cn('flex-none space-y-2', PERSON_WIDTH)}>
+            <Skeleton className="mx-auto size-20 rounded-full sm:size-24" />
+            <Skeleton className="mx-auto h-3 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
