@@ -43,7 +43,7 @@ import { copyOf, shownSubtitle, useSubtitleTiming } from './subtitle-timing';
 const EARLY_END_MS = 30_000;
 
 /** Late enough after the start that reading the file's index for thumbnails doesn't slow it. */
-const THUMBNAIL_INDEX_MS = 5_000;
+const THUMBNAIL_INDEX_MS = 1_500;
 
 /** How long subtitles stay at a newly picked height while the controls show. */
 const PLACING_MS = 3_000;

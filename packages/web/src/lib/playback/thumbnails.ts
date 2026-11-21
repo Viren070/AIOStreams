@@ -125,8 +125,10 @@ export function thumbnailFeed(
     if (asking || none || stopped) return;
     const forRow = rowWanted.find((p) => !row.has(p) && !rowSkipped.has(p));
     if (forRow !== undefined) return ask(forRow, false);
-    // Kept pictures wait, so they never slow down the ones being looked at.
-    if (wanted !== null || rowWanted.length) return;
+    // Kept pictures wait, so they never slow down the ones being looked at:
+    // the seek bar's, and a row's still missing (asked for above). A row with
+    // all its pictures in doesn't hold them up.
+    if (wanted !== null) return;
     const toKeep = keptWanted.find(
       (p) => !keptDone.has(p) && !keptSkipped.has(p)
     );
@@ -193,7 +195,9 @@ export function thumbnailFeed(
         row = new Map(row);
         for (const p of stale.slice(0, stale.length - ROW_KEPT)) row.delete(p);
       }
-      if (asking?.kept) drop();
+      // A kept picture on its way goes on unless the row now lacks one of its own.
+      const lacking = rowWanted.some((p) => !row.has(p) && !rowSkipped.has(p));
+      if (asking?.kept && lacking) drop();
       askNext();
     },
     row: () => (none ? null : row),
