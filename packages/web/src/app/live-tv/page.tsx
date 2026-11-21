@@ -304,6 +304,14 @@ export function LiveTvPage({
     if (target) focusOn(target);
     else leaveUp();
   };
+  // Down from the picker skips the pills, which would pick another group.
+  useAction('nav.down', () => {
+    if (document.activeElement !== find('[data-ui=live-group-picker]'))
+      return false;
+    const grid = channelsBox();
+    if (grid) focusOn(grid);
+    else return pages.isLoading;
+  });
   // A remote's digits go to the channel with that number, loading on to it.
   // Numbers run through the whole lineup, so one outside the group opens All
   // channels on it.
