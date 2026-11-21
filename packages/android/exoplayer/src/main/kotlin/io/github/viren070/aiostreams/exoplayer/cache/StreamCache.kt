@@ -93,6 +93,11 @@ internal class StreamCache(
         stream?.setSkips(held, landings)
     }
 
+    /** Bytes the page is about to seek into, fetched at once in place of the last ones; null when it no longer will. */
+    fun setHeading(range: LongRange?) {
+        stream?.setHeading(range)
+    }
+
     /** What the player holds past where it plays, which side fetches and held skips go by. */
     fun setPlayer(bufferedUs: Long, playing: Boolean) {
         player.bufferedUs = bufferedUs

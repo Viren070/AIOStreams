@@ -263,6 +263,7 @@ export function PlayerControls({
       resume: last ? last.resume : !state.paused,
     };
     setScrub(scrubbing.current);
+    latest.current.prepareSeek?.(scrubbing.current.toMs);
     return true;
   };
   /** Plays from a remote's scrub, or drops it; false without one. */
@@ -271,6 +272,7 @@ export function PlayerControls({
     if (s?.resume === undefined) return false;
     scrubbing.current = null;
     setScrub(null);
+    if (!commit) latest.current.prepareSeek?.(null);
     if (commit) latest.current.seek(s.toMs);
     // Only a hold scrubs from playing, after its first press skipped.
     else if (s.resume) latest.current.seek(s.fromMs);
@@ -331,6 +333,7 @@ export function PlayerControls({
         toMs: durationMs ? Math.min(durationMs, to) : to,
       };
       setScrub(scrubbing.current);
+      latest.current.prepareSeek?.(scrubbing.current.toMs);
     },
     onScrubEnd: (commit) => {
       const s = scrubbing.current;
@@ -338,6 +341,7 @@ export function PlayerControls({
       setScrub(null);
       if (commit && s && Math.abs(s.toMs - s.fromMs) >= 1000)
         latest.current.seek(s.toMs);
+      else latest.current.prepareSeek?.(null);
       if (shown.get()) wake();
     },
     onPinch: player.fit

@@ -116,7 +116,15 @@ export function useBurstSeek(
   } | null>(null);
   const [heading, setHeading] = React.useState<number | null>(null);
   const [landed, setLanded] = React.useState(false);
-  React.useEffect(() => () => clearTimeout(burst.current?.timer), []);
+  // A burst that never sends its seek lets go of where it headed.
+  React.useEffect(
+    () => () => {
+      const pending = burst.current;
+      if (pending && !pending.sent) latest.current.prepareSeek?.(null);
+      clearTimeout(pending?.timer);
+    },
+    [latest]
+  );
   React.useEffect(() => {
     if (heading === null || !landed) return;
     const { playhead } = latest.current;
@@ -154,6 +162,8 @@ export function useBurstSeek(
         sent: !last,
         timer: setTimeout(settle, SEEK_BURST_MS),
       };
+      // The player can fetch there while the burst waits for its last press.
+      if (!burst.current.sent) latest.current.prepareSeek?.(target);
       setHeading(target);
       setLanded(false);
     },

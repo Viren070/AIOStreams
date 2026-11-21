@@ -264,6 +264,14 @@ class ExoEngine(private val context: Context) : Engine {
         sendLines()
     }
 
+    /** From the keyframe the seek starts at, as the player reads there first. */
+    override fun prepareSeek(positionMs: Double?) = post {
+        val map = seekMap?.takeIf { it.isSeekable }
+        if (positionMs == null || map == null || url == null) return@post cache.setHeading(null)
+        val range = bytesAt(map, positionMs, after = false) until bytesAt(map, positionMs + HEADING_MS, after = true)
+        cache.setHeading(range.takeUnless { it.isEmpty() })
+    }
+
     override fun setSkips(skips: List<Skip>) = post {
         this.skips = skips
         updateSkips()
@@ -516,13 +524,16 @@ class ExoEngine(private val context: Context) : Engine {
     /** Automatic skips are held from a little past their start, as the page skips once playback is in them. */
     private fun updateSkips() {
         val map = seekMap?.takeIf { it.isSeekable } ?: return cache.setSkips(emptyList(), emptyList())
-        fun at(ms: Double, after: Boolean) = map.getSeekPoints((ms * 1000).toLong()).let { if (after) it.second else it.first }.position
+        fun at(ms: Double, after: Boolean) = bytesAt(map, ms, after)
         val (auto, offered) = skips.partition { it.auto }
         cache.setSkips(
             held = auto.map { at(it.startMs + SKIP_REACTION_MS, after = true) until at(it.endMs, after = false) }.filterNot { it.isEmpty() },
             landings = offered.map { at(it.endMs, after = false) until at(it.endMs + LANDING_MS, after = true) }.filterNot { it.isEmpty() },
         )
     }
+
+    private fun bytesAt(map: SeekMap, ms: Double, after: Boolean) =
+        map.getSeekPoints((ms * 1000).toLong()).let { if (after) it.second else it.first }.position
 
     /** Past full, the sound processor raises the sound further. */
     private fun applyVolume() {
@@ -828,6 +839,7 @@ class ExoEngine(private val context: Context) : Engine {
         const val IDLE_POLLS = 10
         const val VOLUME_MAX = 130.0
         const val LANDING_MS = 10_000.0
+        const val HEADING_MS = 10_000.0
         const val SKIP_REACTION_MS = 2_000.0
     }
 }
