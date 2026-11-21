@@ -92,7 +92,7 @@ export function pgsLayer(
   surface: PictureSurface,
   start: { delayMs: number; height: number }
 ): PgsLayer {
-  const { canvas, place, box, unwatch } = overlayCanvas(surface, () => {
+  const { canvas, place, unwatch } = overlayCanvas(surface, () => {
     painted = '';
     paint();
   });
@@ -157,31 +157,22 @@ export function pgsLayer(
     if (entry) ask(entry.startMs);
     if (next) ask(next.startMs);
     const shown = entry ? drawn.get(entry.startMs) : null;
-    const { width: wide, height: high } = box();
-    const scale = window.devicePixelRatio || 1;
-    const width = Math.round(wide * scale);
-    const tall = Math.round(high * scale);
-    const key = `${entry?.startMs}:${shown ? 'drawn' : 'none'}:${width}x${tall}:${height}`;
+    const key = `${entry?.startMs}:${shown ? 'drawn' : 'none'}:${height}`;
     if (key === painted) return;
     painted = key;
-    if (canvas.width !== width || canvas.height !== tall) {
-      canvas.width = width;
-      canvas.height = tall;
-    } else context.clearRect(0, 0, width, tall);
+    if (
+      shown &&
+      (canvas.width !== shown.width || canvas.height !== shown.height)
+    ) {
+      // PGS pictures already have a raster size. CSS fits that plane to the video.
+      canvas.width = shown.width;
+      canvas.height = shown.height;
+    } else context.clearRect(0, 0, canvas.width, canvas.height);
     if (!shown) return;
-    const sx = width / shown.width;
-    const sy = tall / shown.height;
-    // Lower-half pictures lift with the other subtitles.
-    const lift = (height / 100) * tall;
+    const lift = (height / 100) * shown.height;
     for (const { x, y, image } of shown.pictures) {
       const low = y + image.height / 2 > shown.height / 2;
-      context.drawImage(
-        image,
-        x * sx,
-        y * sy - (low ? lift : 0),
-        image.width * sx,
-        image.height * sy
-      );
+      context.drawImage(image, x, y - (low ? lift : 0));
     }
   };
 

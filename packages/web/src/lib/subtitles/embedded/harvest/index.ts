@@ -114,9 +114,10 @@ export abstract class SubtitleHarvest {
     if (roomy && this.active) this.pump();
   }
 
-  /** The player hands over the track's lines as it reads the file, so nothing is read for them from here on. */
-  fromPlayer(): void {
-    this.supplied = true;
+  /** Suspend independent reads while the player's demuxer supplies this track. */
+  fromPlayer(supplied = true): void {
+    this.supplied = supplied;
+    if (!supplied && this.active) this.pump();
   }
 
   supplyBlock(_block: SuppliedBlock): Promise<void> {
