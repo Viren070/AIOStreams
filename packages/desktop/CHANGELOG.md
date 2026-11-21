@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.28.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.27.0...desktop-v0.28.0) (2026-11-21)
+
+
+### Features
+
+* add a hero band and backgroundVideo to collection pages ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **desktop:** build a Linux AppImage and .deb with the libs' libmpv ([b60cef4](https://github.com/Viren070/AIOStreams/commit/b60cef4bfa832d52f116417c7c3958bb08a2044a))
+* show a collection's sources as tabs or rows ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **web:** add a picture-in-picture shortcut ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+
+
+### Bug Fixes
+
+* **desktop:** turn off WebKit's sandbox where bwrap can't start ([7afc674](https://github.com/Viren070/AIOStreams/commit/7afc674b43ef9eff7ae92db9d12d002df1b71157))
+* **web:** dock the mini player only in a shown page ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **web:** give each page-drawn subtitle line its own direction ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **web:** keep a touch's focus from waking the player's hidden controls ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **web:** leave mixed libraries out of Discover's collection picker ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+* **web:** size the page background to the tallest viewport ([3fd7dfa](https://github.com/Viren070/AIOStreams/commit/3fd7dfa4ab083b61b9489875ade3c7100a72b2e1))
+
 ## [0.27.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.26.0...desktop-v0.27.0) (2026-11-19)
 
 
