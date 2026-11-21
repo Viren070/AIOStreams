@@ -15,7 +15,7 @@ import type {
 import { createLogger } from '../logging/logger.js';
 import { Cache } from '../utils/cache.js';
 import { getSimpleTextHash } from '../utils/crypto.js';
-import { fetchRemoteCapped } from '../utils/safe-fetch.js';
+import { fetchRemoteCapped } from '../utils/http/safe-fetch.js';
 
 const logger = createLogger('health-checks');
 

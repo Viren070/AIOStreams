@@ -1,5 +1,5 @@
 import z from 'zod';
-import { makeRequest } from '../http.js';
+import { makeRequest } from '../http/index.js';
 import { createLogger } from '../../logging/logger.js';
 import { Cache } from '../cache.js';
 import { config as appConfig } from '../../config/index.js';

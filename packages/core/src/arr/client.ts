@@ -1,5 +1,5 @@
 import { createLogger } from '../logging/logger.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 import type { ArrInstance } from './types.js';
 
 const logger = createLogger('arr');

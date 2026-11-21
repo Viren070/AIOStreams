@@ -6,6 +6,8 @@
 /* The room the floating nav bar takes, which pages keep free. */
 :root {
   --nav-bar: calc(5rem + env(safe-area-inset-bottom));
+  /* Home's hero on large screens. */
+  --hero-height: max(36rem, 53vh);
 }
 @media (min-width: 1024px) {
   :root:not([data-nav='bar']) {
@@ -26,10 +28,10 @@
       animation-timeline: scroll(root);
       animation-range: 0 100vh;
     }
-    /* Home under a back swipe follows its own scroll, not the page's above it. */
-    [data-page='home'][data-peek] [data-ui='hero-backdrops'] {
+    /* A page under a back swipe follows its own scroll, not the page's above it. */
+    [data-peek] :is([data-ui='item-backdrop'], [data-ui='hero-backdrops']) {
       animation: none;
-      transform: translateY(calc(min(var(--home-y), 100vh) / 2));
+      transform: translateY(calc(min(var(--peek-at), 1) * 50vh));
     }
     /* What's over a phone's hero or a title's art fades as it scrolls away. */
     @media (max-width: 639px) {
@@ -49,17 +51,19 @@
       [data-ui='item-heading'] {
         animation-range: 25vh 60vh;
       }
-      [data-page='home'][data-peek]
-        :is([data-ui='hero-content'], [data-ui='hero-dots']) {
+      [data-peek] :is([data-ui='hero-content'], [data-ui='hero-dots']) {
         animation: none;
-        opacity: var(--home-fade);
+        opacity: clamp(0, (0.5 - var(--peek-at)) / 0.4, 1);
+      }
+      [data-peek] [data-ui='item-heading'] {
+        animation: none;
+        opacity: clamp(0, (0.6 - var(--peek-at)) / 0.35, 1);
       }
     }
   }
 }
-/* Only while inert, so it ends in the same frame Home returns to its place. */
-[data-page='home'][inert][data-peek],
-[data-back-under][inert][data-peek] {
+/* Only while inert, so it ends in the same frame the page returns to its place. */
+[data-page][inert][data-peek] {
   visibility: visible;
   content-visibility: visible;
   margin-top: var(--peek-top);
@@ -383,7 +387,7 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
 
 /* Where the picture fades into the wash, at its side and foot, it's darker. */
 :root[data-tv][data-art-wash]
-  [data-ui='title-art']:has(> [data-ui='item-backdrop'])::after {
+  [data-ui='title-art']:has(> [data-ui='item-backdrop']:not([hidden]))::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -392,7 +396,7 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
     linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
 }
 :root[data-tv][dir='rtl'][data-art-wash]
-  [data-ui='title-art']:has(> [data-ui='item-backdrop'])::after {
+  [data-ui='title-art']:has(> [data-ui='item-backdrop']:not([hidden]))::after {
   background:
     linear-gradient(to top left, rgb(0 0 0 / 0.7), transparent 55%),
     linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
@@ -400,7 +404,10 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
 :root[data-tv] [data-ui='item-backdrop'] [data-ui='backdrop-frame'] {
   max-width: none;
 }
-:root[data-tv] [data-ui='item-backdrop'] [data-ui='item-backdrop-image'] {
+/* A collection's video is placed as the picture it fades in over. */
+:root[data-tv]
+  [data-ui='item-backdrop']
+  :is([data-ui='item-backdrop-image'], [data-ui='item-backdrop-video']) {
   object-position: center;
 }
 
@@ -628,9 +635,14 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [role='option']:focus-visible:not([data-focus='own']) {
   outline-offset: -2px;
 }
-[data-tv] [cmdk-input][data-on-filter] {
-  outline: 2px solid var(--ring);
-  outline-offset: -2px;
+/* A list's filter row, rounded as its options are and inside the list's edges. */
+[data-tv] [cmdk-input-wrapper] {
+  margin: 0.25rem 0.25rem 0;
+  border-radius: var(--radius);
+}
+/* A shadow, as older TV engines draw outlines square. */
+[data-tv] [cmdk-input-wrapper][data-on-filter] {
+  box-shadow: inset 0 0 0 2px var(--ring);
 }
 
 /* A guide programme's title moves with the day's scroll to stay beside the

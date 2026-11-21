@@ -1,13 +1,43 @@
 ﻿import type { Logger } from '../../logging/logger.js';
 import { Cache } from '../../utils/cache.js';
-import { createLogger } from '../../utils/index.js';
+import { constants, createLogger } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
+import type { NZB } from '../../debrid/index.js';
+import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import pLimit from 'p-limit';
 
 const logger = createLogger('builtin:scrape');
 
 export const createQueryLimit = () =>
   pLimit(appConfig.builtins.scrape.queryConcurrency);
+
+/** Points each NZB at an AIOStreams proxy URL, so a service can fetch it without reaching the indexer. */
+export async function proxyNzbs(nzbs: NZB[], auth: string): Promise<void> {
+  BuiltinProxy.validateAuth(auth);
+  const proxy = createProxy({
+    id: constants.BUILTIN_SERVICE,
+    url: appConfig.bootstrap.baseUrl,
+    credentials: auth,
+  });
+  const nzbsToProxy = nzbs.map((nzb) => ({
+    url: nzb.nzb,
+    filename: nzb.title,
+  }));
+  const proxiedUrls = await proxy.generateUrls(
+    nzbsToProxy.map(({ url, filename }) => ({
+      url,
+      filename: filename || url.split('/').pop(),
+      type: 'nzb',
+    })),
+    false // don't encrypt NZB URLs to make sure the URLs stay the same.
+  );
+  if (!proxiedUrls || 'error' in proxiedUrls) {
+    throw new Error('Failed to proxy NZBs: ' + proxiedUrls?.error || '');
+  }
+  for (let i = 0; i < nzbs.length; i++) {
+    nzbs[i].nzb = proxiedUrls[i];
+  }
+}
 
 /** Hours since `date` (e.g. an indexer's pubDate), or undefined if unparsable or in the future. */
 export function ageInHoursSince(date: string): number | undefined {

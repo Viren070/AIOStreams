@@ -9,28 +9,29 @@ title.
 
 ## Meta and catalog entry fields
 
-| Field                | Shape                                                     | Shown in Jellyfin as                                                                |
-| -------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                                                     |
-| `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows                           |
-| `animatedPoster`     | image URL, animated (GIF, animated WebP or APNG)          | Played over the poster while its card is focused or hovered, in the AIOStreams apps |
-| `originalTitle`      | string                                                    | The original title, under the name when they differ                                 |
-| `tagline`            | string                                                    | The tagline on the detail page                                                      |
-| `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters                                      |
-| `certification`      | string, e.g. `"PG-13"`                                    | The age rating                                                                      |
-| `certificationLocal` | string, the rating in the viewer's country                | The local rating, where a client shows one                                          |
-| `criticRating`       | number, 0 to 100                                          | The critic score                                                                    |
-| `ratings`            | list of [ratings](#ratings)                               | Each source's score, in the AIOStreams apps                                         |
-| `studios`            | list of strings                                           | Studios                                                                             |
-| `networks`           | list of strings                                           | Studios, after `studios`                                                            |
-| `countries`          | list of names or ISO 3166 codes                           | Production countries, by their English names                                        |
-| `tags`               | list of strings                                           | Tags                                                                                |
-| `endDate`            | date, a series' last air date                             | The end of a series' year range                                                     |
-| `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                                                  |
-| `airTime`            | string, e.g. `"21:00"`                                    | As above                                                                            |
-| `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates                                 |
-| `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                                                        |
-| `trailers`           | list of [trailers](#trailers)                             | The title's trailers, by name                                                       |
+| Field                | Shape                                                     | Shown in Jellyfin as                                                                     |
+| -------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `ids`                | object of [provider ids](#ids)                            | Provider ids and external links                                                          |
+| `landscapePoster`    | image URL                                                 | The wide card on Continue Watching, Next Up and home rows                                |
+| `animatedPoster`     | image URL, animated (GIF, animated WebP or APNG)          | Played over the poster while its card is focused or hovered, in the AIOStreams apps      |
+| `backgroundVideo`    | video URL (MP4 or WebM)                                   | A [collection's](/reference/addon-protocol/collections#art) hero, in the AIOStreams apps |
+| `originalTitle`      | string                                                    | The original title, under the name when they differ                                      |
+| `tagline`            | string                                                    | The tagline on the detail page                                                           |
+| `people`             | list of [people](#people)                                 | Cast and crew rows, with photos and characters                                           |
+| `certification`      | string, e.g. `"PG-13"`                                    | The age rating                                                                           |
+| `certificationLocal` | string, the rating in the viewer's country                | The local rating, where a client shows one                                               |
+| `criticRating`       | number, 0 to 100                                          | The critic score                                                                         |
+| `ratings`            | list of [ratings](#ratings)                               | Each source's score, in the AIOStreams apps                                              |
+| `studios`            | list of strings                                           | Studios                                                                                  |
+| `networks`           | list of strings                                           | Studios, after `studios`                                                                 |
+| `countries`          | list of names or ISO 3166 codes                           | Production countries, by their English names                                             |
+| `tags`               | list of strings                                           | Tags                                                                                     |
+| `endDate`            | date, a series' last air date                             | The end of a series' year range                                                          |
+| `airDays`            | list of `"Sunday"` … `"Saturday"`                         | When a series airs                                                                       |
+| `airTime`            | string, e.g. `"21:00"`                                    | As above                                                                                 |
+| `seasons`            | list of [seasons](#seasons)                               | Season names, overviews, posters and premiere dates                                      |
+| `collection`         | [collection block](/reference/addon-protocol/collections) | A collection                                                                             |
+| `trailers`           | list of [trailers](#trailers)                             | The title's trailers, by name                                                            |
 
 ### People
 

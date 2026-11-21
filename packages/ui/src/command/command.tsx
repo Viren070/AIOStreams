@@ -126,13 +126,23 @@ export type CommandInputProps = React.ComponentPropsWithoutRef<
   Pick<
     ComponentAnatomy<typeof CommandAnatomy>,
     'inputContainerClass' | 'inputIconClass'
-  >;
+  > & {
+    containerProps?: React.HTMLAttributes<HTMLDivElement> & {
+      [data: `data-${string}`]: string | boolean | undefined;
+    };
+  };
 
 export const CommandInput = React.forwardRef<
   HTMLInputElement,
   CommandInputProps
 >((props, ref) => {
-  const { className, inputContainerClass, inputIconClass, ...rest } = props;
+  const {
+    className,
+    inputContainerClass,
+    inputIconClass,
+    containerProps,
+    ...rest
+  } = props;
 
   const {
     inputContainerClass: _inputContainerClass,
@@ -141,6 +151,7 @@ export const CommandInput = React.forwardRef<
 
   return (
     <div
+      {...containerProps}
       className={cn(
         CommandAnatomy.inputContainer(),
         _inputContainerClass,
