@@ -18,6 +18,7 @@ export function PosterServices() {
 
   return (
     <SettingsCard
+      id="posterService"
       title="Poster Service"
       description="Select a poster service to use for catalogs that support it."
     >

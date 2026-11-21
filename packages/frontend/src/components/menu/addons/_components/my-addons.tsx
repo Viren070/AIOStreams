@@ -530,6 +530,7 @@ export function MyAddons({
   return (
     <>
       <SettingsCard
+        id="presets"
         title="My Addons"
         description="Manage your installed addons. Reorder, batch edit, or categorise by type."
         action={

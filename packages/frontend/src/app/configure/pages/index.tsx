@@ -99,7 +99,7 @@ function ServicesPage() {
   const { mode } = useMode();
   return (
     <>
-      <Group title="Accounts">
+      <Group title="Accounts" id="services">
         <InheritedBadge section="services" />
         <StreamServices />
       </Group>
@@ -155,7 +155,7 @@ function ResultsPage() {
   return (
     <>
       {mode === 'pro' && (
-        <Group title="Sort order">
+        <Group title="Sort order" id="sortCriteria">
           <InheritedBadge section="sorting" />
           <SortingContent />
         </Group>
@@ -189,7 +189,7 @@ function PlaybackPage() {
   const { mode } = useMode();
   return (
     <>
-      <Group title="Proxy">
+      <Group title="Proxy" id="proxy">
         <InheritedBadge section="proxy" />
         <ProxyContent />
       </Group>

@@ -367,6 +367,7 @@ function SaveConfigCard({
 }: SaveConfigCardProps) {
   return (
     <SettingsCard
+      id="saveConfiguration"
       title="Save Configuration"
       description="Save your configuration to your account by clicking Save below."
     >
