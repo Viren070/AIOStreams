@@ -257,7 +257,7 @@ export const DOWNLOADS: DownloadOption[] = [
     requirement: 'Nothing to install',
     files: [],
     notes: [
-      'Press Open in browser under Save & Install → AIOStreams app, or open web.aiostreams.org. Its WebGPU engine plays HEVC, Dolby Vision and surround sound.',
+      'Press Open in browser under AIOStreams app → Setup, or open web.aiostreams.org. Its WebGPU engine plays HEVC, Dolby Vision and surround sound.',
     ],
     guide: { label: 'Using a browser', href: '/apps#in-a-browser' },
   },
