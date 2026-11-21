@@ -491,7 +491,12 @@ function PagesWork({
   usePendingStops();
   useWebGpuWarmUp();
   useAction('search', () => navigate(to.search()));
-  useAction('home', () => navigate(to.home));
+  useAction('home', () => {
+    // Focus left in the navigation would keep Home's place from coming back, as picking Home there knows. On Home already, nothing would put it back.
+    if (pathname !== to.home)
+      (document.activeElement as HTMLElement | null)?.blur();
+    navigate(to.home);
+  });
   return (
     <>
       <DownloadRunner paused={playing} />

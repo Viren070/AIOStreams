@@ -192,6 +192,18 @@ function clampX(box: Element, left: number): number {
     : Math.max(0, Math.min(span, left));
 }
 
+let jumping = false;
+
+/** Runs `then` with every scroll it starts made at once, not glided. */
+export function jumpingTo(then: () => void): void {
+  jumping = true;
+  try {
+    then();
+  } finally {
+    jumping = false;
+  }
+}
+
 /**
  * Scrolls `box` to a place, carrying on at the speed a scroll under way has:
  * the browser's own smooth scroll starts again from a standstill, so quick
@@ -204,7 +216,7 @@ export function glideTo(box: Element, left: number, top: number): void {
   ];
   if (!glides.has(box) && to[0] === box.scrollLeft && to[1] === box.scrollTop)
     return;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (jumping || matchMedia('(prefers-reduced-motion: reduce)').matches) {
     glides.delete(box);
     box.scrollTo(...to);
     return;
