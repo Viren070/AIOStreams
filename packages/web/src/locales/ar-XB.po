@@ -35,6 +35,10 @@ msgstr ""
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr ""
 
+#: src/components/media/season-count.tsx
+msgid "{count, plural, one {# season} other {# seasons}}"
+msgstr ""
+
 #: src/app/settings/_components/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr ""
@@ -704,6 +708,10 @@ msgstr ""
 
 #: src/app/settings/browsing.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
+msgstr ""
+
+#: src/app/settings/browsing.tsx
+msgid "Automatic shows it beside the title's details, except on a TV, where the title's picture fills the screen behind them."
 msgstr ""
 
 #: src/app/player/page.tsx
@@ -2032,6 +2040,7 @@ msgstr ""
 msgid "Hidden, channels also leave search and favourites."
 msgstr ""
 
+#: src/app/settings/browsing.tsx
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr ""
@@ -3601,6 +3610,10 @@ msgid "Position"
 msgstr ""
 
 #: src/app/settings/browsing.tsx
+msgid "Poster on a title's page"
+msgstr ""
+
+#: src/app/settings/browsing.tsx
 msgid "Poster size"
 msgstr ""
 
@@ -4292,6 +4305,10 @@ msgstr ""
 
 #: src/app/settings/page.tsx
 msgid "Shortcuts"
+msgstr ""
+
+#: src/app/settings/browsing.tsx
+msgid "Show"
 msgstr ""
 
 #. A dot under the banner that brings this title up
