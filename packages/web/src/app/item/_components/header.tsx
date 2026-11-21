@@ -41,6 +41,7 @@ import {
   usePreloadVersions,
   useVersionPicker,
 } from '@/features/versions/version-picker';
+import { TopVersionBadges } from '@/features/versions/top-version-badges';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { useHold } from '@/hooks/use-hold';
 import { focusDialog, useDialogStart } from '@/lib/input';
@@ -104,11 +105,12 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }
-  if (!parts.length) return null;
+  // A film can still have version badges; the row hides while it's empty.
+  if (!parts.length && item.Type !== 'Movie') return null;
   return (
     <div
       data-ui="item-meta"
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 empty:hidden max-sm:justify-center"
     >
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
@@ -116,9 +118,25 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
           <span data-name={name}>{part}</span>
         </React.Fragment>
       ))}
+      {item.Type === 'Movie' && (
+        <TopVersionBadges
+          item={item}
+          separator={parts.length ? <Dot /> : undefined}
+        />
+      )}
+      {item.Type === 'Series' && <NextUpBadges series={item} />}
     </div>
   );
 });
+
+/** A show's badges are its next episode's, the one Play plays. */
+function NextUpBadges({ series }: { series: BaseItemDto }) {
+  const nextUp = useNextUpFor(series.Id!, true);
+  const episode = nextUp.data?.Items?.[0];
+  return episode ? (
+    <TopVersionBadges item={episode} separator={<Dot />} />
+  ) : null;
+}
 
 /** The show's links, with the selected season's own in place of the show's. */
 function linksFor(item: BaseItemDto, season?: BaseItemDto) {

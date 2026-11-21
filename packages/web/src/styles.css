@@ -628,3 +628,25 @@ html[data-blur-spoilers]:not([data-tv])
     opacity: 0;
   }
 }
+
+/* A light running under a title's scores while fresh ones are fetched. */
+@keyframes score-refresh {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+/* In a facts line a badge keeps to the line's height, however large a theme
+   draws badges elsewhere, so the line doesn't grow as they come. Listed, not
+   :is(), as older TV browsers take no list. */
+[data-ui='item-meta'] [data-ui='version-badge'],
+[data-ui='hero-meta'] [data-ui='version-badge'] {
+  height: 1.5rem;
+}
+[data-ui='item-meta'] [data-ui='version-badge'] img,
+[data-ui='hero-meta'] [data-ui='version-badge'] img {
+  max-height: 1.125rem;
+}

@@ -1,5 +1,5 @@
 import { t } from '@lingui/core/macro';
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { BiSolidStar } from 'react-icons/bi';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import {
@@ -140,6 +140,33 @@ export function Scores({ item, max }: { item: BaseItemDto; max?: number }) {
         .map((score) => (
           <ScoreBadge key={score.source} score={score} />
         ))}
+    </span>
+  );
+}
+
+/**
+ * The scores, with a faint light running along a hairline under them while
+ * fresh ones are fetched; drawn over the row, so nothing around them moves.
+ */
+export function ScoreRefresh({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span className="relative inline-flex">
+      {children}
+      {active && (
+        <span
+          aria-hidden
+          data-ui="score-refresh"
+          className="pointer-events-none absolute inset-x-0 -bottom-1.5 h-px overflow-hidden"
+        >
+          <span className="block h-full w-1/2 animate-[score-refresh_1.6s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        </span>
+      )}
     </span>
   );
 }
