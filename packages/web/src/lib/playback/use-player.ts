@@ -8,7 +8,7 @@ import { parseSubtitle, plainLines } from '@/lib/subtitles/cues';
 import { savedSubtitleDelay } from '@/lib/subtitles/delay';
 import { subtitleUrl, textSubtitles } from '@/lib/subtitles/tracks';
 import { SUBTITLE_LIFT_MS, subtitleHeight } from '@/lib/subtitles/style';
-import type { MediaStream, SourceInfo } from '@/lib/jellyfin/types';
+import type { MediaStream } from '@/lib/jellyfin/types';
 import { appLog } from '@/lib/hosts/shell/bridge';
 import { useLatest } from '@/hooks/use-latest';
 import type { Chapter } from './chapters';
@@ -50,11 +50,11 @@ const PLACING_MS = 3_000;
 
 function serverSubtitles(
   client: JellyfinClient,
-  source: SourceInfo,
+  streams: MediaStream[],
   ownSubtitles: boolean,
   urlOf?: (stream: MediaStream) => string | null
 ): ServerSubtitle[] {
-  return textSubtitles(source)
+  return streams
     .filter((s) => !ownSubtitles || s.IsExternal)
     .flatMap((stream, i) => {
       const url = urlOf ? urlOf(stream) : subtitleUrl(client, stream);
@@ -170,10 +170,16 @@ export function usePlayer(
   const [shownLift] = React.useState(() => createLive(0));
   const [savedFit] = useSetting(settings.video.fit);
   const fit = opts.fit ?? savedFit;
+  const { laterSubtitles } = opts;
   const servers = React.useMemo(
     () =>
-      serverSubtitles(client, source, !!engine.ownSubtitles, opts.subtitleUrl),
-    [client, source, engine, opts.subtitleUrl]
+      serverSubtitles(
+        client,
+        [...textSubtitles(source), ...(laterSubtitles ?? [])],
+        !!engine.ownSubtitles,
+        opts.subtitleUrl
+      ),
+    [client, source, laterSubtitles, engine, opts.subtitleUrl]
   );
   const latestServers = useLatest(servers);
   const fileFor = (from: number): EngineFile => ({
@@ -243,6 +249,34 @@ export function usePlayer(
     positionMs: () => playhead.positionMs,
   });
 
+  const settingsPick = React.useRef<string | null>(null);
+  const pickTracks = (subtitleOnly = false) => {
+    const { tracks, audio, subtitle } = live.current;
+    const shown = shownSubtitle(tracks, subtitle, timing.retimed);
+    const picks = chooseTracks(
+      tracks,
+      latestServers.current,
+      { audio, subtitle: shown },
+      latest.current.prefs ?? {},
+      latest.current.source,
+      !!engine.picksTracks
+    );
+    if (!subtitleOnly && picks.audio && picks.audio !== audio)
+      setAudio(picks.audio);
+    if (picks.subtitle !== shown) setSubtitle(picks.subtitle);
+    settingsPick.current = picks.subtitle;
+  };
+  // The settings may want one found later, unless the user picked another.
+  const addLater = useLatest(() => {
+    active.current.setSubtitles(servers);
+    const { loaded, tracks, subtitle } = live.current;
+    const shown = shownSubtitle(tracks, subtitle, timing.retimed);
+    if (loaded && shown === settingsPick.current) pickTracks(true);
+  });
+  React.useEffect(() => {
+    if (laterSubtitles?.length) addLater.current();
+  }, [laterSubtitles, addLater]);
+
   handle.current = (event) => {
     switch (event.type) {
       case 'state':
@@ -262,19 +296,7 @@ export function usePlayer(
           if (kept.audio) setAudio(kept.audio);
           return setSubtitle(kept.subtitle);
         }
-        const { tracks, audio, subtitle } = live.current;
-        const shown = shownSubtitle(tracks, subtitle, timing.retimed);
-        const picks = chooseTracks(
-          tracks,
-          latestServers.current,
-          { audio, subtitle: shown },
-          latest.current.prefs ?? {},
-          latest.current.source,
-          !!engine.picksTracks
-        );
-        if (picks.audio && picks.audio !== audio) setAudio(picks.audio);
-        if (picks.subtitle !== shown) setSubtitle(picks.subtitle);
-        return;
+        return pickTracks();
       }
       case 'ended': {
         if (recovery) return recovery.dropped('ended');

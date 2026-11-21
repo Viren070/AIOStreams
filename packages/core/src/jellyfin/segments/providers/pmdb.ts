@@ -1,5 +1,5 @@
 import { appConfig } from '../../../index.js';
-import { makeRequest } from '../../../utils/http.js';
+import { makeRequest } from '../../../utils/http/index.js';
 import type {
   ProviderContext,
   Segment,

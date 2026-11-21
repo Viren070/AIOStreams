@@ -303,8 +303,9 @@ export function Guide({
       data-focus="own"
       aria-label={t`Guide`}
       aria-rowcount={total}
+      // One surface with the sticky channels and times that hide what scrolls under them.
       className={cn(
-        'relative overflow-auto overscroll-contain [scrollbar-width:thin]',
+        'relative overflow-auto overscroll-contain rounded-xl bg-[--background] [scrollbar-width:thin]',
         className
       )}
       onKeyDown={onKeyDown}

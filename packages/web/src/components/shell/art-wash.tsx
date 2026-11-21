@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
-import { currentWash, subscribeWash } from '@/lib/artwork/background';
+import { currentWash, subscribeWash, takeCut } from '@/lib/artwork/background';
 import { WASH_H, WASH_W } from '@/lib/artwork/wash';
 
 const FADE_MS = 600;
@@ -37,7 +37,7 @@ export function ArtWash({ className }: { className?: string }) {
     const hide = () => {
       if (front.current === next) old.style.visibility = 'hidden';
     };
-    if (still()) return hide();
+    if (still() || takeCut(frame.src)) return hide();
     next
       .animate([{ opacity: 0 }, { opacity: 1 }], {
         duration: FADE_MS,

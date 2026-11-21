@@ -177,7 +177,7 @@ export async function resolveExternalTarget(
     forwardIp: ctx.clientIp,
     signal,
     headers: { Range: 'bytes=0-0' },
-    rawOptions: { redirect: 'manual' },
+    redirect: 'manual',
   });
 
   try {

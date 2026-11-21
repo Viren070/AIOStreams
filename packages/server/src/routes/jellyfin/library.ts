@@ -13,7 +13,9 @@ import {
   similarPreviews,
   type FilmographyKind,
   Cache,
+  canonicalDescriptor,
   collectionMembers,
+  collectionPart,
   config as appConfig,
   contentItemType,
   defaultUserData,
@@ -588,23 +590,41 @@ async function handleItems(
   }
   if (
     pd?.k === 'boxset' ||
+    pd?.k === 'part' ||
     (pd?.k === 'movie' && !pd.p) ||
     (pd?.k === 'series' && collectionParent)
   ) {
     const meta = await getMeta(ctx, pd.t, pd.i).catch(() => null);
-    if (meta?.collection) {
-      const page = await collectionMembers(engine, meta, {
-        startIndex,
-        limit,
-        exactTotal: isKodi(ctx) && wantsTotal(req),
-        cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${pd.t}|${pd.i}`,
-        select: pageFilter(req, ctx, types, { parentId }),
-        kinds: searchKindsFor(types),
-        collectionsOnly: isBoxsetOnly(types),
-        signal: untilClosed(res),
-      });
+    const collection =
+      meta?.collection && pd.k === 'part'
+        ? collectionPart(
+            meta.collection,
+            pd.st && pd.c
+              ? { type: pd.st, catalogId: pd.c, genre: pd.g }
+              : undefined
+          )
+        : meta?.collection;
+    if (collection) {
+      const page = await collectionMembers(
+        engine,
+        { collection },
+        {
+          startIndex,
+          limit,
+          exactTotal: isKodi(ctx) && wantsTotal(req),
+          cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${canonicalDescriptor(pd)}`,
+          select: pageFilter(req, ctx, types, { parentId }),
+          kinds: searchKindsFor(types),
+          collectionsOnly: isBoxsetOnly(types),
+          signal: untilClosed(res),
+        }
+      );
       const items = await itemsFromPreviews(ctx, page.items, { parentId });
       send(req, res, applySort(req, items), page.total, startIndex);
+      return;
+    }
+    if (pd.k === 'part') {
+      send(req, res, [], 0, startIndex);
       return;
     }
     const r = await boxSetChildren(ctx, pd);

@@ -170,6 +170,8 @@ export interface PlayerEngine {
   setAudio(id: string): void;
   /** One of its own tracks, or a server subtitle. */
   setSubtitle(id: string | null): void;
+  /** The server's subtitles once more arrive, those it opened with first. */
+  setSubtitles(subtitles: ServerSubtitle[]): void;
   setSubtitleDelay?(ms: number): void;
   /** Stretches the page skips, which a player fetching ahead can leave out, or offers to, which it can fetch past early. */
   skipAhead?(skips: PlannedSkip[]): void;

@@ -118,7 +118,7 @@ In the `PlaybackInfo` body:
 | `Fresh`                     | The app is listing versions: answer with a list no older than the server keeps one for   |
 | `Refresh`                   | Look versions up again even if a recent list exists (with the `refreshVersions` feature) |
 | `MediaSourceId`             | Standard. The app is playing that version: answer from the list it came from             |
-| `SkipSubtitles`             | Don't ask subtitle addons for the first version; the app asks for the version it plays   |
+| `SkipSubtitles`             | Don't wait for subtitle addons, for the version named or else the first                  |
 | `EnableRequiredHttpHeaders` | The app's player sends a version's standard `RequiredHttpHeaders` with its requests      |
 | `EnableYouTube`             | The app's player opens a version by its `ytId`                                           |
 | `AllVersions`               | List versions past the configured limit, up to the app's own; one named joins the list   |
@@ -126,10 +126,16 @@ In the `PlaybackInfo` body:
 Other clients send neither, so a version that only plays with its headers, or only as a YouTube
 video, is listed only when the body says the app can play it.
 
+The app sends `SkipSubtitles` with every list and every play, so a slow subtitle addon never holds
+up the start. Once the version plays, it names it again without the field and adds the external
+subtitles that answer lists past the ones it already had. The server keeps a version's external
+subtitles in that order, adding the addons' after its own.
+
 In the query, `MediaSourceFields` takes a comma-separated list of the `MediaSources` fields to send,
-in any case, such as `Id,Type,Name,RunTimeTicks,aiostreams`. The app asks for those when it lists
-versions, as it reads nothing else from a list and names a version to play it, which answers with
-all of it. A list without `MediaStreams` is also quicker to build, as the server skips the tracks.
+in any case, such as `Id,Type,Name,Path,RunTimeTicks,aiostreams`. The app asks for those when it
+lists versions, as it reads nothing else from a list (`Path` is the link it copies) and names a
+version to play it, which answers with all of it. A list without `MediaStreams` is also quicker to
+build, as the server skips the tracks.
 
 ## Playback reports
 
@@ -185,6 +191,44 @@ list for other clients.
 A title no addon in the configuration has details for still opens, named by its id, with an
 `Overview` saying so, and carries `"aiostreams": { "noMeta": true }`. The app shows a page asking for
 a metadata addon in place of the title's own, with Play kept for a movie.
+
+## Collections
+
+A `BoxSet` whose members come from two or more places carries them as parts, with the layout its
+addon asked for:
+
+```json
+"aiostreams": {
+  "layout": "rows",
+  "sources": [
+    { "id": "…", "name": "Latest Netflix Movies", "collectionType": "movies" },
+    { "id": "…", "name": "Drama series", "collectionType": "tvshows" }
+  ]
+}
+```
+
+| Field     | Shape           | What the web app does with it                                                             |
+| --------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `sources` | list of parts   | A row or tab per part                                                                     |
+| `layout`  | `rows` or none  | A row per part; without it, a tab per part after **All**, which lists the `BoxSet` itself |
+| `showAll` | `false` or none | Leaves out the **All** tab                                                                |
+
+Each part:
+
+| Field            | Shape                                   | Meaning                                                                                                                                       |
+| ---------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | item id                                 | Listed with `/Items?ParentId={id}`                                                                                                            |
+| `name`           | string                                  | The row's or tab's name                                                                                                                       |
+| `collectionType` | `movies`, `tvshows`, `boxsets`, or none | The kind of title it holds, as its library's would be, shown beside the name                                                                  |
+| `genre`          | string or none                          | Added to the listing as `Genres={genre}`, for a server whose part `id` is a whole library. AIOStreams' own part ids already hold their genre. |
+
+Tabs that don't fit as pills show as rows instead. With fewer than two parts, the app lists the
+members as one list.
+
+A `BoxSet`'s backdrop is a hero across the top of its page, and `"aiostreams": { "backgroundVideo":
+"…" }`, a video's address, plays muted and looping over it, following the app's trailer setting for
+title pages. With neither shown, the page has no backdrop, and the app shows the `BoxSet`'s `Primary`
+image beside its name unless it has a `Logo`.
 
 ## Episodes
 

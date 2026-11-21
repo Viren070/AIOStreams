@@ -2383,6 +2383,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Principal"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Alterar servidor"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Marcar como visto"
@@ -3251,6 +3256,7 @@ msgid "Pick the version to download."
 msgstr "Escolha a versão a transferir."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Imagem na imagem"
 

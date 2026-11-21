@@ -637,14 +637,17 @@ export function buildContentItem(
   if (typeof meta.language === 'string')
     item.PreferredMetadataLanguage = meta.language;
   if (typeof meta.website === 'string') item.HomePageUrl = meta.website;
-  const animatedPoster =
-    typeof meta.animatedPoster === 'string' &&
-    /^https?:\/\//i.test(meta.animatedPoster)
-      ? meta.animatedPoster
+  const address = (value: unknown) =>
+    typeof value === 'string' && /^https?:\/\//i.test(value)
+      ? value
       : undefined;
-  if (animatedPoster || enrichment.ratings.length)
+  const animatedPoster = address(meta.animatedPoster);
+  const backgroundVideo =
+    jellyfinType === 'BoxSet' ? address(meta.backgroundVideo) : undefined;
+  if (animatedPoster || backgroundVideo || enrichment.ratings.length)
     item.aiostreams = {
       ...(animatedPoster && { animatedPoster }),
+      ...(backgroundVideo && { backgroundVideo }),
       ...(enrichment.ratings.length && { ratings: enrichment.ratings }),
     };
   if (jellyfinType === 'Movie' && ctx.listVersions) {
