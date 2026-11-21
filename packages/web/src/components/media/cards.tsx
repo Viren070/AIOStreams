@@ -488,6 +488,11 @@ export function PosterCard(props: PosterCardProps) {
 export interface WideCardProps {
   href?: string;
   onClick?: () => void;
+  /**
+   * What a card that only acts is known by, as a link is by its address, so
+   * coming back finds it though its text has changed.
+   */
+  address?: string;
   image: ArtworkSource;
   title: string;
   subtitle?: string;
@@ -512,6 +517,7 @@ export function WideCard(props: WideCardProps) {
   const {
     href,
     onClick,
+    address,
     image,
     title,
     subtitle,
@@ -617,6 +623,7 @@ export function WideCard(props: WideCardProps) {
         <button
           type="button"
           onClick={onClick}
+          data-href={address}
           data-focus="own"
           className="group/wide-link block w-full space-y-2 text-start"
         >
