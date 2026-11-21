@@ -374,22 +374,73 @@ export const isCountryWrong = (
   );
 };
 
+/**
+ * Where the words of `title` start and end in its normalised form `normalised`.
+ * Undefined when that can't be told: the script writes no spaces between
+ * words, or normalising word by word gives another string.
+ */
+function normalisedWordBounds(
+  title: string,
+  normalised: string
+): Set<number> | undefined {
+  if (
+    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(
+      normalised
+    )
+  ) {
+    return undefined;
+  }
+  const bounds = new Set([0]);
+  let joined = '';
+  for (const word of title.split(/[^\p{L}\p{M}\p{N}+&]+/u)) {
+    joined += normaliseTitle(word);
+    bounds.add(joined.length);
+  }
+  return joined === normalised ? bounds : undefined;
+}
+
+/**
+ * One title holds the other only inside a word, as `mayday` holds `ayda`: the
+ * letters coincide, but the titles don't. Words written together count as one
+ * (`Spiderman` in `Spider Man`). For a contained title the ratio is exactly
+ * 2s/(s+l), so this only decides pairs between the 0.8 threshold and 0.9; from
+ * 0.9 up the overlap is a cut-off title, left to the ratio.
+ */
+function isInsideWord(
+  aTitle: string,
+  aKey: string,
+  bTitle: string,
+  bKey: string
+): boolean {
+  const [short, longTitle, long] =
+    aKey.length < bKey.length ? [aKey, bTitle, bKey] : [bKey, aTitle, aKey];
+  // below 0.75 the ratio rejects the pair anyway (with room for what
+  // full_process strips), so long titles cost nothing extra
+  const containedRatio = (2 * short.length) / (short.length + long.length);
+  if (containedRatio < 0.75 || containedRatio >= 0.9) return false;
+  if (!long.includes(short)) return false;
+  const bounds = normalisedWordBounds(longTitle, long);
+  if (!bounds) return false;
+  for (let i = long.indexOf(short); i !== -1; i = long.indexOf(short, i + 1)) {
+    if (bounds.has(i) && bounds.has(i + short.length)) return false;
+  }
+  return true;
+}
+
 export const isTitleWrong = (
   parsed: { title?: string },
   metadata?: { titles?: string[] }
 ) => {
-  if (
-    parsed.title &&
-    metadata?.titles &&
-    !titleMatch(
-      normaliseTitle(parsed.title),
-      metadata.titles.map(normaliseTitle),
-      { threshold: 0.8 }
-    )
-  ) {
-    return true;
-  }
-  return false;
+  if (!parsed.title || !metadata?.titles) return false;
+  const parsedTitle = parsed.title;
+  const normalisedParsed = normaliseTitle(parsedTitle);
+  const titles = metadata.titles.flatMap((title) => {
+    const normalised = normaliseTitle(title);
+    return isInsideWord(parsedTitle, normalisedParsed, title, normalised)
+      ? []
+      : [normalised];
+  });
+  return !titleMatch(normalisedParsed, titles, { threshold: 0.8 });
 };
 
 export const isTitleWrongN = (
