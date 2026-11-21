@@ -2383,6 +2383,11 @@ msgstr "洋红色"
 msgid "Main"
 msgstr "主要"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "更改服务器"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "标记为已观看"
@@ -3251,6 +3256,7 @@ msgid "Pick the version to download."
 msgstr "选择要下载的版本。"
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "画中画"
 

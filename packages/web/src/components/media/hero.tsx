@@ -59,7 +59,7 @@ const FOLLOW_DELAY_MS = 300;
 /** How long a title rests in the hero before its trailer starts. */
 const TRAILER_REST_MS = 2500;
 const HERO_BOX =
-  'relative -mt-[var(--top-bar,0px)] h-[max(26rem,75svh)] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(max(36rem,53vh)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]';
+  'relative -mt-[var(--top-bar,0px)] h-[max(26rem,75svh)] w-full overflow-hidden sm:h-[30rem] lg:-ms-[var(--side-bar,0px)] lg:h-[calc(var(--hero-height)+var(--top-bar,0px))] lg:w-[calc(100%+var(--side-bar,0px))]';
 const HERO_CONTENT =
   'absolute inset-x-0 bottom-0 space-y-4 px-4 pb-8 max-sm:pb-12 max-sm:text-center lg:start-[var(--side-bar,0px)] lg:max-w-3xl lg:ps-0 lg:pe-10 lg:pb-14';
 
@@ -1173,7 +1173,7 @@ export function Hero({
               data-slide={role}
               className={cn(slideClass(role), role && 'z-[1]')}
             >
-              <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(max(36rem,53vh)*2.6)]">
+              <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(var(--hero-height)*2.6)]">
                 <Backdrops
                   current={backdropSrc(client, item)}
                   fade={!role}

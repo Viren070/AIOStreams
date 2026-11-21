@@ -156,24 +156,24 @@ const FILTERS: Record<ItemFilter, string> = {
   resumable: 'IsResumable',
 };
 
+export interface ItemPagesOptions {
+  pageSize?: number;
+  filter?: ItemFilter;
+  types?: string;
+  genreId?: string;
+  genre?: string;
+  recursive?: boolean;
+  enabled?: boolean;
+  /** Jellyfin's sort names, without which a catalog keeps its own order. */
+  sortBy?: string;
+  descending?: boolean;
+}
+
 /**
  * The items of a library or collection, in the catalog's order. A library is
  * asked for recursively by its types, as a server may keep its movies in folders.
  */
-export function useItemPages(
-  parentId: string,
-  opts: {
-    pageSize?: number;
-    filter?: ItemFilter;
-    types?: string;
-    genreId?: string;
-    recursive?: boolean;
-    enabled?: boolean;
-    /** Jellyfin's sort names, without which a catalog keeps its own order. */
-    sortBy?: string;
-    descending?: boolean;
-  } = {}
-) {
+export function useItemPages(parentId: string, opts: ItemPagesOptions = {}) {
   const { client, user } = useSession();
   const pageSize = opts.pageSize ?? PAGE;
   return useInfiniteQuery({
@@ -184,6 +184,7 @@ export function useItemPages(
       opts.filter,
       opts.types,
       opts.genreId,
+      opts.genre,
       opts.recursive,
       pageSize,
       opts.sortBy,
@@ -199,6 +200,7 @@ export function useItemPages(
         Limit: pageParam ? pageSize : Math.min(pageSize, FIRST_PAGE),
         IncludeItemTypes: opts.types,
         GenreIds: opts.genreId,
+        Genres: opts.genre,
         Recursive: opts.recursive,
         Filters: opts.filter ? FILTERS[opts.filter] : undefined,
         SortBy: opts.sortBy,

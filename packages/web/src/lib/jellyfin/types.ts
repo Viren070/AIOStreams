@@ -27,6 +27,19 @@ export type SourceInfo = MediaSourceInfo & {
   aiostreams?: AiostreamsSourceExtension;
 };
 
+export interface CollectionPart {
+  id: string;
+  name: string;
+  genre?: string;
+  collectionType?: BaseItemDto['CollectionType'];
+}
+
+export interface CollectionExtension {
+  layout?: string;
+  showAll?: boolean;
+  sources?: CollectionPart[];
+}
+
 export type AiostreamsUser = UserDto & {
   aiostreams?: {
     /** The profile's id in the configuration, which the configure page knows it by. */
