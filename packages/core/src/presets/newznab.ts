@@ -1,30 +1,7 @@
-import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
+import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { appConfig, RESOURCES, ServiceId, constants } from '../utils/index.js';
-import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
-
-class NewznabStreamParser extends BuiltinStreamParser {
-  protected override getMessage(
-    stream: Stream,
-    currentParsedStream: ParsedStream
-  ): string | undefined {
-    const healthChecksEnabled = Boolean(
-      this.addon.preset.options?.zyclopsHealthProxy?.enabled
-    );
-    if (!healthChecksEnabled) {
-      return undefined;
-    }
-
-    const zyclopsHealth =
-      typeof stream.zyclopsHealth === 'string'
-        ? stream.zyclopsHealth
-        : undefined;
-    if (zyclopsHealth) {
-      return 'NZB Health: ' + zyclopsHealth.replace('healthy', '🧝');
-    }
-    return undefined;
-  }
-}
+import { BuiltinAddonPreset } from './builtin.js';
 
 export const NEWZNAB_INDEXERS: {
   label: string;
@@ -209,10 +186,6 @@ export const NEWZNAB_INDEXERS: {
 ];
 
 export class NewznabPreset extends BuiltinAddonPreset {
-  static override getParser() {
-    return NewznabStreamParser;
-  }
-
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
     const supportedServices = [
@@ -377,72 +350,6 @@ export class NewznabPreset extends BuiltinAddonPreset {
         default: false,
         showInSimpleMode: false,
       },
-      {
-        id: 'zyclopsHealthProxy',
-        name: '🧝 Zyclops Health Proxy',
-        description:
-          'Route searches through ElfHosted\'s Zyclops "magic" 🔮 crowdsourced health database to return only known-healthy releases for your backbone/provider ([learn more](https://zyclops.elfhosted.com)).',
-        type: 'subsection',
-        showInSimpleMode: false,
-        subOptions: [
-          {
-            id: 'enabled',
-            name: 'Enable',
-            description:
-              'Enable Zyclops health filtering. ⚠️ Sends your indexer URL/API key with the proxy request and submits the newest untested NZB to enrich the health database. Many indexers prohibit this (*some prohibit Stremio altogether!*), proceed at **your own risk**. The health database is further directly searchable via Newznab on private ElfHosted instances only.',
-            type: 'boolean',
-          },
-          {
-            id: 'backbones',
-            name: 'Backbones',
-            description:
-              'Select one or more backbone networks. Leave empty to identify your upstream with a Provider Host instead. Exactly one of backbones or provider hosts must be configured',
-            type: 'multi-select',
-            required: false,
-            default: [],
-            options: [
-              { value: 'usenetexpress', label: 'UsenetExpress' },
-              { value: 'abavia', label: 'Abavia' },
-              {
-                value: 'eweka-internet-services',
-                label: 'Eweka Internet Services',
-              },
-              { value: 'base-ip', label: 'Base IP' },
-              { value: 'netnews', label: 'NetNews' },
-              { value: 'uzo-reto', label: 'Uzo Reto' },
-              { value: 'omicron', label: 'Omicron' },
-              { value: 'giganews', label: 'Giganews' },
-            ],
-          },
-          {
-            id: 'providerHosts',
-            name: 'Provider Hosts',
-            description:
-              'Enter the hostname(s) that best match your upstream provider, separated by commas if you have multiple. Leave blank when selecting backbones. Exactly one of backbones or provider hosts must be configured',
-            type: 'string',
-            required: false,
-            default: '',
-          },
-          {
-            id: 'showUnknown',
-            name: 'Show Unknown Releases',
-            description:
-              'If enabled, upstream results without a cached health state will still be returned (*the proxy defaults to hiding them*). Incompatible with single IP mode (*below*).',
-            type: 'boolean',
-            default: false,
-            required: false,
-          },
-          {
-            id: 'singleIp',
-            name: 'Single-IP Mode',
-            description:
-              'When enabled, NZB searches/downloads are proxied through the health service so only its IP touches the upstream indexer.',
-            type: 'boolean',
-            default: true,
-            required: false,
-          },
-        ],
-      },
     ];
 
     return {
@@ -552,44 +459,6 @@ export class NewznabPreset extends BuiltinAddonPreset {
     services: ServiceId[],
     options: Record<string, any>
   ) {
-    let zyclopsHealthProxyConfig:
-      | {
-          enabled: boolean;
-          backbones?: string[];
-          providerHosts?: string[];
-          showUnknown?: boolean;
-          singleIp?: boolean;
-        }
-      | undefined = undefined;
-
-    if (options.zyclopsHealthProxy?.enabled) {
-      const providerHosts = options.zyclopsHealthProxy.providerHosts
-        ? options.zyclopsHealthProxy.providerHosts
-            .split(',')
-            .map((value: string) => value.trim())
-            .filter((value: string) => value.length > 0)
-        : [];
-      const backbonesSelected = options.zyclopsHealthProxy?.backbones?.length;
-
-      if (backbonesSelected && providerHosts.length > 0) {
-        throw new Error(
-          `${this.METADATA.NAME}: Zyclops health checks accept only one identifier. Choose either Backbones or Provider Host, not both.`
-        );
-      }
-
-      if (!backbonesSelected && providerHosts.length === 0) {
-        throw new Error(
-          `${this.METADATA.NAME}: Zyclops health checks require either a Backbone selection or a Provider Host when enabled.`
-        );
-      }
-      zyclopsHealthProxyConfig = {
-        enabled: true,
-        backbones: options.zyclopsHealthProxy.backbones,
-        providerHosts: providerHosts,
-        showUnknown: options.zyclopsHealthProxy.showUnknown ?? false,
-        singleIp: options.zyclopsHealthProxy.singleIp ?? true,
-      };
-    }
     const config: Record<string, any> = {
       ...this.getBaseConfig(userData, services),
       url: options.api?.url,
@@ -599,7 +468,6 @@ export class NewznabPreset extends BuiltinAddonPreset {
       forceQuerySearch: options.forceQuerySearch ?? false,
       paginate: options.paginate ?? false,
       seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
-      zyclopsHealthProxy: zyclopsHealthProxyConfig,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

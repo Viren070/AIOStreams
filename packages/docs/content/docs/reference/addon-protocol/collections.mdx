@@ -19,9 +19,10 @@ library.
       "items": [{ "id": "tt0903747", "type": "series", "name": "Breaking Bad", "poster": "https://…" }],
       "sources": [
         { "type": "movie", "catalogId": "netflix-movies" },
-        { "type": "series", "catalogId": "netflix-series", "genre": "Drama" },
-        { "addonId": "com.example.lists", "type": "movie", "catalogId": "top-netflix" }
-      ]
+        { "type": "series", "catalogId": "netflix-series", "genre": "Drama", "name": "Drama series" },
+        { "addonId": "com.example.lists", "type": "movie", "catalogId": "top-netflix", "name": "Top 10" }
+      ],
+      "layout": "rows"
     }
   }
 }
@@ -29,13 +30,15 @@ library.
 
 ## Members
 
-A collection's members are its `items`, then each of its `sources` in turn. A title listed twice
-is kept where it first appears.
+A collection's members are its `items`, then its `sources`, all of one before the next unless
+`merge` says otherwise. A title listed twice is kept where it first appears.
 
 | Field     | Meaning                                                                                                                                                           |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `items`   | Catalog entries as a catalog would return them. `id` and `type` are required.                                                                                     |
 | `sources` | Catalogs whose entries are members, read a page at a time like a library, up to [`JELLYFIN_MAX_CATALOG_ITEMS`](/configuration/environment-variables) per catalog. |
+| `merge`   | `sequential` (the default) reads each source to its end before the next, `interleaved` takes one title from each source in turn, `alternating` 20 at a time.      |
+| `shuffle` | `true` shuffles the titles within each page a client is sent.                                                                                                     |
 
 A member is the same title it is anywhere else: a series opens to its seasons, plays, and keeps its
 watch state. Use `items` for a short fixed list and `sources` for anything long or changing.
@@ -48,8 +51,23 @@ watch state. Use `items` for a short fixed list and `sources` for anything long 
 | `catalogId` | Required. The catalog's `id` in its manifest.                                                                       |
 | `genre`     | A genre to filter the catalog by. The catalog must declare a `genre` extra.                                         |
 | `addonId`   | Another addon's manifest `id` or URL. Omit it for your own addon. A source whose addon is not installed is skipped. |
+| `name`      | What the source's row or tab is called. The catalog's name when absent, with its `genre` after it.                  |
 
 A catalog does not need to be shown anywhere to be a source.
+
+## Layout
+
+In the AIOStreams apps, a collection with two or more sources, or with listed titles and a source,
+shows in parts: its listed titles under its own name, then each source.
+
+| Field     | Meaning                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| `layout`  | `tabs` (the default) for a tab per part, after an **All** tab of every member, or `rows` for a row per part. |
+| `showAll` | `false` leaves out the **All** tab.                                                                          |
+
+Each part shows its name beside the kind of title it holds, as a library does on Home. Tabs whose
+names don't fit show as rows instead. Collections in `items` keep a row of their own above the parts,
+and other Jellyfin clients always get every member in one list.
 
 ## Marking catalog entries
 
@@ -73,6 +91,13 @@ anything.
   In the metas AIOStreams serves onwards, each source's `catalogId` is renamed to the id AIOStreams
   serves that catalog under, and `addonId` is removed.
 </Callout>
+
+## Art
+
+In the AIOStreams apps, a collection's `background` is a hero across the top of its page, under its
+`logo` or name, and `backgroundVideo` plays muted and looping over it where the app would play a
+title's trailer on its page. With neither shown, the page has no background, as a cover is made for
+a tile, and the cover sits beside the collection's name unless it has a `logo`.
 
 ## Collections without the block
 

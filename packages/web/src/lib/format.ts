@@ -124,7 +124,9 @@ export function remainingMs(item: BaseItemDto): number {
 }
 
 /** Tells apart libraries that share a name, such as two "Popular" catalogs. */
-export function libraryLabel(view: BaseItemDto): string | undefined {
+export function libraryLabel(
+  view: Pick<BaseItemDto, 'CollectionType'>
+): string | undefined {
   switch (view.CollectionType) {
     case 'movies':
       return t`Movies`;

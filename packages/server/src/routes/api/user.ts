@@ -445,10 +445,10 @@ router.delete('/sessions', async (req, res, next) => {
     return;
   }
 
+  const uuid = req.uuid || creds.uuid;
   try {
-    const count = await ConfigSessionRepository.deleteAllForUuid(
-      req.uuid || creds.uuid
-    );
+    await UserRepository.verifyUser(uuid, creds.password);
+    const count = await ConfigSessionRepository.deleteAllForUuid(uuid);
     clearConfigSessionCookie(res);
     res.status(200).json(
       createResponse({

@@ -16,7 +16,7 @@ import {
 } from '@/features/live-tv/live-tv';
 import { useInView } from '@/hooks/use-in-view';
 import { useSearchParam } from '@/hooks/use-search-param';
-import { PageBody } from '@/components/shell/page';
+import { PageBody, PageHeader } from '@/components/shell/page';
 import { PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { CardGrid } from '@/components/media/media-row';
@@ -87,38 +87,40 @@ export function FavouritesPage({ kind }: { kind?: string }) {
   return (
     <PageBody>
       <div className="space-y-6">
-        <h1 data-ui="page-title" className="text-3xl font-bold">
-          <Trans>Favourites</Trans>
-        </h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <PillTabs
-            name="kind"
-            options={kinds}
-            value={types}
-            onChange={(next) =>
-              setKind(next === KINDS[0].value ? undefined : next)
-            }
-          />
-          {!channels && (
-            <SortPicker
-              keys={FAVOURITE_SORTS}
-              value={sort}
-              onChange={setSort}
-            />
-          )}
-          {!!items.length && !channels && (
-            <Button
-              data-ui="random-pick"
-              size="sm"
-              intent="gray-subtle"
-              className="ms-auto rounded-full"
-              leftIcon={<BiShuffle />}
-              onClick={() => openRandom({ kind: 'favourite', types })}
-            >
-              <Trans>Random pick</Trans>
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title={<Trans>Favourites</Trans>}
+          actions={
+            !channels && (
+              <>
+                <SortPicker
+                  keys={FAVOURITE_SORTS}
+                  value={sort}
+                  onChange={setSort}
+                />
+                {!!items.length && (
+                  <Button
+                    data-ui="random-pick"
+                    size="sm"
+                    intent="gray-subtle"
+                    className="rounded-full"
+                    leftIcon={<BiShuffle />}
+                    onClick={() => openRandom({ kind: 'favourite', types })}
+                  >
+                    <Trans>Random pick</Trans>
+                  </Button>
+                )}
+              </>
+            )
+          }
+        />
+        <PillTabs
+          name="kind"
+          options={kinds}
+          value={types}
+          onChange={(next) =>
+            setKind(next === KINDS[0].value ? undefined : next)
+          }
+        />
         {channels ? (
           <FavouriteChannels />
         ) : pages.isError ? (

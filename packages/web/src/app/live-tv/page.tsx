@@ -43,7 +43,7 @@ import { navigate, to } from '@/lib/paths';
 import { focusOn, isTextField, pickOnFocus, useAction } from '@/lib/input';
 import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
-import { PageMessage } from '@/components/shell/page';
+import { PAGE_TOP, PageHeader, PageMessage } from '@/components/shell/page';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Select } from '@aiostreams/ui/select';
@@ -74,7 +74,8 @@ const DETAILS_DELAY_MS = 150;
 const PAGE_HEIGHT =
   'h-[calc(100dvh-var(--nav-bar)-var(--mini-bar,0px)-var(--top-bar,0px))]';
 const PAGE = cn(
-  'relative z-[1] flex flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2rem+env(safe-area-inset-top))]',
+  'relative z-[1] flex flex-col gap-4 px-4 lg:ps-0 lg:pe-10',
+  PAGE_TOP,
   PAGE_HEIGHT
 );
 
@@ -403,16 +404,55 @@ export function LiveTvPage({
   const numberShown = numbers.typed && (
     <NumberEntry typed={numbers.typed} className="fixed z-50" />
   );
-  // One row of controls, so the day and the view are a few presses on from the group.
   const header = (
-    <header className="flex flex-none flex-col gap-3">
-      <h1 data-ui="page-title" className="text-3xl font-bold">
-        <Trans>Live TV</Trans>
-      </h1>
-      <div
-        data-ui="live-controls"
-        className="flex flex-wrap items-center gap-x-4 gap-y-2"
-      >
+    <header className="flex flex-none flex-col gap-6">
+      <PageHeader
+        title={<Trans>Live TV</Trans>}
+        actions={
+          (picked || guide) && (
+            <>
+              {picked && (
+                <Combobox
+                  data-ui="live-group-picker"
+                  aria-label={t`Group`}
+                  placeholder={t`Groups`}
+                  emptyMessage={t`Nothing matches.`}
+                  keepOpenOnSelect={false}
+                  className="rounded-full"
+                  fieldClass="sm:w-64"
+                  options={addonGroups.map((g) => ({
+                    value: g.id,
+                    label: g.name,
+                    textValue: g.name,
+                  }))}
+                  value={addonGroups.some((g) => g.id === group) ? [group] : []}
+                  onValueChange={(next) => next[0] && chooseGroup(next[0])}
+                  {...pickOnFocus(
+                    addonGroup && addonGroup !== group
+                      ? () => chooseGroup(addonGroup)
+                      : undefined
+                  )}
+                />
+              )}
+              {guide && (
+                <DayPicker
+                  days={days}
+                  value={dayOffset}
+                  onChange={(offset) => {
+                    setDayOffset(offset);
+                    // Another day opens at the same time of day.
+                    place(
+                      active,
+                      new Date(now).setDate(new Date(now).getDate() + offset)
+                    );
+                  }}
+                />
+              )}
+            </>
+          )
+        }
+      />
+      <div data-ui="live-controls" className="flex flex-col gap-3">
         <PillTabs
           name="live-group"
           options={(picked ? ownGroups : groups).map((g) => ({
@@ -422,45 +462,6 @@ export function LiveTvPage({
           value={group}
           onChange={chooseGroup}
         />
-        {picked && (
-          <div className="w-full sm:w-64">
-            <Combobox
-              data-ui="live-group-picker"
-              aria-label={t`Group`}
-              placeholder={t`Groups`}
-              emptyMessage={t`Nothing matches.`}
-              keepOpenOnSelect={false}
-              className="rounded-full"
-              options={addonGroups.map((g) => ({
-                value: g.id,
-                label: g.name,
-                textValue: g.name,
-              }))}
-              value={addonGroups.some((g) => g.id === group) ? [group] : []}
-              onValueChange={(next) => next[0] && chooseGroup(next[0])}
-              {...pickOnFocus(
-                addonGroup && addonGroup !== group
-                  ? () => chooseGroup(addonGroup)
-                  : undefined
-              )}
-            />
-          </div>
-        )}
-        <div className="ms-auto" />
-        {guide && (
-          <DayPicker
-            days={days}
-            value={dayOffset}
-            onChange={(offset) => {
-              setDayOffset(offset);
-              // Another day opens at the same time of day.
-              place(
-                active,
-                new Date(now).setDate(new Date(now).getDate() + offset)
-              );
-            }}
-          />
-        )}
         {wide && hasGuide && (
           <PillTabs
             name="live-view"

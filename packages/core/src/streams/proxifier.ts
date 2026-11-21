@@ -1,7 +1,7 @@
 import { config as appConfig } from '../config/index.js';
 import { ParsedStream, StreamProxyConfig, UserData } from '../db/schemas.js';
 import { constants, createLogger } from '../utils/index.js';
-import { takeBasicAuthFromUrl } from '../utils/http.js';
+import { takeBasicAuthFromUrl } from '../utils/http/index.js';
 import { createProxy } from '../proxy/index.js';
 import { PLAYBACK_PATH_PREFIX } from '../debrid/utils.js';
 import { mediaInfoIdentity } from '../media-info/identity.js';

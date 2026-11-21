@@ -4,7 +4,7 @@ import { pageRtl } from './direction';
 export const UNDER_SHIFT = 0.25;
 export const UNDER_OPACITY = 0.6;
 
-/** How long the old screen may hold while the new page's art gets ready. */
+/** How long the old screen may hold while the new page, and a title's art, get ready. */
 const ART_WAIT_MS = 200;
 const EASE = 'cubic-bezier(0.05, 0.7, 0.1, 1)';
 const ART_MORPH = { duration: 450, easing: EASE };
@@ -30,13 +30,23 @@ let opening = false;
 /** The page then needs no entrance of its own. */
 export const pageOpening = (): boolean => opening;
 
-const artShown = () =>
+/** The open page's, not those of the pages kept hidden behind it. */
+const onPage = (selector: string) =>
+  document
+    .querySelector('main [data-page]:not([inert])')
+    ?.querySelector<HTMLElement>(selector) ?? null;
+
+/** Until the new page is open and, for a title, its art shows. */
+const opened = (before: Element | null, title: boolean) =>
   new Promise<void>((done) => {
     const by = performance.now() + ART_WAIT_MS;
     // Not by frame: none are drawn until the update finishes.
     const check = () => {
-      const art = document.querySelector("[data-ui='item-backdrop-image']");
-      const shown = art && getComputedStyle(art).opacity !== '0';
+      const page = document.querySelector('main [data-page]:not([inert])');
+      const art = onPage("[data-ui='item-backdrop-image']");
+      const shown =
+        page !== before &&
+        (!title || (art && getComputedStyle(art).opacity !== '0'));
       if (shown || performance.now() > by) done();
       else setTimeout(check, 8);
     };
@@ -45,7 +55,7 @@ const artShown = () =>
 
 /** Both cover by height from the top, so scaled to the hero's height the art frames the picture as the hero does. */
 function morphArt(from: DOMRect | undefined) {
-  const el = document.querySelector("[data-ui='item-backdrop']");
+  const el = onPage("[data-ui='item-backdrop']");
   const to = el?.getBoundingClientRect();
   if (!el || !to?.height || !from) return;
   el.animate(
@@ -88,37 +98,38 @@ const canTransition = () =>
 
 /**
  * Holds the old screen until the new page can draw, which otherwise leaves
- * nothing on screen meanwhile. From the hero, its art and logo carry over as the
- * rest crossfades; otherwise the page slides over.
+ * nothing on screen meanwhile; a title's until its art shows. From the hero,
+ * its art and logo carry over as the rest crossfades; otherwise the page slides over.
  */
-export function openPage(go: () => void, fromHero = false): void {
+export function openPage(
+  go: () => void,
+  { fromHero = false, title = true } = {}
+): void {
   if (!canTransition()) return go();
   const root = document.documentElement;
   const art = fromHero
-    ? document
-        .querySelector("[data-ui='hero-backdrops']")
-        ?.getBoundingClientRect()
+    ? onPage("[data-ui='hero-backdrops']")?.getBoundingClientRect()
     : undefined;
   const named: HTMLElement[] = [];
-  const name = (selector: string, viewTransitionName: string) => {
-    const el = document.querySelector<HTMLElement>(selector);
+  const name = (el: HTMLElement | null, viewTransitionName: string) => {
     if (!el) return;
     el.style.viewTransitionName = viewTransitionName;
     named.push(el);
   };
-  const nameAll = (names: Record<string, string>) =>
-    Object.entries(names).forEach(([selector, each]) => name(selector, each));
-  nameAll(BARS);
+  for (const [selector, each] of Object.entries(BARS))
+    name(document.querySelector<HTMLElement>(selector), each);
   if (fromHero) {
-    nameAll(HERO_LEAVING);
-    name("[data-slide='0'] [data-ui='hero-logo']", LOGO);
+    for (const [selector, each] of Object.entries(HERO_LEAVING))
+      name(onPage(selector), each);
+    name(onPage("[data-slide='0'] [data-ui='hero-logo']"), LOGO);
   } else root.toggleAttribute('data-sliding-open', true);
   opening = true;
+  const before = document.querySelector('main [data-page]:not([inert])');
   const transition = document.startViewTransition(async () => {
     go();
-    await artShown();
+    await opened(before, title);
     if (fromHero) {
-      name("[data-ui='item-logo']", LOGO);
+      name(onPage("[data-ui='item-logo']"), LOGO);
       morphArt(art);
     }
   });
