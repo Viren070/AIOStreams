@@ -10,6 +10,7 @@ import {
 import { Wrapper } from './wrapper.js';
 import { createPosterService } from '../poster/index.js';
 import { getAddonName } from '../utils/general.js';
+import { shuffled } from '../utils/shuffle.js';
 import type {
   MetaPreview,
   MergedCatalog,
@@ -79,6 +80,7 @@ export function withQualifiedCollection<T extends MetaPreview>(
             type: source.type,
             catalogId: `${owner}.${source.catalogId}`,
             genre: source.genre,
+            name: source.name,
           },
         ]
       : [];
@@ -284,10 +286,7 @@ export async function applyCatalogModifications(
     if (cachedShuffle) {
       catalog = cachedShuffle;
     } else {
-      for (let i = catalog.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [catalog[i], catalog[j]] = [catalog[j], catalog[i]];
-      }
+      catalog = shuffled(catalog);
       if (modification.persistShuffleFor) {
         await shuffleCache.set(
           shuffleCacheKey,
