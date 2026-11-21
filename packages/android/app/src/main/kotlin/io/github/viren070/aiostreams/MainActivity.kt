@@ -109,6 +109,10 @@ class MainActivity : ComponentActivity() {
     }
     private val voice = Voice(this) { bridge.send(it) }
     private lateinit var frameRates: FrameRateMatch
+    /** Whether the page draws the video in a box of its own, as a card's trailer or the mini player. */
+    private var framedByPage = false
+    /** Whether the file playing is a trailer, for which the display keeps its mode. */
+    private var trailerKeepsMode = false
     /** False when onCreate only showed the outdated WebView message. */
     private val started get() = ::bridge.isInitialized
     /** The page's renderer ended, leaving a web view that can't be used. */
@@ -166,7 +170,14 @@ class MainActivity : ComponentActivity() {
             send = { bridge.send(it) },
             isLocal = queue::isLocal,
             subtitles = File(cacheDir, "subtitles"),
-            beforeLoad = { playback.beforeLoad(player) },
+            beforeLoad = {
+                // A trailer's hint is for the file it was sent with; the next file switches as films do.
+                runOnUiThread {
+                    trailerKeepsMode = false
+                    frameRates.framed = framedByPage
+                }
+                playback.beforeLoad(player)
+            },
             fallBack = { playback.fallBack(player) },
             frameRate = frameRates::match,
             showVideo = playback::showVideo,
@@ -288,7 +299,10 @@ class MainActivity : ComponentActivity() {
             "player-retry" -> message["name"]?.jsonPrimitive?.contentOrNull?.let { playback.retry(it, player) }
             "player-frame" -> runOnUiThread {
                 mini.place(message)
-                frameRates.framed = message["frame"] is JsonObject
+                framedByPage = message["frame"] is JsonObject
+                // A trailer keeps the display's mode, even filling the screen.
+                trailerKeepsMode = message["keepMode"]?.jsonPrimitive?.booleanOrNull == true
+                frameRates.framed = framedByPage || trailerKeepsMode
             }
             // A TV would blank to switch modes.
             "player-controls" -> if (!onTv()) {
