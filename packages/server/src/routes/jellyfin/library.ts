@@ -11,6 +11,7 @@ import {
   recommendedPreviews,
   searchPeople,
   similarPreviews,
+  withComposers,
   type FilmographyKind,
   Cache,
   canonicalDescriptor,
@@ -503,6 +504,7 @@ async function handleItems(
   const wantsResumable = filters.includes('isresumable');
   const recursive = qb(req, 'Recursive') ?? false;
   const personIds = qlist(req, 'PersonIds');
+  const personTypes = qlist(req, 'PersonTypes');
 
   if (ids.length) {
     // Resolving runs the stream pipeline, so a lookup of several ids never does.
@@ -510,6 +512,9 @@ async function handleItems(
     const built = await mapLimited(ids.slice(0, 200), ROW_CONCURRENCY, (id) =>
       itemForId(req, ctx, id, { resolve, listed: true }).catch(() => null)
     );
+    // One id is a title's page asking for its details, crew and all.
+    if (ids.length === 1 && built[0])
+      built[0] = await withComposers(ctx.userData, built[0]);
     const items = applySort(
       req,
       excludeTypes(
@@ -658,12 +663,26 @@ async function handleItems(
               types.has(k)
             )
           : undefined,
+        personTypes: personTypes.length ? personTypes : undefined,
         sortBy: qlist(req, 'SortBy'),
         descending: sortDescending(req),
         startIndex,
         limit,
       });
       const items = await itemsFromPreviews(ctx, page.previews);
+      // The person's own part in each, as Jellyfin lists people on an item.
+      const id = personIds[0] ?? parentId;
+      if (page.parts && id && person)
+        items.forEach((item, i) => {
+          item.People = (page.parts![i] ?? []).map((part) => ({
+            Id: id,
+            Name: person.n,
+            Type: part.type,
+            ...(part.role && { Role: part.role }),
+            // Not a Jellyfin field: a show's episodes in this part.
+            ...(part.episodes && { EpisodeCount: part.episodes }),
+          }));
+        });
       send(req, res, excludeTypes(req, items), page.total, startIndex);
       return;
     }
@@ -1410,7 +1429,7 @@ router.get(
       res.status(404).json({ Message: 'Item not found' });
       return;
     }
-    res.json(stripInternal(item));
+    res.json(stripInternal(await withComposers(ctx.userData, item)));
   })
 );
 

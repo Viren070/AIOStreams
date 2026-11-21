@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import React from 'react';
 import {
+  infiniteQueryOptions,
   keepPreviousData,
   type QueryCache,
   queryOptions,
@@ -256,32 +257,58 @@ export function useLibraryHeads(views: BaseItemDto[], limit: number) {
 }
 
 /**
- * A person's work, newest first. Pages advance by the server's offset, since
- * a title no addon here can open is left out of its page.
+ * A person's work, newest first; with `roles`, only the titles they had that
+ * kind of part in, such as Director. Pages advance by the server's offset,
+ * since a title no addon here can open is left out of its page.
  */
-export function usePersonItems(personId: string, types: string) {
-  const { client, user } = useSession();
+export function usePersonItems(
+  personId: string,
+  types: string,
+  roles: string[] = [],
+  enabled = true
+) {
   return useInfiniteQuery({
-    queryKey: [...useKey(), 'person-items', personId, types],
-    meta: { cache: 'titles' },
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
-      client.get<BaseItemDtoQueryResult>('/Items', {
-        userId: user.Id,
-        PersonIds: personId,
-        IncludeItemTypes: types,
-        Recursive: true,
-        SortBy: 'PremiereDate,ProductionYear,SortName',
-        SortOrder: 'Descending',
-        StartIndex: pageParam,
-        Limit: PAGE,
-      }),
-    getNextPageParam: (last, pages) => {
-      const offset = pages.length * PAGE;
-      return offset < (last.TotalRecordCount ?? 0) ? offset : undefined;
-    },
-    staleTime: 60 * 60_000,
+    ...usePersonItemsOptions()(personId, types, roles),
+    enabled,
   });
+}
+
+/** A person's work's first page, fetched ahead as their page would ask for it. */
+export function useFetchPersonItems() {
+  const queryClient = useQueryClient();
+  const options = usePersonItemsOptions();
+  return (personId: string, types: string, roles: string[] = []) =>
+    queryClient
+      .fetchInfiniteQuery(options(personId, types, roles))
+      .then((data) => data.pages[0]?.Items ?? []);
+}
+
+function usePersonItemsOptions() {
+  const { client, user } = useSession();
+  const key = useKey();
+  return (personId: string, types: string, roles: string[]) =>
+    infiniteQueryOptions({
+      queryKey: [...key, 'person-items', personId, types, roles.join(',')],
+      meta: { cache: 'titles' },
+      initialPageParam: 0,
+      queryFn: ({ pageParam }) =>
+        client.get<BaseItemDtoQueryResult>('/Items', {
+          userId: user.Id,
+          PersonIds: personId,
+          ...(roles.length > 0 && { PersonTypes: roles.join(',') }),
+          IncludeItemTypes: types,
+          Recursive: true,
+          SortBy: 'PremiereDate,ProductionYear,SortName',
+          SortOrder: 'Descending',
+          StartIndex: pageParam,
+          Limit: PAGE,
+        }),
+      getNextPageParam: (last, pages) => {
+        const offset = pages.length * PAGE;
+        return offset < (last.TotalRecordCount ?? 0) ? offset : undefined;
+      },
+      staleTime: 60 * 60_000,
+    });
 }
 
 /** The next episode of each show the user is caught up on. */
