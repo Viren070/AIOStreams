@@ -1,0 +1,111 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { playedBackSince, rewatchNextIndex } from './rewatch.js';
+
+/** An episode played at `at` (a day number), or never played. */
+const ep = (at?: number, aired = true) => ({
+  played: at !== undefined,
+  aired,
+  lastPlayedAt: at ?? null,
+});
+
+describe('rewatchNextIndex', () => {
+  it('goes on from the episode played last, though the next one was watched before', () => {
+    // Watched through to the end on days 1-5, then episodes 1-2 again on days 10-11.
+    const show = [ep(10), ep(11), ep(3), ep(4), ep(5)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('finds the last play by its date, not by where it sits in the show', () => {
+    // An import can give every row of a show one timestamp; the dates still differ.
+    const show = [ep(1), ep(20), ep(3), ep(4), ep(5), ep(6)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('goes on from an earlier episode watched for the first time', () => {
+    // Caught up with the newest episodes on days 1-3, then went back to the
+    // start of the show on days 10-11: next is the third episode, never seen.
+    const show = [ep(10), ep(11), ep(), ep(), ep(1), ep(2), ep(3)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('offers an episode the first watch skipped', () => {
+    const show = [ep(10), ep(11), ep(), ep(4)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('stays on an episode stopped part-way through the rewatch', () => {
+    const show = [
+      ep(10),
+      ep(11),
+      { ...ep(12), inProgress: true },
+      ep(4),
+      ep(5),
+    ];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('offers an unfinished episode started after the last completed one', () => {
+    // E2 completed on day 11, E3 never played, E4 started on day 12.
+    const started = {
+      played: false,
+      aired: true,
+      lastPlayedAt: 12,
+      inProgress: true,
+    };
+    const show = [ep(10), ep(11), ep(), started, ep(5)];
+    assert.equal(rewatchNextIndex(show), 3);
+  });
+
+  it('passes over a saved position older than the rewatch', () => {
+    const stale = {
+      played: false,
+      aired: true,
+      lastPlayedAt: 2,
+      inProgress: true,
+    };
+    const show = [ep(10), ep(11), ep(), stale, ep(5)];
+    assert.equal(rewatchNextIndex(show), 2);
+  });
+
+  it('passes over episodes that have not aired', () => {
+    const show = [ep(10), ep(11), ep(undefined, false), ep(4)];
+    assert.equal(rewatchNextIndex(show), 3);
+  });
+
+  it('leaves a show watched in order to the usual Next Up', () => {
+    assert.equal(rewatchNextIndex([ep(1), ep(2), ep(3), ep()]), -1);
+    assert.equal(rewatchNextIndex([ep(1), ep(2), ep(3)]), -1);
+  });
+
+  it('takes the furthest episode when plays share a date', () => {
+    assert.equal(rewatchNextIndex([ep(5), ep(5), ep(5), ep()]), -1);
+  });
+
+  it('needs a dated play to go on from', () => {
+    assert.equal(rewatchNextIndex([]), -1);
+    assert.equal(rewatchNextIndex([ep(), ep()]), -1);
+    const undated = { played: true, aired: true, lastPlayedAt: null };
+    assert.equal(rewatchNextIndex([undated, undated, ep()]), -1);
+  });
+});
+
+describe('playedBackSince', () => {
+  it('is false for a show watched in order', () => {
+    assert.equal(playedBackSince([1, 2, 3]), false);
+  });
+
+  it('is true when an earlier episode was played after the last one', () => {
+    assert.equal(playedBackSince([1, 5, 3]), true);
+  });
+
+  it('is false when plays share a date', () => {
+    assert.equal(playedBackSince([4, 4, 4]), false);
+  });
+
+  it('counts a missing date as never', () => {
+    assert.equal(playedBackSince([2, null, null]), true);
+    assert.equal(playedBackSince([null, null, 2]), false);
+    assert.equal(playedBackSince([]), false);
+  });
+});
