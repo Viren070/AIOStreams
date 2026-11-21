@@ -468,17 +468,20 @@ export function webGpuEngine(
       emit({ type: 'unplayable', reason, positionMs });
     };
 
-    const events = (load: number): GpuEvents => {
+    const events = (load: number, startMs: number): GpuEvents => {
+      let playbackStarted = false;
       const current = () => load === opening;
       return {
         onState(state) {
           if (!current()) return;
           if (state === 'playing') {
+            playbackStarted = true;
             paused = false;
             void pip?.video.play().catch(() => {});
             embedded?.setPlaying(true);
             set({ started: true, paused: false, waiting: false });
           } else if (state === 'paused') {
+            playbackStarted = true;
             paused = true;
             if (!revealing) pip?.video.pause();
             set({ paused: true, waiting: false });
@@ -495,7 +498,9 @@ export function webGpuEngine(
           if (current() && ms) set({ durationMs: ms });
         },
         onFallback(reason, atMs) {
-          if (current()) unplayable(reason, atMs);
+          if (!current()) return;
+          // A failed open reports zero before the controller has a playhead.
+          unplayable(reason, atMs === 0 && !playbackStarted ? startMs : atMs);
         },
         onError(message) {
           if (current()) unplayable(message, position);
@@ -521,7 +526,7 @@ export function webGpuEngine(
       }
       const opened = (player = module.createEmbeddedPlayer(
         { container, video: el },
-        events(load)
+        events(load, next.startMs)
       ));
       followPip();
       await Promise.all([
