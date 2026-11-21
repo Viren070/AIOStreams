@@ -11,7 +11,8 @@ const { parsed } = loadEnv({ prefixes: ['PUBLIC_'] });
 
 /**
  * The commit this build comes from, e.g. `a1b2c3d4 (2026-09-25)`: from git, or
- * from the metadata CI writes where there is none, as in the Docker build.
+ * where there is none, as in the Docker build, from `SOURCE_COMMIT` or the
+ * metadata CI writes.
  */
 function buildCommit(): string {
   try {
@@ -24,6 +25,8 @@ function buildCommit(): string {
       .split('\n');
     if (hash) return `${hash} (${date})`;
   } catch {}
+  const sourceCommit = process.env.SOURCE_COMMIT;
+  if (sourceCommit) return sourceCommit.slice(0, 8);
   try {
     const { commitHash, commitTime } = JSON.parse(
       readFileSync(
@@ -87,6 +90,14 @@ const BUNDLED_ICONS = [
   'apple-icon.png',
 ].map((name) => ({ from: `../frontend/public/${name}`, to: name }));
 
+/** What a browser installs the page from; a server serves its own manifest. */
+const WEB_APP_FILES = [
+  { from: './manifest.json', to: 'manifest.json' },
+  ...['web-app-manifest-192x192.png', 'web-app-manifest-512x512.png'].map(
+    (name) => ({ from: `../frontend/public/${name}`, to: name })
+  ),
+];
+
 /** Under its version, as the server caches its static files for a year. */
 function webGpuPlayer() {
   const manifest = createRequire(import.meta.url).resolve(
@@ -134,6 +145,7 @@ export default defineConfig(async ({ envMode }) => {
     // Set by the TV apps' build: they have no bridge to tell the page.
     __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || null),
   };
+  const pageIcons = process.env.PAGE_ICONS === 'true';
   const source = {
     entry: { index: './src/main.tsx' },
     define,
@@ -164,13 +176,17 @@ export default defineConfig(async ({ envMode }) => {
       tools,
       html: {
         template: './index.html',
-        templateParameters: { root: './', icons: false, splash: true },
+        templateParameters: { root: './', icons: pageIcons, splash: true },
       },
       output: {
         distPath: { root: 'dist-standalone' },
         // Relative, since the TV apps load it from their package's files.
         assetPrefix: 'auto',
-        copy: [...BUNDLED_ICONS, engine.copy],
+        copy: [
+          ...BUNDLED_ICONS,
+          ...(pageIcons ? WEB_APP_FILES : []),
+          engine.copy,
+        ],
       },
       server: { port: devServerPort + 1 },
     };

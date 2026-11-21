@@ -205,7 +205,7 @@ Usenet on TorBox requires their **Pro** plan, which also includes [an NNTP serve
 
 #### Cache and Play
 
-Because TorBox must finish downloading before playback, an uncached result normally returns a short "downloading, come back later" video — you'd retry once it's cached. **Cache and Play** (under **Services → Built-in → Cache and Play**) changes that: AIOStreams polls TorBox until the download completes, then serves the playback link directly, so your player just buffers a little longer and starts on its own.
+Because TorBox must finish downloading before playback, an uncached result normally returns a short "downloading, come back later" video — you'd retry once it's cached. **Cache and Play** (on the **Playback** page, in Advanced mode) changes that: AIOStreams polls TorBox until the download completes, then serves the playback link directly, so your player just buffers a little longer and starts on its own.
 
 <Callout type="warn">
   Cache and Play is limited by your player's timeout. The Stremio iOS app, for
@@ -427,6 +427,8 @@ These addons need at least one Usenet-capable service configured — each result
 
 You are not limited to a single Newznab addon: add it once **per indexer**, each with that indexer's API URL and key. A handful of Newznab addon instances side by side is the normal setup.
 
+New to Usenet indexers? Compare options at [Usenet Almanac](https://usenetalmanac.com/indexers/) or [nzb-sources](https://hampelmen.github.io/nzb-sources/).
+
 <Callout type="tip">
   With the Newznab addon, set the **Search Mode** to `both` if you have API
   hits to spare. Some indexers only return results via query search — test both
@@ -446,7 +448,7 @@ Each of these addons has a **Services** option. Left empty, AIOStreams configure
 
 Missing articles are the most common way a Usenet stream fails to play — and normally that means a "Something went wrong" error video. **Failover** fixes this: when the result you clicked fails, AIOStreams automatically tries the next result in your sorted list and redirects your player there instead, so playback works instead of failing.
 
-Enable it under **Services → Built-in → Failover** on the configuration page.
+Enable it on the configure page's **Playback** page, in Advanced mode.
 
 ### Where It Works
 
@@ -469,7 +471,7 @@ Stremio NNTP results are excluded — playback happens entirely inside Stremio. 
 
 ### Same-Release Variants (Deduplicator Merging)
 
-The deduplicator (**Filters → Deduplicator**) removes duplicate copies of the same release from your list. Two settings turn those discarded copies into failover ammunition instead of waste:
+The deduplicator (**Results → Duplicates**) removes duplicate copies of the same release from your list. Two settings turn those discarded copies into failover ammunition instead of waste:
 
 - **Merge Duplicates** — rather than just discarding duplicates, their info is folded into the surviving result (e.g. a runtime that only one addon reported is kept on the winner).
 - **Harvest Failover Variants** — additionally retains the duplicates' playback URLs on the winner as _same-release_ failover targets: the same release from a different indexer or addon.
@@ -478,7 +480,7 @@ With variants harvested, the **Same-Release Failover Attempts** setting (in the 
 
 ### Failover Position
 
-The last stages of the result pipeline are the required/excluded stream expression filters (**Filters → Stream Expression**) followed by result limits (**Filters → Result Limits**) — and depending on your configuration, both can remove a lot of results. **Failover Position** picks the point (always after sorting) from which the fallback chain is built:
+The last stages of the result pipeline are the required/excluded stream expression filters (**Filters → Stream Expression**) followed by result limits (**Results → Limits**) — and depending on your configuration, both can remove a lot of results. **Failover Position** picks the point (always after sorting) from which the fallback chain is built:
 
 | Position            | Fallback chain drawn from                                            |
 | ------------------- | -------------------------------------------------------------------- |
@@ -529,11 +531,9 @@ AIOStreams keeps grabbed `.nzb` files in a two-tier cache (in-memory plus on-dis
 - **NZBHydra2** proxies grabs by default, so search and grab both come from Hydra. Note that Hydra force-disables proxying for certain indexers at those indexers' request, so this is not guaranteed for every indexer.
 - **Prowlarr** only redirects NZB grabs — the downloading service hits the indexer directly, so the IP mismatch remains.
 
-### ElfHosted & Zyclops
+### ElfHosted
 
 When running an ElfHosted AIOStreams instance, your search IP and grab IP are always the same, routed through a built-in NZBHydra/SABnzbd proxy on your instance, so usage patterns are identical to traditional Usenet access. ElfHosted also offers managed [NZBHydra2](https://store.elfhosted.com/product/nzbhydra/) and [Prowlarr](https://store.elfhosted.com/product/prowlarr/) instances ($1 trial) for augmenting an existing setup.
-
-The public [Zyclops NewzNab Healthcheck Proxy](https://zyclops.elfhosted.com/) (_an ElfHosted project_) is another way to keep your search and grab IPs aligned, and Zyclops health checks are built into the AIOStreams Newznab addon. Review the highlighted implications regarding credential/NZB sharing and your indexer's TOS before enabling it.
 
 ### Outbound Request Controls
 

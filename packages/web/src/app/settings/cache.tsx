@@ -20,7 +20,6 @@ import {
   type CacheCategory,
 } from '@/lib/cache';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { onDevice } from './_components/common';
 
 const cacheLabels = (
   category: CacheCategory
@@ -125,7 +124,7 @@ export function CacheSection() {
 
   return (
     <>
-      <SettingsCard description={onDevice()}>
+      <SettingsCard holds="local">
         <Switch
           side="right"
           label={t`Save what you browse`}

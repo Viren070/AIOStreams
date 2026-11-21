@@ -27,12 +27,7 @@ import {
 import { ColorInput } from '@aiostreams/ui/color-input';
 import { currentHost } from '@/lib/hosts';
 import { SettingsCard } from './_components/settings-card';
-import {
-  languageOptions,
-  LanguageList,
-  followsYou,
-  onAccount,
-} from './_components/common';
+import { languageOptions, LanguageList } from './_components/common';
 
 const subtitleModes = (): {
   value: SubtitleMode;
@@ -80,7 +75,7 @@ const subtitleTypeOptions = (): { value: SubtitleType; label: string }[] => [
 ];
 
 export function SubtitlesSection() {
-  const { prefs, update } = usePlaybackPrefs();
+  const { prefs, update, locked } = usePlaybackPrefs();
   const mode: SubtitleMode = prefs.SubtitleMode ?? 'Default';
   const subtitleLists = Array.isArray(prefs.SubtitleLanguages);
   const [size, setSize] = useSetting(settings.subtitle.size);
@@ -110,56 +105,59 @@ export function SubtitlesSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount()}
+        holds="server"
+        locked={locked}
       >
-        <LanguageList
-          label={t`Subtitle languages`}
-          help={t`Tried in order for the subtitles the setting below shows.`}
-          options={languageOptions()}
-          value={subtitleLanguages(prefs)}
-          max={subtitleLists ? undefined : 1}
-          onChange={(next) =>
-            update({
-              ...(subtitleLists && { SubtitleLanguages: next }),
-              SubtitleLanguagePreference: next[0] ?? '',
-            })
-          }
-        />
-        <Select
-          label={t`Subtitles`}
-          help={modes.find((m) => m.value === mode)?.help}
-          options={modes.map(({ value, label }) => ({ value, label }))}
-          value={mode}
-          onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
-        />
-        {Array.isArray(prefs.SubtitleTypes) && (
+        <fieldset disabled={locked} className="contents">
           <LanguageList
-            label={t`Subtitle types`}
-            help={t`When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last.`}
-            options={subtitleTypeOptions()}
-            value={subtitleTypes(prefs)}
-            fixed
-            onChange={(next) => update({ SubtitleTypes: next })}
+            label={t`Subtitle languages`}
+            help={t`Tried in order for the subtitles the setting below shows.`}
+            options={languageOptions()}
+            value={subtitleLanguages(prefs)}
+            max={subtitleLists ? undefined : 1}
+            onChange={(next) =>
+              update({
+                ...(subtitleLists && { SubtitleLanguages: next }),
+                SubtitleLanguagePreference: next[0] ?? '',
+              })
+            }
           />
-        )}
-        {typeof prefs.ListPreferredSubtitlesOnly === 'boolean' && (
+          <Select
+            label={t`Subtitles`}
+            help={modes.find((m) => m.value === mode)?.help}
+            options={modes.map(({ value, label }) => ({ value, label }))}
+            value={mode}
+            onValueChange={(v) => update({ SubtitleMode: v as SubtitleMode })}
+          />
+          {Array.isArray(prefs.SubtitleTypes) && (
+            <LanguageList
+              label={t`Subtitle types`}
+              help={t`When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last.`}
+              options={subtitleTypeOptions()}
+              value={subtitleTypes(prefs)}
+              fixed
+              onChange={(next) => update({ SubtitleTypes: next })}
+            />
+          )}
+          {typeof prefs.ListPreferredSubtitlesOnly === 'boolean' && (
+            <Switch
+              side="right"
+              label={t`List only my languages`}
+              help={t`The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages.`}
+              value={prefs.ListPreferredSubtitlesOnly}
+              onValueChange={(v) => update({ ListPreferredSubtitlesOnly: v })}
+            />
+          )}
           <Switch
             side="right"
-            label={t`List only my languages`}
-            help={t`The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages.`}
-            value={prefs.ListPreferredSubtitlesOnly}
-            onValueChange={(v) => update({ ListPreferredSubtitlesOnly: v })}
+            label={t`Remember picks per show`}
+            help={t`Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it.`}
+            value={prefs.RememberSubtitleSelections !== false}
+            onValueChange={(v) => update({ RememberSubtitleSelections: v })}
           />
-        )}
-        <Switch
-          side="right"
-          label={t`Remember picks per show`}
-          help={t`Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it.`}
-          value={prefs.RememberSubtitleSelections !== false}
-          onValueChange={(v) => update({ RememberSubtitleSelections: v })}
-        />
+        </fieldset>
       </SettingsCard>
-      <SettingsCard name="preview" title={t`Preview`}>
+      <SettingsCard name="preview" title={t`Preview`} holds="profile" plain>
         <div className="relative aspect-[16/5] rounded-lg bg-gradient-to-br from-gray-700 to-gray-950">
           <span
             className="absolute left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded px-2 py-0.5 text-center text-lg"
@@ -169,7 +167,7 @@ export function SubtitlesSection() {
           </span>
         </div>
       </SettingsCard>
-      <SettingsCard name="text" title={t`Text`} description={followsYou()}>
+      <SettingsCard name="text" title={t`Text`} holds="profile">
         <Select
           label={t`Size`}
           options={SUBTITLE_SIZES.map((value) => ({
@@ -207,7 +205,12 @@ export function SubtitlesSection() {
           onValueChange={([v]) => setPosition(v)}
         />
       </SettingsCard>
-      <SettingsCard name="outline-and-shadow" title={t`Outline and shadow`}>
+      <SettingsCard
+        name="outline-and-shadow"
+        title={t`Outline and shadow`}
+        holds="profile"
+        plain
+      >
         <Select
           label={t`Width`}
           options={[
@@ -232,7 +235,12 @@ export function SubtitlesSection() {
           onValueChange={setOutlineColor}
         />
       </SettingsCard>
-      <SettingsCard name="background" title={t`Background`}>
+      <SettingsCard
+        name="background"
+        title={t`Background`}
+        holds="profile"
+        plain
+      >
         <ColorInput
           picker={!currentHost().tv}
           label={t`Colour`}
@@ -249,7 +257,7 @@ export function SubtitlesSection() {
           onValueChange={([v]) => setBackgroundOpacity(v)}
         />
       </SettingsCard>
-      <SettingsCard>
+      <SettingsCard holds="profile" plain>
         <Switch
           side="right"
           label={t`Apply to styled subtitles too`}

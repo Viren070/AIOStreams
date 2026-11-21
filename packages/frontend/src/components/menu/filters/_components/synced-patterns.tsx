@@ -860,7 +860,7 @@ export function SyncedUrlInputs({
 
       <div className="space-y-2">
         {urls.length > 0 && (
-          <div className="rounded-md border border-[--brand]/20 bg-[--brand]/5 divide-y divide-[--brand]/10">
+          <div className="rounded-md border border-brand-300/20 bg-brand-300/5 divide-y divide-brand-300/10">
             {urls.map((url) => {
               const urlState = fetchedData[url];
               return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { PartyRelayMode } from '@aiostreams/core';
 import { allowHints, type JellyfinClient } from './client';
+import { noteStreamsItself } from '@/lib/playback/stream';
 import type { Branding } from './types';
 
 /** The extensions a server can offer; the server lists them in `system.ts`. */
@@ -121,5 +122,6 @@ export function useServerInfoQuery(client: JellyfinClient) {
   });
   // While rendering, so the screens below have it for their first requests.
   allowHints(client.base, !!query.data?.features.clientHints);
+  if (query.data) noteStreamsItself(client.base, query.data.stock);
   return query;
 }

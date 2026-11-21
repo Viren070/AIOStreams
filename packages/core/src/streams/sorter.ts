@@ -266,6 +266,21 @@ class StreamSorter {
           }
           return multiplier * -minAudioIndex;
         }
+        case 'audioChannel': {
+          const preferred = userData.preferredAudioChannels;
+          if (!preferred) {
+            return 0;
+          }
+          const channels = stream.parsedFile?.audioChannels?.length
+            ? stream.parsedFile.audioChannels
+            : ['Unknown'];
+          const indexes = channels
+            .map((channel) => preferred.indexOf(channel as any))
+            .filter((idx) => idx !== -1);
+          return (
+            multiplier * -(indexes.length ? Math.min(...indexes) : Infinity)
+          );
+        }
         case 'streamType': {
           if (!userData.preferredStreamTypes) {
             return 0;

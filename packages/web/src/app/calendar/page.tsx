@@ -5,7 +5,7 @@ import { useElementScrollRestoration, useRouter } from '@tanstack/react-router';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { Button, IconButton } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
-import { Skeleton } from '@aiostreams/ui/skeleton';
+import { LoadingSpinner, Spinner } from '@aiostreams/ui/loading-spinner';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { cn } from '@aiostreams/ui/core/styling';
 import { formatLocale } from '@/lib/i18n';
@@ -425,6 +425,12 @@ export function CalendarPage({ month }: { month?: string }) {
             >
               {dateFormat({ month: 'long', year: 'numeric' }).format(first)}
             </span>
+            {calendar.isLoading && (
+              <Spinner
+                data-ui="calendar-loading"
+                className="ms-2 hidden size-5 md:inline"
+              />
+            )}
           </div>
           {!current && (
             <Button
@@ -441,8 +447,6 @@ export function CalendarPage({ month }: { month?: string }) {
 
         {calendar.isError ? (
           <LuffyError title={t`Could not load the calendar`} />
-        ) : calendar.isLoading ? (
-          <Skeleton className="h-[40rem] w-full rounded-xl" />
         ) : (
           <>
             <div className="hidden md:block">
@@ -454,15 +458,19 @@ export function CalendarPage({ month }: { month?: string }) {
               />
             </div>
             <div className="md:hidden">
-              <Agenda
-                key={monthKey(first)}
-                days={days}
-                month={first.getMonth()}
-                byDay={byDay}
-                current={current}
-              />
+              {calendar.isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <Agenda
+                  key={monthKey(first)}
+                  days={days}
+                  month={first.getMonth()}
+                  byDay={byDay}
+                  current={current}
+                />
+              )}
             </div>
-            {!inMonth && (
+            {!calendar.isLoading && !inMonth && (
               <p className="text-[--muted]">
                 <Trans>
                   Nothing airs this month from your shows or watchlist.

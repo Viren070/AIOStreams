@@ -1,6 +1,6 @@
 import { appConfig } from '../../../index.js';
 import { Cache } from '../../../utils/cache.js';
-import { makeRequest } from '../../../utils/http.js';
+import { makeRequest } from '../../../utils/http/index.js';
 import type {
   ProviderContext,
   Segment,

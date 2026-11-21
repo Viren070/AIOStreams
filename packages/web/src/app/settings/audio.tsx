@@ -16,6 +16,7 @@ import { audioDelayLabel, dialogueLabel } from '@/lib/playback/sound';
 import {
   settings,
   useSetting,
+  useSettingsLayer,
   AUDIO_CHANNELS,
   AUDIO_DELAY_LIMIT_MS,
   AUDIO_DELAY_STEP_MS,
@@ -26,12 +27,7 @@ import {
   type PassthroughFormat,
 } from '@/lib/settings';
 import { SettingsCard } from './_components/settings-card';
-import {
-  languageOptions,
-  LanguageList,
-  onDevice,
-  onAccount,
-} from './_components/common';
+import { languageOptions, LanguageList } from './_components/common';
 
 const audioTypeOptions = (): { value: AudioType; label: string }[] => [
   { value: 'main', label: t`Main` },
@@ -56,7 +52,7 @@ const passthroughHelp = (passthrough: Passthrough) =>
   })[passthrough];
 
 export function AudioSection() {
-  const { prefs, update } = usePlaybackPrefs();
+  const { prefs, update, locked } = usePlaybackPrefs();
   const audio = audioLanguages(prefs);
   const audioLists = Array.isArray(prefs.AudioLanguages);
   return (
@@ -64,50 +60,53 @@ export function AudioSection() {
       <SettingsCard
         name="language"
         title={t`Language`}
-        description={onAccount()}
+        holds="server"
+        locked={locked}
       >
-        <LanguageList
-          label={t`Audio languages`}
-          help={t`A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in.`}
-          options={[
-            { value: ORIGINAL_LANGUAGE, label: t`Original language` },
-            ...languageOptions(),
-          ]}
-          value={audio}
-          max={audioLists ? undefined : 1}
-          onChange={(next) =>
-            update({
-              ...(audioLists && { AudioLanguages: next }),
-              AudioLanguagePreference: next[0] ?? '',
-            })
-          }
-        />
-        {audio.length > 0 && (
+        <fieldset disabled={locked} className="contents">
+          <LanguageList
+            label={t`Audio languages`}
+            help={t`A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in.`}
+            options={[
+              { value: ORIGINAL_LANGUAGE, label: t`Original language` },
+              ...languageOptions(),
+            ]}
+            value={audio}
+            max={audioLists ? undefined : 1}
+            onChange={(next) =>
+              update({
+                ...(audioLists && { AudioLanguages: next }),
+                AudioLanguagePreference: next[0] ?? '',
+              })
+            }
+          />
+          {audio.length > 0 && (
+            <Switch
+              side="right"
+              label={t`Play the version's default track first`}
+              help={t`A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win.`}
+              value={prefs.PlayDefaultAudioTrack !== false}
+              onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+            />
+          )}
+          {Array.isArray(prefs.AudioTypes) && (
+            <LanguageList
+              label={t`Audio types`}
+              help={t`When a version has more than one kind of audio track, the first of these it has plays.`}
+              options={audioTypeOptions()}
+              value={audioTypes(prefs)}
+              fixed
+              onChange={(next) => update({ AudioTypes: next })}
+            />
+          )}
           <Switch
             side="right"
-            label={t`Play the version's default track first`}
-            help={t`A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win.`}
-            value={prefs.PlayDefaultAudioTrack !== false}
-            onValueChange={(v) => update({ PlayDefaultAudioTrack: v })}
+            label={t`Remember picks per show`}
+            help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it.`}
+            value={prefs.RememberAudioSelections !== false}
+            onValueChange={(v) => update({ RememberAudioSelections: v })}
           />
-        )}
-        {Array.isArray(prefs.AudioTypes) && (
-          <LanguageList
-            label={t`Audio types`}
-            help={t`When a version has more than one kind of audio track, the first of these it has plays.`}
-            options={audioTypeOptions()}
-            value={audioTypes(prefs)}
-            fixed
-            onChange={(next) => update({ AudioTypes: next })}
-          />
-        )}
-        <Switch
-          side="right"
-          label={t`Remember picks per show`}
-          help={t`An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it.`}
-          value={prefs.RememberAudioSelections !== false}
-          onValueChange={(v) => update({ RememberAudioSelections: v })}
-        />
+        </fieldset>
       </SettingsCard>
       {shellHost() && (
         <>
@@ -136,10 +135,11 @@ function OutputCard() {
   const [formats, setFormats] = useSetting(settings.audio.passthroughFormats);
   const [ac3Encode, setAc3Encode] = useSetting(settings.audio.ac3Encode);
   const info = useShellInfo();
+  const layer = useSettingsLayer();
   const passing = passthrough !== 'off';
   return (
-    <SettingsCard name="output" title={t`Output`} description={onDevice()}>
-      {!android && <AudioDeviceSelect />}
+    <SettingsCard name="output" title={t`Output`} holds="device">
+      {!android && !layer && <AudioDeviceSelect />}
       <Select
         label={t`Channels`}
         help={t`What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in.`}
@@ -228,7 +228,7 @@ function SoundCard() {
   const [delay, setDelay] = useSetting(settings.audio.delayMs);
   const delayLabel = audioDelayLabel(delay);
   return (
-    <SettingsCard name="sound" title={t`Sound`} description={onDevice()}>
+    <SettingsCard name="sound" title={t`Sound`} holds="device">
       <Select
         label={t`Dialogue boost`}
         help={t`Raises the centre channel, where surround sound puts dialogue. Not for sound passed through.`}

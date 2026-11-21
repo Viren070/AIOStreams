@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@aiostreams/ui/button';
+import { cn } from '@aiostreams/ui/core/styling';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
@@ -13,11 +14,17 @@ import {
   CreateUserResponse,
 } from '@/lib/api';
 import { JellyfinApiKeys } from './jellyfin-api-keys';
-import { JellyfinPersonas } from './jellyfin-personas';
-import { JellyfinTrackers } from './jellyfin-trackers';
+import { ProfileList } from './profiles/profile-list';
+import { JellyfinTrackers } from './profiles/trackers';
+import { profileLabel } from '@/lib/audiences';
+import { profilesOf } from '../../../../core/src/utils/profiles';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@aiostreams/ui/alert';
-import { SettingsCard } from '../shared/settings-card';
+import {
+  PlainSections,
+  SettingsCard,
+  SettingsRows,
+} from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
   Code2,
@@ -29,14 +36,21 @@ import {
   LibraryBig,
   Settings2,
   DownloadIcon,
+  ExternalLink,
   PlusIcon,
   Rss,
   SearchIcon,
   Smartphone,
+  TriangleAlert,
   UploadIcon,
   Users,
 } from 'lucide-react';
-import { LuSquareCheck, LuSquareMinus, LuWand } from 'react-icons/lu';
+import {
+  LuChevronRight,
+  LuSquareCheck,
+  LuSquareMinus,
+  LuWand,
+} from 'react-icons/lu';
 import { AnimatePresence, motion } from 'motion/react';
 import { Checkbox, CheckboxGroup } from '@aiostreams/ui/checkbox';
 import { IconButton } from '@aiostreams/ui/button';
@@ -54,7 +68,11 @@ import { TemplateExportModal } from '../shared/templates/export-modal';
 import { ConfigTemplatesModal } from '../shared/templates';
 import { PasswordInput } from '@aiostreams/ui/password-input';
 import { useMenu } from '@/context/menu';
-import { variantSelectionFromLocation } from '@/lib/manifest-url';
+import {
+  encodeVariantId,
+  variantSelectionFromLocation,
+} from '@/lib/manifest-url';
+import { profileInstallOptions } from '@/lib/audiences';
 import {
   ConfirmationDialog,
   useConfirmationDialog,
@@ -66,7 +84,10 @@ import { FiExternalLink } from 'react-icons/fi';
 import { ProfileCard } from './profile-card';
 import { LinkedAccountsSection } from './linked-accounts';
 import { LinkOfferModal, linkOfferDismissed } from './link-offer-modal';
-import { VariantPills } from '@/components/shared/variant-pills';
+import {
+  VariantPills,
+  type VariantOption,
+} from '@/components/shared/variant-pills';
 import { useSession } from '@/context/session';
 import { useQuery } from '@tanstack/react-query';
 import { configProfilesQuery, linkedAccountsQuery } from '@/lib/queries';
@@ -112,7 +133,6 @@ interface AppCardProps {
   description: string;
   onClick: () => void;
   unofficial?: boolean;
-  beta?: boolean;
   author?: string;
   disabled?: boolean;
   disabledReason?: string;
@@ -125,11 +145,44 @@ function AppCard({
   description,
   onClick,
   unofficial,
-  beta,
   author,
   disabled,
   disabledReason,
 }: AppCardProps) {
+  if (React.useContext(PlainSections)) {
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors first:rounded-t-xl last:rounded-b-xl enabled:hover:bg-[--subtle] focus-visible:bg-[--subtle] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-brand-400">
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt=""
+              className="h-full w-full object-contain"
+            />
+          ) : (
+            icon
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 text-sm text-white">
+            {name}
+            {unofficial && (
+              <span className="text-[11px] text-[--muted]">Unofficial</span>
+            )}
+          </span>
+          <span className="block truncate text-xs text-[--muted]">
+            {disabledReason ??
+              (author ? `${description}, by ${author}` : description)}
+          </span>
+        </span>
+        <LuChevronRight className="h-4 w-4 shrink-0 text-[--muted]" />
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -154,11 +207,6 @@ function AppCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-white">{name}</span>
-          {beta && (
-            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
-              Beta
-            </span>
-          )}
           {unofficial && (
             <span className="rounded-full border border-gray-600 bg-gray-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
               Unofficial
@@ -449,16 +497,6 @@ const COMPATIBLE_CLIENTS: {
     url: 'https://auroramediacenter.com/',
     imgClassName: 'scale-150',
   },
-  {
-    name: 'Fusion',
-    logoSrc: 'https://fusionapp.dev/FUSN_dark-iOS.png',
-    url: 'https://fusionapp.dev/',
-  },
-  {
-    name: 'Omni',
-    logoSrc: 'https://omni.stkc.win/favicon.ico',
-    url: 'https://omni.stkc.win/',
-  },
 ];
 
 function CompatibleClientLogos() {
@@ -487,6 +525,7 @@ function CompatibleClientLogos() {
 
 interface VariantSelectorProps {
   variants: NonNullable<UserData['variants']>;
+  profiles: VariantOption[];
   selected: string[];
   onChange: (selected: string[]) => void;
   location: VariantSelectorLocation;
@@ -495,6 +534,7 @@ interface VariantSelectorProps {
 
 function VariantSelector({
   variants,
+  profiles,
   selected,
   onChange,
   location,
@@ -506,10 +546,13 @@ function VariantSelector({
       <p className="text-sm text-[--muted] mt-1">
         The links below install the selected variant. Each one appears as a
         separate addon in your client; pick more than one to combine them.
+        {profiles.length > 0 &&
+          " A profile's link follows whatever variants that profile has, so it needs no reinstall when they change."}
       </p>
       <VariantPills
         className="mt-4"
         variants={variants}
+        profiles={profiles}
         value={selected}
         onChange={onChange}
       />
@@ -636,25 +679,52 @@ function AppFact({
   );
 }
 
-function AppBlock({
+function AppOffNotice() {
+  return (
+    <div className="mb-5 flex gap-3 rounded-lg border border-[--border] p-3">
+      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-gray-100">
+          This instance has the app turned off
+        </p>
+        <p className="text-xs text-[--muted]">
+          The app signs in through an instance&apos;s media server, which this
+          one doesn&apos;t run. Whoever runs it can turn it on under Dashboard →
+          Settings → Media server, or you can use the app with another instance.
+        </p>
+        <a
+          href="https://aiostreams.org/getting-started/public-instances"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-[--brand] hover:underline"
+        >
+          Public instances
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export function AppBlock({
   webAppUrl,
   desktopLink,
   onOpenServer,
   disabled,
-  disabledReason,
 }: {
   webAppUrl: string;
   desktopLink: string;
   onOpenServer: (tab: ServerTab) => void;
   disabled?: boolean;
-  disabledReason?: string;
 }) {
+  const { layout } = useMenu();
   const download = useDesktopDownload();
   const android = /Android/.test(navigator.userAgent);
   const own = download.os ? 'desktop' : android ? 'android' : null;
   const open = (url: string) => () => window.open(url, '_blank', 'noopener');
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+      {disabled && <AppOffNotice />}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
@@ -677,16 +747,17 @@ function AppBlock({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
-              intent="primary"
-              className="w-full shadow-md sm:col-span-2"
-              leftIcon={<MonitorPlay className="h-4 w-4" />}
-              disabled={disabled}
-            >
-              Open in browser
-            </Button>
-            {own && (
+            {!disabled && (
+              <Button
+                onClick={() => window.open(webAppUrl, '_blank', 'noopener')}
+                intent="primary"
+                className="w-full shadow-md sm:col-span-2"
+                leftIcon={<MonitorPlay className="h-4 w-4" />}
+              >
+                Open in browser
+              </Button>
+            )}
+            {own && !disabled && (
               <Button
                 onClick={() => window.open(desktopLink)}
                 intent="gray-outline"
@@ -698,7 +769,6 @@ function AppBlock({
                     <Smartphone className="h-4 w-4" />
                   )
                 }
-                disabled={disabled}
               >
                 {own === 'desktop' ? 'Open in desktop app' : 'Open in app'}
               </Button>
@@ -709,17 +779,13 @@ function AppBlock({
                   own === 'desktop' ? download.url : ANDROID_DOWNLOAD_URL
                 )}
                 intent="gray-outline"
-                className="w-full"
+                className={cn('w-full', disabled && 'sm:col-span-2')}
                 leftIcon={<DownloadIcon className="h-4 w-4" />}
-                disabled={disabled}
               >
                 {own === 'desktop' ? download.label : 'Download for Android'}
               </Button>
             )}
           </div>
-          {disabledReason && (
-            <p className="text-xs text-amber-300">{disabledReason}</p>
-          )}
         </div>
 
         <div className="space-y-3 lg:border-l lg:border-gray-700/50 lg:pl-8">
@@ -738,30 +804,32 @@ function AppBlock({
               phones download to watch offline.
             </AppFact>
           </ul>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button
-              size="sm"
-              intent="gray-outline"
-              rounded
-              className="w-full sm:w-auto"
-              leftIcon={<Users className="h-4 w-4" />}
-              onClick={() => onOpenServer('users')}
-              disabled={disabled}
-            >
-              Users, trackers and playback
-            </Button>
-            <Button
-              size="sm"
-              intent="gray-outline"
-              rounded
-              className="w-full sm:w-auto"
-              leftIcon={<KeyRound className="h-4 w-4" />}
-              onClick={() => onOpenServer('connect')}
-              disabled={disabled}
-            >
-              Sign-in addresses
-            </Button>
-          </div>
+          {!disabled && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button
+                size="sm"
+                intent="gray-outline"
+                rounded
+                className="w-full sm:w-auto"
+                leftIcon={<Users className="h-4 w-4" />}
+                onClick={() => onOpenServer('users')}
+              >
+                {layout === 'new'
+                  ? 'Profiles and trackers'
+                  : 'Profiles, trackers and playback'}
+              </Button>
+              <Button
+                size="sm"
+                intent="gray-outline"
+                rounded
+                className="w-full sm:w-auto"
+                leftIcon={<KeyRound className="h-4 w-4" />}
+                onClick={() => onOpenServer('connect')}
+              >
+                Sign-in addresses
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-gray-700/50 pt-4">
@@ -773,7 +841,6 @@ function AppBlock({
             intent="gray-outline"
             rounded
             onClick={open(p.url)}
-            disabled={disabled}
           >
             {p.label}
           </Button>
@@ -783,7 +850,6 @@ function AppBlock({
           intent="gray-outline"
           rounded
           onClick={open(`${DOCS_APPS_URL}#get-the-app`)}
-          disabled={disabled}
         >
           All apps
         </Button>
@@ -792,7 +858,7 @@ function AppBlock({
   );
 }
 
-interface InstallCardProps {
+export interface InstallCardProps {
   encodedManifest: string;
   manifestUrl: string;
   usingAlias: boolean;
@@ -816,194 +882,209 @@ interface InstallCardProps {
   variantSelector?: React.ReactNode;
 }
 
-function InstallCard({
-  encodedManifest,
-  manifestUrl,
-  usingAlias,
-  webAppUrl,
-  desktopLink,
-  variantSelector,
-  onCopyManifestUrl,
-  onOpenChillio,
-  onOpenSeanime,
-  onOpenJellyfin,
-  onOpenAniyomi,
-  onOpenNabIndexer,
-  onOpenSearchApi,
-  disableSeanimeCard,
-  seanimeDisabledReason,
-  disableJellyfinCard,
-  jellyfinDisabledReason,
-  disableNabIndexerCard,
-  nabIndexerDisabledReason,
-  disableSearchApiCard,
-  searchApiDisabledReason,
-}: InstallCardProps) {
+function InstallCard(props: InstallCardProps) {
+  const { webAppUrl, desktopLink, onOpenJellyfin, manifestUrl } = props;
   return (
     <SettingsCard
       title="Installation Options"
       description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you — otherwise, you do not need to reinstall."
     >
       <div className="flex flex-col gap-6">
-        {variantSelector}
-        <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
-                  <img
-                    src="https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png"
-                    alt="Stremio"
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Stremio</h3>
-                  <p className="text-sm text-gray-400">
-                    Install to Stremio or other Stremio addon compatible clients
-                    using the Manifest URL.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Button
-                  onClick={() =>
-                    window.open(
-                      manifestUrl.replace(/^https?:\/\//, 'stremio://')
-                    )
-                  }
-                  intent="primary"
-                  className="w-full shadow-md"
-                >
-                  Install to Stremio
-                </Button>
-                <Button
-                  onClick={() =>
-                    window.open(
-                      `https://web.stremio.com/#/addons?addon=${encodedManifest}`
-                    )
-                  }
-                  intent="gray-outline"
-                  className="w-full"
-                >
-                  Install to Stremio Web
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 lg:border-l lg:border-gray-700/50 lg:pl-8">
-              <label className="text-xs font-medium text-gray-400 ml-1">
-                {usingAlias ? 'Manifest URL (alias)' : 'Direct Manifest URL'}
-              </label>
-              <div className="flex items-center gap-2">
-                <TextInput
-                  type="text"
-                  readOnly
-                  value={manifestUrl}
-                  className="flex-1 font-mono text-sm bg-black/20"
-                  onClick={(e) => e.currentTarget.select()}
-                />
-                <Button
-                  onClick={onCopyManifestUrl}
-                  intent="primary"
-                  className="shrink-0 px-3"
-                  aria-label="Copy install link"
-                >
-                  <CopyIcon className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 ml-1">
-                Install manually to Stremio or any Stremio addon compatible
-                client.
-                {usingAlias &&
-                  ' Your profile alias stands in for the UUID and password; the long URL still works.'}
-              </p>
-              <CompatibleClientLogos />
-            </div>
-          </div>
-        </div>
+        {props.variantSelector}
+        <StremioInstall {...props} />
 
         <AppBlock
           webAppUrl={webAppUrl}
           desktopLink={desktopLink}
           onOpenServer={onOpenJellyfin}
-          disabled={disableJellyfinCard}
-          disabledReason={jellyfinDisabledReason}
+          disabled={props.disableJellyfinCard}
         />
 
         <LinkedAccountsSection manifestUrl={manifestUrl} />
 
-        {/* Other apps — playback clients you install the addon into */}
         <div>
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="h-px bg-gray-700 flex-1"></div>
             Other apps
             <div className="h-px bg-gray-700 flex-1"></div>
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <AppCard
-              logoSrc="https://seanime.app/seanime-logo.png"
-              name="Seanime"
-              description="Anime-focused client"
-              onClick={onOpenSeanime}
-              disabled={disableSeanimeCard}
-              disabledReason={seanimeDisabledReason}
-            />
-            <AppCard
-              logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
-              name="Jellyfin apps"
-              description="Use your configuration in any Jellyfin app"
-              beta
-              onClick={() => onOpenJellyfin('connect')}
-              disabled={disableJellyfinCard}
-              disabledReason={jellyfinDisabledReason}
-            />
-            <AppCard
-              logoSrc="https://link.chillio.app/app-icon.png"
-              name="Chillio"
-              description="Via ChillLink protocol"
-              onClick={onOpenChillio}
-            />
-            <AppCard
-              logoSrc="https://aniyomi.org/img/logo-128px.png"
-              name="Aniyomi / Animiru"
-              description="Extension-based integration"
-              unofficial
-              author="worldInColors"
-              onClick={onOpenAniyomi}
-            />
-          </div>
+          <OtherAppCards {...props} />
         </div>
 
-        {/* Programmatic / API access — endpoints other tools consume */}
         <div>
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
             <div className="h-px bg-gray-700 flex-1"></div>
             Programmatic / API access
             <div className="h-px bg-gray-700 flex-1"></div>
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <AppCard
-              icon={<Rss className="h-5 w-5" />}
-              name="Newznab / Torznab"
-              description="Indexer for Prowlarr, NZBHydra & *Arr apps"
-              onClick={onOpenNabIndexer}
-              disabled={disableNabIndexerCard}
-              disabledReason={nabIndexerDisabledReason}
-            />
-            <AppCard
-              icon={<Code2 className="h-5 w-5" />}
-              name="Search API"
-              description="JSON stream search endpoint"
-              onClick={onOpenSearchApi}
-              disabled={disableSearchApiCard}
-              disabledReason={searchApiDisabledReason}
-            />
-          </div>
+          <ApiCards {...props} />
         </div>
       </div>
     </SettingsCard>
+  );
+}
+
+export function StremioInstall({
+  encodedManifest,
+  manifestUrl,
+  usingAlias,
+  onCopyManifestUrl,
+}: InstallCardProps) {
+  return (
+    <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 h-12 w-12 rounded-lg bg-gray-900 flex items-center justify-center p-2 shadow-sm">
+              <img
+                src="https://raw.githubusercontent.com/Stremio/stremio-brand/refs/heads/master/logos/PNG/stremio-logo-800px.png"
+                alt="Stremio"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Stremio</h3>
+              <p className="text-sm text-gray-400">
+                Install to Stremio or other Stremio addon compatible clients
+                using the Manifest URL.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              onClick={() =>
+                window.open(manifestUrl.replace(/^https?:\/\//, 'stremio://'))
+              }
+              intent="primary"
+              className="w-full shadow-md"
+            >
+              Install to Stremio
+            </Button>
+            <Button
+              onClick={() =>
+                window.open(
+                  `https://web.stremio.com/#/addons?addon=${encodedManifest}`
+                )
+              }
+              intent="gray-outline"
+              className="w-full"
+            >
+              Install to Stremio Web
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5 lg:border-l lg:border-gray-700/50 lg:pl-8">
+          <label className="text-xs font-medium text-gray-400 ml-1">
+            {usingAlias ? 'Manifest URL (alias)' : 'Direct Manifest URL'}
+          </label>
+          <div className="flex items-center gap-2">
+            <TextInput
+              type="text"
+              readOnly
+              value={manifestUrl}
+              className="flex-1 font-mono text-sm bg-black/20"
+              onClick={(e) => e.currentTarget.select()}
+            />
+            <Button
+              onClick={onCopyManifestUrl}
+              intent="primary"
+              className="shrink-0 px-3"
+              aria-label="Copy install link"
+            >
+              <CopyIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 ml-1">
+            Install manually to Stremio or any Stremio addon compatible client.
+            {usingAlias &&
+              ' Your alias stands in for the UUID and password; the long URL still works.'}
+          </p>
+          <CompatibleClientLogos />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** `jellyfin` false where the media server apps have a page of their own. */
+export function OtherAppCards({
+  onOpenChillio,
+  onOpenSeanime,
+  onOpenJellyfin,
+  onOpenAniyomi,
+  disableSeanimeCard,
+  seanimeDisabledReason,
+  disableJellyfinCard,
+  jellyfinDisabledReason,
+  jellyfin = true,
+}: InstallCardProps & { jellyfin?: boolean }) {
+  return (
+    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <AppCard
+        logoSrc="https://seanime.app/seanime-logo.png"
+        name="Seanime"
+        description="Anime-focused client"
+        onClick={onOpenSeanime}
+        disabled={disableSeanimeCard}
+        disabledReason={seanimeDisabledReason}
+      />
+      {jellyfin && (
+        <AppCard
+          logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
+          name="Jellyfin apps"
+          description="Use your configuration in any Jellyfin app"
+          onClick={() => onOpenJellyfin('connect')}
+          disabled={disableJellyfinCard}
+          disabledReason={jellyfinDisabledReason}
+        />
+      )}
+      <AppCard
+        logoSrc="https://link.chillio.app/app-icon.png"
+        name="Chillio"
+        description="Via ChillLink protocol"
+        onClick={onOpenChillio}
+      />
+      <AppCard
+        logoSrc="https://aniyomi.org/img/logo-128px.png"
+        name="Aniyomi / Animiru"
+        description="Extension-based integration"
+        unofficial
+        author="worldInColors"
+        onClick={onOpenAniyomi}
+      />
+    </SettingsRows>
+  );
+}
+
+export function ApiCards({
+  onOpenNabIndexer,
+  onOpenSearchApi,
+  disableNabIndexerCard,
+  nabIndexerDisabledReason,
+  disableSearchApiCard,
+  searchApiDisabledReason,
+}: InstallCardProps) {
+  return (
+    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <AppCard
+        icon={<Rss className="h-5 w-5" />}
+        name="Newznab / Torznab"
+        description="Indexer for Prowlarr, NZBHydra & *Arr apps"
+        onClick={onOpenNabIndexer}
+        disabled={disableNabIndexerCard}
+        disabledReason={nabIndexerDisabledReason}
+      />
+      <AppCard
+        icon={<Code2 className="h-5 w-5" />}
+        name="Search API"
+        description="JSON stream search endpoint"
+        onClick={onOpenSearchApi}
+        disabled={disableSearchApiCard}
+        disabledReason={searchApiDisabledReason}
+      />
+    </SettingsRows>
   );
 }
 
@@ -1066,8 +1147,7 @@ function DangerZoneCard({
     <SettingsCard
       title="Danger Zone"
       description="Perform potentially destructive actions that cannot be undone"
-      className="lg:bg-red-700/70 border-red-500/20"
-      titleClassName="group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-700/20"
+      danger
     >
       <div className="flex flex-wrap items-center gap-3">
         {hasUser && (
@@ -1076,7 +1156,7 @@ function DangerZoneCard({
               Change Password
             </Button>
             <Button intent="alert" rounded onClick={onDeleteUserOpen}>
-              Delete User
+              Delete Configuration
             </Button>
           </>
         )}
@@ -1647,7 +1727,7 @@ function StremioCustomSourceModal({
                   key={`${cat.type}-${cat.id}`}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                     cat.selected
-                      ? 'bg-[--brand]/5 hover:bg-[--brand]/10'
+                      ? 'bg-brand-300/5 hover:bg-brand-300/10'
                       : 'hover:bg-gray-800/40'
                   }`}
                 >
@@ -1844,7 +1924,8 @@ export function SaveInstallMenu() {
   );
 }
 
-function Content() {
+/** `offerStremio`: a configuration created here offers to install it in Stremio. */
+export function useSaveInstall({ offerStremio = true } = {}) {
   const {
     userData,
     setUserData,
@@ -1919,7 +2000,7 @@ function Content() {
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
     React.useState('');
-  const { setSelectedMenu, firstMenu } = useMenu();
+  const { setSelectedMenu, firstMenu, layout } = useMenu();
   const templateExportModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const exportMenuModal = useDisclosure(false);
@@ -1965,7 +2046,7 @@ function Content() {
   >(null);
   const [lookingUpQuickConnect, setLookingUpQuickConnect] =
     React.useState(false);
-  const [quickConnectPersona, setQuickConnectPersona] = React.useState('');
+  const [quickConnectProfileId, setQuickConnectProfileId] = React.useState('');
   const [quickConnectPin, setQuickConnectPin] = React.useState('');
   const [approvingQuickConnect, setApprovingQuickConnect] =
     React.useState(false);
@@ -2024,9 +2105,14 @@ function Content() {
     setCreateLoading(true);
     try {
       const result = await createUserConfig(userData, newPassword);
-      toast.success(
-        'Configuration created successfully, your UUID and password are below'
-      );
+      toast.success('Configuration created', {
+        description: `Keep its UUID and password somewhere safe: neither can be recovered. ${
+          layout === 'new'
+            ? 'Copy the UUID from the Configuration page.'
+            : 'The UUID is on this page.'
+        }`,
+        duration: 10_000,
+      });
       setUuid(result.uuid);
       setEncryptedPassword((result as CreateUserResponse).encryptedPassword);
       setPassword(newPassword);
@@ -2035,7 +2121,7 @@ function Content() {
           () => {}
         );
       }
-      if (!linkOfferDismissed()) {
+      if (offerStremio && !linkOfferDismissed()) {
         setLinkOfferFor({ uuid: result.uuid, password: newPassword });
       }
     } catch (err) {
@@ -2118,10 +2204,13 @@ function Content() {
   const enabledVariants = (userData.variants ?? []).filter(
     (variant) => variant.enabled !== false
   );
-  const activeVariants = selectedVariants.filter((id) =>
-    enabledVariants.some((variant) => variant.id === id)
+  const installProfiles = profileInstallOptions(userData);
+  const activeVariants = selectedVariants.filter(
+    (id) =>
+      enabledVariants.some((variant) => variant.id === id) ||
+      installProfiles.some((profile) => profile.id === id)
   );
-  const variantIds = activeVariants.map(encodeURIComponent).join(',');
+  const variantIds = activeVariants.map(encodeVariantId).join(',');
   const variantPath =
     activeVariants.length && variantLocation === 'path'
       ? `/v/${variantIds}`
@@ -2193,16 +2282,13 @@ function Content() {
       onError: () => toast.error('Failed to copy username'),
     });
   };
-  const jellyfinPersonas = userData.jellyfin?.personas ?? [];
-  const jellyfinAccountName =
-    userData.jellyfin?.primary?.name || userData.addonName || 'Primary user';
-  const quickConnectPersonaName = quickConnectPersona
-    ? (jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.name ??
-      quickConnectPersona)
+  const profiles = profilesOf(userData);
+  const quickConnectProfile =
+    profiles.find((p) => p.id === quickConnectProfileId) ?? profiles[0];
+  const quickConnectProfileName = quickConnectProfileId
+    ? profileLabel(userData, quickConnectProfile)
     : null;
-  const quickConnectLocked = quickConnectPersona
-    ? !!jellyfinPersonas.find((p) => p.id === quickConnectPersona)?.lock
-    : !!userData.jellyfin?.primary?.lock;
+  const quickConnectLocked = !!quickConnectProfile.lock;
   // An alias makes it short enough to type on a TV.
   const jellyfinPickerUrl = aliasForInstall
     ? `${baseUrl}/jellyfin/u/${aliasForInstall}`
@@ -2268,7 +2354,7 @@ function Content() {
   const cancelQuickConnect = () => {
     setQuickConnectCode('');
     setQuickConnectPending(null);
-    setQuickConnectPersona('');
+    setQuickConnectProfileId('');
     setQuickConnectPin('');
   };
 
@@ -2279,13 +2365,13 @@ function Content() {
       const result = await approveJellyfinQuickConnect(
         { uuid, password: password || null },
         quickConnectCode,
-        quickConnectPersona || undefined,
+        quickConnectProfileId || undefined,
         quickConnectLocked ? quickConnectPin : undefined
       );
       toast.success(
         result.device?.app
           ? `Signed in ${result.device.app} on ${result.device.name}${
-              quickConnectPersonaName ? ` as ${quickConnectPersonaName}` : ''
+              quickConnectProfileName ? ` as ${quickConnectProfileName}` : ''
             }`
           : 'Quick Connect approved'
       );
@@ -2413,116 +2499,569 @@ function Content() {
     }
   };
 
-  return (
-    <>
-      <div className="flex items-center w-full">
-        <div>
-          <h2>Install Addon</h2>
-          <p className="text-[--muted]">
-            Configure and install your personalized addon
-          </p>
+  const jellyfinConnect = (
+    <div className="space-y-5">
+      <JellyfinPrimer
+        maxLibraries={jellyfin?.maxLibraries ?? 0}
+        maxCatalogItems={jellyfin?.maxCatalogItems ?? 0}
+        maxVersions={Math.min(
+          userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
+          jellyfinVersionCap
+        )}
+        maxAppVersions={jellyfinAppVersionCap}
+      />
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-white">Server address</p>
+        <div className="flex items-center gap-2">
+          <TextInput
+            type="text"
+            readOnly
+            value={jellyfinServerUrl}
+            className="flex-1 font-mono text-sm"
+            onClick={(e) => e.currentTarget.select()}
+          />
+          <Button
+            onClick={copyJellyfinServerUrl}
+            intent="primary"
+            className="shrink-0 px-3"
+            aria-label="Copy server address"
+          >
+            <CopyIcon className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="hidden lg:block lg:ml-auto">
-          <PageControls />
-        </div>
+        <p className="text-xs text-gray-500">
+          Add this as a server in the desktop app or any Jellyfin app.
+        </p>
       </div>
 
-      <div className="space-y-4 mt-6">
-        {!uuid ? (
-          <CreateConfigCard
-            onSubmit={handleCreate}
-            passwordRequirements={passwordRequirements}
-            newPassword={newPassword}
-            confirmNewPassword={confirmNewPassword}
-            onNewPasswordChange={setNewPassword}
-            onConfirmNewPasswordChange={setConfirmNewPassword}
-            staySignedIn={sessionsEnabled ? staySignedIn : null}
-            onStaySignedInChange={setStaySignedIn}
-            createLoading={createLoading}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-white">Username</p>
+        <div className="flex items-center gap-2">
+          <TextInput
+            type="text"
+            readOnly
+            value={jellyfinUsername}
+            className="flex-1 font-mono text-sm"
+            onClick={(e) => e.currentTarget.select()}
           />
-        ) : (
-          <>
-            <SaveConfigCard
-              uuid={uuid}
-              onCopyUuid={() =>
-                copyToClipboard(uuid, {
-                  onSuccess: () => toast.success('UUID copied to clipboard'),
-                  onError: () => toast.error('Failed to copy UUID'),
-                })
-              }
-              onSave={(e) => {
-                e.preventDefault();
-                handleSaveContext();
-              }}
-              saveLoading={saveLoading}
-              onOpenPreferences={preferencesModal.open}
-            />
+          <Button
+            onClick={copyJellyfinUsername}
+            intent="primary"
+            className="shrink-0 px-3"
+            aria-label="Copy username"
+          >
+            <CopyIcon className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500">
+          The password is your configuration password.
+          {profiles.length > 1 && ' Add /<profile> to sign in as a profile.'}
+          {profiles.some((p) => p.lock) &&
+            ' For a profile with a PIN, add /<PIN> to the password.'}
+        </p>
+      </div>
 
-            <InstallCard
-              encodedManifest={encodedManifest}
-              manifestUrl={manifestUrl}
-              usingAlias={!!aliasForInstall}
-              webAppUrl={jellyfinWebAppUrl}
-              desktopLink={jellyfinDesktopLink}
-              variantSelector={
-                enabledVariants.length > 0 ? (
-                  <VariantSelector
-                    variants={enabledVariants}
-                    selected={activeVariants}
-                    onChange={setSelectedVariants}
-                    location={variantLocation}
-                    onLocationChange={setVariantLocation}
-                  />
-                ) : undefined
-              }
-              onCopyManifestUrl={copyManifestUrl}
-              onOpenChillio={chillLinkModal.open}
-              onOpenSeanime={seanimeModal.open}
-              onOpenJellyfin={(tab) => {
-                setJellyfinTab(tab);
-                jellyfinModal.open();
-              }}
-              onOpenAniyomi={aniyomiModal.open}
-              onOpenNabIndexer={nabIndexerModal.open}
-              onOpenSearchApi={searchApiModal.open}
-              disableSeanimeCard={disableSeanimeCard}
-              seanimeDisabledReason={seanimeDisabledReason}
-              disableJellyfinCard={!jellyfinEnabled}
-              jellyfinDisabledReason={
-                jellyfinEnabled ? undefined : 'Disabled on this instance'
-              }
-              disableNabIndexerCard={nabApiDisabled}
-              nabIndexerDisabledReason={
-                nabApiDisabled
-                  ? 'Newznab/Torznab API (disabled on this instance)'
-                  : undefined
-              }
-              disableSearchApiCard={searchApiDisabled}
-              searchApiDisabledReason={
-                searchApiDisabled
-                  ? 'Search API (disabled on this instance)'
-                  : undefined
-              }
+      {jellyfinPickerUrl && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-white">
+            Address with a sign-in picker
+          </p>
+          <div className="flex items-center gap-2">
+            <TextInput
+              type="text"
+              readOnly
+              value={jellyfinPickerUrl}
+              className="flex-1 font-mono text-sm"
+              onClick={(e) => e.currentTarget.select()}
             />
+            <Button
+              onClick={copyJellyfinPickerUrl}
+              intent="primary"
+              className="shrink-0 px-3"
+              aria-label="Copy server address with user picker"
+            >
+              <CopyIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Lists this configuration&apos;s users at sign-in, so there is no
+            UUID to type.{' '}
+            {jellyfin?.pinSignIn
+              ? 'A user with a PIN of 6 or more digits signs in here with that PIN alone; everyone else still needs your password.'
+              : 'Signing in still needs your password.'}{' '}
+            It holds the same secret as your install links, so keep it within
+            your household.
+            {aliasForInstall
+              ? ' Your alias stands in for the UUID and password; the long address still works.'
+              : sessionUser
+                ? ' A share alias on the saved configuration makes it short enough to type on a TV.'
+                : ''}
+          </p>
+        </div>
+      )}
 
-            <ProfileCard />
-          </>
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-white">Quick Connect</p>
+        <p className="text-xs text-gray-500">
+          For TVs: choose Quick Connect on the client and enter its code here.
+        </p>
+        <TextInput
+          type="text"
+          inputMode="numeric"
+          placeholder="123456"
+          maxLength={6}
+          value={quickConnectCode}
+          onValueChange={(v) =>
+            setQuickConnectCode(v.replace(/\D/g, '').slice(0, 6))
+          }
+          className="font-mono text-sm"
+        />
+        {quickConnectCode.length === 6 && !quickConnectPending && (
+          <p className="text-xs text-gray-500">
+            {lookingUpQuickConnect
+              ? 'Looking up the code...'
+              : (quickConnectLookupError ??
+                'No device is waiting on this code.')}
+          </p>
         )}
+        {quickConnectPending && (
+          <div className="space-y-3 rounded-md border border-gray-800 p-3">
+            <div>
+              <p className="text-sm text-white">
+                {quickConnectPending.device.app} on{' '}
+                {quickConnectPending.device.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                Version {quickConnectPending.device.version}, asked{' '}
+                {quickConnectRequestedAgo(quickConnectPending.requestedAt)}.
+              </p>
+            </div>
+            {profiles.length > 1 && (
+              <Select
+                label="Sign in as"
+                value={quickConnectProfileId || '__owner__'}
+                onValueChange={(value) => {
+                  setQuickConnectProfileId(value === '__owner__' ? '' : value);
+                  setQuickConnectPin('');
+                }}
+                options={profiles.map((p) => ({
+                  label: profileLabel(userData, p),
+                  value: p.id || '__owner__',
+                }))}
+              />
+            )}
+            {quickConnectLocked && (
+              <TextInput
+                label="PIN"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                help="This user has a PIN."
+                value={quickConnectPin}
+                onValueChange={(value) =>
+                  setQuickConnectPin(value.replace(/\D/g, '').slice(0, 12))
+                }
+              />
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={approveQuickConnect}
+                intent="primary"
+                disabled={
+                  approvingQuickConnect ||
+                  (quickConnectLocked && quickConnectPin.length < 4)
+                }
+                loading={approvingQuickConnect}
+              >
+                Approve
+                {quickConnectProfileName
+                  ? ` as ${quickConnectProfileName}`
+                  : ''}
+              </Button>
+              <Button intent="primary-subtle" onClick={cancelQuickConnect}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
-        <BackupCard
-          onExportOpen={exportMenuModal.open}
-          onImportOpen={importMenuModal.open}
-          onImport={handleImport}
-          importFileRef={importFileRef}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-white">Web app</p>
+          <p className="text-xs text-gray-500">
+            Browse, see what is playing and manage watch history in your
+            browser.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          intent="gray-outline"
+          rounded
+          className="w-full shrink-0 sm:w-auto"
+          leftIcon={<MonitorPlay className="h-4 w-4" />}
+          onClick={() => window.open(jellyfinWebAppUrl, '_blank', 'noopener')}
+        >
+          Open
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-white">Desktop app</p>
+          <p className="text-xs text-gray-500">
+            The app for Windows, Mac and Linux, with a player that plays what a
+            browser can&apos;t. Sign in with one of the addresses above.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          intent="gray-outline"
+          rounded
+          className="w-full shrink-0 sm:w-auto"
+          leftIcon={<DownloadIcon className="h-4 w-4" />}
+          onClick={() =>
+            window.open(DESKTOP_DOWNLOAD_URL, '_blank', 'noopener')
+          }
+        >
+          Download
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-white">API keys</p>
+          <p className="text-xs text-gray-500">
+            Let other tools use this server&apos;s API without your password.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          intent="gray-outline"
+          rounded
+          className="w-full shrink-0 sm:w-auto"
+          leftIcon={<KeyRound className="h-4 w-4" />}
+          onClick={jellyfinApiKeysModal.open}
+        >
+          Manage
+          {userData.jellyfin?.apiKeys?.length
+            ? ` (${userData.jellyfin.apiKeys.length})`
+            : ''}
+        </Button>
+        <Modal
+          open={jellyfinApiKeysModal.isOpen}
+          onOpenChange={jellyfinApiKeysModal.toggle}
+          title="API keys"
+        >
+          <JellyfinApiKeys serverUrl={jellyfinServerUrl} />
+        </Modal>
+      </div>
+    </div>
+  );
+  const jellyfinTrackers = (
+    <JellyfinTrackers onChooseTrackers={() => setJellyfinTab('users')} />
+  );
+  const jellyfinVersions = (
+    <div className="space-y-5">
+      <Switch
+        label="Resolve streams when an item opens"
+        help={
+          jellyfinResolveForced === null
+            ? "Fills the client's version list before you press play."
+            : 'Set by this instance.'
+        }
+        moreHelp={
+          jellyfinResolveForced === null
+            ? 'Off, streams are fetched when playback starts or an app asks for the version list: lighter, but the list shows a placeholder until then.'
+            : undefined
+        }
+        side="right"
+        disabled={jellyfinResolveForced !== null}
+        value={
+          jellyfinResolveForced ?? userData.jellyfin?.resolveOnOpen ?? true
+        }
+        defaultValue={true}
+        onValueChange={(value) =>
+          setUserData((prev) => ({
+            ...prev,
+            jellyfin: { ...prev.jellyfin, resolveOnOpen: value },
+          }))
+        }
+      />
+      <NumberInput
+        label="Versions per item"
+        help={`Up to ${jellyfinVersionCap} on this instance.`}
+        moreHelp={`For Jellyfin apps. The AIOStreams app lists up to ${jellyfinAppVersionCap} whatever this is set to; your result limits cap those. Version names come from your formatter.`}
+        min={1}
+        max={jellyfinVersionCap}
+        value={Math.min(
+          userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
+          jellyfinVersionCap
+        )}
+        onValueChange={(value) =>
+          setUserData((prev) => ({
+            ...prev,
+            jellyfin: {
+              ...prev.jellyfin,
+              maxVersions: value === undefined ? undefined : value,
+            },
+          }))
+        }
+      />
+      {jellyfinPlayWait !== undefined && (
+        <NumberInput
+          label="Wait for tracks on play"
+          help={`Seconds. ${jellyfinPlayWait} by default on this instance.`}
+          moreHelp="When you play a version whose tracks aren't known yet, the server reads them first, so the player lists every audio and subtitle track on the first play. It only reads versions where that can't add an IP to a debrid account: the built-in usenet service, debrid services that allow it, and anything played through a proxy. If reading takes longer than this, the tracks show from the next play. 0 starts at once. Some apps give up after about 20 seconds, so stay below that. A variant can set this per app."
+          min={0}
+          max={30}
+          value={userData.jellyfin?.playWait ?? jellyfinPlayWait}
+          onValueChange={(value) =>
+            setUserData((prev) => ({
+              ...prev,
+              jellyfin: { ...prev.jellyfin, playWait: value },
+            }))
+          }
         />
-
-        <DangerZoneCard
-          hasUser={!!uuid}
-          onChangePasswordOpen={changePasswordModal.open}
-          onDeleteUserOpen={deleteUserModal.open}
-          onResetOpen={confirmResetProps.open}
+      )}
+      <Switch
+        label="Mark unaired episodes"
+        help="Clients show upcoming episodes as unaired and won't offer to play them."
+        moreHelp="Some clients hide them altogether. When this is off, clients list them as normal episodes, and the AIOStreams app still marks them and asks before playing one."
+        side="right"
+        value={userData.jellyfin?.markUnaired ?? false}
+        defaultValue={false}
+        onValueChange={(value) =>
+          setUserData((prev) => ({
+            ...prev,
+            jellyfin: { ...prev.jellyfin, markUnaired: value },
+          }))
+        }
+      />
+    </div>
+  );
+  const jellyfinMarkers = jellyfinSegmentsAvailable ? (
+    <div className="space-y-3">
+      <Switch
+        label="Skip intro and credits"
+        help="Offers your client markers so it can show a skip button."
+        moreHelp="Timestamps come from community databases and are submitted against one release of an episode, so on a differently cut copy a marker can be a few seconds out. Whether your client skips automatically or asks first is a setting inside that client, not here."
+        side="right"
+        value={userData.jellyfin?.segments ?? true}
+        defaultValue={true}
+        onValueChange={(value) =>
+          setUserData((prev) => ({
+            ...prev,
+            jellyfin: { ...prev.jellyfin, segments: value },
+          }))
+        }
+      />
+      {(userData.jellyfin?.segments ?? true) && (
+        <CheckboxGroup
+          label="Markers to offer"
+          help="Turning off credits keeps the next-episode countdown some clients build from it."
+          options={[
+            { value: 'Intro', label: 'Intro' },
+            { value: 'Recap', label: 'Recap' },
+            { value: 'Outro', label: 'Credits' },
+          ]}
+          value={userData.jellyfin?.segmentTypes ?? ['Intro', 'Recap', 'Outro']}
+          onValueChange={(value) =>
+            setUserData((prev) => ({
+              ...prev,
+              jellyfin: {
+                ...prev.jellyfin,
+                segmentTypes: value as NonNullable<
+                  UserData['jellyfin']
+                >['segmentTypes'],
+              },
+            }))
+          }
         />
+      )}
+      {(userData.jellyfin?.segments ?? true) &&
+        jellyfinSegmentProviders.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white">Sources</p>
+            <ul className="space-y-1">
+              {jellyfinSegmentProviders.map((provider) => {
+                const ownKey = provider.id === 'pmdb' && !!userData.pmdbApiKey;
+                const missingKey = provider.key === 'configuration' && !ownKey;
+                return (
+                  <li
+                    key={provider.id}
+                    className="flex items-center justify-between gap-3 text-xs"
+                  >
+                    <span className="truncate text-gray-300">
+                      {provider.name}
+                    </span>
+                    <span
+                      className={
+                        missingKey
+                          ? 'shrink-0 text-[--orange]'
+                          : 'shrink-0 text-gray-500'
+                      }
+                    >
+                      {missingKey
+                        ? 'Needs your key'
+                        : ownKey
+                          ? 'Using your key'
+                          : 'Included'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-xs text-gray-500">
+              Asked in this order; the first with a marker for a type supplies
+              it.
+            </p>
+          </div>
+        )}
+      {(userData.jellyfin?.segments ?? true) && jellyfinPmdbKey && (
+        <PasswordInput
+          autoComplete="new-password"
+          label="PublicMetaDB API Key"
+          help={
+            <span>
+              {jellyfinPmdbKey === 'instance'
+                ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
+                : 'Adds markers from PublicMetaDB, which also covers movies. '}
+              Create a key under Settings → API on{' '}
+              <a
+                href="https://publicmetadb.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[--brand] hover:underline"
+              >
+                publicmetadb.com
+              </a>
+              .
+            </span>
+          }
+          placeholder={
+            jellyfinPmdbKey === 'instance'
+              ? 'Provided by this instance (enter your own to override)'
+              : 'Enter your PublicMetaDB API key'
+          }
+          value={userData.pmdbApiKey}
+          onValueChange={(value) =>
+            setUserData((prev) => ({
+              ...prev,
+              pmdbApiKey: value || undefined,
+            }))
+          }
+        />
+      )}
+    </div>
+  ) : null;
+  const jellyfinPlayback = (
+    <div className="space-y-5">
+      {jellyfinVersions}
+      {jellyfinMarkers && (
+        <div className="border-t border-gray-800 pt-4">{jellyfinMarkers}</div>
+      )}
+    </div>
+  );
 
+  const installProps: InstallCardProps = {
+    encodedManifest,
+    manifestUrl,
+    usingAlias: !!aliasForInstall,
+    webAppUrl: jellyfinWebAppUrl,
+    desktopLink: jellyfinDesktopLink,
+    variantSelector:
+      enabledVariants.length > 0 ? (
+        <VariantSelector
+          variants={enabledVariants}
+          profiles={installProfiles}
+          selected={activeVariants}
+          onChange={setSelectedVariants}
+          location={variantLocation}
+          onLocationChange={setVariantLocation}
+        />
+      ) : undefined,
+    onCopyManifestUrl: copyManifestUrl,
+    onOpenChillio: chillLinkModal.open,
+    onOpenSeanime: seanimeModal.open,
+    onOpenJellyfin: (tab) => {
+      setJellyfinTab(tab);
+      jellyfinModal.open();
+    },
+    onOpenAniyomi: aniyomiModal.open,
+    onOpenNabIndexer: nabIndexerModal.open,
+    onOpenSearchApi: searchApiModal.open,
+    disableSeanimeCard,
+    seanimeDisabledReason,
+    disableJellyfinCard: !jellyfinEnabled,
+    jellyfinDisabledReason: jellyfinEnabled
+      ? undefined
+      : 'Disabled on this instance',
+    disableNabIndexerCard: nabApiDisabled,
+    nabIndexerDisabledReason: nabApiDisabled
+      ? 'Newznab/Torznab API (disabled on this instance)'
+      : undefined,
+    disableSearchApiCard: searchApiDisabled,
+    searchApiDisabledReason: searchApiDisabled
+      ? 'Search API (disabled on this instance)'
+      : undefined,
+  };
+
+  return {
+    installProps,
+    account: !uuid ? (
+      <CreateConfigCard
+        onSubmit={handleCreate}
+        passwordRequirements={passwordRequirements}
+        newPassword={newPassword}
+        confirmNewPassword={confirmNewPassword}
+        onNewPasswordChange={setNewPassword}
+        onConfirmNewPasswordChange={setConfirmNewPassword}
+        staySignedIn={sessionsEnabled ? staySignedIn : null}
+        onStaySignedInChange={setStaySignedIn}
+        createLoading={createLoading}
+      />
+    ) : (
+      <SaveConfigCard
+        uuid={uuid}
+        onCopyUuid={() =>
+          copyToClipboard(uuid, {
+            onSuccess: () => toast.success('UUID copied to clipboard'),
+            onError: () => toast.error('Failed to copy UUID'),
+          })
+        }
+        onSave={(e) => {
+          e.preventDefault();
+          handleSaveContext();
+        }}
+        saveLoading={saveLoading}
+        onOpenPreferences={preferencesModal.open}
+      />
+    ),
+    backup: (
+      <BackupCard
+        onExportOpen={exportMenuModal.open}
+        onImportOpen={importMenuModal.open}
+        onImport={handleImport}
+        importFileRef={importFileRef}
+      />
+    ),
+    dangerZone: (
+      <DangerZoneCard
+        hasUser={!!uuid}
+        onChangePasswordOpen={changePasswordModal.open}
+        onDeleteUserOpen={deleteUserModal.open}
+        onResetOpen={confirmResetProps.open}
+      />
+    ),
+    jellyfinConnect,
+    jellyfinTrackers,
+    jellyfinPlayback,
+    jellyfinVersions,
+    jellyfinMarkers,
+    modals: (
+      <>
         <Modal
           open={changePasswordModal.isOpen}
           onOpenChange={(open) => {
@@ -2714,11 +3253,7 @@ function Content() {
           description="Stream AIOStreams content directly within Seanime"
         >
           <div className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-gray-400">
-                Seanime integration is in{' '}
-                <span className="font-medium text-amber-300">beta</span>
-              </span>
+            <div className="flex items-center justify-end gap-2 text-xs">
               <span className="text-gray-400">
                 Extension version:{' '}
                 <span className="font-medium text-gray-200">
@@ -2987,530 +3522,22 @@ function Content() {
               {
                 value: 'connect',
                 label: 'Connect',
-                content: (
-                  <div className="space-y-5">
-                    <JellyfinPrimer
-                      maxLibraries={jellyfin?.maxLibraries ?? 0}
-                      maxCatalogItems={jellyfin?.maxCatalogItems ?? 0}
-                      maxVersions={Math.min(
-                        userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
-                        jellyfinVersionCap
-                      )}
-                      maxAppVersions={jellyfinAppVersionCap}
-                    />
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-white">
-                        Server address
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <TextInput
-                          type="text"
-                          readOnly
-                          value={jellyfinServerUrl}
-                          className="flex-1 font-mono text-sm"
-                          onClick={(e) => e.currentTarget.select()}
-                        />
-                        <Button
-                          onClick={copyJellyfinServerUrl}
-                          intent="primary"
-                          className="shrink-0 px-3"
-                          aria-label="Copy server address"
-                        >
-                          <CopyIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Add this as a server in the desktop app or any Jellyfin
-                        app.
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-white">Username</p>
-                      <div className="flex items-center gap-2">
-                        <TextInput
-                          type="text"
-                          readOnly
-                          value={jellyfinUsername}
-                          className="flex-1 font-mono text-sm"
-                          onClick={(e) => e.currentTarget.select()}
-                        />
-                        <Button
-                          onClick={copyJellyfinUsername}
-                          intent="primary"
-                          className="shrink-0 px-3"
-                          aria-label="Copy username"
-                        >
-                          <CopyIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        The password is your configuration password.
-                        {jellyfinPersonas.length > 0 &&
-                          ' Add /<user> to sign in as a user.'}
-                        {(jellyfinPersonas.some((p) => p.lock) ||
-                          !!userData.jellyfin?.primary?.lock) &&
-                          ' For a user with a PIN, add /<PIN> to the password.'}
-                      </p>
-                    </div>
-
-                    {jellyfinPickerUrl && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-white">
-                          Address with a sign-in picker
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <TextInput
-                            type="text"
-                            readOnly
-                            value={jellyfinPickerUrl}
-                            className="flex-1 font-mono text-sm"
-                            onClick={(e) => e.currentTarget.select()}
-                          />
-                          <Button
-                            onClick={copyJellyfinPickerUrl}
-                            intent="primary"
-                            className="shrink-0 px-3"
-                            aria-label="Copy server address with user picker"
-                          >
-                            <CopyIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Lists this configuration&apos;s users at sign-in, so
-                          there is no UUID to type.{' '}
-                          {jellyfin?.pinSignIn
-                            ? 'A user with a PIN of 6 or more digits signs in here with that PIN alone; everyone else still needs your password.'
-                            : 'Signing in still needs your password.'}{' '}
-                          It holds the same secret as your install links, so
-                          keep it within your household.
-                          {aliasForInstall
-                            ? ' Your alias stands in for the UUID and password; the long address still works.'
-                            : sessionUser
-                              ? ' A share alias in your profile makes it short enough to type on a TV.'
-                              : ''}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-white">
-                        Quick Connect
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        For TVs: choose Quick Connect on the client and enter
-                        its code here.
-                      </p>
-                      <TextInput
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="123456"
-                        maxLength={6}
-                        value={quickConnectCode}
-                        onValueChange={(v) =>
-                          setQuickConnectCode(v.replace(/\D/g, '').slice(0, 6))
-                        }
-                        className="font-mono text-sm"
-                      />
-                      {quickConnectCode.length === 6 &&
-                        !quickConnectPending && (
-                          <p className="text-xs text-gray-500">
-                            {lookingUpQuickConnect
-                              ? 'Looking up the code...'
-                              : (quickConnectLookupError ??
-                                'No device is waiting on this code.')}
-                          </p>
-                        )}
-                      {quickConnectPending && (
-                        <div className="space-y-3 rounded-md border border-gray-800 p-3">
-                          <div>
-                            <p className="text-sm text-white">
-                              {quickConnectPending.device.app} on{' '}
-                              {quickConnectPending.device.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Version {quickConnectPending.device.version},
-                              asked{' '}
-                              {quickConnectRequestedAgo(
-                                quickConnectPending.requestedAt
-                              )}
-                              .
-                            </p>
-                          </div>
-                          {jellyfinPersonas.length > 0 && (
-                            <Select
-                              label="Sign in as"
-                              value={quickConnectPersona || '__account__'}
-                              onValueChange={(value) => {
-                                setQuickConnectPersona(
-                                  value === '__account__' ? '' : value
-                                );
-                                setQuickConnectPin('');
-                              }}
-                              options={[
-                                {
-                                  label: jellyfinAccountName,
-                                  value: '__account__',
-                                },
-                                ...jellyfinPersonas.map((p) => ({
-                                  label: p.name,
-                                  value: p.id,
-                                })),
-                              ]}
-                            />
-                          )}
-                          {quickConnectLocked && (
-                            <TextInput
-                              label="PIN"
-                              type="password"
-                              inputMode="numeric"
-                              autoComplete="off"
-                              help="This user has a PIN."
-                              value={quickConnectPin}
-                              onValueChange={(value) =>
-                                setQuickConnectPin(
-                                  value.replace(/\D/g, '').slice(0, 12)
-                                )
-                              }
-                            />
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Button
-                              onClick={approveQuickConnect}
-                              intent="primary"
-                              disabled={
-                                approvingQuickConnect ||
-                                (quickConnectLocked &&
-                                  quickConnectPin.length < 4)
-                              }
-                              loading={approvingQuickConnect}
-                            >
-                              Approve
-                              {quickConnectPersonaName
-                                ? ` as ${quickConnectPersonaName}`
-                                : ''}
-                            </Button>
-                            <Button
-                              intent="primary-subtle"
-                              onClick={cancelQuickConnect}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-sm font-medium text-white">
-                          Web app
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Browse, see what is playing and manage watch history
-                          in your browser.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        intent="gray-outline"
-                        rounded
-                        className="w-full shrink-0 sm:w-auto"
-                        leftIcon={<MonitorPlay className="h-4 w-4" />}
-                        onClick={() =>
-                          window.open(jellyfinWebAppUrl, '_blank', 'noopener')
-                        }
-                      >
-                        Open
-                      </Button>
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-sm font-medium text-white">
-                          Desktop app
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          The app for Windows, Mac and Linux, with a player that
-                          plays what a browser can&apos;t. Sign in with one of
-                          the addresses above.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        intent="gray-outline"
-                        rounded
-                        className="w-full shrink-0 sm:w-auto"
-                        leftIcon={<DownloadIcon className="h-4 w-4" />}
-                        onClick={() =>
-                          window.open(
-                            DESKTOP_DOWNLOAD_URL,
-                            '_blank',
-                            'noopener'
-                          )
-                        }
-                      >
-                        Download
-                      </Button>
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-sm font-medium text-white">
-                          API keys
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Let other tools use this server&apos;s API without
-                          your password.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        intent="gray-outline"
-                        rounded
-                        className="w-full shrink-0 sm:w-auto"
-                        leftIcon={<KeyRound className="h-4 w-4" />}
-                        onClick={jellyfinApiKeysModal.open}
-                      >
-                        Manage
-                        {userData.jellyfin?.apiKeys?.length
-                          ? ` (${userData.jellyfin.apiKeys.length})`
-                          : ''}
-                      </Button>
-                      <Modal
-                        open={jellyfinApiKeysModal.isOpen}
-                        onOpenChange={jellyfinApiKeysModal.toggle}
-                        title="API keys"
-                      >
-                        <JellyfinApiKeys serverUrl={jellyfinServerUrl} />
-                      </Modal>
-                    </div>
-                  </div>
-                ),
+                content: jellyfinConnect,
               },
               {
                 value: 'users',
-                label: 'Users',
-                content: <JellyfinPersonas />,
+                label: 'Profiles',
+                content: <ProfileList />,
               },
               {
                 value: 'trackers',
                 label: 'Trackers',
-                content: <JellyfinTrackers />,
+                content: jellyfinTrackers,
               },
               {
                 value: 'playback',
                 label: 'Playback',
-                content: (
-                  <div className="space-y-5">
-                    <Switch
-                      label="Resolve streams when an item opens"
-                      help={
-                        jellyfinResolveForced === null
-                          ? "Fills the client's version list before you press play."
-                          : 'Set by this instance.'
-                      }
-                      moreHelp={
-                        jellyfinResolveForced === null
-                          ? 'Off, streams are fetched when playback starts or an app asks for the version list: lighter, but the list shows a placeholder until then.'
-                          : undefined
-                      }
-                      side="right"
-                      disabled={jellyfinResolveForced !== null}
-                      value={
-                        jellyfinResolveForced ??
-                        userData.jellyfin?.resolveOnOpen ??
-                        true
-                      }
-                      defaultValue={true}
-                      onValueChange={(value) =>
-                        setUserData((prev) => ({
-                          ...prev,
-                          jellyfin: { ...prev.jellyfin, resolveOnOpen: value },
-                        }))
-                      }
-                    />
-                    <NumberInput
-                      label="Versions per item"
-                      help={`Up to ${jellyfinVersionCap} on this instance.`}
-                      moreHelp={`For Jellyfin apps. The AIOStreams app lists up to ${jellyfinAppVersionCap} whatever this is set to; Filters → Result Limits caps those. Version names come from your formatter.`}
-                      min={1}
-                      max={jellyfinVersionCap}
-                      value={Math.min(
-                        userData.jellyfin?.maxVersions ?? jellyfinVersionCap,
-                        jellyfinVersionCap
-                      )}
-                      onValueChange={(value) =>
-                        setUserData((prev) => ({
-                          ...prev,
-                          jellyfin: {
-                            ...prev.jellyfin,
-                            maxVersions:
-                              value === undefined ? undefined : value,
-                          },
-                        }))
-                      }
-                    />
-                    {jellyfinPlayWait !== undefined && (
-                      <NumberInput
-                        label="Wait for tracks on play"
-                        help={`Seconds. ${jellyfinPlayWait} by default on this instance.`}
-                        moreHelp="When you play a version whose tracks aren't known yet, the server reads them first, so the player lists every audio and subtitle track on the first play. It only reads versions where that can't add an IP to a debrid account: the built-in usenet service, debrid services that allow it, and anything played through a proxy. If reading takes longer than this, the tracks show from the next play. 0 starts at once. Some apps give up after about 20 seconds, so stay below that. A variant can set this per app."
-                        min={0}
-                        max={30}
-                        value={userData.jellyfin?.playWait ?? jellyfinPlayWait}
-                        onValueChange={(value) =>
-                          setUserData((prev) => ({
-                            ...prev,
-                            jellyfin: { ...prev.jellyfin, playWait: value },
-                          }))
-                        }
-                      />
-                    )}
-                    <Switch
-                      label="Mark unaired episodes"
-                      help="Clients show upcoming episodes as unaired and won't offer to play them."
-                      moreHelp="Some clients hide them altogether. When this is off, clients list them as normal episodes, and the AIOStreams app still marks them and asks before playing one."
-                      side="right"
-                      value={userData.jellyfin?.markUnaired ?? false}
-                      defaultValue={false}
-                      onValueChange={(value) =>
-                        setUserData((prev) => ({
-                          ...prev,
-                          jellyfin: { ...prev.jellyfin, markUnaired: value },
-                        }))
-                      }
-                    />
-                    {jellyfinSegmentsAvailable && (
-                      <div className="space-y-3 border-t border-gray-800 pt-4">
-                        <Switch
-                          label="Skip intro and credits"
-                          help="Offers your client markers so it can show a skip button."
-                          moreHelp="Timestamps come from community databases and are submitted against one release of an episode, so on a differently cut copy a marker can be a few seconds out. Whether your client skips automatically or asks first is a setting inside that client, not here."
-                          side="right"
-                          value={userData.jellyfin?.segments ?? true}
-                          defaultValue={true}
-                          onValueChange={(value) =>
-                            setUserData((prev) => ({
-                              ...prev,
-                              jellyfin: { ...prev.jellyfin, segments: value },
-                            }))
-                          }
-                        />
-                        {(userData.jellyfin?.segments ?? true) && (
-                          <CheckboxGroup
-                            label="Markers to offer"
-                            help="Turning off credits keeps the next-episode countdown some clients build from it."
-                            options={[
-                              { value: 'Intro', label: 'Intro' },
-                              { value: 'Recap', label: 'Recap' },
-                              { value: 'Outro', label: 'Credits' },
-                            ]}
-                            value={
-                              userData.jellyfin?.segmentTypes ?? [
-                                'Intro',
-                                'Recap',
-                                'Outro',
-                              ]
-                            }
-                            onValueChange={(value) =>
-                              setUserData((prev) => ({
-                                ...prev,
-                                jellyfin: {
-                                  ...prev.jellyfin,
-                                  segmentTypes: value as NonNullable<
-                                    UserData['jellyfin']
-                                  >['segmentTypes'],
-                                },
-                              }))
-                            }
-                          />
-                        )}
-                        {(userData.jellyfin?.segments ?? true) &&
-                          jellyfinSegmentProviders.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-white">
-                                Sources
-                              </p>
-                              <ul className="space-y-1">
-                                {jellyfinSegmentProviders.map((provider) => {
-                                  const ownKey =
-                                    provider.id === 'pmdb' &&
-                                    !!userData.pmdbApiKey;
-                                  const missingKey =
-                                    provider.key === 'configuration' && !ownKey;
-                                  return (
-                                    <li
-                                      key={provider.id}
-                                      className="flex items-center justify-between gap-3 text-xs"
-                                    >
-                                      <span className="truncate text-gray-300">
-                                        {provider.name}
-                                      </span>
-                                      <span
-                                        className={
-                                          missingKey
-                                            ? 'shrink-0 text-[--orange]'
-                                            : 'shrink-0 text-gray-500'
-                                        }
-                                      >
-                                        {missingKey
-                                          ? 'Needs your key'
-                                          : ownKey
-                                            ? 'Using your key'
-                                            : 'Included'}
-                                      </span>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                              <p className="text-xs text-gray-500">
-                                Asked in this order; the first with a marker for
-                                a type supplies it.
-                              </p>
-                            </div>
-                          )}
-                        {(userData.jellyfin?.segments ?? true) &&
-                          jellyfinPmdbKey && (
-                            <PasswordInput
-                              autoComplete="new-password"
-                              label="PublicMetaDB API Key"
-                              help={
-                                <span>
-                                  {jellyfinPmdbKey === 'instance'
-                                    ? 'This instance already asks PublicMetaDB for markers; your own key makes those lookups as your account instead. '
-                                    : 'Adds markers from PublicMetaDB, which also covers movies. '}
-                                  Create a key under Settings → API on{' '}
-                                  <a
-                                    href="https://publicmetadb.com"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[--brand] hover:underline"
-                                  >
-                                    publicmetadb.com
-                                  </a>
-                                  .
-                                </span>
-                              }
-                              placeholder={
-                                jellyfinPmdbKey === 'instance'
-                                  ? 'Provided by this instance (enter your own to override)'
-                                  : 'Enter your PublicMetaDB API key'
-                              }
-                              value={userData.pmdbApiKey}
-                              onValueChange={(value) =>
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  pmdbApiKey: value || undefined,
-                                }))
-                              }
-                            />
-                          )}
-                      </div>
-                    )}
-                  </div>
-                ),
+                content: jellyfinPlayback,
               },
             ]}
           />
@@ -3667,6 +3694,36 @@ function Content() {
           onOpenChange={templatesModal.toggle}
           openImportModal
         />
+      </>
+    ),
+  };
+}
+
+function Content() {
+  const { uuid } = useUserData();
+  const { installProps, account, backup, dangerZone, modals } =
+    useSaveInstall();
+  return (
+    <>
+      <div className="flex items-center w-full">
+        <div>
+          <h2>Install Addon</h2>
+          <p className="text-[--muted]">
+            Configure and install your personalized addon
+          </p>
+        </div>
+        <div className="hidden lg:block lg:ml-auto">
+          <PageControls />
+        </div>
+      </div>
+
+      <div className="space-y-4 mt-6">
+        {account}
+        {uuid && <InstallCard {...installProps} />}
+        {uuid && <ProfileCard />}
+        {backup}
+        {dangerZone}
+        {modals}
       </div>
     </>
   );

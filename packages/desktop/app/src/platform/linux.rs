@@ -472,7 +472,13 @@ pub fn clear_video() {
 }
 
 pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
-    vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())]
+    let mut options = vec![("vo", "libmpv".into()), ("hwdec", "auto-safe".into())];
+    // mpv leaves it off with an FFmpeg before libavformat 63, as only some of its TLS libraries
+    // find the system's certificates there. The Flatpak runtime's does.
+    if std::path::Path::new("/.flatpak-info").exists() {
+        options.push(("tls-verify", "yes".into()));
+    }
+    options
 }
 
 thread_local! {

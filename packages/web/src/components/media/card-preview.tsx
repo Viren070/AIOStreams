@@ -2,6 +2,8 @@ import { t } from '@lingui/core/macro';
 import React from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { cn } from '@aiostreams/ui/core/styling';
+import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
+import { SLIDE_RESIZE } from '@aiostreams/ui/carousel';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem } from '@/lib/jellyfin/queries';
 import { currentHost } from '@/lib/hosts';
@@ -117,10 +119,14 @@ function slideFrom(cards: HTMLElement[], lefts: number[]) {
   });
 }
 
-/** Scrolls a TV row so an opened card at its end shows whole. */
+/** Scrolls a row so an opened card at its end shows whole. */
 function reveal(slide: HTMLElement) {
   const scroller = slide.closest<HTMLElement>('[data-nav-self-scroll]');
-  if (!scroller || pageRtl()) return;
+  if (!scroller) {
+    slide.dispatchEvent(new Event(SLIDE_RESIZE, { bubbles: true }));
+    return;
+  }
+  if (pageRtl()) return;
   const view = scroller.getBoundingClientRect();
   const over = slide.getBoundingClientRect().right + 16 - view.right;
   if (over <= 0) return;
@@ -149,6 +155,7 @@ function openSlide(card: HTMLElement) {
   frame.style.height = `${height}px`;
   frame.style.aspectRatio = 'auto';
   slide.setAttribute('data-open', '');
+  if (grow) reveal(slide);
   if (still()) return;
   const layer = frame.querySelector<HTMLElement>('[data-ui=open-card]');
   const poster = frame.querySelector<HTMLElement>('[data-ui=open-card-poster]');
@@ -178,7 +185,6 @@ function openSlide(card: HTMLElement) {
     ...timing,
     fill: 'forwards',
   });
-  reveal(slide);
 }
 
 /** At once, before focus moves on and its row measures where to scroll. */
@@ -199,17 +205,21 @@ function closeSlide(card: HTMLElement) {
   slide.removeAttribute('data-open');
   slide.removeAttribute('data-opening');
   slide.removeAttribute('data-trailer');
+  if (!slide.closest('[data-nav-self-scroll]'))
+    slide.dispatchEvent(new Event(SLIDE_RESIZE, { bubbles: true }));
   if (!still()) slideFrom(after, lefts);
 }
 
 export function CardPreviewHost({ children }: { children: React.ReactNode }) {
-  const [mode] = useSetting(settings.interface.cardPreview);
-  const latestMode = React.useRef(mode);
-  latestMode.current = mode;
+  const [enabled] = useSetting(settings.interface.cardPreview);
+  const pointer = useMediaQuery(
+    '(min-width: 1024px) and (hover: hover) and (pointer: fine)'
+  );
+  const on = enabled && (pointer || !!currentHost().tv);
   const [shown, setShown] = React.useState<Shown | null>(null);
   const shownRef = React.useRef(shown);
   shownRef.current = shown;
-  const [ready, setReady] = React.useState<Target | null>(null);
+  const [ready, setReady] = React.useState<Shown | null>(null);
   const pending = React.useRef<Target | null>(null);
   const timers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const previews = React.useMemo<Previews>(() => {
@@ -233,10 +243,7 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
         shut();
         pending.current = target;
         const inPlace =
-          target.byFocus &&
-          latestMode.current === 'open' &&
-          !!slideOf(target.card) &&
-          !!frameOf(target.card);
+          target.byFocus && !!slideOf(target.card) && !!frameOf(target.card);
         const show = () => {
           pending.current = null;
           if (!target.card.isConnected) return;
@@ -247,8 +254,10 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
           flushSync(() => setShown(next));
           openSlide(target.card);
         };
-        if (inPlace)
-          timers.current.push(setTimeout(() => setReady(target), READY_MS));
+        if (target.byFocus)
+          timers.current.push(
+            setTimeout(() => setReady({ ...target, inPlace }), READY_MS)
+          );
         timers.current.push(
           setTimeout(show, target.byFocus ? FOCUS_REST_MS : POINTER_REST_MS)
         );
@@ -291,13 +300,20 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
     };
   }, [popped, previews]);
 
-  const frame = ready && frameOf(ready.card);
+  const frame = on && ready?.inPlace && frameOf(ready.card);
+  // A focused grid card's preview is drawn unseen first too.
+  const preview = popped ?? (on && ready && !ready.inPlace ? ready : null);
   return (
-    <PreviewContext.Provider value={previews}>
+    <PreviewContext.Provider value={on ? previews : null}>
       {children}
-      {popped &&
+      {on &&
+        preview &&
         createPortal(
-          <Preview target={popped} onClose={() => setShown(null)} />,
+          <Preview
+            target={preview}
+            opened={preview === popped}
+            onClose={() => setShown(null)}
+          />,
           document.body
         )}
       {ready &&
@@ -314,14 +330,31 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Centred over the whole card, its title too, inside its row and the window. */
-function place(card: HTMLElement) {
+interface Placement {
+  left: number;
+  top: number;
+  width: number;
+  height?: number;
+  past?: { left: number; right: number };
+}
+
+/** Inside the card's row or grid, so clear of the navigation, and the window. */
+function bounds(card: HTMLElement) {
+  const box = card
+    .closest('[data-ui=media-row], [data-ui=card-grid]')
+    ?.getBoundingClientRect();
+  return {
+    minX: Math.max(8, box?.left ?? 0),
+    maxX: Math.min(innerWidth - 8, box?.right ?? innerWidth),
+  };
+}
+
+/** Centred over the whole card, its title too. */
+function place(card: HTMLElement): Placement {
   const frame = frameOf(card) ?? card;
   const r = frame.getBoundingClientRect();
   const whole = card.getBoundingClientRect();
-  const row = card.closest('[data-ui=media-row]')?.getBoundingClientRect();
-  const minX = Math.max(8, row?.left ?? 0);
-  const maxX = Math.min(innerWidth - 8, row?.right ?? innerWidth);
+  const { minX, maxX } = bounds(card);
   const width = Math.min(
     r.height > r.width
       ? (whole.height * 1.06 * 16) / 9
@@ -338,6 +371,80 @@ function place(card: HTMLElement) {
     innerHeight - height - 8
   );
   return { left, top, width };
+}
+
+/** Opened out from its own edge at its picture's height, into room `pushAside` makes. */
+function beside(card: HTMLElement): Placement {
+  const frame = frameOf(card) ?? card;
+  const r = frame.getBoundingClientRect();
+  const { minX, maxX } = bounds(card);
+  const width = Math.min(Math.max(r.width, (r.height * 16) / 9), maxX - minX);
+  const left = Math.min(
+    Math.max(pageRtl() ? r.right - width : r.left, minX),
+    maxX - width
+  );
+  return {
+    left,
+    top: r.top,
+    width,
+    height: r.height,
+    past: {
+      left: Math.max(0, r.left - left),
+      right: Math.max(0, left + width - r.right),
+    },
+  };
+}
+
+/**
+ * Slides the cards beside a grid card out of its preview's way; moving one to
+ * the next line would lay the whole grid out again. Those pushed past the
+ * grid's edge fade.
+ */
+function pushAside(
+  card: HTMLElement,
+  past: { left: number; right: number }
+): () => void {
+  const cell = card.closest<HTMLElement>('[data-ui=card-grid] > *');
+  const grid = cell?.parentElement;
+  if (!cell || !grid) return () => {};
+  const box = grid.getBoundingClientRect();
+  const at = cell.getBoundingClientRect();
+  const moved = [...grid.children].flatMap((el) => {
+    if (!(el instanceof HTMLElement) || el === cell) return [];
+    // Layout's own line, which the cards' fade-in rise leaves alone.
+    if (el.offsetTop !== cell.offsetTop) return [];
+    const r = el.getBoundingClientRect();
+    const dx = r.left > at.left ? past.right : -past.left;
+    if (!dx) return [];
+    const out = r.left + dx < box.left - 1 || r.right + dx > box.right + 1;
+    return [{ el, dx, out }];
+  });
+  const transition = still()
+    ? ''
+    : // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
+      `transform ${GLIDE_MS}ms ${EASE}, opacity ${GLIDE_MS}ms ${EASE}`;
+  // Cards slid past its edge would widen the page, which a TV's web view zooms out to fit.
+  grid.style.overflowX = 'clip';
+  for (const { el, dx, out } of moved) {
+    el.style.transition = transition;
+    el.style.transform = `translateX(${dx}px)`;
+    if (out) el.style.opacity = '0';
+  }
+  return () => {
+    for (const { el } of moved) {
+      el.style.transform = '';
+      el.style.opacity = '';
+    }
+    setTimeout(() => {
+      for (const { el } of moved)
+        if (!el.style.transform) el.style.transition = '';
+      // Another card's preview may have pushed since.
+      const pushed = [...grid.children].some(
+        (el) => el instanceof HTMLElement && el.style.transform
+      );
+      if (!pushed) grid.style.overflowX = '';
+    }, GLIDE_MS);
+  };
 }
 
 function useCardTrailer(on: boolean) {
@@ -359,14 +466,56 @@ function useCardTrailer(on: boolean) {
 
 const PREVIEW_RADIUS = 12;
 
-function Preview({ target, onClose }: { target: Target; onClose(): void }) {
-  const [at] = React.useState(() => place(target.card));
+function Preview({
+  target,
+  opened = true,
+  onClose,
+}: {
+  target: Target;
+  /** False while it is drawn unseen ahead of opening. */
+  opened?: boolean;
+  onClose(): void;
+}) {
+  const { client } = useSession();
+  const [at] = React.useState(() =>
+    target.byFocus ? beside(target.card) : place(target.card)
+  );
   const tv = !!currentHost().tv;
   const [spot, setSpot] = React.useState<HTMLDivElement | null>(null);
   const box = React.useRef<HTMLDivElement>(null);
-  const trailer = useCardTrailer(true);
-  const open = () =>
+  const poster = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    if (!opened || !at.past) return;
+    const unpush = pushAside(target.card, at.past);
+    target.card.setAttribute('data-previewed', '');
+    return () => {
+      unpush();
+      target.card.removeAttribute('data-previewed');
+    };
+  }, [at, opened, target.card]);
+  React.useLayoutEffect(() => {
+    const { past } = at;
+    if (!opened || !past || still()) return;
+    const timing = { duration: GLIDE_MS, easing: EASE };
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS
+    const round = `round ${PREVIEW_RADIUS}px`;
+    box.current?.animate(
+      [
+        { clipPath: `inset(0 ${past.right}px 0 ${past.left}px ${round})` },
+        { clipPath: `inset(0 ${round})` },
+      ],
+      timing
+    );
+    poster.current?.animate([{ opacity: 1 }, { opacity: 0 }], {
+      ...timing,
+      fill: 'forwards',
+    });
+  }, [at, opened]);
+  const trailer = useCardTrailer(opened);
+  const open = () => {
     target.card.querySelector<HTMLElement>('a[href], button')?.click();
+    onClose();
+  };
   // The app's video over it takes the pointer, which the page then sees leave.
   const lifted = trailer.playing && !!currentHost().player;
   const latest = useLatest({ onClose, open });
@@ -400,13 +549,15 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
       data-ui="card-preview"
       data-type={target.item.Type}
       data-trailer={trailer.playing || undefined}
-      style={at}
+      style={{ left: at.left, top: at.top, width: at.width, height: at.height }}
       className={cn(
         'fixed z-30 cursor-pointer overflow-hidden rounded-xl bg-gray-900 shadow-[0_24px_48px_-12px_rgb(0_0_0/0.85)] ring-1 ring-white/10',
-        'duration-200 ease-out animate-in fade-in-0 zoom-in-90 motion-reduce:animate-none',
+        !at.past &&
+          'duration-200 ease-out animate-in fade-in-0 zoom-in-90 motion-reduce:animate-none',
         target.byFocus &&
           'outline outline-[3px] outline-offset-2 outline-[var(--ring)]',
-        tv && 'pointer-events-none'
+        tv && 'pointer-events-none',
+        !opened && 'invisible'
       )}
       onPointerLeave={(e) => e.pointerType === 'mouse' && !lifted && onClose()}
       onClick={open}
@@ -423,9 +574,31 @@ function Preview({ target, onClose }: { target: Target; onClose(): void }) {
         onClose();
       }}
     >
-      <div ref={setSpot}>
-        <PreviewBody listed={target.item} trailer={trailer.playing} />
+      <div ref={setSpot} className={cn(at.height && 'h-full')}>
+        <PreviewBody
+          listed={target.item}
+          trailer={trailer.playing}
+          fill={!!at.height}
+        />
       </div>
+      {at.past && !still() && (
+        // The card's poster over its own spot, fading as the preview opens out of it.
+        <div
+          ref={poster}
+          className="absolute inset-y-0"
+          style={{
+            left: at.past.left,
+            width: at.width - at.past.left - at.past.right,
+          }}
+        >
+          <Artwork
+            src={(width) =>
+              cardImages(client, target.item, 'poster', { maxWidth: width })
+            }
+            alt=""
+          />
+        </div>
+      )}
       {trailer.started && spot && (
         <TrailerPreview
           item={target.item}

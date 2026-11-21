@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { MergedCatalog } from '@aiostreams/core';
+import { MergedCatalog, UserData } from '@aiostreams/core';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
+import { useMenu } from '@/context/menu';
 import { SettingsCard } from '../../../shared/settings-card';
 import { Button, CloseButton, IconButton } from '@aiostreams/ui/button';
 import { Modal } from '@aiostreams/ui/modal';
@@ -29,6 +30,14 @@ export type MergeRequest =
   | { kind: 'new'; catalogs: { id: string; type: string }[] }
   | { kind: 'edit'; id: string };
 
+export const withoutMergedCatalog = (data: UserData, id: string): UserData => ({
+  ...data,
+  mergedCatalogs: data.mergedCatalogs?.filter((mc) => mc.id !== id),
+  catalogModifications: data.catalogModifications?.filter(
+    (mod) => mod.id !== id
+  ),
+});
+
 export const encodeMergeSource = (c: { id: string; type: string }) =>
   `id=${encodeURIComponent(c.id)}&type=${encodeURIComponent(c.type)}`;
 
@@ -42,6 +51,7 @@ export function MergedCatalogsCard({
 }) {
   const { userData, setUserData } = useUserData();
   const { status } = useStatus();
+  const { layout } = useMenu();
   const maxMergedCatalogSources =
     status?.settings?.limits?.maxMergedCatalogSources ?? 10;
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,15 +78,9 @@ export function MergedCatalogsCard({
     actionIntent: 'alert',
     onConfirm: () => {
       if (pendingDeleteMergedCatalogId) {
-        setUserData((prev) => ({
-          ...prev,
-          mergedCatalogs: prev.mergedCatalogs?.filter(
-            (mc) => mc.id !== pendingDeleteMergedCatalogId
-          ),
-          catalogModifications: prev.catalogModifications?.filter(
-            (mod) => mod.id !== pendingDeleteMergedCatalogId
-          ),
-        }));
+        setUserData((prev) =>
+          withoutMergedCatalog(prev, pendingDeleteMergedCatalogId)
+        );
         setPendingDeleteMergedCatalogId(null);
         toast.success('Merged catalog deleted');
       }
@@ -274,178 +278,12 @@ export function MergedCatalogsCard({
   };
 
   const handleDelete = (id: string) => {
-    setUserData((prev) => ({
-      ...prev,
-      mergedCatalogs: (prev.mergedCatalogs || []).filter((mc) => mc.id !== id),
-      catalogModifications: (prev.catalogModifications || []).filter(
-        (mod) => mod.id !== id
-      ),
-    }));
+    setUserData((prev) => withoutMergedCatalog(prev, id));
     toast.success('Merged catalog deleted');
   };
 
-  return (
-    <SettingsCard
-      title="Merged Catalogs"
-      id="mergedCatalogs"
-      description="Combine multiple catalogs into a single merged catalog. Useful for creating custom collections from different sources."
-      action={
-        <IconButton
-          size="sm"
-          intent="primary-subtle"
-          icon={<FaPlus />}
-          rounded
-          onClick={openAddModal}
-        />
-      }
-    >
-      {mergedCatalogs.length === 0 && (
-        <p className="text-[--muted] text-base text-center my-8">
-          No merged catalogs yet. Click the + button to create one.
-        </p>
-      )}
-
-      {mergedCatalogs.length > 0 && (
-        <ul className="space-y-2">
-          {mergedCatalogs.map((mc) => (
-            <li key={mc.id}>
-              <div className="relative px-4 py-3 bg-[var(--background)] rounded-[--radius-md] border overflow-hidden">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--subtle)] flex-shrink-0">
-                      <LuMerge className="text-xl" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm md:text-base font-medium truncate">
-                        {mc.name}
-                      </h3>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {capitalise(mc.type)} • {mc.catalogIds.length} catalogs
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <IconButton
-                      className="h-8 w-8"
-                      icon={<BiEdit />}
-                      intent="primary-subtle"
-                      rounded
-                      onClick={() => openEditModal(mc)}
-                    />
-                    <IconButton
-                      className="h-8 w-8"
-                      icon={<BiTrash />}
-                      intent="alert-subtle"
-                      rounded
-                      onClick={() => handleDelete(mc.id)}
-                    />
-                  </div>
-                </div>
-
-                {/* Settings accordion */}
-                <Accordion type="single" collapsible className="mt-2">
-                  <AccordionItem value="settings">
-                    <AccordionTrigger>
-                      <div className="flex items-center justify-center md:justify-between w-full">
-                        <h4 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide hidden md:block">
-                          Included Catalogs ({mc.catalogIds.length})
-                        </h4>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-4">
-                        {/* Included catalogs list */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {mc.catalogIds.map((catalogId) => {
-                            const catalog = allCatalogs.find(
-                              (c) => c.value === catalogId
-                            );
-                            const isUnavailable = !catalog;
-                            const availableCatalogsCount = mc.catalogIds.filter(
-                              (id) => allCatalogs.find((c) => c.value === id)
-                            ).length;
-                            const isLastAvailable =
-                              !isUnavailable && availableCatalogsCount === 1;
-                            const isLastCatalog = mc.catalogIds.length === 1;
-
-                            const handleRemove = (e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              if (isLastAvailable) {
-                                toast.error(
-                                  'Cannot remove the last available catalog. Add another catalog first or delete the merged catalog.'
-                                );
-                                return;
-                              }
-                              if (isLastCatalog && isUnavailable) {
-                                // Last catalog and it's unavailable - confirm deletion of merged catalog
-                                setPendingDeleteMergedCatalogId(mc.id);
-                                confirmDeleteLastUnavailable.open();
-                                return;
-                              }
-                              // Normal removal
-                              setUserData((prev) => ({
-                                ...prev,
-                                mergedCatalogs: prev.mergedCatalogs?.map(
-                                  (merged) =>
-                                    merged.id === mc.id
-                                      ? {
-                                          ...merged,
-                                          catalogIds: merged.catalogIds.filter(
-                                            (id) => id !== catalogId
-                                          ),
-                                        }
-                                      : merged
-                                ),
-                              }));
-                            };
-
-                            return (
-                              <span
-                                key={catalogId}
-                                className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-[var(--subtle)] border border-[var(--border)] text-[var(--muted-foreground)] ${catalog?.isDisabled ? 'opacity-60' : ''} ${isUnavailable ? 'bg-orange-50 dark:bg-orange-500/10 border border-orange-300 dark:border-orange-500/50' : ''}`}
-                              >
-                                <span className="font-medium text-[var(--foreground)]">
-                                  {catalog
-                                    ? catalog.name
-                                    : 'Unavailable Catalog'}
-                                </span>
-                                {catalog?.isDisabled && (
-                                  <span className="text-[10px] px-1 py-0.5 rounded text-[--red]">
-                                    Disabled
-                                  </span>
-                                )}
-                                {catalog && (
-                                  <span className="text-[10px] px-1 py-0.5 rounded bg-brand-800/20 border border-[--brand] border-brand-500/50 text-[--muted-foreground]">
-                                    {capitalise(catalog.catalogType)}
-                                  </span>
-                                )}
-                                <CloseButton
-                                  type="button"
-                                  className="ml-0.5"
-                                  size="sm"
-                                  onClick={handleRemove}
-                                  title={
-                                    isLastAvailable
-                                      ? 'Cannot remove last available catalog'
-                                      : 'Remove catalog'
-                                  }
-                                />
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Add/Edit Modal */}
+  const editor = (
+    <>
       <Modal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -716,12 +554,193 @@ export function MergedCatalogsCard({
             />
           )}
 
-          <Button className="w-full" type="submit">
-            {editingMergedCatalog ? 'Save Changes' : 'Create Merged Catalog'}
-          </Button>
+          <div className="flex gap-2">
+            {editingMergedCatalog && (
+              <Button
+                type="button"
+                intent="alert-subtle"
+                onClick={() => {
+                  handleDelete(editingMergedCatalog.id);
+                  setModalOpen(false);
+                }}
+              >
+                Delete
+              </Button>
+            )}
+            <Button className="flex-1" type="submit">
+              {editingMergedCatalog ? 'Save Changes' : 'Create Merged Catalog'}
+            </Button>
+          </div>
         </form>
       </Modal>
       <ConfirmationDialog {...confirmDeleteLastUnavailable} />
+    </>
+  );
+
+  if (layout === 'new') return editor;
+
+  return (
+    <SettingsCard
+      title="Merged Catalogs"
+      id="mergedCatalogs"
+      description="Combine multiple catalogs into a single merged catalog. Useful for creating custom collections from different sources."
+      action={
+        <IconButton
+          size="sm"
+          intent="primary-subtle"
+          icon={<FaPlus />}
+          rounded
+          onClick={openAddModal}
+        />
+      }
+    >
+      {mergedCatalogs.length === 0 && (
+        <p className="text-[--muted] text-base text-center my-8">
+          No merged catalogs yet. Click the + button to create one.
+        </p>
+      )}
+
+      {mergedCatalogs.length > 0 && (
+        <ul className="space-y-2">
+          {mergedCatalogs.map((mc) => (
+            <li key={mc.id}>
+              <div className="relative px-4 py-3 bg-[var(--background)] rounded-[--radius-md] border overflow-hidden">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--subtle)] flex-shrink-0">
+                      <LuMerge className="text-xl" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm md:text-base font-medium truncate">
+                        {mc.name}
+                      </h3>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        {capitalise(mc.type)} • {mc.catalogIds.length} catalogs
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <IconButton
+                      className="h-8 w-8"
+                      icon={<BiEdit />}
+                      intent="primary-subtle"
+                      rounded
+                      onClick={() => openEditModal(mc)}
+                    />
+                    <IconButton
+                      className="h-8 w-8"
+                      icon={<BiTrash />}
+                      intent="alert-subtle"
+                      rounded
+                      onClick={() => handleDelete(mc.id)}
+                    />
+                  </div>
+                </div>
+
+                {/* Settings accordion */}
+                <Accordion type="single" collapsible className="mt-2">
+                  <AccordionItem value="settings">
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-center md:justify-between w-full">
+                        <h4 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide hidden md:block">
+                          Included Catalogs ({mc.catalogIds.length})
+                        </h4>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4">
+                        {/* Included catalogs list */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {mc.catalogIds.map((catalogId) => {
+                            const catalog = allCatalogs.find(
+                              (c) => c.value === catalogId
+                            );
+                            const isUnavailable = !catalog;
+                            const availableCatalogsCount = mc.catalogIds.filter(
+                              (id) => allCatalogs.find((c) => c.value === id)
+                            ).length;
+                            const isLastAvailable =
+                              !isUnavailable && availableCatalogsCount === 1;
+                            const isLastCatalog = mc.catalogIds.length === 1;
+
+                            const handleRemove = (e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              if (isLastAvailable) {
+                                toast.error(
+                                  'Cannot remove the last available catalog. Add another catalog first or delete the merged catalog.'
+                                );
+                                return;
+                              }
+                              if (isLastCatalog && isUnavailable) {
+                                // Last catalog and it's unavailable - confirm deletion of merged catalog
+                                setPendingDeleteMergedCatalogId(mc.id);
+                                confirmDeleteLastUnavailable.open();
+                                return;
+                              }
+                              // Normal removal
+                              setUserData((prev) => ({
+                                ...prev,
+                                mergedCatalogs: prev.mergedCatalogs?.map(
+                                  (merged) =>
+                                    merged.id === mc.id
+                                      ? {
+                                          ...merged,
+                                          catalogIds: merged.catalogIds.filter(
+                                            (id) => id !== catalogId
+                                          ),
+                                        }
+                                      : merged
+                                ),
+                              }));
+                            };
+
+                            return (
+                              <span
+                                key={catalogId}
+                                className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-[var(--subtle)] border border-[var(--border)] text-[var(--muted-foreground)] ${catalog?.isDisabled ? 'opacity-60' : ''} ${isUnavailable ? 'bg-orange-50 dark:bg-orange-500/10 border border-orange-300 dark:border-orange-500/50' : ''}`}
+                              >
+                                <span className="font-medium text-[var(--foreground)]">
+                                  {catalog
+                                    ? catalog.name
+                                    : 'Unavailable Catalog'}
+                                </span>
+                                {catalog?.isDisabled && (
+                                  <span className="text-[10px] px-1 py-0.5 rounded text-[--red]">
+                                    Disabled
+                                  </span>
+                                )}
+                                {catalog && (
+                                  <span className="text-[10px] px-1 py-0.5 rounded bg-brand-800/20 border border-[--brand] border-brand-500/50 text-[--muted-foreground]">
+                                    {capitalise(catalog.catalogType)}
+                                  </span>
+                                )}
+                                <CloseButton
+                                  type="button"
+                                  className="ml-0.5"
+                                  size="sm"
+                                  onClick={handleRemove}
+                                  title={
+                                    isLastAvailable
+                                      ? 'Cannot remove last available catalog'
+                                      : 'Remove catalog'
+                                  }
+                                />
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {editor}
     </SettingsCard>
   );
 }

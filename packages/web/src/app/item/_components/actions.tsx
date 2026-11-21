@@ -27,7 +27,7 @@ import { RatingButton } from './rating';
 import { useVersionPicker } from '@/features/versions/version-picker';
 import { openAddToPlaylist } from '@/features/playlists/playlists';
 import { playable } from '@/lib/playlists';
-import { downloadsHost } from '@/lib/downloads';
+import { downloadsHost, useMayDownload } from '@/lib/downloads';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { TrailerButton } from './trailers';
 import { trailersOf } from '@/lib/playback/trailers';
@@ -59,13 +59,14 @@ const QUICK = [
 function useOffered(item: BaseItemDto, target?: BaseItemDto) {
   const devices = useRemoteDevices();
   const canDrop = useFeature('dropped');
+  const mayDownload = useMayDownload();
   const type = item.Type;
   return {
     trailer: !!trailersOf(item).length,
     watched: type !== 'BoxSet',
     favourite: offersFavourite(type, !!item.UserData?.IsFavorite),
     download:
-      !!downloadsHost() &&
+      mayDownload &&
       ((type === 'Movie' && item.LocationType !== 'Virtual') ||
         type === 'Series'),
     rating: type === 'Movie' || type === 'Series',

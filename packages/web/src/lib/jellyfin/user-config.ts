@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useSettingsLayer } from '@/lib/settings';
 import { useSession } from './session';
 import type { UserDto } from './types';
 
@@ -45,26 +46,26 @@ export const subtitleLanguages = (prefs: PlaybackPrefs) =>
 
 type Configuration = NonNullable<UserDto['Configuration']>;
 
-function useConfigurationKey() {
-  const { client, user } = useSession();
-  return ['jf', client.base, user.Id, 'configuration'] as const;
-}
-
 /** Saved on the server, so they follow the user to other devices and apps. */
 export function usePlaybackPrefs() {
   const { client, user } = useSession();
   const queryClient = useQueryClient();
-  const queryKey = useConfigurationKey();
+  const target = useSettingsLayer()?.userId;
+  const queryKey = ['jf', client.base, target ?? user.Id, 'configuration'];
   const query = useQuery({
     queryKey,
-    meta: { cache: 'account' },
+    meta: target ? undefined : { cache: 'account' },
     queryFn: async () =>
-      (await client.get<UserDto>('/Users/Me')).Configuration ?? {},
+      target
+        ? await client.get<Configuration>(`/Users/${target}/Configuration`)
+        : ((await client.get<UserDto>('/Users/Me')).Configuration ?? {}),
     staleTime: 5 * 60_000,
   });
   const save = useMutation({
     mutationFn: (next: Configuration) =>
-      client.post('/Users/Configuration', next, { userId: user.Id }),
+      target
+        ? client.post(`/Users/${target}/Configuration`, next)
+        : client.post('/Users/Configuration', next, { userId: user.Id }),
     onMutate: (next) => queryClient.setQueryData(queryKey, next),
     onError: () => {
       toast.error(t`Could not save that setting`);
@@ -72,10 +73,15 @@ export function usePlaybackPrefs() {
     },
   });
   const prefs = (query.data ?? {}) as PlaybackPrefs;
+  // A server can keep a user from changing their own configuration.
+  const locked = user.Policy?.EnableUserPreferenceAccess === false;
   return {
     prefs,
     isLoading: query.isLoading,
-    update: (patch: PlaybackPrefs) =>
-      save.mutate({ ...(query.data ?? {}), ...patch } as Configuration),
+    locked,
+    update: (patch: PlaybackPrefs) => {
+      if (!locked)
+        save.mutate({ ...(query.data ?? {}), ...patch } as Configuration);
+    },
   };
 }

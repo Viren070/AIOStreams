@@ -148,7 +148,7 @@ export function CachePage() {
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+                <thead className="text-[--muted] text-xs uppercase bg-white/[0.024]">
                   <tr className="text-left">
                     <th className="p-3">Prefix</th>
                     <th className="p-3">Backend</th>
@@ -163,7 +163,7 @@ export function CachePage() {
                   {d.instances.map((inst) => (
                     <tr
                       key={inst.name}
-                      className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                      className="border-t border-white/5 hover:bg-white/[0.018]"
                     >
                       <td className="p-3 font-mono text-xs">{inst.name}</td>
                       <td className="p-3">

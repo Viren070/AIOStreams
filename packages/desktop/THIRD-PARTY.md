@@ -26,3 +26,8 @@ AIOStreams Desktop is licensed under the AGPL-3.0. It ships with:
 It uses the system's web view, which it does not ship: the Microsoft Edge WebView2 Runtime on
 Windows and WebKit on macOS. On Linux it uses the system's libmpv, GTK 4 and WebKitGTK, and ships
 none of them.
+
+The Flatpak builds its own libmpv, from AIOStreams' forks of mpv and libass with libplacebo,
+LuaJIT, uchardet and libXpresent, and takes FFmpeg, GTK 4 and WebKitGTK from its runtime. Its mpv
+carries the MPVKit patches too, so it is licensed under the GPL-3.0. Each of those libraries'
+licence text is in `lib/aiostreams-desktop/licenses`.

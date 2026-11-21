@@ -43,6 +43,7 @@ import {
   downloadsHost,
   useDownloadOf,
   useEpisodesToDownload,
+  useMayDownload,
 } from '@/lib/downloads';
 import {
   useStraightPlay,
@@ -50,6 +51,7 @@ import {
 } from '@/features/versions/version-picker';
 import { useHeroTarget } from './hero';
 import { useCardPreview } from './card-preview';
+import { useArtTarget } from '@/lib/artwork/background';
 import { openAddToPlaylist } from '@/features/playlists/playlists';
 import { playable as canPlay } from '@/lib/playlists';
 import { usingKeys } from '@/lib/input';
@@ -97,6 +99,7 @@ function DownloadEntry({
   const picker = useVersionPicker();
   const episodes = useEpisodesToDownload();
   const download = useDownloadOf(item.Id);
+  const mayDownload = useMayDownload();
   if (!downloadsHost() || (!playable && item.Type !== 'Series')) return null;
   if (download)
     return (
@@ -107,6 +110,7 @@ function DownloadEntry({
         <BiDownload /> <Trans>See the download</Trans>
       </ContextMenuItem>
     );
+  if (!mayDownload) return null;
   return (
     <ContextMenuItem
       data-name="download"
@@ -202,21 +206,28 @@ export function ItemMenu({
 }: MenuTarget & { children: React.ReactNode }) {
   const heroTarget = useHeroTarget(target.item);
   const preview = useCardPreview(target.item);
+  const art = useArtTarget(target.item);
   const open = React.useContext(OpenMenu);
   const watched = {
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
       heroTarget?.onPointerMove(e);
       preview?.onPointerMove(e);
+      art?.onPointerMove(e);
     },
     onPointerLeave: () => {
       heroTarget?.onPointerLeave();
       preview?.onPointerLeave();
+      art?.onPointerLeave();
     },
     onFocus: (e: React.FocusEvent<HTMLElement>) => {
       heroTarget?.onFocus();
       preview?.onFocus(e);
+      art?.onFocus(e);
     },
-    onBlur: () => preview?.onBlur(),
+    onBlur: () => {
+      preview?.onBlur();
+      art?.onBlur();
+    },
   };
   if (!open) return <div {...watched}>{children}</div>;
   const endPress = (e: React.PointerEvent) => {

@@ -137,7 +137,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="tablist"
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-lg border border-[--border] bg-[--subtle]/50 p-0.5',
+        'inline-flex items-center gap-0.5 rounded-lg border border-[--border] bg-white/[0.03] p-0.5',
         className
       )}
     >

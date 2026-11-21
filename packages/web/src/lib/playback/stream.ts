@@ -19,17 +19,30 @@ function streamUrl(
   });
 }
 
+/** Servers that send no extensions, which stream what they have themselves. */
+const streaming = new Set<string>();
+
+export function noteStreamsItself(base: string, yes: boolean): void {
+  if (yes) streaming.add(base);
+  else streaming.delete(base);
+}
+
+export const streamsItself = (base: string) => streaming.has(base);
+
 /**
  * The source's own address, which outlives this session. Players open it
  * rather than the stream route, as mpv reads a playlist's relative parts
- * against the address it opened, not the one a redirect led to.
+ * against the address it opened, not the one a redirect led to. A server
+ * that streams itself may hold an address only it can reach.
  */
 export function directUrl(
   client: JellyfinClient,
   itemId: string,
   source: SourceInfo
 ): string {
-  return source.Path && /^https?:\/\//i.test(source.Path)
+  return source.Path &&
+    /^https?:\/\//i.test(source.Path) &&
+    !streamsItself(client.base)
     ? source.Path
     : streamUrl(client, itemId, source);
 }

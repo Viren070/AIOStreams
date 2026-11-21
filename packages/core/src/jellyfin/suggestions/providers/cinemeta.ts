@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createLogger } from '../../../logging/logger.js';
-import { makeRequest } from '../../../utils/http.js';
+import { makeRequest } from '../../../utils/http/index.js';
 import type { SuggestionProvider, TitleSuggestion } from '../types.js';
 import { completes, distinctNames, titleWords } from '../words.js';
 

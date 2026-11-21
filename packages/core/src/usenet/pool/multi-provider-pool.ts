@@ -450,6 +450,10 @@ export class MultiProviderPool {
         pinned.release();
       }
     }
+    const cached = this.cachedMiss(segment.messageId);
+    if (cached !== undefined) {
+      throw this.cachedMissError(segment.messageId, cached);
+    }
 
     let shared = this.inflightHeads.get(segment.messageId);
     if (!shared) {
@@ -469,6 +473,10 @@ export class MultiProviderPool {
             want,
             wire.start
           );
+        } catch (err) {
+          const kind = definitiveLossKind(err);
+          if (kind) this.recordMiss(segment.messageId, kind);
+          throw err;
         } finally {
           wire.end();
           releaseGlobal();

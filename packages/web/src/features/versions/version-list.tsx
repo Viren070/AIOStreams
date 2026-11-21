@@ -34,6 +34,7 @@ import { directUrl } from '@/lib/playback/stream';
 import {
   downloadable,
   useAddDownloads,
+  useMayDownload,
   useReplaceVersion,
   type Download,
 } from '@/lib/downloads';
@@ -108,6 +109,7 @@ export function Versions({
   const queryClient = useQueryClient();
   const infoOptions = usePlaybackInfoOptions();
   const addDownloads = useAddDownloads();
+  const mayDownload = useMayDownload();
   const replaceVersion = useReplaceVersion();
   const download = request.download;
   const [startMs, setStartMs] = React.useState(request.startMs);
@@ -361,9 +363,8 @@ export function Versions({
           <CachedImage
             src={art}
             alt=""
-            className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25"
+            className="absolute inset-x-0 top-0 aspect-video min-h-full w-full object-cover opacity-25 [mask-image:linear-gradient(to_bottom,black_30%,transparent)]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[--paper]/30 via-[--paper]/70 to-[--paper]" />
         </div>
       )}
       {compact ? (
@@ -495,7 +496,7 @@ export function Versions({
             return <Notice key={source.Id} notice={source} />;
           const link = directUrl(client, item.Id!, source);
           const actions = [
-            ...(!download && downloadable(source)
+            ...(!download && mayDownload && downloadable(source)
               ? [
                   {
                     name: 'download',

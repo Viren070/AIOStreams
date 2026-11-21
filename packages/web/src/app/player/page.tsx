@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,6 +18,8 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem } from '@/lib/jellyfin/queries';
 import {
+  useLaterSubtitles,
+  useMaxBitrate,
   usePlaybackInfo,
   usePlaybackInfoOptions,
   useSegments,
@@ -37,7 +40,7 @@ import {
 } from '@/lib/playback/stream';
 import { PlaybackReporter } from '@/lib/playback/reporter';
 import { currentHost } from '@/lib/hosts';
-import { appLog } from '@/lib/hosts/shell/bridge';
+import { appBridge, appLog } from '@/lib/hosts/shell/bridge';
 import { useFeature } from '@/lib/jellyfin/server-info';
 import {
   leaveFullscreen,
@@ -48,6 +51,13 @@ import type { EngineFactory, StatsRow } from '@/lib/playback/engine';
 import { videoEngine } from '@/lib/playback/video';
 import { playsWithWebGpu } from '@/lib/playback/player-choice';
 import { webGpuEngine } from '@/lib/playback/webgpu';
+import {
+  transcodes,
+  transcodeServer,
+  transcodingEngine,
+} from '@/lib/playback/transcoding';
+import { mayConvert } from '@/lib/playback/quality';
+import { serverChapters, trickplayFeed } from '@/lib/playback/trickplay';
 import { useNowPlaying } from '@/lib/playback/now-playing';
 import { usePlayingAnime } from '@/lib/playback/upscaling';
 import {
@@ -90,6 +100,13 @@ import {
   usePlayback,
 } from '@/lib/playback/session';
 import { leaveAppPip, useAppPip } from '@/lib/hosts/shell/pip';
+import {
+  canUseDocumentPip,
+  closeDocumentPip,
+  onDocumentPipLeave,
+  openDocumentPip,
+  useDocumentPip,
+} from '@/lib/playback/document-pip';
 import { PictureInPicture } from '@/features/player/picture-in-picture';
 import { noteChannelPlayed } from '@/features/live-tv/live-tv';
 import { useZap, type Zap } from '@/features/player/live';
@@ -142,6 +159,7 @@ interface PlayerProps {
   onCovered(covered: boolean): void;
   /** The playlist it was started from. */
   playlist?: string;
+  onQuality?(bitrate: number, positionMs: number): void;
 }
 
 /**
@@ -218,8 +236,14 @@ export function PlayerPage({
   // Pinned once found: a refreshed version list must not restart playback.
   const [playing, setPlaying] = React.useState<Omit<
     PlayerProps,
-    'startMs' | 'onCovered' | 'playlist' | 'mini'
+    'startMs' | 'onCovered' | 'playlist' | 'mini' | 'onQuality'
   > | null>(null);
+  const [restart, setRestart] = React.useState<{ at: number; n: number }>();
+  const changeQuality = React.useCallback((bitrate: number, at: number) => {
+    settings.player.quality.write(bitrate);
+    setRestart((r) => ({ at, n: (r?.n ?? 0) + 1 }));
+    setPlaying(null);
+  }, []);
   const [covered, setCovered] = React.useState(true);
   const sources = local ? [local.source!] : playableSources(info.data);
   const source = named ? sources.find((s) => s.Id === named) : sources[0];
@@ -293,6 +317,7 @@ export function PlayerPage({
     () => () => {
       const open = playbackNow();
       if (!open || open.mini) leaveAppPip();
+      if (!open) closeDocumentPip();
     },
     []
   );
@@ -317,11 +342,13 @@ export function PlayerPage({
       {playing ? (
         <VersionPickerProvider>
           <Player
+            key={restart?.n}
             {...playing}
-            startMs={startMs}
+            startMs={restart?.at ?? startMs}
             playlist={playlist}
             onCovered={setCovered}
             mini={mini}
+            onQuality={changeQuality}
           />
         </VersionPickerProvider>
       ) : loading ? null : (
@@ -435,7 +462,10 @@ function useReporting(
   const refreshAll = useRefreshAll();
   const refresh = React.useRef(refreshAll);
   refresh.current = refreshAll;
-  const { started, paused } = player.state;
+  const { started, paused, stream } = player.state;
+  const session = stream ? stream.playSessionId : playSessionId;
+  const liveStreamId = stream?.liveStreamId;
+  const transcoded = !!stream;
   // A server that sends the object without the feature numbers versions by position.
   const lasting = useFeature('versions') || !source.aiostreams;
 
@@ -455,9 +485,10 @@ function useReporting(
       {
         itemId: item.Id!,
         mediaSourceId: source.Id!,
-        playSessionId,
+        playSessionId: session,
         userId: user.Id,
         live,
+        transcode: transcoded ? { liveStreamId } : undefined,
       },
       () => ({
         ms: player.playhead.positionMs,
@@ -478,7 +509,17 @@ function useReporting(
       });
       reporter.current = null;
     };
-  }, [started, client, user.Id, item.Id, source.Id, playSessionId, live]);
+  }, [
+    started,
+    client,
+    user.Id,
+    item.Id,
+    source.Id,
+    session,
+    live,
+    transcoded,
+    liveStreamId,
+  ]);
 
   React.useEffect(() => {
     reporter.current?.progress(paused ? 'Pause' : 'Unpause');
@@ -604,6 +645,17 @@ function Failure({
       </div>
     </div>
   );
+}
+
+function windowSize(source: SourceInfo): { width: number; height: number } {
+  const video = source.MediaStreams?.find((s) => s.Type === 'Video');
+  const ratio =
+    video?.Width && video.Height ? video.Width / video.Height : 16 / 9;
+  const area = 480 * 270;
+  return {
+    width: Math.round(Math.sqrt(area * ratio)),
+    height: Math.round(Math.sqrt(area / ratio)),
+  };
 }
 
 /** Sized from the video's height, as a cue is by default; Firefox reads a percentage against the page font. */
@@ -736,10 +788,29 @@ function Player({
   onCovered,
   playlist,
   mini,
+  onQuality,
 }: PlayerProps) {
-  const { client } = useSession();
+  const { client, user } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [hostPlayer] = React.useState(() => currentHost().player);
+  const maxBitrate = useMaxBitrate();
+  // A version the server converts plays its conversion; one the page's
+  // engines can't read goes to it last.
+  const [engines] = React.useState((): EngineFactory[] => {
+    const page = () => videoEngine(video);
+    if (local?.local || youTube)
+      return hostPlayer ? [hostPlayer] : pageEngines(video);
+    const server = transcodeServer(client, user.Id!, item.Id!, maxBitrate);
+    if (transcodes(source))
+      return [transcodingEngine(hostPlayer ?? page(), server)];
+    if (hostPlayer) return [hostPlayer];
+    return [
+      ...pageEngines(video),
+      ...(source.SupportsTranscoding
+        ? [transcodingEngine(page(), server)]
+        : []),
+    ];
+  });
   usePlayingAnime(item);
   const close = React.useRef<() => void>(undefined);
   const ended = useEnded(item, mini, () => close.current?.());
@@ -794,7 +865,25 @@ function Player({
     },
     [local]
   );
-  const own = usePlayer(hostPlayer ? [hostPlayer] : pageEngines(video), {
+  const [quality] = useSetting(settings.player.quality);
+  const convertible =
+    !!onQuality &&
+    !!source.SupportsTranscoding &&
+    mayConvert(user) &&
+    !local?.local &&
+    !youTube &&
+    !launched;
+  // A download plays offline, and a YouTube video has none of these.
+  const fromServer = React.useMemo(() => {
+    if (local?.local || youTube) return {};
+    const chapters = serverChapters(item);
+    return {
+      chapters: chapters.length ? chapters : undefined,
+      pictures: trickplayFeed(client, item, source),
+    };
+  }, [local, youTube, client, item, source]);
+  const laterSubtitles = useLaterSubtitles(item.Id!, source, !local?.local);
+  const own = usePlayer(engines, {
     client,
     item,
     url: local?.local
@@ -802,6 +891,7 @@ function Player({
       : (youTube ?? directUrl(client, item.Id!, source)),
     headers: local?.local ? undefined : requiredHeaders(source),
     subtitleUrl: local ? localSubtitle : undefined,
+    laterSubtitles,
     source,
     startMs,
     onEnded,
@@ -821,6 +911,8 @@ function Player({
     subtitleStyle,
     launched,
     startPaused,
+    chapters: fromServer.chapters,
+    pictures: fromServer.pictures,
   });
   const player = usePartyPlayer(own, playlistItemId);
   close.current = player.close;
@@ -894,13 +986,54 @@ function Player({
   const launchedName = launched?.name ?? '';
   const failure = player.state.error ?? '';
   const pip = useAppPip();
-  useFullWindowFor(!!failure || next.asking || !!launched);
+  const needsPage = !!failure || next.asking || !!launched;
+  useFullWindowFor(needsPage);
   const covered = !pip && (!player.state.started || !!launched);
   React.useLayoutEffect(() => onCovered(covered), [covered, onCovered]);
   const [place, setPlace] = React.useState<MiniVideoPlace | null>(null);
   React.useEffect(() => {
     if (mini) leaveFullscreen();
   }, [mini]);
+
+  const [pipWindow] = useSetting(settings.player.pictureInPicture);
+  const windowed = !hostPlayer && canUseDocumentPip() && pipWindow === 'player';
+  const pageWindow = useDocumentPip();
+  const inWindow = windowed ? pageWindow : null;
+  React.useEffect(() => {
+    if (needsPage || !windowed) closeDocumentPip();
+  }, [needsPage, windowed]);
+  const [frameHost] = React.useState(() => {
+    const host = document.createElement('div');
+    host.className = 'contents';
+    return host;
+  });
+  const slot = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    (inWindow?.document.body ?? slot.current)?.prepend(frameHost);
+  }, [inWindow, frameHost]);
+  React.useEffect(() => {
+    const leave = onDocumentPipLeave(() => slot.current?.append(frameHost));
+    return () => {
+      leave();
+      frameHost.remove();
+    };
+  }, [frameHost]);
+  const followWindow = useLatest(own.setPictureInPicture);
+  React.useEffect(() => {
+    followWindow.current?.(!!inWindow);
+  }, [inWindow, followWindow]);
+  const shownControls: PlayerController = windowed
+    ? {
+        ...controls,
+        togglePictureInPicture: () =>
+          inWindow
+            ? closeDocumentPip()
+            : void openDocumentPip(windowSize(source)),
+        // The window's controls lift the subtitles instead.
+        liftSubtitles: inWindow ? undefined : controls.liftSubtitles,
+      }
+    : controls;
+  const elsewhere = !!inWindow || !!player.state.pictureInPicture;
 
   if (pip)
     return (
@@ -912,6 +1045,8 @@ function Player({
             skipping={skipping}
             live={!!source.IsInfiniteStream}
             onClose={stop}
+            onLeave={leaveAppPip}
+            onDrag={() => appBridge()?.send({ type: 'window-drag' })}
           />
         )}
       </div>
@@ -921,41 +1056,57 @@ function Player({
     <div data-page="player" className={mini ? 'contents' : 'fixed inset-0'}>
       {!hostPlayer && (
         <>
-          <style>{cueCss(subtitleStyle)}</style>
-          {/* The engine's canvas and the subtitle layers sit here with the video, and move with it. */}
-          <div
-            data-ui="video-frame"
-            className={
-              // Over the mini player's card, which comes after it.
-              cn(
-                '[container-type:size]',
-                mini
-                  ? 'pointer-events-none fixed left-0 top-0 z-[41] h-full w-full overflow-hidden'
-                  : 'absolute inset-0 isolate'
-              )
-            }
-            style={mini && place ? place : undefined}
-          >
-            <video
-              ref={video}
-              data-ui="video"
-              className={cn(
-                'h-full w-full bg-black transition-opacity duration-700 ease-out',
-                mini ? 'object-contain' : OBJECT_FIT[fit],
-                !player.state.started && 'opacity-0'
-              )}
-              autoPlay
-              playsInline
-            />
-            <PageSubtitle
-              framed
-              text={player.subtitleText}
-              style={subtitleStyle}
-              lift={mini ? undefined : player.subtitleLift}
-            />
-          </div>
+          <div ref={slot} className="contents" />
+          {createPortal(
+            <>
+              <style>{cueCss(subtitleStyle)}</style>
+              {/* The engine's canvas and the subtitle layers sit here with the video, and move with it. */}
+              <div
+                data-ui="video-frame"
+                className={cn(
+                  '[container-type:size]',
+                  // Over the mini player's card, which comes after it.
+                  mini && !inWindow
+                    ? 'pointer-events-none fixed left-0 top-0 z-[41] h-full w-full overflow-hidden'
+                    : 'absolute inset-0 isolate',
+                  player.state.pictureInPicture && 'invisible'
+                )}
+                style={mini && place && !inWindow ? place : undefined}
+              >
+                <video
+                  ref={video}
+                  data-ui="video"
+                  className={cn(
+                    'h-full w-full bg-black transition-opacity duration-700 ease-out',
+                    mini || inWindow ? 'object-contain' : OBJECT_FIT[fit],
+                    !player.state.started && 'opacity-0'
+                  )}
+                  autoPlay
+                  playsInline
+                />
+                <PageSubtitle
+                  framed
+                  text={player.subtitleText}
+                  style={subtitleStyle}
+                  lift={mini ? undefined : player.subtitleLift}
+                />
+              </div>
+            </>,
+            frameHost
+          )}
         </>
       )}
+      {inWindow &&
+        createPortal(
+          <PictureInPicture
+            player={controls}
+            skipping={skipping}
+            live={!!source.IsInfiniteStream}
+            onClose={stop}
+            onLeave={closeDocumentPip}
+          />,
+          inWindow.document.body
+        )}
       {mini && (
         <MiniPlayer
           item={item}
@@ -982,6 +1133,14 @@ function Player({
               <Trans>Playing in {launchedName}</Trans>
             </p>
           )}
+          {elsewhere && (
+            <p
+              data-ui="player-elsewhere"
+              className="pointer-events-none fixed inset-x-0 top-1/4 text-center text-lg font-medium text-white/80"
+            >
+              <Trans>Playing in picture-in-picture</Trans>
+            </p>
+          )}
           {player.state.error ? (
             <Failure
               itemId={item.Id!}
@@ -997,7 +1156,7 @@ function Player({
               {!next.asking && (
                 <PlayerControls
                   item={item}
-                  player={controls}
+                  player={shownControls}
                   skipping={skipping}
                   onBack={back}
                   onMinimise={minimise}
@@ -1014,6 +1173,15 @@ function Player({
                       : undefined
                   }
                   onParty={together}
+                  quality={
+                    convertible
+                      ? {
+                          value: quality,
+                          select: (bitrate) =>
+                            onQuality(bitrate, player.playhead.positionMs),
+                        }
+                      : undefined
+                  }
                   live={!!source.IsInfiniteStream}
                 />
               )}

@@ -33,14 +33,14 @@ import { TemplateUpdatesModal } from './_components/template-updates-modal';
 export function AboutMenu() {
   return (
     <PageWrapper className="space-y-5 p-4 sm:p-8">
-      <Content />
+      <AboutContent />
     </PageWrapper>
   );
 }
 
-function Content() {
+export function AboutContent() {
   const { status } = useStatus();
-  const { nextMenu, setSelectedMenu } = useMenu();
+  const { nextMenu, setSelectedMenu, layout } = useMenu();
   const { userData, setUserData, uuid, password } = useUserData();
   const { isFirstTime, setIsFirstTime } = useMode();
   const loader = useTemplateLoader(status);
@@ -117,7 +117,7 @@ function Content() {
       templatesModal.open();
       url.searchParams.delete('template');
       url.searchParams.delete('templateId');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState(window.history.state, '', url.toString());
     }
   }, []);
 
@@ -240,7 +240,7 @@ function Content() {
           docsLoading={docs.isLoading}
         />
 
-        <InterfaceMode />
+        {layout === 'classic' && <InterfaceMode />}
 
         <Resources
           discordUrl={discordUrl}
@@ -276,6 +276,7 @@ function Content() {
         onOpenChange={customizeModal.toggle}
         currentName={addonName}
         currentLogo={userData.addonLogo}
+        currentBackground={userData.addonBackground}
         currentDescription={userData.addonDescription}
       />
 

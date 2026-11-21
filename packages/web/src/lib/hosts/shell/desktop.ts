@@ -8,7 +8,7 @@ import {
   type VideoOutput,
 } from './bridge';
 import { shellDownloads } from './downloads';
-import { appEngine } from './player';
+import { appEngine, shellFeatures } from './player';
 import { resolveYouTube } from './youtube';
 
 export type DiscordStatus = ShellAnswer<'discord-status'>;
@@ -91,7 +91,9 @@ export const desktopHost: Host = {
   name: 'desktop',
   device: () => ({ name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: ['audio', 'chapters', 'stats', 'headers', 'upscaling'],
+  get playerFeatures() {
+    return shellFeatures();
+  },
   resolveYouTube,
   downloads: {
     ...shellDownloads,

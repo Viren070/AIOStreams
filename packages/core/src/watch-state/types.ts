@@ -6,6 +6,7 @@ import type {
   WatchStateRow,
 } from '../db/repositories/watch-state.js';
 import { IdParser } from '../utils/id-parser.js';
+import { OWNER_ID } from '../utils/profiles.js';
 
 export type {
   WatchIdentity,
@@ -15,24 +16,21 @@ export type {
   WatchStateRow,
 };
 
-/** The primary user: the key every row had before personas existed. */
-export const ACCOUNT_PERSONA = '';
-
 /**
  * Names one history. Anything that reads or writes a row keyed by
- * `(uuid, persona)` takes this; a credential or a piece of content is a `uuid`.
+ * `(uuid, profile)` takes this; a credential or a piece of content is a `uuid`.
  */
 export interface WatchScope {
   uuid: string;
-  persona: string;
+  profile: string;
 }
 
-export function accountScope(uuid: string): WatchScope {
-  return { uuid, persona: ACCOUNT_PERSONA };
+export function ownerScope(uuid: string): WatchScope {
+  return { uuid, profile: OWNER_ID };
 }
 
-export function scopeOf(row: { uuid: string; persona: string }): WatchScope {
-  return { uuid: row.uuid, persona: row.persona };
+export function scopeOf(row: { uuid: string; profile: string }): WatchScope {
+  return { uuid: row.uuid, profile: row.profile };
 }
 
 export interface ContentRef {
@@ -177,12 +175,7 @@ export interface WatchProgressEvent {
 
 export interface WatchFlagEvent {
   type:
-    | 'played'
-    | 'unplayed'
-    | 'favorite'
-    | 'unfavorite'
-    | 'dropped'
-    | 'undropped';
+    'played' | 'unplayed' | 'favorite' | 'unfavorite' | 'dropped' | 'undropped';
   identity: WatchIdentity;
   snapshot?: WatchSnapshot;
 }

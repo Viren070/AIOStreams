@@ -6,22 +6,29 @@ import { Button } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { useSession } from '@/lib/jellyfin/session';
-import { useItemPages, useLiveTvView } from '@/lib/jellyfin/queries';
+import { useItemPages } from '@/lib/jellyfin/queries';
 import {
   FAVOURITES,
   useChannelPages,
+  useLiveTvShown,
   useNow,
   useSchedules,
 } from '@/features/live-tv/live-tv';
 import { useInView } from '@/hooks/use-in-view';
-import { navigate, to } from '@/lib/paths';
-import { PageBody } from '@/components/shell/page';
+import { useSearchParam } from '@/hooks/use-search-param';
+import { PageBody, PageHeader } from '@/components/shell/page';
 import { PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { CardGrid } from '@/components/media/media-row';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import { BATCH } from '@/features/live-tv/channel-list';
 import { openRandom } from '@/components/media/random-pick';
+import {
+  SORTS,
+  SortPicker,
+  useSortParam,
+  type SortKey,
+} from '@/components/media/sort-picker';
 
 const KINDS = [
   {
@@ -47,19 +54,25 @@ const KINDS = [
 /* eslint-disable-next-line lingui/no-unlocalized-strings -- Jellyfin's item type */
 const CHANNELS = 'TvChannel';
 
+const FAVOURITE_SORTS: SortKey[] = ['added', 'name', 'released', 'rating'];
+
 export function FavouritesPage({ kind }: { kind?: string }) {
   const { client } = useSession();
-  const live = !!useLiveTvView().data;
+  const live = useLiveTvShown();
   const kinds = live
     ? [...KINDS, { value: CHANNELS, label: t`Channels` }]
     : KINDS;
   const types = kinds.find((k) => k.value === kind)?.value ?? KINDS[0].value;
   const channels = types === CHANNELS;
+  const [, setKind] = useSearchParam('kind');
+  const [sort, setSort] = useSortParam(FAVOURITE_SORTS, 'added');
   const pages = useItemPages('', {
     filter: 'favorite',
     types,
     recursive: true,
     enabled: !channels,
+    sortBy: SORTS[sort.key],
+    descending: sort.descending,
   });
   const items = pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [];
   const sentinel = useInView<HTMLDivElement>(
@@ -74,36 +87,40 @@ export function FavouritesPage({ kind }: { kind?: string }) {
   return (
     <PageBody>
       <div className="space-y-6">
-        <h1 data-ui="page-title" className="text-3xl font-bold">
-          <Trans>Favourites</Trans>
-        </h1>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <PillTabs
-            name="kind"
-            options={kinds}
-            value={types}
-            onChange={(next) =>
-              navigate(
-                to.favourites(next === KINDS[0].value ? undefined : next),
-                {
-                  replace: true,
-                }
-              )
-            }
-          />
-          {!!items.length && !channels && (
-            <Button
-              data-ui="random-pick"
-              size="sm"
-              intent="gray-subtle"
-              className="rounded-full"
-              leftIcon={<BiShuffle />}
-              onClick={() => openRandom({ kind: 'favourite', types })}
-            >
-              <Trans>Random pick</Trans>
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title={<Trans>Favourites</Trans>}
+          actions={
+            !channels && (
+              <>
+                <SortPicker
+                  keys={FAVOURITE_SORTS}
+                  value={sort}
+                  onChange={setSort}
+                />
+                {!!items.length && (
+                  <Button
+                    data-ui="random-pick"
+                    size="sm"
+                    intent="gray-subtle"
+                    className="rounded-full"
+                    leftIcon={<BiShuffle />}
+                    onClick={() => openRandom({ kind: 'favourite', types })}
+                  >
+                    <Trans>Random pick</Trans>
+                  </Button>
+                )}
+              </>
+            )
+          }
+        />
+        <PillTabs
+          name="kind"
+          options={kinds}
+          value={types}
+          onChange={(next) =>
+            setKind(next === KINDS[0].value ? undefined : next)
+          }
+        />
         {channels ? (
           <FavouriteChannels />
         ) : pages.isError ? (

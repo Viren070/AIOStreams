@@ -542,9 +542,6 @@ importers:
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.3.1)
-      embla-carousel-wheel-gestures:
-        specifier: ^8.1.0
-        version: 8.1.0(embla-carousel@8.6.0)
       fast-deep-equal:
         specifier: ^3.1.3
         version: 3.1.3
@@ -606,14 +603,14 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@aiostreams/jassub':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@aiostreams/ui':
         specifier: workspace:*
         version: link:../ui
       '@aiostreams/webgpu-player':
-        specifier: ^0.4.1
-        version: 0.4.1
+        specifier: ^0.5.2
+        version: 0.5.2
       '@fontsource/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -677,6 +674,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^7.1.1
         version: 7.1.1(eslint@10.13.0(jiti@2.7.0))
+      hls.js:
+        specifier: ^1.7.4
+        version: 1.7.4
       motion:
         specifier: ^12.43.0
         version: 12.43.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -727,8 +727,8 @@ packages:
     resolution: {integrity: sha512-bgt7dSU1HufSKO7hqE7SuyGJ7BPOXUx6/S2lH4UMkwTlHHiRlGtOWFaXLlUOYi7iLJRcEnGvdxKu5kwO+Qu8Yw==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
 
-  '@aiostreams/jassub@0.1.0':
-    resolution: {integrity: sha512-Lmcom4pKcFlfMjL2a824AXyNte9xRNvWtXiLV/jasQNqgU3Ubc3NM8r+bGdu6R7OJPJWCGS+7bi4ZchSLwz5UA==}
+  '@aiostreams/jassub@0.1.1':
+    resolution: {integrity: sha512-/TPOm8xzbbJre/Jnl1peHxv1VwFdhDi96hQaxz7nv9CfTj1++KRq3/n0it/D9Cnifa7CuhdKjbX137S5ipnglw==}
 
   '@aiostreams/release-parser@1.0.1':
     resolution: {integrity: sha512-gWkU+TOtOCHa28lR7pYUtEpi5XLAVzedfotrehdLjaAUnYFwRewG10DwdPWjAmY1Xn5i2+VNXxa5C/eWZhhREQ==}
@@ -736,8 +736,8 @@ packages:
   '@aiostreams/seanime-extensions@0.10.3':
     resolution: {integrity: sha512-1yoLXMz6DPyVRaeR8gY/mGYLQR3DdhcYOcPCI32vj8VJY0GfOdZxzMP+bCoU4EHY0lZmsa821P/ZZk95hG944Q==}
 
-  '@aiostreams/webgpu-player@0.4.1':
-    resolution: {integrity: sha512-OJhK/yaYGsmEQsIommSFttVy9wQ2MUAo/RmwzCCzJBT3D2Qfk+TakbSSJy6fiBwLOQ3LqtTrWS/BepOYXcsLog==}
+  '@aiostreams/webgpu-player@0.5.2':
+    resolution: {integrity: sha512-eqFkip9SO4+X5rXgm1OePOi6A8UNYzG+FhLhDtay1YgFG86j9OoHjdxzZ2zfC9G1iTNSU5EeQtJiCSW1cbrSmg==}
 
   '@alloc/quick-lru@5.3.0':
     resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
@@ -4542,12 +4542,6 @@ packages:
     peerDependencies:
       embla-carousel: 8.6.0
 
-  embla-carousel-wheel-gestures@8.1.0:
-    resolution: {integrity: sha512-J68jkYrxbWDmXOm2n2YHl+uMEXzkGSKjWmjaEgL9xVvPb3HqVmg6rJSKfI3sqIDVvm7mkeTy87wtG/5263XqHQ==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      embla-carousel: ^8.0.0 || ~8.0.0-rc03
-
   embla-carousel@8.6.0:
     resolution: {integrity: sha512-SjWyZBHJPbqxHOzckOfo8lHisEaJWmwd23XppYFYVh10bU66/Pn5tkVkbkCMZVdbUE5eTCI2nD8OyIP4Z+uwkA==}
 
@@ -5329,6 +5323,9 @@ packages:
 
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
+
+  hls.js@1.7.4:
+    resolution: {integrity: sha512-3GlxGdPvT2YHvQYOt+yOzT/DEior/qJVNIylHA77kgeoBTdQQqi70GwefNEUmHQeNGyjC8U62+bruqW/Tpm+tg==}
 
   hmac-drbg@1.0.1:
     resolution: {integrity: sha512-Tti3gMqLdZfhOQY1Mzf/AanLiqh1WTiJgEj26ZuYQ9fbkLomzGchCws4FyrSd4VkpBfiNhaE1On+lOz894jvXg==}
@@ -8016,10 +8013,6 @@ packages:
     resolution: {integrity: sha512-DbUS8rHvWse55EiHM0q5q1z3eVRCLWW7Va7mUqA2/JJdQHIew4Op2HTglHkBJDOAVrQeQf0I+REUJkIrYqtL+w==}
     engines: {node: '>=14'}
 
-  wheel-gestures@2.3.0:
-    resolution: {integrity: sha512-6b+PIXuKIy0ibVnF04GoijGKGIDwjlYSK7bCgicuQwPLivfjoLeCCK0bwbjyOdrStDTNPlyGFixIj0d0kZzwiQ==}
-    engines: {node: '>=18'}
-
   which-boxed-primitive@1.1.1:
     resolution: {integrity: sha512-TbX3mj8n0odCBFVlY8AxkqcHASw3L60jIuF8jFP78az3C2YhmGvqbHBpAjTRH2/xqYunrJ9g1jSyjCjpoWzIAA==}
     engines: {node: '>= 0.4'}
@@ -8164,7 +8157,7 @@ snapshots:
 
   '@aiostreams/fsmux@0.3.1': {}
 
-  '@aiostreams/jassub@0.1.0':
+  '@aiostreams/jassub@0.1.1':
     dependencies:
       abslink: 1.3.1
       lfa-ponyfill: 1.1.1
@@ -8175,7 +8168,7 @@ snapshots:
 
   '@aiostreams/seanime-extensions@0.10.3': {}
 
-  '@aiostreams/webgpu-player@0.4.1': {}
+  '@aiostreams/webgpu-player@0.5.2': {}
 
   '@alloc/quick-lru@5.3.0': {}
 
@@ -11914,11 +11907,6 @@ snapshots:
     dependencies:
       embla-carousel: 8.6.0
 
-  embla-carousel-wheel-gestures@8.1.0(embla-carousel@8.6.0):
-    dependencies:
-      embla-carousel: 8.6.0
-      wheel-gestures: 2.3.0
-
   embla-carousel@8.6.0: {}
 
   emoji-regex@8.0.0: {}
@@ -13033,6 +13021,8 @@ snapshots:
   hermes-parser@0.25.1:
     dependencies:
       hermes-estree: 0.25.1
+
+  hls.js@1.7.4: {}
 
   hmac-drbg@1.0.1:
     dependencies:
@@ -16179,8 +16169,6 @@ snapshots:
       path-posix: 1.0.0
       url-join: 5.0.0
       url-parse: 1.5.10
-
-  wheel-gestures@2.3.0: {}
 
   which-boxed-primitive@1.1.1:
     dependencies:

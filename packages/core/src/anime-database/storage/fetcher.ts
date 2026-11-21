@@ -10,7 +10,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { makeRequest } from '../../utils/http.js';
+import { makeRequest } from '../../utils/http/index.js';
 import { withRetry } from '../../utils/general.js';
 import { getTimeTakenSincePoint } from '../../utils/time.js';
 import { createLogger } from '../../logging/logger.js';

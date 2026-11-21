@@ -16,13 +16,14 @@ import { useDebounce } from '@aiostreams/ui/hooks/debounce';
 import { currentHost, type Hearing } from '@/lib/hosts';
 import { useAction } from '@/lib/input';
 import { useSession } from '@/lib/jellyfin/session';
+import { useServerInfo } from '@/lib/jellyfin/server-info';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
+import { useSearch, useSearchSuggestions } from '@/lib/jellyfin/queries';
 import {
-  useLiveTvView,
-  useSearch,
-  useSearchSuggestions,
-} from '@/lib/jellyfin/queries';
-import { useNow, useSchedules } from '@/features/live-tv/live-tv';
+  useLiveTvShown,
+  useNow,
+  useSchedules,
+} from '@/features/live-tv/live-tv';
 import { settings, useSetting } from '@/lib/settings';
 import { useSearchHistory } from './search-history';
 import { cardImages, cardShape, animatedPosterOf } from '@/lib/artwork/urls';
@@ -31,6 +32,7 @@ import { href, itemPath, navigate, to } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PageBody } from '@/components/shell/page';
 import { MixedGrid } from '@/components/media/mixed-grid';
+import { CardPreviewHost } from '@/components/media/card-preview';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import { BATCH } from '@/features/live-tv/channel-list';
 import { MediaRow } from '@/components/media/media-row';
@@ -64,8 +66,18 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
   const movies = useSearch(query, 'Movie', !combine);
   const shows = useSearch(query, 'Series', !combine);
   const people = useSearch(query, 'Person');
-  const live = !!useLiveTvView().data;
+  const live = useLiveTvShown();
   const channels = useSearch(query, 'TvChannel', live);
+  // A server's own library also finds these, where catalogs list none.
+  const { stock } = useServerInfo();
+  const collections = useSearch(query, 'BoxSet', stock);
+  const episodes = useSearch(query, 'Episode', stock);
+  const collectionItems = collections.isPlaceholderData
+    ? []
+    : (collections.data?.Items ?? []);
+  const episodeItems = episodes.isPlaceholderData
+    ? []
+    : (episodes.data?.Items ?? []);
   const suggesting = typed !== chosen;
   const suggestions = useSearchSuggestions(
     useDebounce(typed, 200),
@@ -135,7 +147,9 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
     (combine
       ? !!mixed.data?.Items?.length || !!named.length
       : !!movieItems.length || !!showItems.length || !!named.length) ||
-    !!channelItems.length;
+    !!channelItems.length ||
+    !!collectionItems.length ||
+    !!episodeItems.length;
 
   return (
     <PageBody>
@@ -240,38 +254,58 @@ export function SearchPage({ initialTerm }: { initialTerm: string }) {
             if ((e.target as HTMLElement).closest('a')) history.add(query);
           }}
         >
-          {peopleFirst && peopleRow}
-          {combine ? (
-            <MixedGrid
-              items={mixed.data?.Items ?? []}
-              client={client}
-              loading={mixed.isLoading}
-            />
-          ) : (
-            <>
+          <CardPreviewHost>
+            {peopleFirst && peopleRow}
+            {combine ? (
+              <MixedGrid
+                items={mixed.data?.Items ?? []}
+                client={client}
+                loading={mixed.isLoading}
+              />
+            ) : (
+              <>
+                <ResultRow
+                  id="search:movies"
+                  title={t`Movies`}
+                  items={movieItems}
+                  loading={moviesLoading}
+                  client={client}
+                />
+                <ResultRow
+                  id="search:shows"
+                  title={t`Shows`}
+                  items={showItems}
+                  loading={showsLoading}
+                  client={client}
+                />
+              </>
+            )}
+            {!!collectionItems.length && (
               <ResultRow
-                id="search:movies"
-                title={t`Movies`}
-                items={movieItems}
-                loading={moviesLoading}
+                id="search:collections"
+                title={t`Collections`}
+                items={collectionItems}
+                loading={false}
                 client={client}
               />
+            )}
+            {!!episodeItems.length && (
               <ResultRow
-                id="search:shows"
-                title={t`Shows`}
-                items={showItems}
-                loading={showsLoading}
+                id="search:episodes"
+                title={t`Episodes`}
+                items={episodeItems}
+                loading={false}
                 client={client}
               />
-            </>
-          )}
-          {!peopleFirst && peopleRow}
-          {live && (
-            <ChannelRow
-              items={channelItems}
-              loading={channels.isLoading || channels.isPlaceholderData}
-            />
-          )}
+            )}
+            {!peopleFirst && peopleRow}
+            {live && (
+              <ChannelRow
+                items={channelItems}
+                loading={channels.isLoading || channels.isPlaceholderData}
+              />
+            )}
+          </CardPreviewHost>
         </div>
       )}
       {searching && !loading && !found && (

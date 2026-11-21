@@ -53,3 +53,21 @@ mod fixed_video {
 }
 #[cfg(not(target_os = "macos"))]
 pub use fixed_video::*;
+
+/// Only Windows has a graphics card upscaler that mpv can ask for.
+#[cfg(not(windows))]
+mod no_super_resolution {
+    use aiostreams_desktop_core::upscale::DisplayProbe;
+
+    pub fn check_super_resolution() {}
+
+    pub fn super_resolution() -> bool {
+        false
+    }
+
+    pub fn display_probe(_video: &super::VideoSurface) -> Option<DisplayProbe> {
+        None
+    }
+}
+#[cfg(not(windows))]
+pub use no_super_resolution::*;

@@ -26,7 +26,7 @@ const ROW_KEPT = 16;
 /** How long an ask may still be answered, after the app drops it for a newer one. */
 const ANSWERABLE_MS = 15_000;
 
-type Open = (
+export type Open = (
   onThumbnail: (thumbnail: Thumbnail | null) => void
 ) => ReturnType<NonNullable<PlayerEngine['thumbnails']>>;
 

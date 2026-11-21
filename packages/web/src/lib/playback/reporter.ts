@@ -37,6 +37,8 @@ export class PlaybackReporter {
       playSessionId?: string | null;
       userId?: string;
       live?: boolean;
+      /** Set while the server's conversion plays; the server closes it with the session. */
+      transcode?: { liveStreamId?: string };
     },
     private readonly position: () => {
       ms: number;
@@ -64,7 +66,8 @@ export class PlaybackReporter {
       AudioStreamIndex: audio,
       SubtitleStreamIndex: subtitle,
       CanSeek: true,
-      PlayMethod: 'DirectPlay',
+      PlayMethod: this.info.transcode ? 'Transcode' : 'DirectPlay',
+      LiveStreamId: this.info.transcode?.liveStreamId,
       ...extra,
     };
   }

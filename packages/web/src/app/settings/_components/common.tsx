@@ -9,13 +9,16 @@ import { BasicField } from '@aiostreams/ui/basic-field';
 import { cn } from '@aiostreams/ui/core/styling';
 import { LANGUAGES, languageName } from '@/lib/languages';
 import { focusOn } from '@/lib/input';
+import { useSettingsLayer } from '@/lib/settings';
 import { SettingsRow } from './settings-card';
 
-export const onDevice = () => t`Kept on this device.`;
-export const onAccount = () =>
-  t`Saved to your account, so your other devices and Jellyfin apps use it too.`;
-export const followsYou = () =>
-  t`Saved to your account, so it follows you to every device.`;
+export const deviceOnly = (help: string) =>
+  `${help} ${t`Kept on this device.`}`;
+
+/** A device setting among a profile's, shown only for this device's own settings. */
+export function DeviceOnly({ children }: { children: React.ReactElement }) {
+  return useSettingsLayer() ? null : children;
+}
 
 export const DOCS_URL = 'https://aiostreams.org';
 

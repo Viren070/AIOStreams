@@ -4,9 +4,9 @@ import { nativeShellParts } from './native-shell';
 import { ofType, trackLabel } from '@/lib/playback/controller';
 import type {
   EngineFactory,
-  EngineFile,
   EngineState,
   EngineTrack,
+  ServerSubtitle,
 } from '@/lib/playback/engine';
 
 const EMBEDDED = 'embedded:';
@@ -105,20 +105,20 @@ function loadMetadata(item: BaseItemDto): Record<string, unknown> {
 const jmpEngine: EngineFactory = (emit) => {
   const report = (state: EngineState) => emit({ type: 'state', state });
   let player: JmpPlayer | null = null;
-  let file: EngineFile | null = null;
+  let servers: ServerSubtitle[] = [];
   let teardown = () => {};
 
   /** The player's subtitle stream: a position among the embedded ones, or `#,` and a link. */
   const subtitleStream = (id: string): number | string | null => {
     if (id.startsWith(EMBEDDED)) return Number(id.slice(EMBEDDED.length));
-    const server = file?.subtitles.find((s) => s.id === id);
+    const server = servers.find((s) => s.id === id);
     return server ? `#,${server.url}` : null;
   };
 
   return {
     load(next) {
       teardown();
-      file = next;
+      servers = next.subtitles;
       const { source } = next;
       const audio = ofType(source, 'Audio');
       const subtitles = ofType(source, 'Subtitle');
@@ -252,6 +252,9 @@ const jmpEngine: EngineFactory = (emit) => {
       const stream = id ? subtitleStream(id) : 0;
       if (stream !== null) player?.setSubtitleStream(stream);
     },
+    setSubtitles(next) {
+      servers = next;
+    },
     toggleFullscreen: () =>
       void desktopApi().then((api) =>
         api?.input.executeActions(['host:fullscreen'])
@@ -269,7 +272,7 @@ export function jellyfinDesktopHost(): Host | null {
     ...(window.NativeShell && nativeShellParts(window.NativeShell)),
     name: 'jellyfin-desktop',
     player: jmpEngine,
-    playerFeatures: ['audio'],
+    playerFeatures: ['audio', 'anyFormat'],
   };
   return host;
 }

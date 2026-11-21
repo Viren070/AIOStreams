@@ -269,7 +269,7 @@ function FieldOverridesModal({
                         'text-xs px-1.5 py-0.5 rounded-full font-semibold leading-none',
                         isActive
                           ? 'bg-white/20 text-white'
-                          : 'bg-[--brand]/20 text-[--brand]',
+                          : 'bg-brand-300/20 text-[--brand]',
                       ].join(' ')}
                     >
                       {count}

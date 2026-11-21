@@ -222,7 +222,7 @@ function TrackSection({ title, tracks }: { title: string; tracks: Track[] }) {
         {title}
         <span className="ml-1.5 font-normal tabular-nums">{tracks.length}</span>
       </h4>
-      <ol className="divide-y divide-[--border]/40">
+      <ol className="divide-y divide-white/[0.04]">
         {tracks.map((t) => (
           <TrackRow key={t.index} track={t} />
         ))}
@@ -257,7 +257,7 @@ function KeyList({ keys }: { keys: string[] }) {
       <h4 className="text-xs font-semibold uppercase tracking-wide text-[--muted]">
         Stored under
       </h4>
-      <ul className="mt-1 divide-y divide-[--border]/40">
+      <ul className="mt-1 divide-y divide-white/[0.04]">
         {keys.map((key) => (
           <li key={key} className="flex items-center gap-2 py-1.5">
             <Tooltip

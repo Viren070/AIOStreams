@@ -1469,6 +1469,18 @@ class StreamFilterer {
         : [normMin, normMax];
     };
 
+    type OpenRange = [number | undefined, number | undefined];
+    /** Inclusive, like the required ranges; an open end matches anything. */
+    const inRange = (value: number, [min, max]: OpenRange) =>
+      (min === undefined || value >= min) &&
+      (max === undefined || value <= max);
+    const rangeLabel = ([min, max]: OpenRange, unit = '') =>
+      min === undefined
+        ? `<= ${max}${unit}`
+        : max === undefined
+          ? `>= ${min}${unit}`
+          : `${min}-${max}${unit}`;
+
     const normaliseSeederRange = (
       seederRange: [number, number] | undefined
     ) => {
@@ -1787,38 +1799,22 @@ class StreamFilterer {
         includedSeederRange &&
         (!this.userData.seederRangeTypes?.length ||
           (typeForSeederRange &&
-            this.userData.seederRangeTypes.includes(typeForSeederRange)))
+            this.userData.seederRangeTypes.includes(typeForSeederRange))) &&
+        inRange(stream.torrent?.seeders ?? 0, includedSeederRange)
       ) {
-        if (
-          includedSeederRange[0] &&
-          (stream.torrent?.seeders ?? 0) > includedSeederRange[0]
-        ) {
-          this.incrementIncludedReason('seeder', `>${includedSeederRange[0]}`);
-          return true;
-        }
-        if (
-          includedSeederRange[1] &&
-          (stream.torrent?.seeders ?? 0) < includedSeederRange[1]
-        ) {
-          this.incrementIncludedReason('seeder', `<${includedSeederRange[1]}`);
-          return true;
-        }
+        this.incrementIncludedReason('seeder', rangeLabel(includedSeederRange));
+        return true;
       }
 
       if (
         includedAgeRange &&
         (!this.userData.ageRangeTypes?.length ||
           (typeForAgeRange &&
-            this.userData.ageRangeTypes.includes(typeForAgeRange)))
+            this.userData.ageRangeTypes.includes(typeForAgeRange))) &&
+        inRange(stream.age ?? 0, includedAgeRange)
       ) {
-        if (includedAgeRange[0] && (stream.age ?? 0) > includedAgeRange[0]) {
-          this.incrementIncludedReason('age', `>${includedAgeRange[0]}h`);
-          return true;
-        }
-        if (includedAgeRange[1] && (stream.age ?? 0) < includedAgeRange[1]) {
-          this.incrementIncludedReason('age', `<${includedAgeRange[1]}h`);
-          return true;
-        }
+        this.incrementIncludedReason('age', rangeLabel(includedAgeRange, 'h'));
+        return true;
       }
 
       if (
@@ -2237,28 +2233,14 @@ class StreamFilterer {
         excludedSeederRange &&
         (!this.userData.seederRangeTypes?.length ||
           (typeForSeederRange &&
-            this.userData.seederRangeTypes.includes(typeForSeederRange)))
+            this.userData.seederRangeTypes.includes(typeForSeederRange))) &&
+        inRange(stream.torrent?.seeders ?? 0, excludedSeederRange)
       ) {
-        if (
-          excludedSeederRange[0] &&
-          (stream.torrent?.seeders ?? 0) > excludedSeederRange[0]
-        ) {
-          this.incrementRemovalReason(
-            'excludedSeederRange',
-            `< ${excludedSeederRange[0]}`
-          );
-          return false;
-        }
-        if (
-          excludedSeederRange[1] &&
-          (stream.torrent?.seeders ?? 0) < excludedSeederRange[1]
-        ) {
-          this.incrementRemovalReason(
-            'excludedSeederRange',
-            `> ${excludedSeederRange[1]}`
-          );
-          return false;
-        }
+        this.incrementRemovalReason(
+          'excludedSeederRange',
+          rangeLabel(excludedSeederRange)
+        );
+        return false;
       }
 
       if (
@@ -2291,22 +2273,14 @@ class StreamFilterer {
         excludedAgeRange &&
         (!this.userData.ageRangeTypes?.length ||
           (typeForAgeRange &&
-            this.userData.ageRangeTypes.includes(typeForAgeRange)))
+            this.userData.ageRangeTypes.includes(typeForAgeRange))) &&
+        inRange(stream.age ?? 0, excludedAgeRange)
       ) {
-        if (excludedAgeRange[0] && (stream.age ?? 0) > excludedAgeRange[0]) {
-          this.incrementRemovalReason(
-            'excludedAgeRange',
-            `< ${excludedAgeRange[0]}h`
-          );
-          return false;
-        }
-        if (excludedAgeRange[1] && (stream.age ?? 0) < excludedAgeRange[1]) {
-          this.incrementRemovalReason(
-            'excludedAgeRange',
-            `> ${excludedAgeRange[1]}h`
-          );
-          return false;
-        }
+        this.incrementRemovalReason(
+          'excludedAgeRange',
+          rangeLabel(excludedAgeRange, 'h')
+        );
+        return false;
       }
 
       if (!shouldPassthroughStage(stream, 'year')) {
@@ -2426,8 +2400,7 @@ class StreamFilterer {
         : undefined;
 
       let finalBitrateRange:
-        | [number | undefined, number | undefined]
-        | undefined;
+        [number | undefined, number | undefined] | undefined;
       if (type === 'movie') {
         finalBitrateRange =
           normaliseBitrateRange(resolutionBitrateRange?.movies) ||

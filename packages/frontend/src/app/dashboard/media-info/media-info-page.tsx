@@ -156,7 +156,7 @@ function Pager({
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (total === 0) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[--border]/50 p-3 text-xs text-[--muted]">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 p-3 text-xs text-[--muted]">
       <span className="tabular-nums">
         {(page - 1) * PAGE_SIZE + (shown > 0 ? 1 : 0)}–
         {(page - 1) * PAGE_SIZE + shown} of {total.toLocaleString()}
@@ -475,7 +475,7 @@ function JobRow({
         {active ? (
           <Spinner className="h-4 w-4" />
         ) : (
-          <span className="h-2 w-2 rounded-full bg-[--muted]/60" />
+          <span className="h-2 w-2 rounded-full bg-white/[0.24]" />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -533,7 +533,7 @@ function LiveQueue({
       <div
         className={cn(
           'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3',
-          live.jobs.length > 0 && 'border-b border-[--border]/50'
+          live.jobs.length > 0 && 'border-b border-white/5'
         )}
       >
         <div>
@@ -551,7 +551,7 @@ function LiveQueue({
         </p>
       </div>
       {live.jobs.length > 0 && (
-        <ul className="divide-y divide-[--border]/50">
+        <ul className="divide-y divide-white/5">
           {live.jobs.map((job) => (
             <JobRow
               key={job.id}
@@ -630,7 +630,7 @@ function FileRow({
       <button
         type="button"
         onClick={() => onOpen(file)}
-        className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-[--subtle]/30"
+        className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-white/[0.018]"
       >
         <div className="flex w-full items-baseline gap-3">
           <span
@@ -744,7 +744,7 @@ function ProbedFiles({ nzb, origins }: { nzb?: string; origins: string[] }) {
             </Card>
           ) : (
             <Card className="overflow-hidden p-0">
-              <ul className="divide-y divide-[--border]/50">
+              <ul className="divide-y divide-white/5">
                 {d.items.map((file) => (
                   <FileRow
                     key={`${file.releaseKey}:${file.file}`}
@@ -876,7 +876,7 @@ function Attempts() {
             </Card>
           ) : (
             <Card className="overflow-hidden p-0">
-              <ul className="divide-y divide-[--border]/50">
+              <ul className="divide-y divide-white/5">
                 {d.items.map((a) => (
                   <AttemptRow key={a.id} attempt={a} />
                 ))}

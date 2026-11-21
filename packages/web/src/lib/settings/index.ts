@@ -8,6 +8,7 @@ import {
   device,
   deviceLists,
   group,
+  local,
   record,
   synced,
   syncedChoice,
@@ -20,9 +21,13 @@ import {
 
 export {
   onSettingsChange,
+  SettingsLayer,
   signedIn,
   syncPreferences,
+  useLayer,
   useSetting,
+  useSettingsLayer,
+  type Layer,
   type Setting,
 } from './store';
 
@@ -45,8 +50,23 @@ export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
 
-export const CARD_PREVIEWS = ['open', 'pop', 'off'] as const;
-export type CardPreview = (typeof CARD_PREVIEWS)[number];
+/** What a touch, or a mouse's hold, on the video does. */
+export const GESTURES = [
+  'seek',
+  'scrub',
+  'volume',
+  'brightness',
+  'hold',
+  'pinch',
+] as const;
+export type Gesture = (typeof GESTURES)[number];
+
+export const LIVE_TV_PLACES = ['home', 'nav', 'off'] as const;
+export type LiveTvPlace = (typeof LIVE_TV_PLACES)[number];
+
+/** Title pages, pages that list titles, and the rest. */
+export const ART_PAGES = ['item', 'browse', 'other'] as const;
+export type ArtPage = (typeof ART_PAGES)[number];
 
 export const TRAILER_SPOTS = ['cards', 'hero', 'item'] as const;
 export type TrailerSpot = (typeof TRAILER_SPOTS)[number];
@@ -86,8 +106,8 @@ export type TopBar = (typeof TOP_BARS)[number];
 export const TAB_NAMES = ['shown', 'hidden'] as const;
 export type TabNames = (typeof TAB_NAMES)[number];
 
-export const BAR_BACKGROUNDS = ['solid', 'frosted', 'liquid'] as const;
-export type BarBackground = (typeof BAR_BACKGROUNDS)[number];
+export const GLASS_SURFACES = ['solid', 'frosted', 'liquid'] as const;
+export type GlassSurface = (typeof GLASS_SURFACES)[number];
 
 const POSTER_LINES: PosterLine[] = ['title', 'year'];
 
@@ -191,6 +211,9 @@ export const PLAYER_ENGINES = [
   'browser',
 ] as const;
 export type PlayerEngine = (typeof PLAYER_ENGINES)[number];
+/** A browser's picture-in-picture: a window with the player in it, or its own of the video alone. */
+export const PIP_WINDOWS = ['player', 'video'] as const;
+export type PipWindow = (typeof PIP_WINDOWS)[number];
 /** What Back does in the player: stop, or play on in the mini player. */
 export const PLAYER_BACKS = ['stop', 'minimise'] as const;
 export type PlayerBack = (typeof PLAYER_BACKS)[number];
@@ -206,6 +229,11 @@ export const PARTY_REACTIONS = ['👍', '😂', '😮', '😢', '❤️', '🔥'
 
 export const CACHE_SIZES = ['auto', '128', '256', '512', '1000'] as const;
 export type CacheSize = (typeof CACHE_SIZES)[number];
+
+/** The most a stream may take in bits per second, which a server converts down to; 0 is the file as it is. */
+export const QUALITIES = [
+  0, 20_000_000, 10_000_000, 8_000_000, 4_000_000, 2_000_000, 1_000_000,
+] as const;
 
 /** `auto` asks the output what it decodes, which only the Android app can. */
 export const PASSTHROUGH = ['off', 'auto', 'always'] as const;
@@ -316,6 +344,10 @@ const trailer = record(TRAILER_SPOTS, (spot) =>
   )
 );
 
+const gesture = record(GESTURES, (name) =>
+  device<boolean>(`aiostreams-web-controls-gesture-${name}`, true)
+);
+
 const passthroughFormat = record(PASSTHROUGH_FORMATS, (format) =>
   device<boolean>(
     `aiostreams-web-audio-passthrough-${format}`,
@@ -339,9 +371,8 @@ const discord = record(DISCORD_EVENTS, (event) =>
 );
 
 /*
- * Grouped as the settings page lists them. How the user likes to watch
- * follows their account; what suits this device's screen, input, sound or
- * hardware stays on it.
+ * How the user likes to watch follows their account; what suits this device's
+ * screen, input, sound or hardware stays on it.
  */
 export const settings = {
   interface: {
@@ -388,20 +419,21 @@ export const settings = {
     blurSpoilers: syncedFlag('blurSpoilers'),
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
     heroSeconds: syncedChoice<number>('heroSeconds', HERO_SECONDS, 9),
+    liveTv: syncedChoice<LiveTvPlace>('liveTv', LIVE_TV_PLACES, 'home'),
     episodeLayout: device<EpisodeLayout>(
       'aiostreams-web-interface-episode-layout',
       'auto',
       EPISODE_LAYOUTS,
       ['aiostreams-web-episode-layout']
     ),
-    cardPreview: device<CardPreview>(
-      'aiostreams-web-interface-card-preview',
-      'open',
-      CARD_PREVIEWS,
+    cardPreview: device<boolean>(
+      'aiostreams-web-interface-card-previews',
+      true,
+      undefined,
       [
         {
-          key: 'aiostreams-web-interface-card-previews',
-          read: (old) => (old === false ? 'off' : undefined),
+          key: 'aiostreams-web-interface-card-preview',
+          read: (old) => (old === 'off' ? false : undefined),
         },
       ]
     ),
@@ -465,13 +497,6 @@ export const settings = {
       'shown',
       TAB_NAMES
     ),
-    /** What the navigation bars over the page sit on. */
-    barBackground: device<BarBackground>(
-      'aiostreams-web-interface-bar-background',
-      'frosted',
-      BAR_BACKGROUNDS,
-      ['aiostreams-web-bar-background']
-    ),
   },
   theme: {
     /** Unset colours keep the stylesheet's own. */
@@ -485,6 +510,29 @@ export const settings = {
       (value) => (value.trim() ? value.slice(0, MAX_CUSTOM_CSS) : undefined)
     ),
     serverCss: syncedFlag('serverCss', true),
+    /** What the navigation bars and glass panels sit on. */
+    glassSurface: device<GlassSurface>(
+      'aiostreams-web-theme-glass-surface',
+      'frosted',
+      GLASS_SURFACES,
+      [
+        'aiostreams-web-interface-bar-background',
+        'aiostreams-web-bar-background',
+      ]
+    ),
+    artBackground: synced<ArtPage[]>(
+      'artBackground',
+      (raw = 'item') =>
+        raw === '1'
+          ? [...ART_PAGES]
+          : ART_PAGES.filter((page) => raw.split(',').includes(page)),
+      (value) => {
+        const pages = ART_PAGES.filter((page) => value.includes(page));
+        if (pages.join() === 'item') return undefined;
+        return pages.length ? pages.join(',') : 'none';
+      }
+    ),
+    artGlass: device<boolean>('aiostreams-web-theme-art-glass', false),
   },
   playback: {
     autoPlayFirst: syncedFlag('autoPlayFirst', false, [
@@ -564,6 +612,8 @@ export const settings = {
       HOLD_RATES,
       ['aiostreams-web-hold-rate']
     ),
+    gesture,
+    gestures: group(gesture),
     /** Keys changed from the defaults, by action. */
     shortcuts: deviceLists('aiostreams-web-controls-shortcuts', [
       'aiostreams-web-shortcuts',
@@ -571,17 +621,13 @@ export const settings = {
     thumbnails: device<boolean>('aiostreams-web-controls-thumbnails', true),
     timeLeft: device<boolean>('aiostreams-web-controls-time-left', false),
     clock: device<boolean>('aiostreams-web-controls-clock', true),
-    showOnPauseAndSkip: device<boolean>(
-      'aiostreams-web-controls-show-on-pause-and-skip',
-      true
-    ),
   },
   player: {
     /** `app`, a player's id, or `custom` for `link`. */
     choice: device<string>('aiostreams-web-player-choice', 'app', undefined, [
       'aiostreams-web-player',
     ]),
-    link: device<string>('aiostreams-web-player-link', ''),
+    link: local(device<string>('aiostreams-web-player-link', '')),
     engine: device<PlayerEngine>(
       'aiostreams-web-player-engine',
       'auto',
@@ -593,16 +639,24 @@ export const settings = {
       'auto',
       CACHE_SIZES
     ),
+    quality: device<number>('aiostreams-web-player-quality', 0, QUALITIES),
     back: device<PlayerBack>(
       'aiostreams-web-player-back',
       'stop',
       PLAYER_BACKS
     ),
+    pictureInPicture: device<PipWindow>(
+      'aiostreams-web-player-picture-in-picture',
+      'player',
+      PIP_WINDOWS
+    ),
     /** Where the mini player was left. */
-    miniCorner: device<MiniCorner>(
-      'aiostreams-web-mini-corner',
-      'bottom-end',
-      MINI_CORNERS
+    miniCorner: local(
+      device<MiniCorner>(
+        'aiostreams-web-mini-corner',
+        'bottom-end',
+        MINI_CORNERS
+      )
     ),
   },
   video: {
@@ -631,7 +685,12 @@ export const settings = {
       undefined,
       ['aiostreams-android-tunneling']
     ),
+    gpuSubtitles: device<boolean>('aiostreams-web-video-gpu-subtitles', true),
     upscaling: device<boolean>('aiostreams-web-video-upscaling', false),
+    superResolution: device<boolean>(
+      'aiostreams-web-video-super-resolution',
+      false
+    ),
     hdrOutput: device<boolean>('aiostreams-web-video-hdr-output', false),
   },
   audio: {
@@ -642,9 +701,11 @@ export const settings = {
       ['aiostreams-desktop-audio-channels']
     ),
     /** mpv's name for the output, or `auto` for the system's default. */
-    device: device<string>('aiostreams-web-audio-device', 'auto', undefined, [
-      'aiostreams-desktop-audio-device',
-    ]),
+    device: local(
+      device<string>('aiostreams-web-audio-device', 'auto', undefined, [
+        'aiostreams-desktop-audio-device',
+      ])
+    ),
     passthrough: device<Passthrough>(
       'aiostreams-web-audio-passthrough',
       appBridge()?.platform === 'android' ? 'auto' : 'off',
@@ -700,11 +761,13 @@ export const settings = {
     ),
   },
   app: {
-    updateChannel: device<UpdateChannelSetting>(
-      'aiostreams-web-app-update-channel',
-      'installed',
-      UPDATE_CHANNELS,
-      ['aiostreams-desktop-update-channel']
+    updateChannel: local(
+      device<UpdateChannelSetting>(
+        'aiostreams-web-app-update-channel',
+        'installed',
+        UPDATE_CHANNELS,
+        ['aiostreams-desktop-update-channel']
+      )
     ),
     pip: device<boolean>('aiostreams-web-app-pip', true, undefined, [
       'aiostreams-android-pip',
@@ -717,47 +780,44 @@ export const settings = {
     ),
     discord,
     discordEvents: group(discord),
-    usageStats: device<boolean>('aiostreams-web-app-usage-stats', true),
-    usageStatsNoticed: device<boolean>(
-      'aiostreams-web-app-usage-stats-noticed',
-      false
+    usageStats: local(device<boolean>('aiostreams-web-app-usage-stats', true)),
+    usageStatsNoticed: local(
+      device<boolean>('aiostreams-web-app-usage-stats-noticed', false)
     ),
   },
   cache: {
-    enabled: device<boolean>('aiostreams-web-cache', true),
-    maxStaleDays: device<number>(
-      'aiostreams-web-cache-max-stale',
-      7,
-      CACHE_MAX_STALE_DAYS
+    enabled: local(device<boolean>('aiostreams-web-cache', true)),
+    maxStaleDays: local(
+      device<number>('aiostreams-web-cache-max-stale', 7, CACHE_MAX_STALE_DAYS)
     ),
-    maxSizeMb: device<number>('aiostreams-web-cache-size', 500, CACHE_SIZES_MB),
+    maxSizeMb: local(
+      device<number>('aiostreams-web-cache-size', 500, CACHE_SIZES_MB)
+    ),
     categories: record(CACHE_CATEGORIES, (category) =>
-      device<boolean>(`aiostreams-web-cache-${category}`, true)
+      local(device<boolean>(`aiostreams-web-cache-${category}`, true))
     ),
   },
   downloads: {
-    concurrent: device<number>(
-      'aiostreams-web-downloads-at-once',
-      2,
-      DOWNLOADS_AT_ONCE
+    concurrent: local(
+      device<number>('aiostreams-web-downloads-at-once', 2, DOWNLOADS_AT_ONCE)
     ),
-    searches: device<number>(
-      'aiostreams-web-downloads-searches',
-      3,
-      DOWNLOAD_SEARCHES,
-      ['aiostreams-web-download-searches']
+    searches: local(
+      device<number>(
+        'aiostreams-web-downloads-searches',
+        3,
+        DOWNLOAD_SEARCHES,
+        ['aiostreams-web-download-searches']
+      )
     ),
-    subtitles: device<boolean>(
-      'aiostreams-web-downloads-subtitles',
-      true,
-      undefined,
-      ['aiostreams-web-download-subtitles']
+    subtitles: local(
+      device<boolean>('aiostreams-web-downloads-subtitles', true, undefined, [
+        'aiostreams-web-download-subtitles',
+      ])
     ),
-    wifiOnly: device<boolean>(
-      'aiostreams-web-downloads-wifi-only',
-      true,
-      undefined,
-      ['aiostreams-web-download-wifi-only']
+    wifiOnly: local(
+      device<boolean>('aiostreams-web-downloads-wifi-only', true, undefined, [
+        'aiostreams-web-download-wifi-only',
+      ])
     ),
   },
 };

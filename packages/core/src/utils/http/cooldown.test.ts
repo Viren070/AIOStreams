@@ -6,14 +6,14 @@ import {
   MockAgent,
   setGlobalDispatcher,
 } from 'undici';
-import { settingsStore } from '../config/index.js';
-import { SettingsRepository } from '../db/repositories/settings.js';
+import { settingsStore } from '../../config/index.js';
+import { SettingsRepository } from '../../db/repositories/settings.js';
 import {
   makeRequest,
   parseRetryAfter,
   RateLimitedError,
   cooldownKey,
-} from './http.js';
+} from './index.js';
 
 describe('parseRetryAfter', () => {
   test('parses delay-seconds', () => {

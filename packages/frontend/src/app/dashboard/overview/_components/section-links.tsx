@@ -3,9 +3,9 @@ import { Card } from '@aiostreams/ui/card';
 import { NAV, SECTIONED, sectionHref } from '@/app/dashboard/nav';
 
 const CHIP_CLASS =
-  'relative rounded-md border border-[--border] bg-[--subtle]/50 px-2 py-1 ' +
+  'relative rounded-md border border-[--border] bg-white/[0.03] px-2 py-1 ' +
   'text-[11px] font-medium text-[--muted] transition-colors ' +
-  'hover:border-[--muted]/50 hover:text-[--foreground]';
+  'hover:border-white/20 hover:text-[--foreground]';
 
 /**
  * Quick links to every dashboard section, derived from the sidebar's `NAV` so
@@ -22,7 +22,7 @@ export function SectionLinks() {
           return (
             <Card
               key={n.href}
-              className="group relative p-4 transition-colors hover:border-[--muted]/40 hover:bg-[--subtle]/50"
+              className="group relative p-4 transition-colors hover:border-white/[0.16] hover:bg-white/[0.03]"
             >
               <Link
                 to={n.href}

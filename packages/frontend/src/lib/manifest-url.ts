@@ -13,6 +13,11 @@ export interface ManifestUrlParts {
   location?: 'path' | 'query';
 }
 
+/** Keeps a profile's `@` readable; URLs allow it in both forms. */
+export function encodeVariantId(id: string): string {
+  return encodeURIComponent(id).replace(/^%40/, '@');
+}
+
 export function buildManifestUrl({
   baseUrl,
   uuid,
@@ -27,7 +32,7 @@ export function buildManifestUrl({
     ? `${baseUrl}/stremio/u/${identity}`
     : `${baseUrl}/stremio/${uuid}/${encryptedPassword}`;
 
-  const ids = variantIds.map(encodeURIComponent).join(',');
+  const ids = variantIds.map(encodeVariantId).join(',');
   const path = ids && location === 'path' ? `/v/${ids}` : '';
   const query = ids && location === 'query' ? `?v=${ids}` : '';
   return `${prefix}${path}/manifest.json${query}`;

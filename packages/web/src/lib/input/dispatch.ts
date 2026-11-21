@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLatest } from '@/hooks/use-latest';
+import { usePageShown } from '@/lib/page-shown';
 import { action, actionsFor, type ActionId } from './actions';
 import {
   activate,
@@ -45,16 +46,18 @@ export function onAction(
   return () => void entries.delete(entry);
 }
 
+/** Off on a page kept hidden behind another. */
 export function useAction(
   id: ActionId,
   run: ActionHandler,
   enabled = true
 ): void {
   const latest = useLatest(run);
+  const on = enabled && usePageShown();
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!on) return;
     return onAction(id, (input, repeat) => latest.current(input, repeat));
-  }, [id, enabled, latest]);
+  }, [id, on, latest]);
 }
 
 function runHandlers(
@@ -221,7 +224,8 @@ function takesHold(e: KeyboardEvent, input: string): boolean {
 
 function onKeyUp(e: KeyboardEvent): void {
   down.delete(e.key);
-  if (holding?.key !== e.key) return;
+  // An autofill's keyup is a plain event with no key.
+  if (!holding || holding.key !== e.key) return;
   swallow(e);
   const { release } = holding;
   holding = null;
@@ -375,23 +379,23 @@ function onWheel(e: WheelEvent): void {
   }
 }
 
-export function startInput(): () => void {
+export function startInput(target: Window = window): () => void {
   const early = (e: KeyboardEvent) => onKey(e, true);
   const late = (e: KeyboardEvent) => onKey(e, false);
-  window.addEventListener('keydown', early, true);
-  window.addEventListener('keydown', late);
-  window.addEventListener('keyup', onKeyUp, true);
-  window.addEventListener('blur', onBlur);
-  window.addEventListener('wheel', onWheel, { passive: true });
-  window.addEventListener('pointerdown', onPointer, true);
-  window.addEventListener('focusin', onFocus, true);
+  target.addEventListener('keydown', early, true);
+  target.addEventListener('keydown', late);
+  target.addEventListener('keyup', onKeyUp, true);
+  target.addEventListener('blur', onBlur);
+  target.addEventListener('wheel', onWheel, { passive: true });
+  target.addEventListener('pointerdown', onPointer, true);
+  target.addEventListener('focusin', onFocus, true);
   return () => {
-    window.removeEventListener('focusin', onFocus, true);
-    window.removeEventListener('pointerdown', onPointer, true);
-    window.removeEventListener('keyup', onKeyUp, true);
-    window.removeEventListener('blur', onBlur);
-    window.removeEventListener('keydown', early, true);
-    window.removeEventListener('keydown', late);
-    window.removeEventListener('wheel', onWheel);
+    target.removeEventListener('focusin', onFocus, true);
+    target.removeEventListener('pointerdown', onPointer, true);
+    target.removeEventListener('keyup', onKeyUp, true);
+    target.removeEventListener('blur', onBlur);
+    target.removeEventListener('keydown', early, true);
+    target.removeEventListener('keydown', late);
+    target.removeEventListener('wheel', onWheel);
   };
 }

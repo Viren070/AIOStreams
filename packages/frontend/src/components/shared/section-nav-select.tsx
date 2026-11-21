@@ -57,7 +57,7 @@ export function SectionNavSelect<Id extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-full items-center gap-2.5 rounded-full border border-[--border] bg-[--subtle]/40 px-4 text-sm font-medium"
+        className="flex h-11 w-full items-center gap-2.5 rounded-full border border-[--border] bg-white/[0.024] px-4 text-sm font-medium"
       >
         <ActiveIcon className="shrink-0 text-lg text-[--muted]" />
         <span className="flex-1 text-left">{active.label}</span>
@@ -103,7 +103,7 @@ export function SectionNavSelect<Id extends string>({
                         'flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors',
                         sel
                           ? 'bg-[--subtle] font-medium text-[--foreground]'
-                          : 'text-[--muted] hover:bg-[--subtle]/40 hover:text-[--foreground]'
+                          : 'text-[--muted] hover:bg-white/[0.024] hover:text-[--foreground]'
                       )}
                     >
                       <Icon className="shrink-0 text-lg" />

@@ -2,7 +2,7 @@ import React from 'react';
 import { t } from '@lingui/core/macro';
 import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
-import { BarSurface } from '@/components/shell/bar-surface';
+import { GlassSurface } from '@/components/shell/glass-surface';
 import { useScrollAway } from '@/components/shell/page-scroll';
 import { NavTab, onBar, select } from './common';
 import { AccountMenu, YouIcon } from './account';
@@ -43,7 +43,7 @@ export function MobileNav({
         !wide && 'lg:hidden'
       )}
     >
-      <BarSurface
+      <GlassSurface
         className={cn(
           'pointer-events-auto flex items-center gap-1 rounded-full p-1.5',
           named && 'w-full max-w-md'
@@ -81,7 +81,7 @@ export function MobileNav({
             />
           }
         />
-      </BarSurface>
+      </GlassSurface>
     </nav>
   );
 }

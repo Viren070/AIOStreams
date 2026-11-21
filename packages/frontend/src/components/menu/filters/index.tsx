@@ -58,6 +58,10 @@ import {
 } from '../../../../../core/src/utils/constants';
 import { Switch } from '@aiostreams/ui/switch';
 import { useStatus } from '@/context/status';
+import {
+  FILTER_TAB_IDS,
+  type FilterTabId,
+} from '../../../../../core/src/utils/fieldMeta';
 import { NumberInput } from '@aiostreams/ui/number-input';
 import { IconButton, Button } from '@aiostreams/ui/button';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -110,7 +114,8 @@ import {
   defaultDeduplicatorMultiGroupBehaviour,
 } from './_components/filter-utils';
 import type { SyncConfig } from './_components/synced-patterns';
-import { UserData } from '@aiostreams/core';
+import { StatusResponse, UserData } from '@aiostreams/core';
+import type { IconType } from 'react-icons';
 import { toast } from 'sonner';
 import { Popover } from '@aiostreams/ui/popover';
 import { AiOutlineExclamationCircle } from 'react-icons/ai';
@@ -184,18 +189,95 @@ export function FiltersMenu() {
   );
 }
 
-function Content() {
-  const { tab, setTab } = useSubTab('filters');
+export const FILTER_TAB_ICONS: Record<FilterTabId, IconType> = {
+  cache: FaBolt,
+  resolution: BiSolidCameraMovie,
+  quality: MdMovieFilter,
+  encode: FaFilm,
+  'stream-type': MdVideoLibrary,
+  'visual-tag': MdHdrOn,
+  'audio-tag': BsSpeakerFill,
+  'audio-channel': MdSurroundSound,
+  language: FaLanguage,
+  subtitle: MdSubtitles,
+  seeders: MdPerson,
+  age: FaClock,
+  matching: FaEquals,
+  keyword: MdTextFields,
+  'release-group': FaTextSlash,
+  'stream-expression': TbFilterCode,
+  regex: BsRegex,
+  size: GoFileBinary,
+  bitrate: FaTachometerAlt,
+  limit: GoContainer,
+  deduplicator: MdCleaningServices,
+  miscellaneous: MdMiscellaneousServices,
+};
+
+const ADVANCED_FILTER_TABS: FilterTabId[] = [
+  'stream-type',
+  'quality',
+  'encode',
+  'visual-tag',
+  'audio-tag',
+  'audio-channel',
+  'matching',
+  'keyword',
+  'release-group',
+  'stream-expression',
+  'regex',
+];
+
+export function filterTabShown(
+  id: FilterTabId,
+  mode: string,
+  status: StatusResponse | null
+): boolean {
+  if (mode !== 'pro' && ADVANCED_FILTER_TABS.includes(id)) return false;
+  if (id !== 'regex') return true;
+  const access = status?.settings.regexAccess;
+  return (
+    access?.level !== 'none' ||
+    (access.patterns?.length ?? 0) > 0 ||
+    (access.urls?.length ?? 0) > 0
+  );
+}
+
+export const FILTER_TAB_LABELS: Record<FilterTabId, string> = {
+  cache: 'Cache',
+  resolution: 'Resolution',
+  quality: 'Quality',
+  encode: 'Encode',
+  'stream-type': 'Stream Type',
+  'visual-tag': 'Visual Tag',
+  'audio-tag': 'Audio Tag',
+  'audio-channel': 'Audio Channel',
+  language: 'Language',
+  subtitle: 'Subtitle',
+  seeders: 'Seeders',
+  age: 'Age',
+  matching: 'Matching',
+  'stream-expression': 'Stream Expression',
+  keyword: 'Keyword',
+  'release-group': 'Release Group',
+  regex: 'Regex',
+  bitrate: 'Bitrate',
+  size: 'Size',
+  limit: 'Result Limits',
+  deduplicator: 'Deduplicator',
+  miscellaneous: 'Miscellaneous',
+};
+
+export function useFilterSections(): {
+  sections: Record<FilterTabId, React.ReactNode>;
+  modals: React.ReactNode;
+} {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
-  const { isInherited, hasParent } = useParentInheritance();
   const allowedRegexModal = useDisclosure(false);
   const allowedRegexUrlsModal = useDisclosure(false);
   const whitelistedSelUrlsModal = useDisclosure(false);
-  const handleTabChange = (value: string) => {
-    setTab(value);
-  };
 
   const getSyncedProps = (
     key:
@@ -300,11 +382,3674 @@ function Content() {
       }));
     }
   }, []);
+  const sections: Record<FilterTabId, React.ReactNode> = {
+    cache: (
+      <>
+        <div className="space-y-4">
+          <SettingsCard
+            id="excludeUncached"
+            title="Uncached"
+            description="Control the exclusion of uncached results"
+          >
+            <div className="space-y-4">
+              <Switch
+                label="Exclude Uncached"
+                help="Completely remove uncached results"
+                moreHelp="Enabling this option overrides the below controls and cannot be used in conjunction with them"
+                side="right"
+                value={userData.excludeUncached ?? false}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    excludeUncached: value,
+                  }));
+                }}
+              />
+              {mode === 'pro' && (
+                <>
+                  <Combobox
+                    help="Addons selected here will have their uncached results excluded"
+                    label="Exclude Uncached From Addons"
+                    value={userData.excludeUncachedFromAddons ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeUncachedFromAddons: value,
+                      }));
+                    }}
+                    options={userData.presets.map((preset) => ({
+                      label: preset.options.name || preset.type,
+                      value: preset.instanceId,
+                      textValue: preset.options.name,
+                    }))}
+                    emptyMessage="You haven't installed any addons..."
+                    placeholder="Select addons..."
+                    multiple
+                    disabled={userData.excludeUncached === true}
+                  />
+
+                  <Combobox
+                    help="Services selected here will have their uncached results excluded"
+                    label="Exclude Uncached From Services"
+                    value={userData.excludeUncachedFromServices ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeUncachedFromServices: value,
+                      }));
+                    }}
+                    options={Object.values(status?.settings.services ?? {}).map(
+                      (service) => ({
+                        label: service.name,
+                        value: service.id,
+                        textValue: service.name,
+                      })
+                    )}
+                    placeholder="Select services..."
+                    emptyMessage="This is odd... there aren't any services to choose from..."
+                    multiple
+                    disabled={userData.excludeUncached === true}
+                  />
+                  <Combobox
+                    help="Stream types selected here will have their uncached results excluded"
+                    label="Exclude Uncached From Stream Types"
+                    value={userData.excludeUncachedFromStreamTypes ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeUncachedFromStreamTypes: value as StreamType[],
+                      }));
+                    }}
+                    options={STREAM_TYPES.filter((streamType) =>
+                      ['debrid', 'usenet'].includes(streamType)
+                    ).map((streamType) => ({
+                      label: streamType,
+                      value: streamType,
+                      textValue: streamType,
+                    }))}
+                    emptyMessage="This is odd... there aren't any stream types to choose from..."
+                    placeholder="Select stream types..."
+                    multiple
+                    disabled={userData.excludeUncached === true}
+                  />
+
+                  <Select
+                    label="Apply mode"
+                    disabled={userData.excludeUncached === true}
+                    help="How these three options (from addons, services and stream types) are applied. AND means a result must match all, OR means a result only needs to match one"
+                    value={userData.excludeUncachedMode ?? 'or'}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeUncachedMode: value as 'or' | 'and',
+                      }));
+                    }}
+                    options={[
+                      { label: 'OR', value: 'or' },
+                      { label: 'AND', value: 'and' },
+                    ]}
+                  />
+                </>
+              )}
+            </div>
+          </SettingsCard>
+          <SettingsCard
+            id="excludeCached"
+            title="Cached"
+            description="Control the exclusion of cached results"
+          >
+            <div className="space-y-4">
+              <Switch
+                label="Exclude Cached"
+                help="Completely remove cached results"
+                moreHelp="Enabling this option overrides the below controls and cannot be used in conjunction with them"
+                side="right"
+                value={userData.excludeCached ?? false}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    excludeCached: value,
+                  }));
+                }}
+              />
+              {mode === 'pro' && (
+                <>
+                  <Combobox
+                    help="Addons selected here will have their cached results excluded"
+                    label="Exclude Cached From Addons"
+                    value={userData.excludeCachedFromAddons ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeCachedFromAddons: value,
+                      }));
+                    }}
+                    options={userData.presets.map((preset) => ({
+                      label: preset.options.name || preset.type,
+                      value: preset.instanceId,
+                      textValue: preset.options.name || preset.type,
+                    }))}
+                    emptyMessage="You haven't installed any addons..."
+                    placeholder="Select addons..."
+                    multiple
+                    disabled={userData.excludeCached === true}
+                  />
+                  <Combobox
+                    help="Services selected here will have their cached results excluded"
+                    label="Exclude Cached From Services"
+                    value={userData.excludeCachedFromServices ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeCachedFromServices: value,
+                      }));
+                    }}
+                    options={Object.values(status?.settings.services ?? {}).map(
+                      (service) => ({
+                        label: service.name,
+                        value: service.id,
+                        textValue: service.name,
+                      })
+                    )}
+                    placeholder="Select services..."
+                    emptyMessage="This is odd... there aren't any services to choose from..."
+                    multiple
+                    disabled={userData.excludeCached === true}
+                  />
+                  <Combobox
+                    help="Stream types selected here will have their cached results excluded"
+                    label="Exclude Cached From Stream Types"
+                    value={userData.excludeCachedFromStreamTypes ?? []}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeCachedFromStreamTypes: value as StreamType[],
+                      }));
+                    }}
+                    options={STREAM_TYPES.filter((streamType) =>
+                      ['debrid', 'usenet'].includes(streamType)
+                    ).map((streamType) => ({
+                      label: streamType,
+                      value: streamType,
+                      textValue: streamType,
+                    }))}
+                    emptyMessage="This is odd... there aren't any stream types to choose from..."
+                    placeholder="Select stream types..."
+                    multiple
+                    disabled={userData.excludeCached === true}
+                  />
+                  <Select
+                    label="Apply mode"
+                    disabled={userData.excludeCached === true}
+                    help="How these three options (from addons, services and stream types) are applied. AND means a result must match all, OR means a result only needs to match one"
+                    value={userData.excludeCachedMode ?? 'or'}
+                    onValueChange={(value) => {
+                      setUserData((prev) => ({
+                        ...prev,
+                        excludeCachedMode: value as 'or' | 'and',
+                      }));
+                    }}
+                    options={[
+                      { label: 'OR', value: 'or' },
+                      { label: 'AND', value: 'and' },
+                    ]}
+                  />
+                </>
+              )}
+            </div>
+          </SettingsCard>
+        </div>
+      </>
+    ),
+    resolution: (
+      <>
+        <FilterSettings<Resolution>
+          filterName="Resolutions"
+          preferredOptions={
+            userData.preferredResolutions || defaultPreferredResolutions
+          }
+          requiredOptions={userData.requiredResolutions || []}
+          excludedOptions={userData.excludedResolutions || []}
+          includedOptions={userData.includedResolutions || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredResolutions: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredResolutions: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedResolutions: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedResolutions: included,
+            }))
+          }
+          options={RESOLUTIONS.map((resolution) => ({
+            name: resolution,
+            value: resolution,
+          }))}
+        />
+      </>
+    ),
+    quality: (
+      <>
+        <FilterSettings<Quality>
+          filterName="Qualities"
+          preferredOptions={
+            userData.preferredQualities || defaultPreferredQualities
+          }
+          requiredOptions={userData.requiredQualities || []}
+          excludedOptions={userData.excludedQualities || []}
+          includedOptions={userData.includedQualities || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredQualities: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredQualities: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedQualities: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedQualities: included,
+            }))
+          }
+          options={QUALITIES.map((quality) => ({
+            name: quality,
+            value: quality,
+          }))}
+        />
+      </>
+    ),
+    encode: (
+      <>
+        <FilterSettings<Encode>
+          filterName="Encodes"
+          preferredOptions={
+            userData.preferredEncodes || defaultPreferredEncodes
+          }
+          requiredOptions={userData.requiredEncodes || []}
+          excludedOptions={userData.excludedEncodes || []}
+          includedOptions={userData.includedEncodes || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredEncodes: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredEncodes: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedEncodes: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedEncodes: included,
+            }))
+          }
+          options={ENCODES.map((encode) => ({
+            name: encode,
+            value: encode,
+          }))}
+        />
+      </>
+    ),
+    'stream-type': (
+      <>
+        <FilterSettings<StreamType>
+          filterName="Stream Types"
+          preferredOptions={
+            userData.preferredStreamTypes || defaultPreferredStreamTypes
+          }
+          requiredOptions={userData.requiredStreamTypes || []}
+          excludedOptions={userData.excludedStreamTypes || []}
+          includedOptions={userData.includedStreamTypes || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredStreamTypes: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredStreamTypes: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedStreamTypes: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedStreamTypes: included,
+            }))
+          }
+          options={STREAM_TYPES.map((streamType) => ({
+            name: streamType,
+            value: streamType,
+          }))}
+        />
+      </>
+    ),
+    'visual-tag': (
+      <>
+        <FilterSettings<VisualTag>
+          filterName="Visual Tags"
+          preferredOptions={
+            userData.preferredVisualTags || defaultPreferredVisualTags
+          }
+          requiredOptions={userData.requiredVisualTags || []}
+          excludedOptions={userData.excludedVisualTags || []}
+          includedOptions={userData.includedVisualTags || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredVisualTags: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredVisualTags: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedVisualTags: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedVisualTags: included,
+            }))
+          }
+          options={VISUAL_TAGS.map((visualTag) => ({
+            name: visualTag,
+            value: visualTag,
+          }))}
+        />
+      </>
+    ),
+    'audio-tag': (
+      <>
+        <FilterSettings<AudioTag>
+          filterName="Audio Tags"
+          preferredOptions={userData.preferredAudioTags || []}
+          requiredOptions={userData.requiredAudioTags || []}
+          excludedOptions={userData.excludedAudioTags || []}
+          includedOptions={userData.includedAudioTags || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredAudioTags: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredAudioTags: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedAudioTags: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedAudioTags: included,
+            }))
+          }
+          options={AUDIO_TAGS.map((audioTag) => ({
+            name: audioTag,
+            value: audioTag,
+          }))}
+        />
+      </>
+    ),
+    'audio-channel': (
+      <>
+        <FilterSettings<AudioChannel>
+          filterName="Audio Channels"
+          preferredOptions={userData.preferredAudioChannels || []}
+          requiredOptions={userData.requiredAudioChannels || []}
+          excludedOptions={userData.excludedAudioChannels || []}
+          includedOptions={userData.includedAudioChannels || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredAudioChannels: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredAudioChannels: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedAudioChannels: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedAudioChannels: included,
+            }))
+          }
+          options={AUDIO_CHANNELS.map((audioChannel) => ({
+            name: audioChannel,
+            value: audioChannel,
+          }))}
+        />
+      </>
+    ),
+    language: (
+      <>
+        <FilterSettings<Language>
+          filterName="Languages"
+          preferredOptions={userData.preferredLanguages || []}
+          requiredOptions={userData.requiredLanguages || []}
+          excludedOptions={userData.excludedLanguages || []}
+          includedOptions={userData.includedLanguages || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredLanguages: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredLanguages: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedLanguages: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedLanguages: included,
+            }))
+          }
+          options={LANGUAGES.map((language) => ({
+            name: language
+              .split(' ')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+            value: language,
+          }))}
+        />
+      </>
+    ),
+    subtitle: (
+      <>
+        <Alert
+          intent="warning"
+          title="Difference between Language and Subtitle filters"
+          description={
+            <div className="text-sm">
+              Languages and subtitles behave differently depending on what
+              information is available for a stream.
+              <br />
+              <br />
+              <span className="inline-flex items-center gap-1">
+                When accurate media info is available
+                <Popover
+                  className="text-sm "
+                  trigger={
+                    <AiOutlineExclamationCircle className="transition-opacity opacity-45 hover:opacity-90 inline-block cursor-pointer" />
+                  }
+                >
+                  <div className="max-w-sm">
+                    <div className="font-medium">
+                      Accurate media info is available for:
+                    </div>
+                    <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+                      <li>
+                        Certain results from built-in or service-wrapped addons
+                      </li>
+                      <li>
+                        Certain results from StremThru Torz/Store and Meteor
+                      </li>
+                      <li>
+                        Torznab/Newznab results from indexers that provide
+                        separate audio/subtitle metadata
+                      </li>
+                      <li>
+                        <strong>nekoBT</strong> results (all results have
+                        accurate audio/subtitle info)
+                      </li>
+                      <li>
+                        <strong>Torrentio</strong> anime results (subtitles
+                        field may be populated)
+                      </li>
+                    </ul>
+                  </div>
+                </Popover>
+              </span>
+              {', '}
+              <code className="bg-base-200 px-1 py-0.5 rounded">
+                languages
+              </code>{' '}
+              contains audio track languages and{' '}
+              <code className="bg-base-200 px-1 py-0.5 rounded">subtitles</code>{' '}
+              contains embedded subtitle languages.
+              <br />
+              <br />
+              In all other cases,{' '}
+              <code className="bg-base-200 px-1 py-0.5 rounded">
+                subtitles
+              </code>{' '}
+              is empty and{' '}
+              <code className="bg-base-200 px-1 py-0.5 rounded">languages</code>{' '}
+              contains every language found in the filename &mdash; including
+              subtitle-only languages (e.g. a filename containing
+              &quot;Eng.Sub&quot; will add English to languages, not subtitles).
+              This is a known limitation of filename-only parsing.
+            </div>
+          }
+        />
+
+        <FilterSettings<Language>
+          filterName="Subtitles"
+          preferredOptions={userData.preferredSubtitles || []}
+          requiredOptions={userData.requiredSubtitles || []}
+          excludedOptions={userData.excludedSubtitles || []}
+          includedOptions={userData.includedSubtitles || []}
+          onPreferredChange={(preferred) =>
+            setUserData((prev) => ({
+              ...prev,
+              preferredSubtitles: preferred,
+            }))
+          }
+          onRequiredChange={(required) =>
+            setUserData((prev) => ({
+              ...prev,
+              requiredSubtitles: required,
+            }))
+          }
+          onExcludedChange={(excluded) =>
+            setUserData((prev) => ({
+              ...prev,
+              excludedSubtitles: excluded,
+            }))
+          }
+          onIncludedChange={(included) =>
+            setUserData((prev) => ({
+              ...prev,
+              includedSubtitles: included,
+            }))
+          }
+          options={LANGUAGES.map((language) => ({
+            name: language
+              .split(' ')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+            value: language,
+          }))}
+        />
+      </>
+    ),
+    seeders: (
+      <>
+        <SettingsCard
+          title="Seeder Filters"
+          description="Configure required, excluded, and included seeder ranges"
+        >
+          <div className="space-y-4">
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 min-w-0">
+                  <Slider
+                    min={MIN_SEEDERS}
+                    max={MAX_SEEDERS}
+                    defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
+                    value={
+                      userData.requiredSeederRange || [MIN_SEEDERS, MAX_SEEDERS]
+                    }
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      newValue?.[0] !== undefined &&
+                      newValue?.[1] !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredSeederRange: [newValue[0], newValue[1]],
+                      }))
+                    }
+                    minStepsBetweenThumbs={1}
+                    label="Required Seeder Range"
+                    help="Streams with seeders outside this range will be excluded"
+                  />
+                  <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                    <span>
+                      {userData.requiredSeederRange?.[0] || MIN_SEEDERS}
+                    </span>
+                    <span>
+                      {userData.requiredSeederRange?.[1] || MAX_SEEDERS}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2 md:w-[240px] shrink-0">
+                  <NumberInput
+                    label="Min"
+                    value={userData.requiredSeederRange?.[0] || MIN_SEEDERS}
+                    min={MIN_SEEDERS}
+                    max={userData.requiredSeederRange?.[1] || MAX_SEEDERS}
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredSeederRange: [
+                          newValue,
+                          prev.requiredSeederRange?.[1] || MAX_SEEDERS,
+                        ],
+                      }))
+                    }
+                  />
+                  <NumberInput
+                    label="Max"
+                    value={userData.requiredSeederRange?.[1] || MAX_SEEDERS}
+                    min={userData.requiredSeederRange?.[0] || MIN_SEEDERS}
+                    max={MAX_SEEDERS}
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredSeederRange: [
+                          prev.requiredSeederRange?.[0] || MIN_SEEDERS,
+                          newValue,
+                        ],
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {mode === 'pro' && (
+                <>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Slider
+                        min={MIN_SEEDERS}
+                        max={MAX_SEEDERS}
+                        defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
+                        value={
+                          userData.excludeSeederRange || [
+                            MIN_SEEDERS,
+                            MAX_SEEDERS,
+                          ]
+                        }
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          newValue?.[0] !== undefined &&
+                          newValue?.[1] !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeSeederRange: [newValue[0], newValue[1]],
+                          }))
+                        }
+                        minStepsBetweenThumbs={1}
+                        label="Excluded Seeder Range"
+                        help="Streams with seeders in this range will be excluded"
+                      />
+                      <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                        <span>
+                          {userData.excludeSeederRange?.[0] || MIN_SEEDERS}
+                        </span>
+                        <span>
+                          {userData.excludeSeederRange?.[1] || MAX_SEEDERS}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:w-[240px] shrink-0">
+                      <NumberInput
+                        label="Min"
+                        value={userData.excludeSeederRange?.[0] || MIN_SEEDERS}
+                        min={MIN_SEEDERS}
+                        max={userData.excludeSeederRange?.[1] || MAX_SEEDERS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeSeederRange: [
+                              newValue,
+                              prev.excludeSeederRange?.[1] || MAX_SEEDERS,
+                            ],
+                          }))
+                        }
+                      />
+                      <NumberInput
+                        label="Max"
+                        value={userData.excludeSeederRange?.[1] || MAX_SEEDERS}
+                        min={userData.excludeSeederRange?.[0] || MIN_SEEDERS}
+                        max={MAX_SEEDERS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeSeederRange: [
+                              prev.excludeSeederRange?.[0] || MIN_SEEDERS,
+                              newValue,
+                            ],
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {mode === 'pro' && (
+                <>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Slider
+                        min={MIN_SEEDERS}
+                        max={MAX_SEEDERS}
+                        defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
+                        value={
+                          userData.includeSeederRange || [
+                            MIN_SEEDERS,
+                            MAX_SEEDERS,
+                          ]
+                        }
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          newValue?.[0] !== undefined &&
+                          newValue?.[1] !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeSeederRange: [newValue[0], newValue[1]],
+                          }))
+                        }
+                        minStepsBetweenThumbs={1}
+                        label="Included Seeder Range"
+                        help="Streams with seeders in this range skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
+                      />
+                      <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                        <span>
+                          {userData.includeSeederRange?.[0] || MIN_SEEDERS}
+                        </span>
+                        <span>
+                          {userData.includeSeederRange?.[1] || MAX_SEEDERS}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:w-[240px] shrink-0">
+                      <NumberInput
+                        label="Min"
+                        value={userData.includeSeederRange?.[0] || MIN_SEEDERS}
+                        min={MIN_SEEDERS}
+                        max={userData.includeSeederRange?.[1] || MAX_SEEDERS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeSeederRange: [
+                              newValue,
+                              prev.includeSeederRange?.[1] || MAX_SEEDERS,
+                            ],
+                          }))
+                        }
+                      />
+                      <NumberInput
+                        label="Max"
+                        value={userData.includeSeederRange?.[1] || MAX_SEEDERS}
+                        min={userData.includeSeederRange?.[0] || MIN_SEEDERS}
+                        max={MAX_SEEDERS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeSeederRange: [
+                              prev.includeSeederRange?.[0] || MIN_SEEDERS,
+                              newValue,
+                            ],
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Combobox
+                label="Stream Types"
+                emptyMessage="There aren't any stream types to choose from..."
+                options={['p2p', 'cached', 'uncached'].map((type) => ({
+                  label: type,
+                  value: type,
+                }))}
+                value={userData.seederRangeTypes || []}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    seederRangeTypes: value as (
+                      'p2p' | 'cached' | 'uncached'
+                    )[],
+                  }));
+                }}
+                help="Stream types that will use the seeder ranges defined above. Leave blank to apply to all stream types."
+                multiple
+              />
+            </div>
+          </div>
+        </SettingsCard>
+      </>
+    ),
+    age: (
+      <>
+        <SettingsCard
+          title="Age Filters"
+          description="Configure required, excluded, and included age ranges (in hours since upload)"
+        >
+          <div className="space-y-4">
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 min-w-0">
+                  <Slider
+                    min={MIN_AGE_HOURS}
+                    max={MAX_AGE_HOURS}
+                    step={24}
+                    defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
+                    value={
+                      userData.requiredAgeRange || [
+                        MIN_AGE_HOURS,
+                        MAX_AGE_HOURS,
+                      ]
+                    }
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      newValue?.[0] !== undefined &&
+                      newValue?.[1] !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredAgeRange: [newValue[0], newValue[1]],
+                      }))
+                    }
+                    minStepsBetweenThumbs={1}
+                    label="Required Age Range"
+                    help="Streams with age outside this range will be excluded"
+                  />
+                  <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                    <span>
+                      {formatAgeDisplay(
+                        userData.requiredAgeRange?.[0] || MIN_AGE_HOURS
+                      )}
+                    </span>
+                    <span>
+                      {formatAgeDisplay(
+                        userData.requiredAgeRange?.[1] || MAX_AGE_HOURS
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2 md:w-[240px] shrink-0">
+                  <NumberInput
+                    label="Min"
+                    step={24}
+                    value={userData.requiredAgeRange?.[0] || MIN_AGE_HOURS}
+                    min={MIN_AGE_HOURS}
+                    max={userData.requiredAgeRange?.[1] || MAX_AGE_HOURS}
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredAgeRange: [
+                          newValue,
+                          prev.requiredAgeRange?.[1] || MAX_AGE_HOURS,
+                        ],
+                      }))
+                    }
+                  />
+                  <NumberInput
+                    label="Max"
+                    step={24}
+                    value={userData.requiredAgeRange?.[1] || MAX_AGE_HOURS}
+                    min={userData.requiredAgeRange?.[0] || MIN_AGE_HOURS}
+                    max={MAX_AGE_HOURS}
+                    onValueChange={(newValue) =>
+                      newValue !== undefined &&
+                      setUserData((prev) => ({
+                        ...prev,
+                        requiredAgeRange: [
+                          prev.requiredAgeRange?.[0] || MIN_AGE_HOURS,
+                          newValue,
+                        ],
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {mode === 'pro' && (
+                <>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Slider
+                        min={MIN_AGE_HOURS}
+                        max={MAX_AGE_HOURS}
+                        step={24}
+                        defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
+                        value={
+                          userData.excludeAgeRange || [
+                            MIN_AGE_HOURS,
+                            MAX_AGE_HOURS,
+                          ]
+                        }
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          newValue?.[0] !== undefined &&
+                          newValue?.[1] !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeAgeRange: [newValue[0], newValue[1]],
+                          }))
+                        }
+                        minStepsBetweenThumbs={1}
+                        label="Excluded Age Range"
+                        help="Streams with age in this range will be excluded"
+                      />
+                      <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                        <span>
+                          {formatAgeDisplay(
+                            userData.excludeAgeRange?.[0] || MIN_AGE_HOURS
+                          )}
+                        </span>
+                        <span>
+                          {formatAgeDisplay(
+                            userData.excludeAgeRange?.[1] || MAX_AGE_HOURS
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:w-[240px] shrink-0">
+                      <NumberInput
+                        label="Min"
+                        step={24}
+                        value={userData.excludeAgeRange?.[0] || MIN_AGE_HOURS}
+                        min={MIN_AGE_HOURS}
+                        max={userData.excludeAgeRange?.[1] || MAX_AGE_HOURS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeAgeRange: [
+                              newValue,
+                              prev.excludeAgeRange?.[1] || MAX_AGE_HOURS,
+                            ],
+                          }))
+                        }
+                      />
+                      <NumberInput
+                        label="Max"
+                        step={24}
+                        value={userData.excludeAgeRange?.[1] || MAX_AGE_HOURS}
+                        min={userData.excludeAgeRange?.[0] || MIN_AGE_HOURS}
+                        max={MAX_AGE_HOURS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            excludeAgeRange: [
+                              prev.excludeAgeRange?.[0] || MIN_AGE_HOURS,
+                              newValue,
+                            ],
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Slider
+                        min={MIN_AGE_HOURS}
+                        max={MAX_AGE_HOURS}
+                        step={24}
+                        defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
+                        value={
+                          userData.includeAgeRange || [
+                            MIN_AGE_HOURS,
+                            MAX_AGE_HOURS,
+                          ]
+                        }
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          newValue?.[0] !== undefined &&
+                          newValue?.[1] !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeAgeRange: [newValue[0], newValue[1]],
+                          }))
+                        }
+                        minStepsBetweenThumbs={1}
+                        label="Included Age Range"
+                        help="Streams with age in this range skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
+                      />
+                      <div className="flex justify-between mt-1 text-xs text-[--muted]">
+                        <span>
+                          {formatAgeDisplay(
+                            userData.includeAgeRange?.[0] || MIN_AGE_HOURS
+                          )}
+                        </span>
+                        <span>
+                          {formatAgeDisplay(
+                            userData.includeAgeRange?.[1] || MAX_AGE_HOURS
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:w-[240px] shrink-0">
+                      <NumberInput
+                        label="Min"
+                        step={24}
+                        value={userData.includeAgeRange?.[0] || MIN_AGE_HOURS}
+                        min={MIN_AGE_HOURS}
+                        max={userData.includeAgeRange?.[1] || MAX_AGE_HOURS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeAgeRange: [
+                              newValue,
+                              prev.includeAgeRange?.[1] || MAX_AGE_HOURS,
+                            ],
+                          }))
+                        }
+                      />
+                      <NumberInput
+                        label="Max"
+                        step={24}
+                        value={userData.includeAgeRange?.[1] || MAX_AGE_HOURS}
+                        min={userData.includeAgeRange?.[0] || MIN_AGE_HOURS}
+                        max={MAX_AGE_HOURS}
+                        onValueChange={(newValue) =>
+                          newValue !== undefined &&
+                          setUserData((prev) => ({
+                            ...prev,
+                            includeAgeRange: [
+                              prev.includeAgeRange?.[0] || MIN_AGE_HOURS,
+                              newValue,
+                            ],
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Combobox
+                label="Stream Types"
+                emptyMessage="There aren't any stream types to choose from..."
+                options={['debrid', 'usenet', 'p2p'].map((type) => ({
+                  label: type,
+                  value: type,
+                }))}
+                defaultValue={['usenet']}
+                value={userData.ageRangeTypes ?? []}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    ageRangeTypes: value as ('debrid' | 'usenet' | 'p2p')[],
+                  }));
+                }}
+                help="Stream types that will use the age ranges defined above. Leave blank to apply to all stream types."
+                multiple
+              />
+            </div>
+          </div>
+        </SettingsCard>
+      </>
+    ),
+    matching: (
+      <>
+        <div className="space-y-4">
+          <SettingsCard
+            id="titleMatching"
+            title="Title Matching"
+            description="Any streams which don't specifically match the requested title will be filtered out. You can optionally choose to only apply it to specific request types and addons. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
+          >
+            <Switch
+              label="Enabled"
+              side="right"
+              value={userData.titleMatching?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  titleMatching: {
+                    ...(prev.titleMatching || {}),
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+
+            <Select
+              disabled={!userData.titleMatching?.enabled}
+              label="Matching Mode"
+              options={['exact', 'contains'].map((mode) => ({
+                label: mode,
+                value: mode,
+              }))}
+              defaultValue="exact"
+              value={userData.titleMatching?.mode}
+              help={
+                userData.titleMatching?.mode === 'contains'
+                  ? "Streams whose detected title doesn't contain the requested title will be excluded"
+                  : "Streams whose detected title doesn't match the requested title exactly will be excluded"
+              }
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  titleMatching: {
+                    ...prev.titleMatching,
+                    mode: value as 'exact' | 'contains' | undefined,
+                  },
+                }));
+              }}
+            />
+
+            <Select
+              disabled={!userData.titleMatching?.enabled}
+              label="Ambiguous Results"
+              options={[
+                { label: 'keep', value: 'keep' },
+                { label: 'discard', value: 'discard' },
+              ]}
+              defaultValue="keep"
+              value={userData.titleMatching?.ambiguousResults}
+              help="What to do with results that can't be told apart from a same-name series (reboots and country variants, e.g. The Office UK vs US). 'discard' keeps only results whose year, country tag or episode title confirms the requested series."
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  titleMatching: {
+                    ...prev.titleMatching,
+                    ambiguousResults: value as 'keep' | 'discard' | undefined,
+                  },
+                }));
+              }}
+            />
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Slider
+                  label="Similarity Threshold"
+                  help="The minimum similarity threshold required for a title to be considered a match. Lower values allow more leniency whereas higher values are more strict."
+                  moreHelp="The similarity is calculated using the Levenshtein distance algorithm."
+                  disabled={!userData.titleMatching?.enabled}
+                  value={[userData.titleMatching?.similarityThreshold ?? 0.85]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  defaultValue={[0.85]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      titleMatching: {
+                        ...prev.titleMatching,
+                        similarityThreshold: value[0],
+                      },
+                    }));
+                  }}
+                />
+              </div>
+              <div className="w-24">
+                <NumberInput
+                  label="Value"
+                  step={0.01}
+                  value={userData.titleMatching?.similarityThreshold ?? 0.85}
+                  min={0}
+                  max={1}
+                  disabled={!userData.titleMatching?.enabled}
+                  onValueChange={(newValue) => {
+                    if (newValue !== undefined) {
+                      setUserData((prev) => ({
+                        ...prev,
+                        titleMatching: {
+                          ...prev.titleMatching,
+                          similarityThreshold: newValue,
+                        },
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Combobox
+                  multiple
+                  disabled={!userData.titleMatching?.enabled}
+                  label="Request Types"
+                  emptyMessage="There aren't any request types to choose from..."
+                  help="Request types that will use title matching. Leave blank to apply to all request types."
+                  options={TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                    textValue: type,
+                  }))}
+                  value={userData.titleMatching?.requestTypes}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      titleMatching: {
+                        ...prev.titleMatching,
+                        requestTypes: value,
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  multiple
+                  disabled={!userData.titleMatching?.enabled}
+                  label="Addons"
+                  help="Addons that will use strict title matching. Leave blank to apply to all addons."
+                  emptyMessage="You haven't installed any addons yet..."
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    textValue: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                  }))}
+                  value={userData.titleMatching?.addons || []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      titleMatching: {
+                        ...prev.titleMatching,
+                        addons: value,
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard
+            id="yearMatching"
+            title="Year Matching"
+            description="Any streams which don't specifically match the requested year will be filtered out. You can optionally choose to only apply it to specific request types and addons. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
+          >
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.yearMatching?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  yearMatching: { ...prev.yearMatching, enabled: value },
+                }));
+              }}
+            />
+            <Switch
+              label="Strict"
+              side="right"
+              help="Filter out streams for movies that don't have a year specified."
+              moreHelp="Disabling this will allow streams without a year to be included in the results."
+              disabled={!userData.yearMatching?.enabled}
+              value={userData.yearMatching?.strict ?? true}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  yearMatching: { ...prev.yearMatching, strict: value },
+                }));
+              }}
+            />
+            <Combobox
+              multiple
+              disabled={
+                !userData.yearMatching?.enabled ||
+                userData.yearMatching?.strict === false
+              }
+              label="Strict Request Types"
+              emptyMessage="There aren't any request types to choose from..."
+              help="Request types where streams without a year are filtered out. Defaults to movie only, as series results usually don't include a year."
+              options={TYPES.map((type) => ({
+                label: type,
+                value: type,
+                textValue: type,
+              }))}
+              value={userData.yearMatching?.strictTypes ?? ['movie']}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  yearMatching: {
+                    ...prev.yearMatching,
+                    strictTypes: value,
+                  },
+                }));
+              }}
+            />
+            <Switch
+              label="Use Initial Air Date"
+              side="right"
+              help="For series/anime, compare against only the initial air year instead of the full year range."
+              moreHelp="Helps filter out same-title-different-show results (e.g. 'One Piece 2023' live-action vs 'One Piece 1999' anime). May also filter torrents that include a season air year in their name."
+              disabled={!userData.yearMatching?.enabled}
+              value={userData.yearMatching?.useInitialAirDate ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  yearMatching: {
+                    ...prev.yearMatching,
+                    useInitialAirDate: value,
+                  },
+                }));
+              }}
+            />
+            <NumberInput
+              label="Year Tolerance"
+              disabled={!userData.yearMatching?.enabled}
+              value={userData.yearMatching?.tolerance ?? 1}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  yearMatching: {
+                    ...prev.yearMatching,
+                    tolerance: value,
+                  },
+                }));
+              }}
+              min={0}
+              max={100}
+              help="The number of years to tolerate when matching years. For example, if the year tolerance is 5, then a stream with a year of 2020 will match a request for 2025."
+            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Combobox
+                  multiple
+                  disabled={!userData.yearMatching?.enabled}
+                  label="Request Types"
+                  emptyMessage="There aren't any request types to choose from..."
+                  help="Request types that will use year matching. Leave blank to apply to all request types."
+                  options={TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                    textValue: type,
+                  }))}
+                  value={userData.yearMatching?.requestTypes}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      yearMatching: {
+                        ...prev.yearMatching,
+                        requestTypes: value,
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  multiple
+                  disabled={!userData.yearMatching?.enabled}
+                  label="Addons"
+                  help="Addons that will use year matching. Leave blank to apply to all addons."
+                  emptyMessage="You haven't installed any addons yet..."
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    textValue: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                  }))}
+                  value={userData.yearMatching?.addons || []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      yearMatching: {
+                        ...prev.yearMatching,
+                        addons: value,
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard
+            id="seasonEpisodeMatching"
+            title="Season/Episode Matching"
+            description="Any streams which don't specifically match the requested season/episode will be filtered out. You can optionally choose to only apply it to specific request types and addons"
+          >
+            <Switch
+              label="Enabled"
+              side="right"
+              value={userData.seasonEpisodeMatching?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  seasonEpisodeMatching: {
+                    ...(prev.seasonEpisodeMatching || {}),
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+            <Switch
+              label="Strict"
+              side="right"
+              help="Filter out streams for series that don't have any season or episode specified."
+              moreHelp="Disabling this will allow streams without a season or episode to be included in the results."
+              disabled={!userData.seasonEpisodeMatching?.enabled}
+              value={userData.seasonEpisodeMatching?.strict ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  seasonEpisodeMatching: {
+                    ...prev.seasonEpisodeMatching,
+                    strict: value,
+                  },
+                }));
+              }}
+            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Combobox
+                  multiple
+                  disabled={!userData.seasonEpisodeMatching?.enabled}
+                  label="Request Types"
+                  help="Request types that will use season/episode matching. Leave blank to apply to all request types."
+                  emptyMessage="There aren't any request types to choose from..."
+                  options={TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                    textValue: type,
+                  }))}
+                  value={userData.seasonEpisodeMatching?.requestTypes}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      seasonEpisodeMatching: {
+                        ...prev.seasonEpisodeMatching,
+                        requestTypes: value,
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  multiple
+                  disabled={!userData.seasonEpisodeMatching?.enabled}
+                  label="Addons"
+                  help="Addons that will use season/episode matching. Leave blank to apply to all addons."
+                  emptyMessage="You haven't installed any addons yet..."
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    textValue: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                  }))}
+                  value={userData.seasonEpisodeMatching?.addons || []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => {
+                      return {
+                        ...prev,
+                        seasonEpisodeMatching: {
+                          ...prev.seasonEpisodeMatching,
+                          addons: value,
+                        },
+                      };
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard
+            id="episodeTitleMatching"
+            title="Episode Title Matching"
+            description="Any streams whose release name carries an episode title that doesn't match the requested episode's title will be filtered out. Streams without an episode title are unaffected. Helps tell apart same-name series (e.g. The Office UK vs US) whose episode titles differ. You can optionally choose to only apply it to specific request types and addons."
+          >
+            <Switch
+              label="Enabled"
+              side="right"
+              value={userData.episodeTitleMatching?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  episodeTitleMatching: {
+                    ...(prev.episodeTitleMatching || {}),
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Slider
+                  label="Similarity Threshold"
+                  help="The minimum similarity threshold required for an episode title to be considered a match. Lower values allow more leniency whereas higher values are more strict."
+                  disabled={!userData.episodeTitleMatching?.enabled}
+                  value={[
+                    userData.episodeTitleMatching?.similarityThreshold ?? 0.8,
+                  ]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  defaultValue={[0.8]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      episodeTitleMatching: {
+                        ...prev.episodeTitleMatching,
+                        similarityThreshold: value[0],
+                      },
+                    }));
+                  }}
+                />
+              </div>
+              <div className="w-24">
+                <NumberInput
+                  label="Value"
+                  step={0.01}
+                  value={
+                    userData.episodeTitleMatching?.similarityThreshold ?? 0.8
+                  }
+                  min={0}
+                  max={1}
+                  disabled={!userData.episodeTitleMatching?.enabled}
+                  onValueChange={(newValue) => {
+                    if (newValue !== undefined) {
+                      setUserData((prev) => ({
+                        ...prev,
+                        episodeTitleMatching: {
+                          ...prev.episodeTitleMatching,
+                          similarityThreshold: newValue,
+                        },
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Combobox
+                  multiple
+                  disabled={!userData.episodeTitleMatching?.enabled}
+                  label="Request Types"
+                  help="Request types that will use episode title matching. Leave blank to apply to all request types."
+                  emptyMessage="There aren't any request types to choose from..."
+                  options={TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                    textValue: type,
+                  }))}
+                  value={userData.episodeTitleMatching?.requestTypes}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      episodeTitleMatching: {
+                        ...prev.episodeTitleMatching,
+                        requestTypes: value,
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  multiple
+                  disabled={!userData.episodeTitleMatching?.enabled}
+                  label="Addons"
+                  help="Addons that will use episode title matching. Leave blank to apply to all addons."
+                  emptyMessage="You haven't installed any addons yet..."
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    textValue: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                  }))}
+                  value={userData.episodeTitleMatching?.addons || []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      episodeTitleMatching: {
+                        ...prev.episodeTitleMatching,
+                        addons: value,
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard
+            id="languageInference"
+            title="Language Inference"
+            description="When a stream declares no language of its own, the language of the metadata title it matched is added to it. A source only contributes while its own filter is running, so Title needs Title Matching enabled and Episode Title needs Episode Title Matching enabled. Inference also happens after the language filters, so an inferred language reaches the formatter, sorting and stream expressions, but cannot be filtered on in the same request."
+          >
+            <Switch
+              label="Enabled"
+              side="right"
+              value={userData.languageInference?.enabled ?? true}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  languageInference: {
+                    ...(prev.languageInference || {}),
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+            <Combobox
+              multiple
+              disabled={userData.languageInference?.enabled === false}
+              label="Sources"
+              emptyMessage="There aren't any sources to choose from..."
+              help="Which matched title may contribute a language, on top of that title's own filter being enabled. Leave blank to allow both. Episode titles are the stronger signal, as a series title is often identical across languages."
+              options={[
+                {
+                  label: 'Title',
+                  value: 'title',
+                  textValue: 'Title',
+                },
+                {
+                  label: 'Episode Title',
+                  value: 'episodeTitle',
+                  textValue: 'Episode Title',
+                },
+              ]}
+              value={userData.languageInference?.sources || []}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  languageInference: {
+                    ...prev.languageInference,
+                    sources: value as ('title' | 'episodeTitle')[],
+                  },
+                }));
+              }}
+            />
+          </SettingsCard>
+        </div>
+      </>
+    ),
+    'stream-expression': (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Create advanced filters to exclude, prefer or require specific
+            streams from your results using stream expressions. Write
+            expressions that evaluate which streams to select based on
+            properties like addon type, quality, size, or any other stream
+            attributes. Multiple expressions can be combined using logical
+            operators for precise filtering control. You can also use ternary
+            operators to apply conditional logic to the streams.
+          </p>
+        </div>
+        <div className="mb-4 space-y-4">
+          {status?.settings.selSyncAccess.level === 'trusted' &&
+            (userData.trusted ? (
+              <Alert
+                intent="success"
+                title="Trusted User"
+                description={
+                  <div className="space-y-2">
+                    <p>
+                      You are a trusted user. You can sync expressions from any
+                      URL.
+                    </p>
+                    {status?.settings.selSyncAccess.trustedUrls &&
+                      status.settings.selSyncAccess.trustedUrls.length > 0 && (
+                        <div className="flex flex-row flex-wrap gap-2">
+                          <Button
+                            intent="primary-outline"
+                            size="sm"
+                            onClick={whitelistedSelUrlsModal.open}
+                          >
+                            View Whitelisted Sync URLs
+                          </Button>
+                        </div>
+                      )}
+                  </div>
+                }
+              />
+            ) : (
+              <Alert
+                intent="info"
+                title="Trusted Users Only"
+                description={
+                  <div className="space-y-2">
+                    <p>
+                      Syncing stream expressions from arbitrary URLs is only
+                      available to trusted users. You can only sync from
+                      whitelisted URLs. If you are the owner of the instance,
+                      you can add your UUID to the{' '}
+                      <code className="font-mono">TRUSTED_UUIDS</code>{' '}
+                      environment variable.
+                    </p>
+                    {status?.settings.selSyncAccess.trustedUrls &&
+                      status.settings.selSyncAccess.trustedUrls.length > 0 && (
+                        <div className="flex flex-row flex-wrap gap-2">
+                          <Button
+                            intent="primary-outline"
+                            size="sm"
+                            onClick={whitelistedSelUrlsModal.open}
+                          >
+                            View Whitelisted Sync URLs
+                          </Button>
+                        </div>
+                      )}
+                  </div>
+                }
+              />
+            ))}
+        </div>
+        <div className="space-y-4">
+          <SettingsCard title="Help">
+            <div className="space-y-3">
+              <p className="text-sm text-[--muted]">
+                This filter uses AIOStreams'{' '}
+                <a
+                  href="https://aiostreams.org/reference/stream-expressions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  stream expression language
+                </a>
+                , the same syntax used in the Groups system. The difference here
+                is that you only have the <code>streams</code> constant
+                containing all available streams
+              </p>
+              <div className="text-sm text-[--muted]">
+                <p className="font-medium mb-2">How it works:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Your expression should return an array of streams</li>
+                  <li>
+                    Use functions like <code>addon()</code>, <code>type()</code>
+                    , <code>quality()</code> to filter streams
+                  </li>
+                  <li>
+                    Combine multiple attributes together using nested functions
+                  </li>
+                  <li>
+                    Apply conditional logic using ternary operators{' '}
+                    <code>expression ? arrayIfTrue : arrayIfFalse</code> where
+                    the two arrays can be replaced with true or false for all
+                    streams and no streams respectively.
+                  </li>
+                </ul>
+              </div>
+              <p className="text-sm text-[--muted]">
+                <strong>Example:</strong>{' '}
+                <code>addon(type(streams, 'debrid'), 'TorBox')</code> excludes
+                all TorBox debrid streams.
+              </p>
+              <p className="text-sm text-[--muted]">
+                For detailed syntax and available functions, see the{' '}
+                <a
+                  href="https://aiostreams.org/reference/stream-expressions#function-reference"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[--brand] hover:underline"
+                >
+                  Full function reference
+                </a>
+              </p>
+            </div>
+          </SettingsCard>
+          <ToggleableTextInputs
+            title="Required Stream Expressions"
+            description="The expressions to apply to the streams. Streams selected by any of these expressions will be required to be in the results."
+            placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+            values={userData.requiredStreamExpressions || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                requiredStreamExpressions: values,
+              }));
+            }}
+            onExpressionChange={(expression, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                requiredStreamExpressions: [
+                  ...(prev.requiredStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.requiredStreamExpressions || [])[index],
+                    expression,
+                  },
+                  ...(prev.requiredStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onEnabledChange={(enabled, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                requiredStreamExpressions: [
+                  ...(prev.requiredStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.requiredStreamExpressions || [])[index],
+                    enabled,
+                  },
+                  ...(prev.requiredStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedRequiredStreamExpressionUrls')}
+          />
+          <ToggleableTextInputs
+            title="Excluded Stream Expressions"
+            description="The expressions to apply to the streams. Streams selected by any of these expressions will be excluded from the results."
+            placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+            values={userData.excludedStreamExpressions || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedStreamExpressions: values,
+              }));
+            }}
+            onExpressionChange={(expression, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedStreamExpressions: [
+                  ...(prev.excludedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.excludedStreamExpressions || [])[index],
+                    expression,
+                  },
+                  ...(prev.excludedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onEnabledChange={(enabled, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedStreamExpressions: [
+                  ...(prev.excludedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.excludedStreamExpressions || [])[index],
+                    enabled,
+                  },
+                  ...(prev.excludedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedExcludedStreamExpressionUrls')}
+          />
+          <ToggleableTextInputs
+            title="Included Stream Expressions"
+            description="The expressions to apply to the streams. Streams selected by any of these expressions will be included in the results."
+            placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+            values={userData.includedStreamExpressions || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                includedStreamExpressions: values,
+              }));
+            }}
+            onExpressionChange={(expression, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                includedStreamExpressions: [
+                  ...(prev.includedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.includedStreamExpressions || [])[index],
+                    expression,
+                  },
+                  ...(prev.includedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onEnabledChange={(enabled, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                includedStreamExpressions: [
+                  ...(prev.includedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.includedStreamExpressions || [])[index],
+                    enabled,
+                  },
+                  ...(prev.includedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedIncludedStreamExpressionUrls')}
+          />
+          <ToggleableTextInputs
+            title="Preferred Stream Expressions"
+            description="The expressions to apply to the streams. Streams selected by these expressions will be preferred over other streams and ranked by the order they are in this list."
+            placeholder="addon(type(streams, 'debrid'), 'TorBox')"
+            values={userData.preferredStreamExpressions || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredStreamExpressions: values,
+              }));
+            }}
+            onExpressionChange={(expression, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredStreamExpressions: [
+                  ...(prev.preferredStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.preferredStreamExpressions || [])[index],
+                    expression,
+                  },
+                  ...(prev.preferredStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onEnabledChange={(enabled, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredStreamExpressions: [
+                  ...(prev.preferredStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.preferredStreamExpressions || [])[index],
+                    enabled,
+                  },
+                  ...(prev.preferredStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedPreferredStreamExpressionUrls')}
+          />
+          <RankedExpressionInputs
+            title="Ranked Stream Expressions"
+            description="Add expressions with scores. All matching expressions accumulate their scores on each stream. Use negative scores to penalize matches. Sort by 'Stream Expression Score' to order by the total."
+            values={userData.rankedStreamExpressions || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedStreamExpressions: values,
+              }));
+            }}
+            onExpressionChange={(expression, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedStreamExpressions: [
+                  ...(prev.rankedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.rankedStreamExpressions || [])[index],
+                    expression,
+                  },
+                  ...(prev.rankedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onScoreChange={(score, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedStreamExpressions: [
+                  ...(prev.rankedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.rankedStreamExpressions || [])[index],
+                    score,
+                  },
+                  ...(prev.rankedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onEnabledChange={(enabled, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedStreamExpressions: [
+                  ...(prev.rankedStreamExpressions || []).slice(0, index),
+                  {
+                    ...(prev.rankedStreamExpressions || [])[index],
+                    enabled,
+                  },
+                  ...(prev.rankedStreamExpressions || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedRankedStreamExpressionUrls')}
+          />
+        </div>
+      </>
+    ),
+    keyword: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Filter your streams by keywords - words or phrases that must appear
+            in the filename, folder name, indexer, or release group
+          </p>
+        </div>
+        <div className="space-y-4">
+          {mode === 'pro' && (
+            <TextInputs
+              label="Required Keywords"
+              help="Streams that do not contain any of these keywords will be excluded"
+              itemName="Keyword"
+              values={userData.requiredKeywords || []}
+              onValuesChange={(values) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  requiredKeywords: values,
+                }));
+              }}
+            />
+          )}
+          <TextInputs
+            label="Excluded Keywords"
+            help="Streams that contain any of these keywords will be excluded"
+            itemName="Keyword"
+            values={userData.excludedKeywords || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedKeywords: values,
+              }));
+            }}
+          />
+          {mode === 'pro' && (
+            <TextInputs
+              label="Included Keywords"
+              help="Streams that contain any of these keywords skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
+              itemName="Keyword"
+              values={userData.includedKeywords || []}
+              onValuesChange={(values) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  includedKeywords: values,
+                }));
+              }}
+            />
+          )}
+          <TextInputs
+            label="Preferred Keywords"
+            help="Streams that contain any of these keywords will be preferred"
+            itemName="Keyword"
+            values={userData.preferredKeywords || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredKeywords: values,
+              }));
+            }}
+          />
+        </div>
+      </>
+    ),
+    'release-group': (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Filter your streams by release group - the group that released the
+            content (e.g., SPARKS, NTb, FLUX, etc.)
+          </p>
+        </div>
+        <div className="space-y-4">
+          <TextInputs
+            label="Required Release Groups"
+            help="Only streams from these release groups will be kept. Streams from other release groups will be excluded."
+            itemName="Release Group"
+            values={userData.requiredReleaseGroups || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                requiredReleaseGroups: values,
+              }));
+            }}
+          />
+          <TextInputs
+            label="Excluded Release Groups"
+            help="Streams from these release groups will be excluded"
+            itemName="Release Group"
+            values={userData.excludedReleaseGroups || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedReleaseGroups: values,
+              }));
+            }}
+          />
+          <TextInputs
+            label="Included Release Groups"
+            help="Streams from these release groups skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
+            itemName="Release Group"
+            values={userData.includedReleaseGroups || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                includedReleaseGroups: values,
+              }));
+            }}
+          />
+          <TextInputs
+            label="Preferred Release Groups"
+            help="Streams from these release groups will be sorted higher. The order matters - release groups at the top will be preferred over those below."
+            itemName="Release Group"
+            values={userData.preferredReleaseGroups || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredReleaseGroups: values,
+              }));
+            }}
+          />
+        </div>
+      </>
+    ),
+    regex: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Filter your streams by regular expressions that must match one of
+            the following: filename, folder name, indexer, or release group
+          </p>
+        </div>
+        <div className="mb-4 space-y-4">
+          {status?.settings.regexAccess.level === 'trusted' &&
+            (userData.trusted ? (
+              <Alert
+                intent="success"
+                title="Trusted User"
+                description={
+                  <p>
+                    You are a trusted user. You have full access to regex
+                    filters.
+                  </p>
+                }
+              />
+            ) : (
+              <Alert
+                intent="info"
+                title="Trusted Users Only"
+                description={
+                  <>
+                    <p>
+                      Regex filters are only available to trusted users due to
+                      the potential for abuse. If you are the owner of the
+                      instance, you can add your UUID to the{' '}
+                      <code className="font-mono">TRUSTED_UUIDS</code>{' '}
+                      environment variable.
+                    </p>
+                  </>
+                }
+              />
+            ))}
+          {(status?.settings.regexAccess.patterns?.length ||
+            status?.settings.regexAccess.urls?.length) && (
+            <Alert
+              intent="info"
+              title="Allowed Regex Patterns"
+              description={
+                <div className="space-y-2">
+                  <div className="max-w-full overflow-hidden">
+                    <p className="break-words">
+                      This instance has allowed a specific set of regexes to be
+                      used by all users.
+                    </p>
+                    {status?.settings.regexAccess.description && (
+                      <div className="mt-2 break-words overflow-hidden">
+                        <MarkdownLite>
+                          {status?.settings.regexAccess.description || ''}
+                        </MarkdownLite>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-row flex-wrap gap-2">
+                    {status?.settings.regexAccess.urls &&
+                      status.settings.regexAccess.urls.length > 0 && (
+                        <Button
+                          intent="primary-outline"
+                          size="sm"
+                          onClick={allowedRegexUrlsModal.open}
+                        >
+                          View Allowed Import URLs
+                        </Button>
+                      )}
+                    <Button
+                      intent="primary-outline"
+                      size="sm"
+                      onClick={allowedRegexModal.open}
+                    >
+                      View Allowed Patterns
+                    </Button>
+                  </div>
+                </div>
+              }
+            />
+          )}
+        </div>
+        <div className="space-y-4">
+          {mode === 'pro' && (
+            <TextInputs
+              fieldName="requiredRegexPatterns"
+              label="Required Regex"
+              help="Streams that do not match any of these regular expressions will be excluded"
+              itemName="Regex"
+              values={userData.requiredRegexPatterns || []}
+              onValuesChange={(values) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  requiredRegexPatterns: values,
+                }));
+              }}
+              {...getSyncedProps('syncedRequiredRegexUrls')}
+            />
+          )}
+          <TextInputs
+            label="Excluded Regex"
+            fieldName="excludedRegexPatterns"
+            help="Streams that match any of these regular expressions will be excluded"
+            itemName="Regex"
+            values={userData.excludedRegexPatterns || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                excludedRegexPatterns: values,
+              }));
+            }}
+            {...getSyncedProps('syncedExcludedRegexUrls')}
+          />
+          {mode === 'pro' && (
+            <TextInputs
+              label="Included Regex"
+              fieldName="includedRegexPatterns"
+              help="Streams that match any of these regular expressions skip every other filter, except Excluded and Required stream expressions and the Digital Release Filter. Duplicate removal and result limits still apply."
+              itemName="Regex"
+              values={userData.includedRegexPatterns || []}
+              onValuesChange={(values) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  includedRegexPatterns: values,
+                }));
+              }}
+              {...getSyncedProps('syncedIncludedRegexUrls')}
+            />
+          )}
+          <TwoTextInputs
+            title="Preferred Regex Patterns"
+            description="Define regex patterns with names for easy reference"
+            {...getSyncedProps('syncedPreferredRegexUrls')}
+            keyName="Name"
+            keyId="name"
+            keyPlaceholder="Enter pattern name"
+            valueId="pattern"
+            valueName="Pattern"
+            valuePlaceholder="Enter regex pattern"
+            values={(userData.preferredRegexPatterns || []).map((pattern) => ({
+              name: pattern.name,
+              value: pattern.pattern,
+            }))}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredRegexPatterns: values.map((v) => ({
+                  name: v.name,
+                  pattern: v.value,
+                })),
+              }));
+            }}
+            onValueChange={(value, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredRegexPatterns: [
+                  ...(prev.preferredRegexPatterns || []).slice(0, index),
+                  {
+                    ...(prev.preferredRegexPatterns || [])[index],
+                    pattern: value,
+                  },
+                  ...(prev.preferredRegexPatterns || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onKeyChange={(key, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                preferredRegexPatterns: [
+                  ...(prev.preferredRegexPatterns || []).slice(0, index),
+                  {
+                    ...(prev.preferredRegexPatterns || [])[index],
+                    name: key,
+                  },
+                  ...(prev.preferredRegexPatterns || []).slice(index + 1),
+                ],
+              }));
+            }}
+          />
+          <RankedRegexInputs
+            title="Ranked Regex Patterns"
+            description="Add regex patterns with scores. Matches on the filename and folder name. Accumulates scores."
+            values={userData.rankedRegexPatterns || []}
+            onValuesChange={(values) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedRegexPatterns: values,
+              }));
+            }}
+            onPatternChange={(pattern, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedRegexPatterns: [
+                  ...(prev.rankedRegexPatterns || []).slice(0, index),
+                  { ...(prev.rankedRegexPatterns || [])[index], pattern },
+                  ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onNameChange={(name, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedRegexPatterns: [
+                  ...(prev.rankedRegexPatterns || []).slice(0, index),
+                  { ...(prev.rankedRegexPatterns || [])[index], name },
+                  ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                ],
+              }));
+            }}
+            onScoreChange={(score, index) => {
+              setUserData((prev) => ({
+                ...prev,
+                rankedRegexPatterns: [
+                  ...(prev.rankedRegexPatterns || []).slice(0, index),
+                  { ...(prev.rankedRegexPatterns || [])[index], score },
+                  ...(prev.rankedRegexPatterns || []).slice(index + 1),
+                ],
+              }));
+            }}
+            {...getSyncedProps('syncedRankedRegexUrls')}
+          />
+        </div>
+      </>
+    ),
+    bitrate: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Set minimum and maximum bitrate limits for movies, series, and anime
+            series. You can set a global limit, and also choose to set specific
+            limits for each resolution. For a given stream, only one set of
+            bitrate filters would be used. A resolution specific limit takes
+            priority. Anime series limits take precedence over regular series
+            limits.
+          </p>
+        </div>
+        <Alert
+          intent="warning"
+          className="mb-4"
+          title="Bitrate Accuracy"
+          description="Bitrate values are estimates calculated from file size and duration. These represent average bitrates and may not reflect peak bitrates or exact encoding quality."
+        />
+        <div className="space-y-4">
+          <div className="rounded-[--radius-md] border bg-[--background] p-4">
+            <Switch
+              label="Use Runtime from Metadata Providers"
+              side="right"
+              help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size. Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
+              value={userData.bitrate?.useMetadataRuntime ?? true}
+              onValueChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  bitrate: { ...prev.bitrate, useMetadataRuntime: value },
+                }));
+              }}
+            />
+          </div>
+          <SettingsCard
+            title="Global"
+            description="Apply bitrate filters for movies, series, and anime series"
+          >
+            <BitrateRangeSlider
+              label="Global Bitrate Limits"
+              help="Set the minimum and maximum bitrate limits for all results"
+              moviesValue={
+                (
+                  userData.bitrate?.global?.movies || [MIN_BITRATE, MAX_BITRATE]
+                ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+              }
+              seriesValue={
+                (
+                  userData.bitrate?.global?.series || [MIN_BITRATE, MAX_BITRATE]
+                ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+              }
+              animeValue={
+                (
+                  userData.bitrate?.global?.anime || [MIN_BITRATE, MAX_BITRATE]
+                ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+              }
+              onMoviesChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  bitrate: {
+                    ...prev.bitrate,
+                    global: { ...prev.bitrate?.global, movies: value },
+                  },
+                }));
+              }}
+              onSeriesChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  bitrate: {
+                    ...prev.bitrate,
+                    global: { ...prev.bitrate?.global, series: value },
+                  },
+                }));
+              }}
+              onAnimeChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  bitrate: {
+                    ...prev.bitrate,
+                    global: { ...prev.bitrate?.global, anime: value },
+                  },
+                }));
+              }}
+            />
+          </SettingsCard>
+          {mode === 'pro' && (
+            <SettingsCard
+              title="Resolution-Specific"
+              description="Set bitrate limits for specific resolutions"
+            >
+              <div className="space-y-8">
+                {RESOLUTIONS.map((resolution) => (
+                  <BitrateRangeSlider
+                    key={resolution}
+                    label={resolution}
+                    help={`Set the minimum and maximum bitrate for ${resolution} results`}
+                    moviesValue={
+                      (
+                        userData.bitrate?.resolution?.[resolution]?.movies || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    seriesValue={
+                      (
+                        userData.bitrate?.resolution?.[resolution]?.series || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    animeValue={
+                      (
+                        userData.bitrate?.resolution?.[resolution]?.anime || [
+                          MIN_BITRATE,
+                          MAX_BITRATE,
+                        ]
+                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
+                    }
+                    onMoviesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          resolution: {
+                            ...prev.bitrate?.resolution,
+                            [resolution]: {
+                              ...prev.bitrate?.resolution?.[resolution],
+                              movies: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    onSeriesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          resolution: {
+                            ...prev.bitrate?.resolution,
+                            [resolution]: {
+                              ...prev.bitrate?.resolution?.[resolution],
+                              series: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    onAnimeChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        bitrate: {
+                          ...prev.bitrate,
+                          resolution: {
+                            ...prev.bitrate?.resolution,
+                            [resolution]: {
+                              ...prev.bitrate?.resolution?.[resolution],
+                              anime: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                  />
+                ))}
+              </div>
+            </SettingsCard>
+          )}
+        </div>
+      </>
+    ),
+    size: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Set minimum and maximum size limits for movies, series, and anime
+            series. You can set a global limit, and also choose to set specific
+            limits for each resolution. For a given stream, only one set of size
+            filters would be used. A resolution specific limit takes priority.
+            Anime series limits take precedence over regular series limits.
+          </p>
+        </div>
+        <div className="space-y-4">
+          <SettingsCard
+            title="Global"
+            description="Apply size filters for movies, series, and anime series"
+          >
+            <SizeRangeSlider
+              label="Global Size Limits"
+              help="Set the minimum and maximum size limits for all results"
+              moviesValue={
+                userData.size?.global?.movies || [MIN_SIZE, MAX_SIZE]
+              }
+              seriesValue={
+                userData.size?.global?.series || [MIN_SIZE, MAX_SIZE]
+              }
+              animeValue={userData.size?.global?.anime || [MIN_SIZE, MAX_SIZE]}
+              onMoviesChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  size: {
+                    ...prev.size,
+                    global: { ...prev.size?.global, movies: value },
+                  },
+                }));
+              }}
+              onSeriesChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  size: {
+                    ...prev.size,
+                    global: { ...prev.size?.global, series: value },
+                  },
+                }));
+              }}
+              onAnimeChange={(value) => {
+                setUserData((prev: any) => ({
+                  ...prev,
+                  size: {
+                    ...prev.size,
+                    global: { ...prev.size?.global, anime: value },
+                  },
+                }));
+              }}
+            />
+          </SettingsCard>
+          {mode === 'pro' && (
+            <SettingsCard
+              title="Resolution-Specific"
+              description="Set size limits for specific resolutions"
+            >
+              <div className="space-y-8">
+                {RESOLUTIONS.map((resolution) => (
+                  <SizeRangeSlider
+                    key={resolution}
+                    label={resolution}
+                    help={`Set the minimum and maximum size for ${resolution} results`}
+                    moviesValue={
+                      userData.size?.resolution?.[resolution]?.movies || [
+                        MIN_SIZE,
+                        MAX_SIZE,
+                      ]
+                    }
+                    seriesValue={
+                      userData.size?.resolution?.[resolution]?.series || [
+                        MIN_SIZE,
+                        MAX_SIZE,
+                      ]
+                    }
+                    animeValue={
+                      userData.size?.resolution?.[resolution]?.anime || [
+                        MIN_SIZE,
+                        MAX_SIZE,
+                      ]
+                    }
+                    onMoviesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        size: {
+                          ...prev.size,
+                          resolution: {
+                            ...prev.size?.resolution,
+                            [resolution]: {
+                              ...prev.size?.resolution?.[resolution],
+                              movies: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    onSeriesChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        size: {
+                          ...prev.size,
+                          resolution: {
+                            ...prev.size?.resolution,
+                            [resolution]: {
+                              ...prev.size?.resolution?.[resolution],
+                              series: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                    onAnimeChange={(value) => {
+                      setUserData((prev: any) => ({
+                        ...prev,
+                        size: {
+                          ...prev.size,
+                          resolution: {
+                            ...prev.size?.resolution,
+                            [resolution]: {
+                              ...prev.size?.resolution?.[resolution],
+                              anime: value,
+                            },
+                          },
+                        },
+                      }));
+                    }}
+                  />
+                ))}
+              </div>
+            </SettingsCard>
+          )}
+        </div>
+      </>
+    ),
+    limit: (
+      <>
+        <SettingsCard description="Apply limits to specific kinds of results">
+          <div className="space-y-4">
+            <Select
+              label="Limit Mode"
+              help="Independent: each category limit is checked separately. Conjunctive: category limits are combined into a composite key (e.g. 3 per resolution per addon)."
+              value={userData.resultLimits?.mode ?? 'independent'}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  resultLimits: {
+                    ...prev.resultLimits,
+                    mode: value as 'independent' | 'conjunctive',
+                  },
+                }));
+              }}
+              options={[
+                { label: 'Independent', value: 'independent' },
+                { label: 'Conjunctive', value: 'conjunctive' },
+              ]}
+            />
+            <NumberInput
+              help="Global limit for all results"
+              label="Global Limit"
+              value={userData.resultLimits?.global || undefined}
+              min={0}
+              defaultValue={undefined}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  resultLimits: {
+                    ...prev.resultLimits,
+                    global: value || undefined,
+                  },
+                }));
+              }}
+            />
+            {mode === 'pro' && (
+              <NumberInput
+                help="Limit for results by service"
+                label="Service Limit"
+                value={userData.resultLimits?.service || undefined}
+                min={0}
+                defaultValue={undefined}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    resultLimits: {
+                      ...prev.resultLimits,
+                      service: value || undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+            {mode === 'pro' && (
+              <NumberInput
+                help="Limit for results by addon"
+                label="Addon Limit"
+                value={userData.resultLimits?.addon || undefined}
+                min={0}
+                defaultValue={undefined}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    resultLimits: {
+                      ...prev.resultLimits,
+                      addon: value || undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+            <NumberInput
+              help="Limit for results by resolution"
+              label="Resolution Limit"
+              value={userData.resultLimits?.resolution || undefined}
+              min={0}
+              defaultValue={undefined}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  resultLimits: {
+                    ...prev.resultLimits,
+                    resolution: value || undefined,
+                  },
+                }));
+              }}
+            />
+            {mode === 'pro' && (
+              <NumberInput
+                help="Limit for results by quality"
+                label="Quality Limit"
+                value={userData.resultLimits?.quality || undefined}
+                min={0}
+                defaultValue={undefined}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    resultLimits: {
+                      ...prev.resultLimits,
+                      quality: value || undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+            {mode === 'pro' && (
+              <NumberInput
+                help="Limit for results by indexer"
+                label="Indexer Limit"
+                value={userData.resultLimits?.indexer || undefined}
+                min={0}
+                defaultValue={undefined}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    resultLimits: {
+                      ...prev.resultLimits,
+                      indexer: value || undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+            {mode === 'pro' && (
+              <NumberInput
+                help="Limit for results by release group"
+                label="Release Group Limit"
+                value={userData.resultLimits?.releaseGroup || undefined}
+                min={0}
+                defaultValue={undefined}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    resultLimits: {
+                      ...prev.resultLimits,
+                      releaseGroup: value || undefined,
+                    },
+                  }));
+                }}
+              />
+            )}
+          </div>
+        </SettingsCard>
+      </>
+    ),
+    deduplicator: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Enable and customise the removal of duplicate results.
+          </p>
+        </div>
+        <div className="space-y-4">
+          <SettingsCard>
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.deduplicator?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  deduplicator: { ...prev.deduplicator, enabled: value },
+                }));
+              }}
+            />
+          </SettingsCard>
+          {mode === 'pro' && (
+            <>
+              <SettingsCard
+                title="Group Handling"
+                description={
+                  <div>
+                    Sets of duplicates are separated into groups based on the
+                    streams' type. (e.g. cached, uncached, p2p, etc.) These
+                    options control how each set of duplicates are handled.
+                  </div>
+                }
+              >
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <span className="font-medium">Single Result</span>
+                    <p className="text-sm text-[--muted] mt-1">
+                      Keeps only one result from your highest priority service
+                      and highest priority addon. Enabled tiebreakers (torrent
+                      seeders, usenet age) are applied at the position
+                      configured below - either before or after addon order is
+                      considered.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Per Service</span>
+                    <p className="text-sm text-[--muted] mt-1">
+                      This keeps one result per service, and choses each result
+                      using the same criteria above. P2P results have no
+                      service, so they don&apos;t offer it.
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Per Addon</span>
+                    <p className="text-sm text-[--muted] mt-1">
+                      This keeps one result per addon, and choses each result
+                      from your highest priority service, and for P2P/uncached
+                      results it looks at the number of seeders.
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  disabled={!userData.deduplicator?.enabled}
+                  label="Cached Results"
+                  value={userData.deduplicator?.cached ?? 'per_addon'}
+                  options={[
+                    { label: 'Disabled', value: 'disabled' },
+                    { label: 'Single Result', value: 'single_result' },
+                    { label: 'Per Service', value: 'per_service' },
+                    { label: 'Per Addon', value: 'per_addon' },
+                  ]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        cached: value as
+                          | 'single_result'
+                          | 'per_service'
+                          | 'per_addon'
+                          | 'disabled',
+                      },
+                    }));
+                  }}
+                />
+                <Select
+                  disabled={!userData.deduplicator?.enabled}
+                  label="Uncached Results"
+                  value={userData.deduplicator?.uncached ?? 'per_addon'}
+                  options={[
+                    { label: 'Disabled', value: 'disabled' },
+                    { label: 'Single Result', value: 'single_result' },
+                    { label: 'Per Service', value: 'per_service' },
+                    { label: 'Per Addon', value: 'per_addon' },
+                  ]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        uncached: value as
+                          | 'single_result'
+                          | 'per_service'
+                          | 'per_addon'
+                          | 'disabled',
+                      },
+                    }));
+                  }}
+                />
+                <Select
+                  disabled={!userData.deduplicator?.enabled}
+                  label="P2P Results"
+                  value={
+                    userData.deduplicator?.p2p === 'per_service'
+                      ? 'single_result'
+                      : (userData.deduplicator?.p2p ?? 'per_addon')
+                  }
+                  options={[
+                    { label: 'Disabled', value: 'disabled' },
+                    { label: 'Single Result', value: 'single_result' },
+                    { label: 'Per Addon', value: 'per_addon' },
+                  ]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        p2p: value as
+                          | 'single_result'
+                          | 'per_service'
+                          | 'per_addon'
+                          | 'disabled',
+                      },
+                    }));
+                  }}
+                />
+              </SettingsCard>
+              <SettingsCard title="Other">
+                <Combobox
+                  disabled={!userData.deduplicator?.enabled}
+                  label="Detection Methods"
+                  multiple
+                  help="Select the methods used to detect duplicates"
+                  value={
+                    userData.deduplicator?.keys ?? ['filename', 'infoHash']
+                  }
+                  emptyMessage="No detection methods available"
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        keys: value as (typeof DEDUPLICATOR_KEYS)[number][],
+                      },
+                    }));
+                  }}
+                  options={DEDUPLICATOR_KEYS.map((key) => ({
+                    label: key,
+                    value: key,
+                  }))}
+                />
+                {(
+                  userData.deduplicator?.keys ?? ['filename', 'infoHash']
+                ).includes('smartDetect') && (
+                  <>
+                    <Combobox
+                      disabled={!userData.deduplicator?.enabled}
+                      label="Smart Detect Attributes"
+                      multiple
+                      help="Choose which file attributes are used to identify duplicates when Smart Detect is enabled. Numeric attributes (size, bitrate) use a configurable percentage tolerance."
+                      value={
+                        userData.deduplicator?.smartDetectAttributes ??
+                        DEFAULT_SMART_DETECT_ATTRIBUTES
+                      }
+                      emptyMessage="No attributes available"
+                      onValueChange={(value) => {
+                        setUserData((prev) => ({
+                          ...prev,
+                          deduplicator: {
+                            ...prev.deduplicator,
+                            smartDetectAttributes:
+                              value as (typeof SMART_DETECT_ATTRIBUTES)[number][],
+                          },
+                        }));
+                      }}
+                      options={SMART_DETECT_ATTRIBUTES.map((attr) => ({
+                        label: attr,
+                        value: attr,
+                      }))}
+                    />
+                    {(['size', 'bitrate'] as const).some((a) =>
+                      (
+                        userData.deduplicator?.smartDetectAttributes ??
+                        DEFAULT_SMART_DETECT_ATTRIBUTES
+                      ).includes(a)
+                    ) && (
+                      <NumberInput
+                        disabled={!userData.deduplicator?.enabled}
+                        label="Numeric Rounding (%)"
+                        help="Numeric attributes (size, bitrate) are bucketed using geometric rounding at this tolerance. Two values within roughly this percentage of each other are treated as equal. Higher = more lenient; lower = stricter."
+                        min={1}
+                        max={50}
+                        step={1}
+                        value={userData.deduplicator?.smartDetectRounding ?? 10}
+                        onValueChange={(value) => {
+                          if (value !== undefined) {
+                            setUserData((prev) => ({
+                              ...prev,
+                              deduplicator: {
+                                ...prev.deduplicator,
+                                smartDetectRounding: value,
+                              },
+                            }));
+                          }
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+                <Combobox
+                  help="Addons selected here will always have their results kept during deduplication."
+                  label="Addon Exclusions"
+                  value={userData.deduplicator?.excludeAddons ?? []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        excludeAddons: value,
+                      },
+                    }));
+                  }}
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                    textValue: preset.options.name,
+                  }))}
+                  emptyMessage="You haven't installed any addons..."
+                  placeholder="Select addons..."
+                  multiple
+                  disabled={userData.deduplicator?.enabled === false}
+                />
+                <Select
+                  label="Multi-Group Behaviour"
+                  help={`Configure how duplicates across multiple types are handled. e.g. if a given duplicate set has both cached and uncached streams, what should be done.
+                      ${deduplicatorMultiGroupBehaviourHelp[userData.deduplicator?.multiGroupBehaviour || defaultDeduplicatorMultiGroupBehaviour]}
+                      `}
+                  value={
+                    userData.deduplicator?.multiGroupBehaviour ??
+                    defaultDeduplicatorMultiGroupBehaviour
+                  }
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        multiGroupBehaviour: value as
+                          'conservative' | 'aggressive' | 'keep_all',
+                      },
+                    }));
+                  }}
+                  disabled={!userData.deduplicator?.enabled}
+                  options={[
+                    { label: 'Conservative', value: 'conservative' },
+                    { label: 'Aggressive', value: 'aggressive' },
+                    { label: 'Keep All', value: 'keep_all' },
+                  ]}
+                />
+                <Select
+                  label="Library Stream Behaviour"
+                  help="How to treat library streams when duplicates are found. 'Ignore': library streams have no special priority — normal service/addon order decides. 'Prefer': a library stream always beats a non-library stream head-to-head, even if the non-library stream is from a higher-priority addon. Other tiebreakers still apply between two library streams. 'Exclusive': if the group contains any library stream, all non-library streams are dropped before selection runs — only meaningful with Per Service or Per Addon modes where multiple winners are kept."
+                  value={userData.deduplicator?.libraryBehaviour ?? 'ignore'}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        libraryBehaviour: value as
+                          'ignore' | 'prefer' | 'exclusive',
+                      },
+                    }));
+                  }}
+                  disabled={!userData.deduplicator?.enabled}
+                  options={[
+                    { label: 'Ignore', value: 'ignore' },
+                    { label: 'Prefer', value: 'prefer' },
+                    { label: 'Exclusive', value: 'exclusive' },
+                  ]}
+                />
+                {DEDUPLICATOR_TIEBREAKERS.map((tiebreakerType) => {
+                  const label =
+                    tiebreakerType === 'torrent_seeders'
+                      ? 'Torrent Seeders Tiebreaker'
+                      : 'Usenet Age Tiebreaker';
+                  const help =
+                    tiebreakerType === 'torrent_seeders'
+                      ? 'When choosing between duplicate P2P or uncached streams, prefer the one with more seeders. Controls where in the priority order this check runs relative to addon order.'
+                      : 'When choosing between duplicate Usenet streams, prefer the newer post (posts released within the last 24 hours are considered equal). Controls where in the priority order this check runs relative to addon order.';
+                  const defaultPosition = 'before_addon';
+                  const currentTiebreakers = userData.deduplicator
+                    ?.tiebreakers ?? [
+                    {
+                      type: 'torrent_seeders',
+                      position: 'before_addon',
+                    },
+                    { type: 'usenet_age', position: 'before_addon' },
+                  ];
+                  const entry = currentTiebreakers.find(
+                    (t) => t.type === tiebreakerType
+                  );
+                  const value = entry?.position ?? 'disabled';
+                  return (
+                    <Select
+                      key={tiebreakerType}
+                      disabled={!userData.deduplicator?.enabled}
+                      label={label}
+                      help={help}
+                      value={value ?? defaultPosition}
+                      onValueChange={(newValue) => {
+                        setUserData((prev) => {
+                          const existing = prev.deduplicator?.tiebreakers ?? [
+                            {
+                              type: 'torrent_seeders' as const,
+                              position: 'before_addon' as const,
+                            },
+                            {
+                              type: 'usenet_age' as const,
+                              position: 'before_addon' as const,
+                            },
+                          ];
+                          const filtered = existing.filter(
+                            (t) => t.type !== tiebreakerType
+                          );
+                          const updated =
+                            newValue === 'disabled'
+                              ? filtered
+                              : [
+                                  ...filtered,
+                                  {
+                                    type: tiebreakerType,
+                                    position: newValue as
+                                      'before_addon' | 'after_addon',
+                                  },
+                                ];
+                          return {
+                            ...prev,
+                            deduplicator: {
+                              ...prev.deduplicator,
+                              tiebreakers: updated,
+                            },
+                          };
+                        });
+                      }}
+                      options={[
+                        { label: 'Disabled', value: 'disabled' },
+                        {
+                          label: 'Before Addon Order',
+                          value: 'before_addon',
+                        },
+                        {
+                          label: 'After Addon Order',
+                          value: 'after_addon',
+                        },
+                      ]}
+                    />
+                  );
+                })}
+              </SettingsCard>
+              <SettingsCard
+                title="Merge Duplicates"
+                description="Instead of just discarding duplicates, fold their info into the surviving result: extra same-release failover targets and richer metadata from other addons."
+              >
+                <Switch
+                  label="Enable Merging"
+                  side="right"
+                  disabled={!userData.deduplicator?.enabled}
+                  value={userData.deduplicator?.merge?.enabled ?? false}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        merge: {
+                          ...prev.deduplicator?.merge,
+                          enabled: value,
+                        },
+                      },
+                    }));
+                  }}
+                />
+                <Switch
+                  label="Harvest Failover Variants"
+                  side="right"
+                  help="Collect discarded duplicates' playback URLs as same-release failover targets, so failover can try another copy of the SAME release (e.g. a different indexer's NZB) before moving to a different release. Follows your Failover content-type settings."
+                  disabled={
+                    !userData.deduplicator?.enabled ||
+                    !userData.deduplicator?.merge?.enabled
+                  }
+                  value={
+                    userData.deduplicator?.merge?.failoverVariants ?? false
+                  }
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        merge: {
+                          ...prev.deduplicator?.merge,
+                          failoverVariants: value,
+                        },
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  label="Merged Metadata Fields"
+                  multiple
+                  help="Which metadata to merge from discarded duplicates into the kept result. Languages/subtitles are merged accuracy-aware: an addon's accurate audio/subtitle split is never overwritten by inaccurate filename-parsed guesses."
+                  disabled={
+                    !userData.deduplicator?.enabled ||
+                    !userData.deduplicator?.merge?.enabled
+                  }
+                  value={userData.deduplicator?.merge?.fields ?? []}
+                  emptyMessage="No fields available"
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      deduplicator: {
+                        ...prev.deduplicator,
+                        merge: {
+                          ...prev.deduplicator?.merge,
+                          fields:
+                            value as (typeof DEDUPLICATOR_MERGE_FIELDS)[number][],
+                        },
+                      },
+                    }));
+                  }}
+                  options={DEDUPLICATOR_MERGE_FIELDS.map((field) => ({
+                    label: field,
+                    value: field,
+                  }))}
+                />
+              </SettingsCard>
+            </>
+          )}
+        </div>
+      </>
+    ),
+    miscellaneous: (
+      <>
+        <div className="mb-4">
+          <p className="text-sm text-[--muted]">
+            Additional miscellaneous filters.
+          </p>
+        </div>
+        <div className="space-y-4">
+          <SettingsCard
+            id="digitalReleaseFilter"
+            title="Digital Release Filter"
+            description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime). Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."
+          >
+            <Switch
+              label="Enabled"
+              side="right"
+              value={userData.digitalReleaseFilter?.enabled ?? false}
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  digitalReleaseFilter: {
+                    ...(prev.digitalReleaseFilter || {}),
+                    enabled: value,
+                  },
+                }));
+              }}
+            />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Slider
+                  label="Tolerance"
+                  moreHelp="Ignore the digital release filter if the movie was released within this many days of the current date. This accounts for early releases, leaks, and server timezone differences."
+                  disabled={!userData.digitalReleaseFilter?.enabled}
+                  value={[userData.digitalReleaseFilter?.tolerance ?? 0]}
+                  min={0}
+                  max={365}
+                  step={1}
+                  defaultValue={[0]}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      digitalReleaseFilter: {
+                        ...prev.digitalReleaseFilter,
+                        tolerance: value[0],
+                      },
+                    }));
+                  }}
+                />
+              </div>
+              <div className="w-24">
+                <NumberInput
+                  label="Value"
+                  step={1}
+                  value={userData.digitalReleaseFilter?.tolerance ?? 0}
+                  min={0}
+                  max={365}
+                  disabled={!userData.digitalReleaseFilter?.enabled}
+                  onValueChange={(newValue) => {
+                    if (newValue !== undefined) {
+                      setUserData((prev) => ({
+                        ...prev,
+                        digitalReleaseFilter: {
+                          ...prev.digitalReleaseFilter,
+                          tolerance: newValue,
+                        },
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-[--muted]">Tolerance in days</p>
+            <Switch
+              label="Also Check Result Age"
+              side="right"
+              disabled={!userData.digitalReleaseFilter?.enabled}
+              value={userData.digitalReleaseFilter?.checkResultAge ?? false}
+              moreHelp="Blocks results uploaded before the release/air date (beyond tolerance). Only works when a result's age is known."
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  digitalReleaseFilter: {
+                    ...prev.digitalReleaseFilter,
+                    checkResultAge: value,
+                  },
+                }));
+              }}
+            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Combobox
+                  multiple
+                  disabled={!userData.digitalReleaseFilter?.enabled}
+                  label="Request Types"
+                  emptyMessage="There aren't any request types to choose from..."
+                  help="Request types that will use the digital release filter. Leave blank to apply to all request types."
+                  options={TYPES.map((type) => ({
+                    label: type,
+                    value: type,
+                    textValue: type,
+                  }))}
+                  value={userData.digitalReleaseFilter?.requestTypes}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      digitalReleaseFilter: {
+                        ...prev.digitalReleaseFilter,
+                        requestTypes: value,
+                      },
+                    }));
+                  }}
+                />
+                <Combobox
+                  multiple
+                  disabled={!userData.digitalReleaseFilter?.enabled}
+                  label="Addons"
+                  help="Addons that will use the digital release filter. Leave blank to apply to all addons."
+                  emptyMessage="You haven't installed any addons yet..."
+                  options={userData.presets.map((preset) => ({
+                    label: preset.options.name || preset.type,
+                    textValue: preset.options.name || preset.type,
+                    value: preset.instanceId,
+                  }))}
+                  value={userData.digitalReleaseFilter?.addons || []}
+                  onValueChange={(value) => {
+                    setUserData((prev) => ({
+                      ...prev,
+                      digitalReleaseFilter: {
+                        ...prev.digitalReleaseFilter,
+                        addons: value,
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+            <Switch
+              label="Show Info Stream When Filtered"
+              side="right"
+              defaultValue={true}
+              disabled={!userData.digitalReleaseFilter?.enabled}
+              value={userData.digitalReleaseFilter?.showInfoOnFilter ?? true}
+              moreHelp="When the digital release filter triggers, show an info stream."
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  digitalReleaseFilter: {
+                    ...prev.digitalReleaseFilter,
+                    showInfoOnFilter: value,
+                  },
+                }));
+              }}
+            />
+          </SettingsCard>
+          <SettingsCard
+            id="enableSeadex"
+            title="SeaDex Integration"
+            description="Fetch SeaDex data (releases.moe) for anime to identify best quality releases."
+          >
+            <Switch
+              label="Enable"
+              side="right"
+              value={userData.enableSeadex ?? true}
+              defaultValue={true}
+              onValueChange={(value) => {
+                setUserData((prev) => ({ ...prev, enableSeadex: value }));
+              }}
+            />
+          </SettingsCard>
+          {status?.settings.remuxdb.enabled && (
+            <SettingsCard
+              id="remuxDb"
+              title="RemuxDB Integration"
+              description="Fill in missing audio and subtitle tracks, languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB. Usenet results can only be matched when they come from the Newznab addon: NZBHydra and Prowlarr replace the indexer's NZB link with their own, so the NZB's ID can't be read from it."
+            >
+              <Switch
+                label="Enable"
+                side="right"
+                value={userData.remuxDb?.enabled ?? true}
+                defaultValue={true}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    remuxDb: { ...prev.remuxDb, enabled: value },
+                  }));
+                }}
+              />
+            </SettingsCard>
+          )}
+          {mode === 'pro' && userData.excludeSeasonPacks && (
+            <SettingsCard
+              id="excludeSeasonPacks"
+              title="Exclude Season Packs"
+              description="Whether to filter out results that contain entire seasons."
+            >
+              <Switch
+                label="Enable"
+                side="right"
+                value={userData.excludeSeasonPacks}
+                onValueChange={(value) => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    excludeSeasonPacks: value,
+                  }));
+                }}
+              />
+            </SettingsCard>
+          )}
+        </div>
+      </>
+    ),
+  };
+  const modals = (
+    <>
+      {/* Modal for Allowed Regex Patterns */}
+      <Modal
+        open={allowedRegexModal.isOpen}
+        onOpenChange={allowedRegexModal.close}
+        title="Allowed Regex Patterns"
+        description="These are regex patterns that you are allowed to use in your filters."
+      >
+        <div className="space-y-4">
+          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
+            <div className="space-y-2">
+              {status?.settings.regexAccess.patterns?.map(
+                (pattern: string, index: number) => (
+                  <div
+                    key={index}
+                    className="font-mono text-sm bg-gray-800 rounded px-3 py-2 break-all whitespace-pre-wrap"
+                  >
+                    {pattern}
+                  </div>
+                )
+              )}
+              {(!status?.settings.regexAccess.patterns ||
+                status.settings.regexAccess.patterns.length === 0) && (
+                <div className="text-muted-foreground text-sm text-center">
+                  No allowed regex patterns configured
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={whitelistedSelUrlsModal.isOpen}
+        onOpenChange={whitelistedSelUrlsModal.close}
+        title="Whitelisted Sync URLs"
+        description="These are URLs that are whitelisted for syncing stream expressions."
+      >
+        <div className="space-y-4">
+          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
+            <div className="space-y-2">
+              {status?.settings.selSyncAccess.trustedUrls?.map(
+                (url: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
+                  >
+                    <div className="flex-1 break-all whitespace-pre-wrap">
+                      {url}
+                    </div>
+                    <IconButton
+                      size="sm"
+                      intent="primary-subtle"
+                      icon={<FaRegCopy />}
+                      onClick={() =>
+                        copyToClipboard(url, {
+                          onSuccess: () =>
+                            toast.success('URL copied to clipboard'),
+                          onError: () => toast.error('Failed to copy URL'),
+                        })
+                      }
+                    />
+                  </div>
+                )
+              )}
+              {(!status?.settings.selSyncAccess.trustedUrls ||
+                status.settings.selSyncAccess.trustedUrls.length === 0) && (
+                <div className="text-muted-foreground text-sm text-center">
+                  No whitelisted sync URLs configured
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={allowedRegexUrlsModal.isOpen}
+        onOpenChange={allowedRegexUrlsModal.close}
+        title="Allowed Regex Pattern URLs"
+        description="These are URLs that you can import regex patterns from."
+      >
+        <div className="space-y-4">
+          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
+            <div className="space-y-2">
+              {status?.settings.regexAccess.urls?.map(
+                (url: string, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
+                  >
+                    <div className="flex-1 break-all whitespace-pre-wrap">
+                      {url}
+                    </div>
+                    <IconButton
+                      size="sm"
+                      intent="primary-subtle"
+                      icon={<FaRegCopy />}
+                      onClick={() =>
+                        copyToClipboard(url, {
+                          onSuccess: () =>
+                            toast.success('URL copied to clipboard'),
+                          onError: () => toast.error('Failed to copy URL'),
+                        })
+                      }
+                    />
+                  </div>
+                )
+              )}
+              {(!status?.settings.regexAccess.urls ||
+                status.settings.regexAccess.urls.length === 0) && (
+                <div className="text-muted-foreground text-sm text-center">
+                  No allowed regex pattern URLs configured
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+  return { sections, modals };
+}
+
+function Content() {
+  const { tab, setTab } = useSubTab('filters');
+  const { mode } = useMode();
+  const { status } = useStatus();
+  const { isInherited, hasParent } = useParentInheritance();
+  const { sections, modals } = useFilterSections();
   return (
     <>
       <Tabs
         value={tab}
-        onValueChange={handleTabChange}
+        onValueChange={setTab}
         variant="pill"
         className={tabsRootClass}
         triggerClass={tabsTriggerClass}
@@ -444,3927 +4189,21 @@ function Content() {
             </div>
           </SettingsNavCard>
         </TabsList>
-
         <div className="space-y-0 relative">
-          <TabsContent
-            id="filter-tab-cache"
-            value="cache"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Cache" />
-              <div className="space-y-4">
-                <SettingsCard
-                  id="excludeUncached"
-                  title="Uncached"
-                  description="Control the exclusion of uncached results"
-                >
-                  <div className="space-y-4">
-                    <Switch
-                      label="Exclude Uncached"
-                      help="Completely remove uncached results"
-                      moreHelp="Enabling this option overrides the below controls and cannot be used in conjunction with them"
-                      side="right"
-                      value={userData.excludeUncached ?? false}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          excludeUncached: value,
-                        }));
-                      }}
-                    />
-                    {mode === 'pro' && (
-                      <>
-                        <Combobox
-                          help="Addons selected here will have their uncached results excluded"
-                          label="Exclude Uncached From Addons"
-                          value={userData.excludeUncachedFromAddons ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeUncachedFromAddons: value,
-                            }));
-                          }}
-                          options={userData.presets.map((preset) => ({
-                            label: preset.options.name || preset.type,
-                            value: preset.instanceId,
-                            textValue: preset.options.name,
-                          }))}
-                          emptyMessage="You haven't installed any addons..."
-                          placeholder="Select addons..."
-                          multiple
-                          disabled={userData.excludeUncached === true}
-                        />
-
-                        <Combobox
-                          help="Services selected here will have their uncached results excluded"
-                          label="Exclude Uncached From Services"
-                          value={userData.excludeUncachedFromServices ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeUncachedFromServices: value,
-                            }));
-                          }}
-                          options={Object.values(
-                            status?.settings.services ?? {}
-                          ).map((service) => ({
-                            label: service.name,
-                            value: service.id,
-                            textValue: service.name,
-                          }))}
-                          placeholder="Select services..."
-                          emptyMessage="This is odd... there aren't any services to choose from..."
-                          multiple
-                          disabled={userData.excludeUncached === true}
-                        />
-                        <Combobox
-                          help="Stream types selected here will have their uncached results excluded"
-                          label="Exclude Uncached From Stream Types"
-                          value={userData.excludeUncachedFromStreamTypes ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeUncachedFromStreamTypes:
-                                value as StreamType[],
-                            }));
-                          }}
-                          options={STREAM_TYPES.filter((streamType) =>
-                            ['debrid', 'usenet'].includes(streamType)
-                          ).map((streamType) => ({
-                            label: streamType,
-                            value: streamType,
-                            textValue: streamType,
-                          }))}
-                          emptyMessage="This is odd... there aren't any stream types to choose from..."
-                          placeholder="Select stream types..."
-                          multiple
-                          disabled={userData.excludeUncached === true}
-                        />
-
-                        <Select
-                          label="Apply mode"
-                          disabled={userData.excludeUncached === true}
-                          help="How these three options (from addons, services and stream types) are applied. AND means a result must match all, OR means a result only needs to match one"
-                          value={userData.excludeUncachedMode ?? 'or'}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeUncachedMode: value as 'or' | 'and',
-                            }));
-                          }}
-                          options={[
-                            { label: 'OR', value: 'or' },
-                            { label: 'AND', value: 'and' },
-                          ]}
-                        />
-                      </>
-                    )}
-                  </div>
-                </SettingsCard>
-                <SettingsCard
-                  id="excludeCached"
-                  title="Cached"
-                  description="Control the exclusion of cached results"
-                >
-                  <div className="space-y-4">
-                    <Switch
-                      label="Exclude Cached"
-                      help="Completely remove cached results"
-                      moreHelp="Enabling this option overrides the below controls and cannot be used in conjunction with them"
-                      side="right"
-                      value={userData.excludeCached ?? false}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          excludeCached: value,
-                        }));
-                      }}
-                    />
-                    {mode === 'pro' && (
-                      <>
-                        <Combobox
-                          help="Addons selected here will have their cached results excluded"
-                          label="Exclude Cached From Addons"
-                          value={userData.excludeCachedFromAddons ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeCachedFromAddons: value,
-                            }));
-                          }}
-                          options={userData.presets.map((preset) => ({
-                            label: preset.options.name || preset.type,
-                            value: preset.instanceId,
-                            textValue: preset.options.name || preset.type,
-                          }))}
-                          emptyMessage="You haven't installed any addons..."
-                          placeholder="Select addons..."
-                          multiple
-                          disabled={userData.excludeCached === true}
-                        />
-                        <Combobox
-                          help="Services selected here will have their cached results excluded"
-                          label="Exclude Cached From Services"
-                          value={userData.excludeCachedFromServices ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeCachedFromServices: value,
-                            }));
-                          }}
-                          options={Object.values(
-                            status?.settings.services ?? {}
-                          ).map((service) => ({
-                            label: service.name,
-                            value: service.id,
-                            textValue: service.name,
-                          }))}
-                          placeholder="Select services..."
-                          emptyMessage="This is odd... there aren't any services to choose from..."
-                          multiple
-                          disabled={userData.excludeCached === true}
-                        />
-                        <Combobox
-                          help="Stream types selected here will have their cached results excluded"
-                          label="Exclude Cached From Stream Types"
-                          value={userData.excludeCachedFromStreamTypes ?? []}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeCachedFromStreamTypes:
-                                value as StreamType[],
-                            }));
-                          }}
-                          options={STREAM_TYPES.filter((streamType) =>
-                            ['debrid', 'usenet'].includes(streamType)
-                          ).map((streamType) => ({
-                            label: streamType,
-                            value: streamType,
-                            textValue: streamType,
-                          }))}
-                          emptyMessage="This is odd... there aren't any stream types to choose from..."
-                          placeholder="Select stream types..."
-                          multiple
-                          disabled={userData.excludeCached === true}
-                        />
-                        <Select
-                          label="Apply mode"
-                          disabled={userData.excludeCached === true}
-                          help="How these three options (from addons, services and stream types) are applied. AND means a result must match all, OR means a result only needs to match one"
-                          value={userData.excludeCachedMode ?? 'or'}
-                          onValueChange={(value) => {
-                            setUserData((prev) => ({
-                              ...prev,
-                              excludeCachedMode: value as 'or' | 'and',
-                            }));
-                          }}
-                          options={[
-                            { label: 'OR', value: 'or' },
-                            { label: 'AND', value: 'and' },
-                          ]}
-                        />
-                      </>
-                    )}
-                  </div>
-                </SettingsCard>
-              </div>
-            </>
-          </TabsContent>
-
-          <TabsContent
-            id="filter-tab-resolution"
-            value="resolution"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Resolution" />
-              <FilterSettings<Resolution>
-                filterName="Resolutions"
-                preferredOptions={
-                  userData.preferredResolutions || defaultPreferredResolutions
-                }
-                requiredOptions={userData.requiredResolutions || []}
-                excludedOptions={userData.excludedResolutions || []}
-                includedOptions={userData.includedResolutions || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredResolutions: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredResolutions: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedResolutions: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedResolutions: included,
-                  }))
-                }
-                options={RESOLUTIONS.map((resolution) => ({
-                  name: resolution,
-                  value: resolution,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-quality"
-            value="quality"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Quality" />
-              <FilterSettings<Quality>
-                filterName="Qualities"
-                preferredOptions={
-                  userData.preferredQualities || defaultPreferredQualities
-                }
-                requiredOptions={userData.requiredQualities || []}
-                excludedOptions={userData.excludedQualities || []}
-                includedOptions={userData.includedQualities || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredQualities: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredQualities: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedQualities: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedQualities: included,
-                  }))
-                }
-                options={QUALITIES.map((quality) => ({
-                  name: quality,
-                  value: quality,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-encode"
-            value="encode"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Encode" />
-              <FilterSettings<Encode>
-                filterName="Encodes"
-                preferredOptions={
-                  userData.preferredEncodes || defaultPreferredEncodes
-                }
-                requiredOptions={userData.requiredEncodes || []}
-                excludedOptions={userData.excludedEncodes || []}
-                includedOptions={userData.includedEncodes || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredEncodes: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredEncodes: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedEncodes: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedEncodes: included,
-                  }))
-                }
-                options={ENCODES.map((encode) => ({
-                  name: encode,
-                  value: encode,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-stream-type"
-            value="stream-type"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Stream Type" />
-              <FilterSettings<StreamType>
-                filterName="Stream Types"
-                preferredOptions={
-                  userData.preferredStreamTypes || defaultPreferredStreamTypes
-                }
-                requiredOptions={userData.requiredStreamTypes || []}
-                excludedOptions={userData.excludedStreamTypes || []}
-                includedOptions={userData.includedStreamTypes || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredStreamTypes: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredStreamTypes: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedStreamTypes: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedStreamTypes: included,
-                  }))
-                }
-                options={STREAM_TYPES.map((streamType) => ({
-                  name: streamType,
-                  value: streamType,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-visual-tag"
-            value="visual-tag"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Visual Tag" />
-              <FilterSettings<VisualTag>
-                filterName="Visual Tags"
-                preferredOptions={
-                  userData.preferredVisualTags || defaultPreferredVisualTags
-                }
-                requiredOptions={userData.requiredVisualTags || []}
-                excludedOptions={userData.excludedVisualTags || []}
-                includedOptions={userData.includedVisualTags || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredVisualTags: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredVisualTags: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedVisualTags: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedVisualTags: included,
-                  }))
-                }
-                options={VISUAL_TAGS.map((visualTag) => ({
-                  name: visualTag,
-                  value: visualTag,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-audio-tag"
-            value="audio-tag"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Audio Tag" />
-              <FilterSettings<AudioTag>
-                filterName="Audio Tags"
-                preferredOptions={userData.preferredAudioTags || []}
-                requiredOptions={userData.requiredAudioTags || []}
-                excludedOptions={userData.excludedAudioTags || []}
-                includedOptions={userData.includedAudioTags || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredAudioTags: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredAudioTags: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedAudioTags: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedAudioTags: included,
-                  }))
-                }
-                options={AUDIO_TAGS.map((audioTag) => ({
-                  name: audioTag,
-                  value: audioTag,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-audio-channel"
-            value="audio-channel"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Audio Channel" />
-              <FilterSettings<AudioChannel>
-                filterName="Audio Channels"
-                preferredOptions={userData.preferredAudioChannels || []}
-                requiredOptions={userData.requiredAudioChannels || []}
-                excludedOptions={userData.excludedAudioChannels || []}
-                includedOptions={userData.includedAudioChannels || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredAudioChannels: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredAudioChannels: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedAudioChannels: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedAudioChannels: included,
-                  }))
-                }
-                options={AUDIO_CHANNELS.map((audioChannel) => ({
-                  name: audioChannel,
-                  value: audioChannel,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-language"
-            value="language"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Language" />
-              <FilterSettings<Language>
-                filterName="Languages"
-                preferredOptions={userData.preferredLanguages || []}
-                requiredOptions={userData.requiredLanguages || []}
-                excludedOptions={userData.excludedLanguages || []}
-                includedOptions={userData.includedLanguages || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredLanguages: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredLanguages: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedLanguages: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedLanguages: included,
-                  }))
-                }
-                options={LANGUAGES.map((language) => ({
-                  name: language
-                    .split(' ')
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' '),
-                  value: language,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-subtitle"
-            value="subtitle"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Subtitle" />
-
-              <Alert
-                intent="warning"
-                title="Difference between Language and Subtitle filters"
-                description={
-                  <div className="text-sm">
-                    Languages and subtitles behave differently depending on what
-                    information is available for a stream.
-                    <br />
-                    <br />
-                    <span className="inline-flex items-center gap-1">
-                      When accurate media info is available
-                      <Popover
-                        className="text-sm "
-                        trigger={
-                          <AiOutlineExclamationCircle className="transition-opacity opacity-45 hover:opacity-90 inline-block cursor-pointer" />
-                        }
-                      >
-                        <div className="max-w-sm">
-                          <div className="font-medium">
-                            Accurate media info is available for:
-                          </div>
-                          <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
-                            <li>
-                              Certain results from built-in or service-wrapped
-                              addons
-                            </li>
-                            <li>
-                              Certain results from StremThru Torz/Store and
-                              Meteor
-                            </li>
-                            <li>
-                              Torznab/Newznab results from indexers that provide
-                              separate audio/subtitle metadata
-                            </li>
-                            <li>
-                              <strong>nekoBT</strong> results (all results have
-                              accurate audio/subtitle info)
-                            </li>
-                            <li>
-                              <strong>Torrentio</strong> anime results
-                              (subtitles field may be populated)
-                            </li>
-                          </ul>
-                        </div>
-                      </Popover>
-                    </span>
-                    {', '}
-                    <code className="bg-base-200 px-1 py-0.5 rounded">
-                      languages
-                    </code>{' '}
-                    contains audio track languages and{' '}
-                    <code className="bg-base-200 px-1 py-0.5 rounded">
-                      subtitles
-                    </code>{' '}
-                    contains embedded subtitle languages.
-                    <br />
-                    <br />
-                    In all other cases,{' '}
-                    <code className="bg-base-200 px-1 py-0.5 rounded">
-                      subtitles
-                    </code>{' '}
-                    is empty and{' '}
-                    <code className="bg-base-200 px-1 py-0.5 rounded">
-                      languages
-                    </code>{' '}
-                    contains every language found in the filename &mdash;
-                    including subtitle-only languages (e.g. a filename
-                    containing &quot;Eng.Sub&quot; will add English to
-                    languages, not subtitles). This is a known limitation of
-                    filename-only parsing.
-                  </div>
-                }
-              />
-
-              <FilterSettings<Language>
-                filterName="Subtitles"
-                preferredOptions={userData.preferredSubtitles || []}
-                requiredOptions={userData.requiredSubtitles || []}
-                excludedOptions={userData.excludedSubtitles || []}
-                includedOptions={userData.includedSubtitles || []}
-                onPreferredChange={(preferred) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    preferredSubtitles: preferred,
-                  }))
-                }
-                onRequiredChange={(required) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    requiredSubtitles: required,
-                  }))
-                }
-                onExcludedChange={(excluded) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    excludedSubtitles: excluded,
-                  }))
-                }
-                onIncludedChange={(included) =>
-                  setUserData((prev) => ({
-                    ...prev,
-                    includedSubtitles: included,
-                  }))
-                }
-                options={LANGUAGES.map((language) => ({
-                  name: language
-                    .split(' ')
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' '),
-                  value: language,
-                }))}
-              />
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-seeders"
-            value="seeders"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Seeders" />
-              <SettingsCard
-                title="Seeder Filters"
-                description="Configure required, excluded, and included seeder ranges"
-              >
-                <div className="space-y-4">
-                  <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1 min-w-0">
-                        <Slider
-                          min={MIN_SEEDERS}
-                          max={MAX_SEEDERS}
-                          defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
-                          value={
-                            userData.requiredSeederRange || [
-                              MIN_SEEDERS,
-                              MAX_SEEDERS,
-                            ]
-                          }
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            newValue?.[0] !== undefined &&
-                            newValue?.[1] !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredSeederRange: [newValue[0], newValue[1]],
-                            }))
-                          }
-                          minStepsBetweenThumbs={1}
-                          label="Required Seeder Range"
-                          help="Streams with seeders outside this range will be excluded"
-                        />
-                        <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                          <span>
-                            {userData.requiredSeederRange?.[0] || MIN_SEEDERS}
-                          </span>
-                          <span>
-                            {userData.requiredSeederRange?.[1] || MAX_SEEDERS}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 md:w-[240px] shrink-0">
-                        <NumberInput
-                          label="Min"
-                          value={
-                            userData.requiredSeederRange?.[0] || MIN_SEEDERS
-                          }
-                          min={MIN_SEEDERS}
-                          max={userData.requiredSeederRange?.[1] || MAX_SEEDERS}
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredSeederRange: [
-                                newValue,
-                                prev.requiredSeederRange?.[1] || MAX_SEEDERS,
-                              ],
-                            }))
-                          }
-                        />
-                        <NumberInput
-                          label="Max"
-                          value={
-                            userData.requiredSeederRange?.[1] || MAX_SEEDERS
-                          }
-                          min={userData.requiredSeederRange?.[0] || MIN_SEEDERS}
-                          max={MAX_SEEDERS}
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredSeederRange: [
-                                prev.requiredSeederRange?.[0] || MIN_SEEDERS,
-                                newValue,
-                              ],
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {mode === 'pro' && (
-                      <>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-1 min-w-0">
-                            <Slider
-                              min={MIN_SEEDERS}
-                              max={MAX_SEEDERS}
-                              defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
-                              value={
-                                userData.excludeSeederRange || [
-                                  MIN_SEEDERS,
-                                  MAX_SEEDERS,
-                                ]
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                newValue?.[0] !== undefined &&
-                                newValue?.[1] !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeSeederRange: [
-                                    newValue[0],
-                                    newValue[1],
-                                  ],
-                                }))
-                              }
-                              minStepsBetweenThumbs={1}
-                              label="Excluded Seeder Range"
-                              help="Streams with seeders in this range will be excluded"
-                            />
-                            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                              <span>
-                                {userData.excludeSeederRange?.[0] ||
-                                  MIN_SEEDERS}
-                              </span>
-                              <span>
-                                {userData.excludeSeederRange?.[1] ||
-                                  MAX_SEEDERS}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 md:w-[240px] shrink-0">
-                            <NumberInput
-                              label="Min"
-                              value={
-                                userData.excludeSeederRange?.[0] || MIN_SEEDERS
-                              }
-                              min={MIN_SEEDERS}
-                              max={
-                                userData.excludeSeederRange?.[1] || MAX_SEEDERS
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeSeederRange: [
-                                    newValue,
-                                    prev.excludeSeederRange?.[1] || MAX_SEEDERS,
-                                  ],
-                                }))
-                              }
-                            />
-                            <NumberInput
-                              label="Max"
-                              value={
-                                userData.excludeSeederRange?.[1] || MAX_SEEDERS
-                              }
-                              min={
-                                userData.excludeSeederRange?.[0] || MIN_SEEDERS
-                              }
-                              max={MAX_SEEDERS}
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeSeederRange: [
-                                    prev.excludeSeederRange?.[0] || MIN_SEEDERS,
-                                    newValue,
-                                  ],
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {mode === 'pro' && (
-                      <>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-1 min-w-0">
-                            <Slider
-                              min={MIN_SEEDERS}
-                              max={MAX_SEEDERS}
-                              defaultValue={[MIN_SEEDERS, MAX_SEEDERS]}
-                              value={
-                                userData.includeSeederRange || [
-                                  MIN_SEEDERS,
-                                  MAX_SEEDERS,
-                                ]
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                newValue?.[0] !== undefined &&
-                                newValue?.[1] !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeSeederRange: [
-                                    newValue[0],
-                                    newValue[1],
-                                  ],
-                                }))
-                              }
-                              minStepsBetweenThumbs={1}
-                              label="Included Seeder Range"
-                              help="Streams with seeders in this range will be included, ignoring ANY other exclude/required filters, not just for this filter"
-                            />
-                            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                              <span>
-                                {userData.includeSeederRange?.[0] ||
-                                  MIN_SEEDERS}
-                              </span>
-                              <span>
-                                {userData.includeSeederRange?.[1] ||
-                                  MAX_SEEDERS}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 md:w-[240px] shrink-0">
-                            <NumberInput
-                              label="Min"
-                              value={
-                                userData.includeSeederRange?.[0] || MIN_SEEDERS
-                              }
-                              min={MIN_SEEDERS}
-                              max={
-                                userData.includeSeederRange?.[1] || MAX_SEEDERS
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeSeederRange: [
-                                    newValue,
-                                    prev.includeSeederRange?.[1] || MAX_SEEDERS,
-                                  ],
-                                }))
-                              }
-                            />
-                            <NumberInput
-                              label="Max"
-                              value={
-                                userData.includeSeederRange?.[1] || MAX_SEEDERS
-                              }
-                              min={
-                                userData.includeSeederRange?.[0] || MIN_SEEDERS
-                              }
-                              max={MAX_SEEDERS}
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeSeederRange: [
-                                    prev.includeSeederRange?.[0] || MIN_SEEDERS,
-                                    newValue,
-                                  ],
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <Combobox
-                      label="Stream Types"
-                      emptyMessage="There aren't any stream types to choose from..."
-                      options={['p2p', 'cached', 'uncached'].map((type) => ({
-                        label: type,
-                        value: type,
-                      }))}
-                      value={userData.seederRangeTypes || []}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          seederRangeTypes: value as (
-                            | 'p2p'
-                            | 'cached'
-                            | 'uncached'
-                          )[],
-                        }));
-                      }}
-                      help="Stream types that will use the seeder ranges defined above. Leave blank to apply to all stream types."
-                      multiple
-                    />
-                  </div>
-                </div>
-              </SettingsCard>
-            </>
-          </TabsContent>
-          <TabsContent id="filter-tab-age" value="age" className="space-y-4">
-            <>
-              <HeadingWithPageControls heading="Age" />
-              <SettingsCard
-                title="Age Filters"
-                description="Configure required, excluded, and included age ranges (in hours since upload)"
-              >
-                <div className="space-y-4">
-                  <div className="space-y-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1 min-w-0">
-                        <Slider
-                          min={MIN_AGE_HOURS}
-                          max={MAX_AGE_HOURS}
-                          step={24}
-                          defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
-                          value={
-                            userData.requiredAgeRange || [
-                              MIN_AGE_HOURS,
-                              MAX_AGE_HOURS,
-                            ]
-                          }
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            newValue?.[0] !== undefined &&
-                            newValue?.[1] !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredAgeRange: [newValue[0], newValue[1]],
-                            }))
-                          }
-                          minStepsBetweenThumbs={1}
-                          label="Required Age Range"
-                          help="Streams with age outside this range will be excluded"
-                        />
-                        <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                          <span>
-                            {formatAgeDisplay(
-                              userData.requiredAgeRange?.[0] || MIN_AGE_HOURS
-                            )}
-                          </span>
-                          <span>
-                            {formatAgeDisplay(
-                              userData.requiredAgeRange?.[1] || MAX_AGE_HOURS
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 md:w-[240px] shrink-0">
-                        <NumberInput
-                          label="Min"
-                          step={24}
-                          value={
-                            userData.requiredAgeRange?.[0] || MIN_AGE_HOURS
-                          }
-                          min={MIN_AGE_HOURS}
-                          max={userData.requiredAgeRange?.[1] || MAX_AGE_HOURS}
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredAgeRange: [
-                                newValue,
-                                prev.requiredAgeRange?.[1] || MAX_AGE_HOURS,
-                              ],
-                            }))
-                          }
-                        />
-                        <NumberInput
-                          label="Max"
-                          step={24}
-                          value={
-                            userData.requiredAgeRange?.[1] || MAX_AGE_HOURS
-                          }
-                          min={userData.requiredAgeRange?.[0] || MIN_AGE_HOURS}
-                          max={MAX_AGE_HOURS}
-                          onValueChange={(newValue) =>
-                            newValue !== undefined &&
-                            setUserData((prev) => ({
-                              ...prev,
-                              requiredAgeRange: [
-                                prev.requiredAgeRange?.[0] || MIN_AGE_HOURS,
-                                newValue,
-                              ],
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {mode === 'pro' && (
-                      <>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-1 min-w-0">
-                            <Slider
-                              min={MIN_AGE_HOURS}
-                              max={MAX_AGE_HOURS}
-                              step={24}
-                              defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
-                              value={
-                                userData.excludeAgeRange || [
-                                  MIN_AGE_HOURS,
-                                  MAX_AGE_HOURS,
-                                ]
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                newValue?.[0] !== undefined &&
-                                newValue?.[1] !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeAgeRange: [newValue[0], newValue[1]],
-                                }))
-                              }
-                              minStepsBetweenThumbs={1}
-                              label="Excluded Age Range"
-                              help="Streams with age in this range will be excluded"
-                            />
-                            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                              <span>
-                                {formatAgeDisplay(
-                                  userData.excludeAgeRange?.[0] || MIN_AGE_HOURS
-                                )}
-                              </span>
-                              <span>
-                                {formatAgeDisplay(
-                                  userData.excludeAgeRange?.[1] || MAX_AGE_HOURS
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 md:w-[240px] shrink-0">
-                            <NumberInput
-                              label="Min"
-                              step={24}
-                              value={
-                                userData.excludeAgeRange?.[0] || MIN_AGE_HOURS
-                              }
-                              min={MIN_AGE_HOURS}
-                              max={
-                                userData.excludeAgeRange?.[1] || MAX_AGE_HOURS
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeAgeRange: [
-                                    newValue,
-                                    prev.excludeAgeRange?.[1] || MAX_AGE_HOURS,
-                                  ],
-                                }))
-                              }
-                            />
-                            <NumberInput
-                              label="Max"
-                              step={24}
-                              value={
-                                userData.excludeAgeRange?.[1] || MAX_AGE_HOURS
-                              }
-                              min={
-                                userData.excludeAgeRange?.[0] || MIN_AGE_HOURS
-                              }
-                              max={MAX_AGE_HOURS}
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  excludeAgeRange: [
-                                    prev.excludeAgeRange?.[0] || MIN_AGE_HOURS,
-                                    newValue,
-                                  ],
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-1 min-w-0">
-                            <Slider
-                              min={MIN_AGE_HOURS}
-                              max={MAX_AGE_HOURS}
-                              step={24}
-                              defaultValue={[MIN_AGE_HOURS, MAX_AGE_HOURS]}
-                              value={
-                                userData.includeAgeRange || [
-                                  MIN_AGE_HOURS,
-                                  MAX_AGE_HOURS,
-                                ]
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                newValue?.[0] !== undefined &&
-                                newValue?.[1] !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeAgeRange: [newValue[0], newValue[1]],
-                                }))
-                              }
-                              minStepsBetweenThumbs={1}
-                              label="Included Age Range"
-                              help="Streams with age in this range will be included even if they would be excluded otherwise"
-                            />
-                            <div className="flex justify-between mt-1 text-xs text-[--muted]">
-                              <span>
-                                {formatAgeDisplay(
-                                  userData.includeAgeRange?.[0] || MIN_AGE_HOURS
-                                )}
-                              </span>
-                              <span>
-                                {formatAgeDisplay(
-                                  userData.includeAgeRange?.[1] || MAX_AGE_HOURS
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 md:w-[240px] shrink-0">
-                            <NumberInput
-                              label="Min"
-                              step={24}
-                              value={
-                                userData.includeAgeRange?.[0] || MIN_AGE_HOURS
-                              }
-                              min={MIN_AGE_HOURS}
-                              max={
-                                userData.includeAgeRange?.[1] || MAX_AGE_HOURS
-                              }
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeAgeRange: [
-                                    newValue,
-                                    prev.includeAgeRange?.[1] || MAX_AGE_HOURS,
-                                  ],
-                                }))
-                              }
-                            />
-                            <NumberInput
-                              label="Max"
-                              step={24}
-                              value={
-                                userData.includeAgeRange?.[1] || MAX_AGE_HOURS
-                              }
-                              min={
-                                userData.includeAgeRange?.[0] || MIN_AGE_HOURS
-                              }
-                              max={MAX_AGE_HOURS}
-                              onValueChange={(newValue) =>
-                                newValue !== undefined &&
-                                setUserData((prev) => ({
-                                  ...prev,
-                                  includeAgeRange: [
-                                    prev.includeAgeRange?.[0] || MIN_AGE_HOURS,
-                                    newValue,
-                                  ],
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <Combobox
-                      label="Stream Types"
-                      emptyMessage="There aren't any stream types to choose from..."
-                      options={['debrid', 'usenet', 'p2p'].map((type) => ({
-                        label: type,
-                        value: type,
-                      }))}
-                      defaultValue={['usenet']}
-                      value={userData.ageRangeTypes || ['usenet']}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          ageRangeTypes: value as (
-                            | 'debrid'
-                            | 'usenet'
-                            | 'p2p'
-                          )[],
-                        }));
-                      }}
-                      help="Stream types that will use the age ranges defined above. Leave blank to apply to all stream types."
-                      multiple
-                    />
-                  </div>
-                </div>
-              </SettingsCard>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-matching"
-            value="matching"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Matching" />
-              <div className="space-y-4">
-                <SettingsCard
-                  id="titleMatching"
-                  title="Title Matching"
-                  description="Any streams which don't specifically match the requested title will be filtered out. You can optionally choose to only apply it to specific request types and addons. This requires a TMDB Read Access Token to be set in the Services menu."
-                >
-                  <Switch
-                    label="Enabled"
-                    side="right"
-                    value={userData.titleMatching?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        titleMatching: {
-                          ...(prev.titleMatching || {}),
-                          enabled: value,
-                        },
-                      }));
-                    }}
-                  />
-
-                  <Select
-                    disabled={!userData.titleMatching?.enabled}
-                    label="Matching Mode"
-                    options={['exact', 'contains'].map((mode) => ({
-                      label: mode,
-                      value: mode,
-                    }))}
-                    defaultValue="exact"
-                    value={userData.titleMatching?.mode}
-                    help={
-                      userData.titleMatching?.mode === 'contains'
-                        ? "Streams whose detected title doesn't contain the requested title will be excluded"
-                        : "Streams whose detected title doesn't match the requested title exactly will be excluded"
-                    }
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        titleMatching: {
-                          ...prev.titleMatching,
-                          mode: value as 'exact' | 'contains' | undefined,
-                        },
-                      }));
-                    }}
-                  />
-
-                  <Select
-                    disabled={!userData.titleMatching?.enabled}
-                    label="Ambiguous Results"
-                    options={[
-                      { label: 'keep', value: 'keep' },
-                      { label: 'discard', value: 'discard' },
-                    ]}
-                    defaultValue="keep"
-                    value={userData.titleMatching?.ambiguousResults}
-                    help="What to do with results that can't be told apart from a same-name series (reboots and country variants, e.g. The Office UK vs US). 'discard' keeps only results whose year, country tag or episode title confirms the requested series."
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        titleMatching: {
-                          ...prev.titleMatching,
-                          ambiguousResults: value as
-                            | 'keep'
-                            | 'discard'
-                            | undefined,
-                        },
-                      }));
-                    }}
-                  />
-
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Slider
-                        label="Similarity Threshold"
-                        help="The minimum similarity threshold required for a title to be considered a match. Lower values allow more leniency whereas higher values are more strict."
-                        moreHelp="The similarity is calculated using the Levenshtein distance algorithm."
-                        disabled={!userData.titleMatching?.enabled}
-                        value={[
-                          userData.titleMatching?.similarityThreshold ?? 0.85,
-                        ]}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        defaultValue={[0.85]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            titleMatching: {
-                              ...prev.titleMatching,
-                              similarityThreshold: value[0],
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                    <div className="w-24">
-                      <NumberInput
-                        label="Value"
-                        step={0.01}
-                        value={
-                          userData.titleMatching?.similarityThreshold ?? 0.85
-                        }
-                        min={0}
-                        max={1}
-                        disabled={!userData.titleMatching?.enabled}
-                        onValueChange={(newValue) => {
-                          if (newValue !== undefined) {
-                            setUserData((prev) => ({
-                              ...prev,
-                              titleMatching: {
-                                ...prev.titleMatching,
-                                similarityThreshold: newValue,
-                              },
-                            }));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Combobox
-                        multiple
-                        disabled={!userData.titleMatching?.enabled}
-                        label="Request Types"
-                        emptyMessage="There aren't any request types to choose from..."
-                        help="Request types that will use title matching. Leave blank to apply to all request types."
-                        options={TYPES.map((type) => ({
-                          label: type,
-                          value: type,
-                          textValue: type,
-                        }))}
-                        value={userData.titleMatching?.requestTypes}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            titleMatching: {
-                              ...prev.titleMatching,
-                              requestTypes: value,
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        multiple
-                        disabled={!userData.titleMatching?.enabled}
-                        label="Addons"
-                        help="Addons that will use strict title matching. Leave blank to apply to all addons."
-                        emptyMessage="You haven't installed any addons yet..."
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          textValue: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                        }))}
-                        value={userData.titleMatching?.addons || []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            titleMatching: {
-                              ...prev.titleMatching,
-                              addons: value,
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SettingsCard>
-
-                <SettingsCard
-                  id="yearMatching"
-                  title="Year Matching"
-                  description="Any streams which don't specifically match the requested year will be filtered out. You can optionally choose to only apply it to specific request types and addons"
-                >
-                  <Switch
-                    label="Enable"
-                    side="right"
-                    value={userData.yearMatching?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        yearMatching: { ...prev.yearMatching, enabled: value },
-                      }));
-                    }}
-                  />
-                  <Switch
-                    label="Strict"
-                    side="right"
-                    help="Filter out streams for movies that don't have a year specified."
-                    moreHelp="Disabling this will allow streams without a year to be included in the results."
-                    disabled={!userData.yearMatching?.enabled}
-                    value={userData.yearMatching?.strict ?? true}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        yearMatching: { ...prev.yearMatching, strict: value },
-                      }));
-                    }}
-                  />
-                  <Combobox
-                    multiple
-                    disabled={
-                      !userData.yearMatching?.enabled ||
-                      userData.yearMatching?.strict === false
-                    }
-                    label="Strict Request Types"
-                    emptyMessage="There aren't any request types to choose from..."
-                    help="Request types where streams without a year are filtered out. Defaults to movie only, as series results usually don't include a year."
-                    options={TYPES.map((type) => ({
-                      label: type,
-                      value: type,
-                      textValue: type,
-                    }))}
-                    value={userData.yearMatching?.strictTypes ?? ['movie']}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        yearMatching: {
-                          ...prev.yearMatching,
-                          strictTypes: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <Switch
-                    label="Use Initial Air Date"
-                    side="right"
-                    help="For series/anime, compare against only the initial air year instead of the full year range."
-                    moreHelp="Helps filter out same-title-different-show results (e.g. 'One Piece 2023' live-action vs 'One Piece 1999' anime). May also filter torrents that include a season air year in their name."
-                    disabled={!userData.yearMatching?.enabled}
-                    value={userData.yearMatching?.useInitialAirDate ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        yearMatching: {
-                          ...prev.yearMatching,
-                          useInitialAirDate: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <NumberInput
-                    label="Year Tolerance"
-                    disabled={!userData.yearMatching?.enabled}
-                    value={userData.yearMatching?.tolerance ?? 1}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        yearMatching: {
-                          ...prev.yearMatching,
-                          tolerance: value,
-                        },
-                      }));
-                    }}
-                    min={0}
-                    max={100}
-                    help="The number of years to tolerate when matching years. For example, if the year tolerance is 5, then a stream with a year of 2020 will match a request for 2025."
-                  />
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Combobox
-                        multiple
-                        disabled={!userData.yearMatching?.enabled}
-                        label="Request Types"
-                        emptyMessage="There aren't any request types to choose from..."
-                        help="Request types that will use year matching. Leave blank to apply to all request types."
-                        options={TYPES.map((type) => ({
-                          label: type,
-                          value: type,
-                          textValue: type,
-                        }))}
-                        value={userData.yearMatching?.requestTypes}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            yearMatching: {
-                              ...prev.yearMatching,
-                              requestTypes: value,
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        multiple
-                        disabled={!userData.yearMatching?.enabled}
-                        label="Addons"
-                        help="Addons that will use year matching. Leave blank to apply to all addons."
-                        emptyMessage="You haven't installed any addons yet..."
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          textValue: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                        }))}
-                        value={userData.yearMatching?.addons || []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            yearMatching: {
-                              ...prev.yearMatching,
-                              addons: value,
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SettingsCard>
-
-                <SettingsCard
-                  id="seasonEpisodeMatching"
-                  title="Season/Episode Matching"
-                  description="Any streams which don't specifically match the requested season/episode will be filtered out. You can optionally choose to only apply it to specific request types and addons"
-                >
-                  <Switch
-                    label="Enabled"
-                    side="right"
-                    value={userData.seasonEpisodeMatching?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        seasonEpisodeMatching: {
-                          ...(prev.seasonEpisodeMatching || {}),
-                          enabled: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <Switch
-                    label="Strict"
-                    side="right"
-                    help="Filter out streams for series that don't have any season or episode specified."
-                    moreHelp="Disabling this will allow streams without a season or episode to be included in the results."
-                    disabled={!userData.seasonEpisodeMatching?.enabled}
-                    value={userData.seasonEpisodeMatching?.strict ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        seasonEpisodeMatching: {
-                          ...prev.seasonEpisodeMatching,
-                          strict: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Combobox
-                        multiple
-                        disabled={!userData.seasonEpisodeMatching?.enabled}
-                        label="Request Types"
-                        help="Request types that will use season/episode matching. Leave blank to apply to all request types."
-                        emptyMessage="There aren't any request types to choose from..."
-                        options={TYPES.map((type) => ({
-                          label: type,
-                          value: type,
-                          textValue: type,
-                        }))}
-                        value={userData.seasonEpisodeMatching?.requestTypes}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            seasonEpisodeMatching: {
-                              ...prev.seasonEpisodeMatching,
-                              requestTypes: value,
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        multiple
-                        disabled={!userData.seasonEpisodeMatching?.enabled}
-                        label="Addons"
-                        help="Addons that will use season/episode matching. Leave blank to apply to all addons."
-                        emptyMessage="You haven't installed any addons yet..."
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          textValue: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                        }))}
-                        value={userData.seasonEpisodeMatching?.addons || []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => {
-                            return {
-                              ...prev,
-                              seasonEpisodeMatching: {
-                                ...prev.seasonEpisodeMatching,
-                                addons: value,
-                              },
-                            };
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SettingsCard>
-
-                <SettingsCard
-                  id="episodeTitleMatching"
-                  title="Episode Title Matching"
-                  description="Any streams whose release name carries an episode title that doesn't match the requested episode's title will be filtered out. Streams without an episode title are unaffected. Helps tell apart same-name series (e.g. The Office UK vs US) whose episode titles differ. You can optionally choose to only apply it to specific request types and addons."
-                >
-                  <Switch
-                    label="Enabled"
-                    side="right"
-                    value={userData.episodeTitleMatching?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        episodeTitleMatching: {
-                          ...(prev.episodeTitleMatching || {}),
-                          enabled: value,
-                        },
-                      }));
-                    }}
-                  />
-
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Slider
-                        label="Similarity Threshold"
-                        help="The minimum similarity threshold required for an episode title to be considered a match. Lower values allow more leniency whereas higher values are more strict."
-                        disabled={!userData.episodeTitleMatching?.enabled}
-                        value={[
-                          userData.episodeTitleMatching?.similarityThreshold ??
-                            0.8,
-                        ]}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        defaultValue={[0.8]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            episodeTitleMatching: {
-                              ...prev.episodeTitleMatching,
-                              similarityThreshold: value[0],
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                    <div className="w-24">
-                      <NumberInput
-                        label="Value"
-                        step={0.01}
-                        value={
-                          userData.episodeTitleMatching?.similarityThreshold ??
-                          0.8
-                        }
-                        min={0}
-                        max={1}
-                        disabled={!userData.episodeTitleMatching?.enabled}
-                        onValueChange={(newValue) => {
-                          if (newValue !== undefined) {
-                            setUserData((prev) => ({
-                              ...prev,
-                              episodeTitleMatching: {
-                                ...prev.episodeTitleMatching,
-                                similarityThreshold: newValue,
-                              },
-                            }));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Combobox
-                        multiple
-                        disabled={!userData.episodeTitleMatching?.enabled}
-                        label="Request Types"
-                        help="Request types that will use episode title matching. Leave blank to apply to all request types."
-                        emptyMessage="There aren't any request types to choose from..."
-                        options={TYPES.map((type) => ({
-                          label: type,
-                          value: type,
-                          textValue: type,
-                        }))}
-                        value={userData.episodeTitleMatching?.requestTypes}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            episodeTitleMatching: {
-                              ...prev.episodeTitleMatching,
-                              requestTypes: value,
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        multiple
-                        disabled={!userData.episodeTitleMatching?.enabled}
-                        label="Addons"
-                        help="Addons that will use episode title matching. Leave blank to apply to all addons."
-                        emptyMessage="You haven't installed any addons yet..."
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          textValue: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                        }))}
-                        value={userData.episodeTitleMatching?.addons || []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            episodeTitleMatching: {
-                              ...prev.episodeTitleMatching,
-                              addons: value,
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SettingsCard>
-
-                <SettingsCard
-                  id="languageInference"
-                  title="Language Inference"
-                  description="When a stream declares no language of its own, the language of the metadata title it matched is added to it. A source only contributes while its own filter is running, so Title needs Title Matching enabled and Episode Title needs Episode Title Matching enabled. Inference also happens after the language filters, so an inferred language reaches the formatter, sorting and stream expressions, but cannot be filtered on in the same request."
-                >
-                  <Switch
-                    label="Enabled"
-                    side="right"
-                    value={userData.languageInference?.enabled ?? true}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        languageInference: {
-                          ...(prev.languageInference || {}),
-                          enabled: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <Combobox
-                    multiple
-                    disabled={userData.languageInference?.enabled === false}
-                    label="Sources"
-                    emptyMessage="There aren't any sources to choose from..."
-                    help="Which matched title may contribute a language, on top of that title's own filter being enabled. Leave blank to allow both. Episode titles are the stronger signal, as a series title is often identical across languages."
-                    options={[
-                      {
-                        label: 'Title',
-                        value: 'title',
-                        textValue: 'Title',
-                      },
-                      {
-                        label: 'Episode Title',
-                        value: 'episodeTitle',
-                        textValue: 'Episode Title',
-                      },
-                    ]}
-                    value={userData.languageInference?.sources || []}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        languageInference: {
-                          ...prev.languageInference,
-                          sources: value as ('title' | 'episodeTitle')[],
-                        },
-                      }));
-                    }}
-                  />
-                </SettingsCard>
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-stream-expression"
-            value="stream-expression"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Stream Expression" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Create advanced filters to exclude, prefer or require specific
-                  streams from your results using stream expressions. Write
-                  expressions that evaluate which streams to select based on
-                  properties like addon type, quality, size, or any other stream
-                  attributes. Multiple expressions can be combined using logical
-                  operators for precise filtering control. You can also use
-                  ternary operators to apply conditional logic to the streams.
-                </p>
-              </div>
-              <div className="mb-4 space-y-4">
-                {status?.settings.selSyncAccess.level === 'trusted' &&
-                  (userData.trusted ? (
-                    <Alert
-                      intent="success"
-                      title="Trusted User"
-                      description={
-                        <div className="space-y-2">
-                          <p>
-                            You are a trusted user. You can sync expressions
-                            from any URL.
-                          </p>
-                          {status?.settings.selSyncAccess.trustedUrls &&
-                            status.settings.selSyncAccess.trustedUrls.length >
-                              0 && (
-                              <div className="flex flex-row flex-wrap gap-2">
-                                <Button
-                                  intent="primary-outline"
-                                  size="sm"
-                                  onClick={whitelistedSelUrlsModal.open}
-                                >
-                                  View Whitelisted Sync URLs
-                                </Button>
-                              </div>
-                            )}
-                        </div>
-                      }
-                    />
-                  ) : (
-                    <Alert
-                      intent="info"
-                      title="Trusted Users Only"
-                      description={
-                        <div className="space-y-2">
-                          <p>
-                            Syncing stream expressions from arbitrary URLs is
-                            only available to trusted users. You can only sync
-                            from whitelisted URLs. If you are the owner of the
-                            instance, you can add your UUID to the{' '}
-                            <code className="font-mono">TRUSTED_UUIDS</code>{' '}
-                            environment variable.
-                          </p>
-                          {status?.settings.selSyncAccess.trustedUrls &&
-                            status.settings.selSyncAccess.trustedUrls.length >
-                              0 && (
-                              <div className="flex flex-row flex-wrap gap-2">
-                                <Button
-                                  intent="primary-outline"
-                                  size="sm"
-                                  onClick={whitelistedSelUrlsModal.open}
-                                >
-                                  View Whitelisted Sync URLs
-                                </Button>
-                              </div>
-                            )}
-                        </div>
-                      }
-                    />
-                  ))}
-              </div>
-              <div className="space-y-4">
-                <SettingsCard title="Help">
-                  <div className="space-y-3">
-                    <p className="text-sm text-[--muted]">
-                      This filter uses AIOStreams'{' '}
-                      <a
-                        href="https://aiostreams.org/reference/stream-expressions"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[--brand] hover:underline"
-                      >
-                        stream expression language
-                      </a>
-                      , the same syntax used in the Groups system. The
-                      difference here is that you only have the{' '}
-                      <code>streams</code> constant containing all available
-                      streams
-                    </p>
-                    <div className="text-sm text-[--muted]">
-                      <p className="font-medium mb-2">How it works:</p>
-                      <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>
-                          Your expression should return an array of streams
-                        </li>
-                        <li>
-                          Use functions like <code>addon()</code>,{' '}
-                          <code>type()</code>, <code>quality()</code> to filter
-                          streams
-                        </li>
-                        <li>
-                          Combine multiple attributes together using nested
-                          functions
-                        </li>
-                        <li>
-                          Apply conditional logic using ternary operators{' '}
-                          <code>expression ? arrayIfTrue : arrayIfFalse</code>{' '}
-                          where the two arrays can be replaced with true or
-                          false for all streams and no streams respectively.
-                        </li>
-                      </ul>
-                    </div>
-                    <p className="text-sm text-[--muted]">
-                      <strong>Example:</strong>{' '}
-                      <code>addon(type(streams, 'debrid'), 'TorBox')</code>{' '}
-                      excludes all TorBox debrid streams.
-                    </p>
-                    <p className="text-sm text-[--muted]">
-                      For detailed syntax and available functions, see the{' '}
-                      <a
-                        href="https://aiostreams.org/reference/stream-expressions#function-reference"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[--brand] hover:underline"
-                      >
-                        Full function reference
-                      </a>
-                    </p>
-                  </div>
-                </SettingsCard>
-                <ToggleableTextInputs
-                  title="Required Stream Expressions"
-                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be required to be in the results."
-                  placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-                  values={userData.requiredStreamExpressions || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredStreamExpressions: values,
-                    }));
-                  }}
-                  onExpressionChange={(expression, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredStreamExpressions: [
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.requiredStreamExpressions || [])[index],
-                          expression,
-                        },
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onEnabledChange={(enabled, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredStreamExpressions: [
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.requiredStreamExpressions || [])[index],
-                          enabled,
-                        },
-                        ...(prev.requiredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedRequiredStreamExpressionUrls')}
-                />
-                <ToggleableTextInputs
-                  title="Excluded Stream Expressions"
-                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be excluded from the results."
-                  placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-                  values={userData.excludedStreamExpressions || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedStreamExpressions: values,
-                    }));
-                  }}
-                  onExpressionChange={(expression, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedStreamExpressions: [
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.excludedStreamExpressions || [])[index],
-                          expression,
-                        },
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onEnabledChange={(enabled, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedStreamExpressions: [
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.excludedStreamExpressions || [])[index],
-                          enabled,
-                        },
-                        ...(prev.excludedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedExcludedStreamExpressionUrls')}
-                />
-                <ToggleableTextInputs
-                  title="Included Stream Expressions"
-                  description="The expressions to apply to the streams. Streams selected by any of these expressions will be included in the results."
-                  placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-                  values={userData.includedStreamExpressions || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedStreamExpressions: values,
-                    }));
-                  }}
-                  onExpressionChange={(expression, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedStreamExpressions: [
-                        ...(prev.includedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.includedStreamExpressions || [])[index],
-                          expression,
-                        },
-                        ...(prev.includedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onEnabledChange={(enabled, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedStreamExpressions: [
-                        ...(prev.includedStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.includedStreamExpressions || [])[index],
-                          enabled,
-                        },
-                        ...(prev.includedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedIncludedStreamExpressionUrls')}
-                />
-                <ToggleableTextInputs
-                  title="Preferred Stream Expressions"
-                  description="The expressions to apply to the streams. Streams selected by these expressions will be preferred over other streams and ranked by the order they are in this list."
-                  placeholder="addon(type(streams, 'debrid'), 'TorBox')"
-                  values={userData.preferredStreamExpressions || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredStreamExpressions: values,
-                    }));
-                  }}
-                  onExpressionChange={(expression, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredStreamExpressions: [
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.preferredStreamExpressions || [])[index],
-                          expression,
-                        },
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onEnabledChange={(enabled, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredStreamExpressions: [
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          0,
-                          index
-                        ),
-                        {
-                          ...(prev.preferredStreamExpressions || [])[index],
-                          enabled,
-                        },
-                        ...(prev.preferredStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedPreferredStreamExpressionUrls')}
-                />
-                <RankedExpressionInputs
-                  title="Ranked Stream Expressions"
-                  description="Add expressions with scores. All matching expressions accumulate their scores on each stream. Use negative scores to penalize matches. Sort by 'Stream Expression Score' to order by the total."
-                  values={userData.rankedStreamExpressions || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedStreamExpressions: values,
-                    }));
-                  }}
-                  onExpressionChange={(expression, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedStreamExpressions: [
-                        ...(prev.rankedStreamExpressions || []).slice(0, index),
-                        {
-                          ...(prev.rankedStreamExpressions || [])[index],
-                          expression,
-                        },
-                        ...(prev.rankedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onScoreChange={(score, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedStreamExpressions: [
-                        ...(prev.rankedStreamExpressions || []).slice(0, index),
-                        {
-                          ...(prev.rankedStreamExpressions || [])[index],
-                          score,
-                        },
-                        ...(prev.rankedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  onEnabledChange={(enabled, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedStreamExpressions: [
-                        ...(prev.rankedStreamExpressions || []).slice(0, index),
-                        {
-                          ...(prev.rankedStreamExpressions || [])[index],
-                          enabled,
-                        },
-                        ...(prev.rankedStreamExpressions || []).slice(
-                          index + 1
-                        ),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedRankedStreamExpressionUrls')}
-                />
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-keyword"
-            value="keyword"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Keyword" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Filter your streams by keywords - words or phrases that must
-                  appear in the filename, folder name, indexer, or release group
-                </p>
-              </div>
-              <div className="space-y-4">
-                {mode === 'pro' && (
-                  <TextInputs
-                    label="Required Keywords"
-                    help="Streams that do not contain any of these keywords will be excluded"
-                    itemName="Keyword"
-                    values={userData.requiredKeywords || []}
-                    onValuesChange={(values) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        requiredKeywords: values,
-                      }));
-                    }}
-                  />
-                )}
-                <TextInputs
-                  label="Excluded Keywords"
-                  help="Streams that contain any of these keywords will be excluded"
-                  itemName="Keyword"
-                  values={userData.excludedKeywords || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedKeywords: values,
-                    }));
-                  }}
-                />
-                {mode === 'pro' && (
-                  <TextInputs
-                    label="Included Keywords"
-                    help="Streams that contain any of these keywords will be included, ignoring ANY other exclude/required filters, not just for this filter"
-                    itemName="Keyword"
-                    values={userData.includedKeywords || []}
-                    onValuesChange={(values) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        includedKeywords: values,
-                      }));
-                    }}
-                  />
-                )}
-                <TextInputs
-                  label="Preferred Keywords"
-                  help="Streams that contain any of these keywords will be preferred"
-                  itemName="Keyword"
-                  values={userData.preferredKeywords || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredKeywords: values,
-                    }));
-                  }}
-                />
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-release-group"
-            value="release-group"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Release Group" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Filter your streams by release group - the group that released
-                  the content (e.g., SPARKS, NTb, FLUX, etc.)
-                </p>
-              </div>
-              <div className="space-y-4">
-                <TextInputs
-                  label="Required Release Groups"
-                  help="Only streams from these release groups will be kept. Streams from other release groups will be excluded."
-                  itemName="Release Group"
-                  values={userData.requiredReleaseGroups || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      requiredReleaseGroups: values,
-                    }));
-                  }}
-                />
-                <TextInputs
-                  label="Excluded Release Groups"
-                  help="Streams from these release groups will be excluded"
-                  itemName="Release Group"
-                  values={userData.excludedReleaseGroups || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedReleaseGroups: values,
-                    }));
-                  }}
-                />
-                <TextInputs
-                  label="Included Release Groups"
-                  help="Streams from these release groups will be included, ignoring ANY other exclude/required filters, not just for this filter"
-                  itemName="Release Group"
-                  values={userData.includedReleaseGroups || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      includedReleaseGroups: values,
-                    }));
-                  }}
-                />
-                <TextInputs
-                  label="Preferred Release Groups"
-                  help="Streams from these release groups will be sorted higher. The order matters - release groups at the top will be preferred over those below."
-                  itemName="Release Group"
-                  values={userData.preferredReleaseGroups || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredReleaseGroups: values,
-                    }));
-                  }}
-                />
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-regex"
-            value="regex"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Regex" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Filter your streams by regular expressions that must match one
-                  of the following: filename, folder name, indexer, or release
-                  group
-                </p>
-              </div>
-              <div className="mb-4 space-y-4">
-                {status?.settings.regexAccess.level === 'trusted' &&
-                  (userData.trusted ? (
-                    <Alert
-                      intent="success"
-                      title="Trusted User"
-                      description={
-                        <p>
-                          You are a trusted user. You have full access to regex
-                          filters.
-                        </p>
-                      }
-                    />
-                  ) : (
-                    <Alert
-                      intent="info"
-                      title="Trusted Users Only"
-                      description={
-                        <>
-                          <p>
-                            Regex filters are only available to trusted users
-                            due to the potential for abuse. If you are the owner
-                            of the instance, you can add your UUID to the{' '}
-                            <code className="font-mono">TRUSTED_UUIDS</code>{' '}
-                            environment variable.
-                          </p>
-                        </>
-                      }
-                    />
-                  ))}
-                {(status?.settings.regexAccess.patterns?.length ||
-                  status?.settings.regexAccess.urls?.length) && (
-                  <Alert
-                    intent="info"
-                    title="Allowed Regex Patterns"
-                    description={
-                      <div className="space-y-2">
-                        <div className="max-w-full overflow-hidden">
-                          <p className="break-words">
-                            This instance has allowed a specific set of regexes
-                            to be used by all users.
-                          </p>
-                          {status?.settings.regexAccess.description && (
-                            <div className="mt-2 break-words overflow-hidden">
-                              <MarkdownLite>
-                                {status?.settings.regexAccess.description || ''}
-                              </MarkdownLite>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-row flex-wrap gap-2">
-                          {status?.settings.regexAccess.urls &&
-                            status.settings.regexAccess.urls.length > 0 && (
-                              <Button
-                                intent="primary-outline"
-                                size="sm"
-                                onClick={allowedRegexUrlsModal.open}
-                              >
-                                View Allowed Import URLs
-                              </Button>
-                            )}
-                          <Button
-                            intent="primary-outline"
-                            size="sm"
-                            onClick={allowedRegexModal.open}
-                          >
-                            View Allowed Patterns
-                          </Button>
-                        </div>
-                      </div>
-                    }
-                  />
-                )}
-              </div>
-              <div className="space-y-4">
-                {mode === 'pro' && (
-                  <TextInputs
-                    fieldName="requiredRegexPatterns"
-                    label="Required Regex"
-                    help="Streams that do not match any of these regular expressions will be excluded"
-                    itemName="Regex"
-                    values={userData.requiredRegexPatterns || []}
-                    onValuesChange={(values) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        requiredRegexPatterns: values,
-                      }));
-                    }}
-                    {...getSyncedProps('syncedRequiredRegexUrls')}
-                  />
-                )}
-                <TextInputs
-                  label="Excluded Regex"
-                  fieldName="excludedRegexPatterns"
-                  help="Streams that match any of these regular expressions will be excluded"
-                  itemName="Regex"
-                  values={userData.excludedRegexPatterns || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      excludedRegexPatterns: values,
-                    }));
-                  }}
-                  {...getSyncedProps('syncedExcludedRegexUrls')}
-                />
-                {mode === 'pro' && (
-                  <TextInputs
-                    label="Included Regex"
-                    fieldName="includedRegexPatterns"
-                    help="Streams that match any of these regular expressions will be included, ignoring other exclude/required filters"
-                    itemName="Regex"
-                    values={userData.includedRegexPatterns || []}
-                    onValuesChange={(values) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        includedRegexPatterns: values,
-                      }));
-                    }}
-                    {...getSyncedProps('syncedIncludedRegexUrls')}
-                  />
-                )}
-                <TwoTextInputs
-                  title="Preferred Regex Patterns"
-                  description="Define regex patterns with names for easy reference"
-                  {...getSyncedProps('syncedPreferredRegexUrls')}
-                  keyName="Name"
-                  keyId="name"
-                  keyPlaceholder="Enter pattern name"
-                  valueId="pattern"
-                  valueName="Pattern"
-                  valuePlaceholder="Enter regex pattern"
-                  values={(userData.preferredRegexPatterns || []).map(
-                    (pattern) => ({
-                      name: pattern.name,
-                      value: pattern.pattern,
-                    })
-                  )}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredRegexPatterns: values.map((v) => ({
-                        name: v.name,
-                        pattern: v.value,
-                      })),
-                    }));
-                  }}
-                  onValueChange={(value, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredRegexPatterns: [
-                        ...(prev.preferredRegexPatterns || []).slice(0, index),
-                        {
-                          ...(prev.preferredRegexPatterns || [])[index],
-                          pattern: value,
-                        },
-                        ...(prev.preferredRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
-                  onKeyChange={(key, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      preferredRegexPatterns: [
-                        ...(prev.preferredRegexPatterns || []).slice(0, index),
-                        {
-                          ...(prev.preferredRegexPatterns || [])[index],
-                          name: key,
-                        },
-                        ...(prev.preferredRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
-                />
-                <RankedRegexInputs
-                  title="Ranked Regex Patterns"
-                  description="Add regex patterns with scores. Matches on filename only. Accumulates scores."
-                  values={userData.rankedRegexPatterns || []}
-                  onValuesChange={(values) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedRegexPatterns: values,
-                    }));
-                  }}
-                  onPatternChange={(pattern, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedRegexPatterns: [
-                        ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        { ...(prev.rankedRegexPatterns || [])[index], pattern },
-                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
-                  onNameChange={(name, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedRegexPatterns: [
-                        ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        { ...(prev.rankedRegexPatterns || [])[index], name },
-                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
-                  onScoreChange={(score, index) => {
-                    setUserData((prev) => ({
-                      ...prev,
-                      rankedRegexPatterns: [
-                        ...(prev.rankedRegexPatterns || []).slice(0, index),
-                        { ...(prev.rankedRegexPatterns || [])[index], score },
-                        ...(prev.rankedRegexPatterns || []).slice(index + 1),
-                      ],
-                    }));
-                  }}
-                  {...getSyncedProps('syncedRankedRegexUrls')}
-                />
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-bitrate"
-            value="bitrate"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Bitrate" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Set minimum and maximum bitrate limits for movies, series, and
-                  anime series. You can set a global limit, and also choose to
-                  set specific limits for each resolution. For a given stream,
-                  only one set of bitrate filters would be used. A resolution
-                  specific limit takes priority. Anime series limits take
-                  precedence over regular series limits.
-                </p>
-              </div>
-              <Alert
-                intent="warning"
-                className="mb-4"
-                title="Bitrate Accuracy"
-                description="Bitrate values are estimates calculated from file size and duration. These represent average bitrates and may not reflect peak bitrates or exact encoding quality."
-              />
-              <div className="space-y-4">
-                <div className="rounded-[--radius-md] border bg-[--background] p-4">
-                  <Switch
-                    label="Use Runtime from Metadata Providers"
-                    side="right"
-                    help="When enabled, uses runtime data from metadata providers (like TMDB) for bitrate calculations as fallback. Note: This makes estimates less accurate as actual file durations often differ from metadata, and most files lack duration info, making sorting by bitrate similar to sorting by size."
-                    value={userData.bitrate?.useMetadataRuntime ?? true}
-                    onValueChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        bitrate: { ...prev.bitrate, useMetadataRuntime: value },
-                      }));
-                    }}
-                  />
-                </div>
-                <SettingsCard
-                  title="Global"
-                  description="Apply bitrate filters for movies, series, and anime series"
-                >
-                  <BitrateRangeSlider
-                    label="Global Bitrate Limits"
-                    help="Set the minimum and maximum bitrate limits for all results"
-                    moviesValue={
-                      (
-                        userData.bitrate?.global?.movies || [
-                          MIN_BITRATE,
-                          MAX_BITRATE,
-                        ]
-                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
-                    }
-                    seriesValue={
-                      (
-                        userData.bitrate?.global?.series || [
-                          MIN_BITRATE,
-                          MAX_BITRATE,
-                        ]
-                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
-                    }
-                    animeValue={
-                      (
-                        userData.bitrate?.global?.anime || [
-                          MIN_BITRATE,
-                          MAX_BITRATE,
-                        ]
-                      ).map((v) => Math.min(v, MAX_BITRATE)) as [number, number]
-                    }
-                    onMoviesChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        bitrate: {
-                          ...prev.bitrate,
-                          global: { ...prev.bitrate?.global, movies: value },
-                        },
-                      }));
-                    }}
-                    onSeriesChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        bitrate: {
-                          ...prev.bitrate,
-                          global: { ...prev.bitrate?.global, series: value },
-                        },
-                      }));
-                    }}
-                    onAnimeChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        bitrate: {
-                          ...prev.bitrate,
-                          global: { ...prev.bitrate?.global, anime: value },
-                        },
-                      }));
-                    }}
-                  />
-                </SettingsCard>
-                {mode === 'pro' && (
-                  <SettingsCard
-                    title="Resolution-Specific"
-                    description="Set bitrate limits for specific resolutions"
-                  >
-                    <div className="space-y-8">
-                      {RESOLUTIONS.map((resolution) => (
-                        <BitrateRangeSlider
-                          key={resolution}
-                          label={resolution}
-                          help={`Set the minimum and maximum bitrate for ${resolution} results`}
-                          moviesValue={
-                            (
-                              userData.bitrate?.resolution?.[resolution]
-                                ?.movies || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
-                              number,
-                              number,
-                            ]
-                          }
-                          seriesValue={
-                            (
-                              userData.bitrate?.resolution?.[resolution]
-                                ?.series || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
-                              number,
-                              number,
-                            ]
-                          }
-                          animeValue={
-                            (
-                              userData.bitrate?.resolution?.[resolution]
-                                ?.anime || [MIN_BITRATE, MAX_BITRATE]
-                            ).map((v) => Math.min(v, MAX_BITRATE)) as [
-                              number,
-                              number,
-                            ]
-                          }
-                          onMoviesChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              bitrate: {
-                                ...prev.bitrate,
-                                resolution: {
-                                  ...prev.bitrate?.resolution,
-                                  [resolution]: {
-                                    ...prev.bitrate?.resolution?.[resolution],
-                                    movies: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                          onSeriesChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              bitrate: {
-                                ...prev.bitrate,
-                                resolution: {
-                                  ...prev.bitrate?.resolution,
-                                  [resolution]: {
-                                    ...prev.bitrate?.resolution?.[resolution],
-                                    series: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                          onAnimeChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              bitrate: {
-                                ...prev.bitrate,
-                                resolution: {
-                                  ...prev.bitrate?.resolution,
-                                  [resolution]: {
-                                    ...prev.bitrate?.resolution?.[resolution],
-                                    anime: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </SettingsCard>
-                )}
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent id="filter-tab-size" value="size" className="space-y-4">
-            <>
-              <HeadingWithPageControls heading="Size" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Set minimum and maximum size limits for movies, series, and
-                  anime series. You can set a global limit, and also choose to
-                  set specific limits for each resolution. For a given stream,
-                  only one set of size filters would be used. A resolution
-                  specific limit takes priority. Anime series limits take
-                  precedence over regular series limits.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <SettingsCard
-                  title="Global"
-                  description="Apply size filters for movies, series, and anime series"
-                >
-                  <SizeRangeSlider
-                    label="Global Size Limits"
-                    help="Set the minimum and maximum size limits for all results"
-                    moviesValue={
-                      userData.size?.global?.movies || [MIN_SIZE, MAX_SIZE]
-                    }
-                    seriesValue={
-                      userData.size?.global?.series || [MIN_SIZE, MAX_SIZE]
-                    }
-                    animeValue={
-                      userData.size?.global?.anime || [MIN_SIZE, MAX_SIZE]
-                    }
-                    onMoviesChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        size: {
-                          ...prev.size,
-                          global: { ...prev.size?.global, movies: value },
-                        },
-                      }));
-                    }}
-                    onSeriesChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        size: {
-                          ...prev.size,
-                          global: { ...prev.size?.global, series: value },
-                        },
-                      }));
-                    }}
-                    onAnimeChange={(value) => {
-                      setUserData((prev: any) => ({
-                        ...prev,
-                        size: {
-                          ...prev.size,
-                          global: { ...prev.size?.global, anime: value },
-                        },
-                      }));
-                    }}
-                  />
-                </SettingsCard>
-                {mode === 'pro' && (
-                  <SettingsCard
-                    title="Resolution-Specific"
-                    description="Set size limits for specific resolutions"
-                  >
-                    <div className="space-y-8">
-                      {RESOLUTIONS.map((resolution) => (
-                        <SizeRangeSlider
-                          key={resolution}
-                          label={resolution}
-                          help={`Set the minimum and maximum size for ${resolution} results`}
-                          moviesValue={
-                            userData.size?.resolution?.[resolution]?.movies || [
-                              MIN_SIZE,
-                              MAX_SIZE,
-                            ]
-                          }
-                          seriesValue={
-                            userData.size?.resolution?.[resolution]?.series || [
-                              MIN_SIZE,
-                              MAX_SIZE,
-                            ]
-                          }
-                          animeValue={
-                            userData.size?.resolution?.[resolution]?.anime || [
-                              MIN_SIZE,
-                              MAX_SIZE,
-                            ]
-                          }
-                          onMoviesChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              size: {
-                                ...prev.size,
-                                resolution: {
-                                  ...prev.size?.resolution,
-                                  [resolution]: {
-                                    ...prev.size?.resolution?.[resolution],
-                                    movies: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                          onSeriesChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              size: {
-                                ...prev.size,
-                                resolution: {
-                                  ...prev.size?.resolution,
-                                  [resolution]: {
-                                    ...prev.size?.resolution?.[resolution],
-                                    series: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                          onAnimeChange={(value) => {
-                            setUserData((prev: any) => ({
-                              ...prev,
-                              size: {
-                                ...prev.size,
-                                resolution: {
-                                  ...prev.size?.resolution,
-                                  [resolution]: {
-                                    ...prev.size?.resolution?.[resolution],
-                                    anime: value,
-                                  },
-                                },
-                              },
-                            }));
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </SettingsCard>
-                )}
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-limit"
-            value="limit"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Result Limits" />
-              <SettingsCard description="Apply limits to specific kinds of results">
-                <div className="space-y-4">
-                  <Select
-                    label="Limit Mode"
-                    help="Independent: each category limit is checked separately. Conjunctive: category limits are combined into a composite key (e.g. 3 per resolution per addon)."
-                    value={userData.resultLimits?.mode ?? 'independent'}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        resultLimits: {
-                          ...prev.resultLimits,
-                          mode: value as 'independent' | 'conjunctive',
-                        },
-                      }));
-                    }}
-                    options={[
-                      { label: 'Independent', value: 'independent' },
-                      { label: 'Conjunctive', value: 'conjunctive' },
-                    ]}
-                  />
-                  <NumberInput
-                    help="Global limit for all results"
-                    label="Global Limit"
-                    value={userData.resultLimits?.global || undefined}
-                    min={0}
-                    defaultValue={undefined}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        resultLimits: {
-                          ...prev.resultLimits,
-                          global: value || undefined,
-                        },
-                      }));
-                    }}
-                  />
-                  {mode === 'pro' && (
-                    <NumberInput
-                      help="Limit for results by service"
-                      label="Service Limit"
-                      value={userData.resultLimits?.service || undefined}
-                      min={0}
-                      defaultValue={undefined}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          resultLimits: {
-                            ...prev.resultLimits,
-                            service: value || undefined,
-                          },
-                        }));
-                      }}
-                    />
-                  )}
-                  {mode === 'pro' && (
-                    <NumberInput
-                      help="Limit for results by addon"
-                      label="Addon Limit"
-                      value={userData.resultLimits?.addon || undefined}
-                      min={0}
-                      defaultValue={undefined}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          resultLimits: {
-                            ...prev.resultLimits,
-                            addon: value || undefined,
-                          },
-                        }));
-                      }}
-                    />
-                  )}
-                  <NumberInput
-                    help="Limit for results by resolution"
-                    label="Resolution Limit"
-                    value={userData.resultLimits?.resolution || undefined}
-                    min={0}
-                    defaultValue={undefined}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        resultLimits: {
-                          ...prev.resultLimits,
-                          resolution: value || undefined,
-                        },
-                      }));
-                    }}
-                  />
-                  {mode === 'pro' && (
-                    <NumberInput
-                      help="Limit for results by quality"
-                      label="Quality Limit"
-                      value={userData.resultLimits?.quality || undefined}
-                      min={0}
-                      defaultValue={undefined}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          resultLimits: {
-                            ...prev.resultLimits,
-                            quality: value || undefined,
-                          },
-                        }));
-                      }}
-                    />
-                  )}
-                  {mode === 'pro' && (
-                    <NumberInput
-                      help="Limit for results by indexer"
-                      label="Indexer Limit"
-                      value={userData.resultLimits?.indexer || undefined}
-                      min={0}
-                      defaultValue={undefined}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          resultLimits: {
-                            ...prev.resultLimits,
-                            indexer: value || undefined,
-                          },
-                        }));
-                      }}
-                    />
-                  )}
-                  {mode === 'pro' && (
-                    <NumberInput
-                      help="Limit for results by release group"
-                      label="Release Group Limit"
-                      value={userData.resultLimits?.releaseGroup || undefined}
-                      min={0}
-                      defaultValue={undefined}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          resultLimits: {
-                            ...prev.resultLimits,
-                            releaseGroup: value || undefined,
-                          },
-                        }));
-                      }}
-                    />
-                  )}
-                </div>
-              </SettingsCard>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-deduplicator"
-            value="deduplicator"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Deduplicator" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Enable and customise the removal of duplicate results.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <SettingsCard>
-                  <Switch
-                    label="Enable"
-                    side="right"
-                    value={userData.deduplicator?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        deduplicator: { ...prev.deduplicator, enabled: value },
-                      }));
-                    }}
-                  />
-                </SettingsCard>
-                {mode === 'pro' && (
-                  <>
-                    <SettingsCard
-                      title="Group Handling"
-                      description={
-                        <div>
-                          Sets of duplicates are separated into groups based on
-                          the streams' type. (e.g. cached, uncached, p2p, etc.)
-                          These options control how each set of duplicates are
-                          handled.
-                        </div>
-                      }
-                    >
-                      <div className="mt-2 space-y-2">
-                        <div>
-                          <span className="font-medium">Single Result</span>
-                          <p className="text-sm text-[--muted] mt-1">
-                            Keeps only one result from your highest priority
-                            service and highest priority addon. Enabled
-                            tiebreakers (torrent seeders, usenet age) are
-                            applied at the position configured below - either
-                            before or after addon order is considered.
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Per Service</span>
-                          <p className="text-sm text-[--muted] mt-1">
-                            This keeps one result per service, and choses each
-                            result using the same criteria above.
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium">Per Addon</span>
-                          <p className="text-sm text-[--muted] mt-1">
-                            This keeps one result per addon, and choses each
-                            result from your highest priority service, and for
-                            P2P/uncached results it looks at the number of
-                            seeders.
-                          </p>
-                        </div>
-                      </div>
-                      <Select
-                        disabled={!userData.deduplicator?.enabled}
-                        label="Cached Results"
-                        value={userData.deduplicator?.cached ?? 'disabled'}
-                        options={[
-                          { label: 'Disabled', value: 'disabled' },
-                          { label: 'Single Result', value: 'single_result' },
-                          { label: 'Per Service', value: 'per_service' },
-                          { label: 'Per Addon', value: 'per_addon' },
-                        ]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              cached: value as
-                                | 'single_result'
-                                | 'per_service'
-                                | 'per_addon'
-                                | 'disabled',
-                            },
-                          }));
-                        }}
-                      />
-                      <Select
-                        disabled={!userData.deduplicator?.enabled}
-                        label="Uncached Results"
-                        value={userData.deduplicator?.uncached ?? 'disabled'}
-                        options={[
-                          { label: 'Disabled', value: 'disabled' },
-                          { label: 'Single Result', value: 'single_result' },
-                          { label: 'Per Service', value: 'per_service' },
-                          { label: 'Per Addon', value: 'per_addon' },
-                        ]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              uncached: value as
-                                | 'single_result'
-                                | 'per_service'
-                                | 'per_addon'
-                                | 'disabled',
-                            },
-                          }));
-                        }}
-                      />
-                      <Select
-                        disabled={!userData.deduplicator?.enabled}
-                        label="P2P Results"
-                        value={userData.deduplicator?.p2p ?? 'disabled'}
-                        options={[
-                          { label: 'Disabled', value: 'disabled' },
-                          { label: 'Single Result', value: 'single_result' },
-                          { label: 'Per Service', value: 'per_service' },
-                          { label: 'Per Addon', value: 'per_addon' },
-                        ]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              p2p: value as
-                                | 'single_result'
-                                | 'per_service'
-                                | 'per_addon'
-                                | 'disabled',
-                            },
-                          }));
-                        }}
-                      />
-                    </SettingsCard>
-                    <SettingsCard title="Other">
-                      <Combobox
-                        disabled={!userData.deduplicator?.enabled}
-                        label="Detection Methods"
-                        multiple
-                        help="Select the methods used to detect duplicates"
-                        value={
-                          userData.deduplicator?.keys ?? [
-                            'filename',
-                            'infoHash',
-                          ]
-                        }
-                        emptyMessage="No detection methods available"
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              keys: value as (typeof DEDUPLICATOR_KEYS)[number][],
-                            },
-                          }));
-                        }}
-                        options={DEDUPLICATOR_KEYS.map((key) => ({
-                          label: key,
-                          value: key,
-                        }))}
-                      />
-                      {(
-                        userData.deduplicator?.keys ?? ['filename', 'infoHash']
-                      ).includes('smartDetect') && (
-                        <>
-                          <Combobox
-                            disabled={!userData.deduplicator?.enabled}
-                            label="Smart Detect Attributes"
-                            multiple
-                            help="Choose which file attributes are used to identify duplicates when Smart Detect is enabled. Numeric attributes (size, bitrate) use a configurable percentage tolerance."
-                            value={
-                              userData.deduplicator?.smartDetectAttributes ??
-                              DEFAULT_SMART_DETECT_ATTRIBUTES
-                            }
-                            emptyMessage="No attributes available"
-                            onValueChange={(value) => {
-                              setUserData((prev) => ({
-                                ...prev,
-                                deduplicator: {
-                                  ...prev.deduplicator,
-                                  smartDetectAttributes:
-                                    value as (typeof SMART_DETECT_ATTRIBUTES)[number][],
-                                },
-                              }));
-                            }}
-                            options={SMART_DETECT_ATTRIBUTES.map((attr) => ({
-                              label: attr,
-                              value: attr,
-                            }))}
-                          />
-                          {(['size', 'bitrate'] as const).some((a) =>
-                            (
-                              userData.deduplicator?.smartDetectAttributes ??
-                              DEFAULT_SMART_DETECT_ATTRIBUTES
-                            ).includes(a)
-                          ) && (
-                            <NumberInput
-                              disabled={!userData.deduplicator?.enabled}
-                              label="Numeric Rounding (%)"
-                              help="Numeric attributes (size, bitrate) are bucketed using geometric rounding at this tolerance. Two values within roughly this percentage of each other are treated as equal. Higher = more lenient; lower = stricter."
-                              min={1}
-                              max={50}
-                              step={1}
-                              value={
-                                userData.deduplicator?.smartDetectRounding ?? 10
-                              }
-                              onValueChange={(value) => {
-                                if (value !== undefined) {
-                                  setUserData((prev) => ({
-                                    ...prev,
-                                    deduplicator: {
-                                      ...prev.deduplicator,
-                                      smartDetectRounding: value,
-                                    },
-                                  }));
-                                }
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
-                      <Combobox
-                        help="Addons selected here will always have their results kept during deduplication."
-                        label="Addon Exclusions"
-                        value={userData.deduplicator?.excludeAddons ?? []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              excludeAddons: value,
-                            },
-                          }));
-                        }}
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                          textValue: preset.options.name,
-                        }))}
-                        emptyMessage="You haven't installed any addons..."
-                        placeholder="Select addons..."
-                        multiple
-                        disabled={userData.deduplicator?.enabled === false}
-                      />
-                      <Select
-                        label="Multi-Group Behaviour"
-                        help={`Configure how duplicates across multiple types are handled. e.g. if a given duplicate set has both cached and uncached streams, what should be done.
-                      ${deduplicatorMultiGroupBehaviourHelp[userData.deduplicator?.multiGroupBehaviour || defaultDeduplicatorMultiGroupBehaviour]}
-                      `}
-                        value={
-                          userData.deduplicator?.multiGroupBehaviour ??
-                          defaultDeduplicatorMultiGroupBehaviour
-                        }
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              multiGroupBehaviour: value as
-                                | 'conservative'
-                                | 'aggressive'
-                                | 'keep_all',
-                            },
-                          }));
-                        }}
-                        disabled={!userData.deduplicator?.enabled}
-                        options={[
-                          { label: 'Conservative', value: 'conservative' },
-                          { label: 'Aggressive', value: 'aggressive' },
-                          { label: 'Keep All', value: 'keep_all' },
-                        ]}
-                      />
-                      <Select
-                        label="Library Stream Behaviour"
-                        help="How to treat library streams when duplicates are found. 'Ignore': library streams have no special priority — normal service/addon order decides. 'Prefer': a library stream always beats a non-library stream head-to-head, even if the non-library stream is from a higher-priority addon. Other tiebreakers still apply between two library streams. 'Exclusive': if the group contains any library stream, all non-library streams are dropped before selection runs — only meaningful with Per Service or Per Addon modes where multiple winners are kept."
-                        value={
-                          userData.deduplicator?.libraryBehaviour ?? 'ignore'
-                        }
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              libraryBehaviour: value as
-                                | 'ignore'
-                                | 'prefer'
-                                | 'exclusive',
-                            },
-                          }));
-                        }}
-                        disabled={!userData.deduplicator?.enabled}
-                        options={[
-                          { label: 'Ignore', value: 'ignore' },
-                          { label: 'Prefer', value: 'prefer' },
-                          { label: 'Exclusive', value: 'exclusive' },
-                        ]}
-                      />
-                      {DEDUPLICATOR_TIEBREAKERS.map((tiebreakerType) => {
-                        const label =
-                          tiebreakerType === 'torrent_seeders'
-                            ? 'Torrent Seeders Tiebreaker'
-                            : 'Usenet Age Tiebreaker';
-                        const help =
-                          tiebreakerType === 'torrent_seeders'
-                            ? 'When choosing between duplicate P2P or uncached streams, prefer the one with more seeders. Controls where in the priority order this check runs relative to addon order.'
-                            : 'When choosing between duplicate Usenet streams, prefer the newer post (posts released within the last 24 hours are considered equal). Controls where in the priority order this check runs relative to addon order.';
-                        const defaultPosition = 'before_addon';
-                        const currentTiebreakers = userData.deduplicator
-                          ?.tiebreakers ?? [
-                          {
-                            type: 'torrent_seeders',
-                            position: 'before_addon',
-                          },
-                          { type: 'usenet_age', position: 'before_addon' },
-                        ];
-                        const entry = currentTiebreakers.find(
-                          (t) => t.type === tiebreakerType
-                        );
-                        const value = entry?.position ?? 'disabled';
-                        return (
-                          <Select
-                            key={tiebreakerType}
-                            disabled={!userData.deduplicator?.enabled}
-                            label={label}
-                            help={help}
-                            value={value ?? defaultPosition}
-                            onValueChange={(newValue) => {
-                              setUserData((prev) => {
-                                const existing = prev.deduplicator
-                                  ?.tiebreakers ?? [
-                                  {
-                                    type: 'torrent_seeders' as const,
-                                    position: 'before_addon' as const,
-                                  },
-                                  {
-                                    type: 'usenet_age' as const,
-                                    position: 'after_addon' as const,
-                                  },
-                                ];
-                                const filtered = existing.filter(
-                                  (t) => t.type !== tiebreakerType
-                                );
-                                const updated =
-                                  newValue === 'disabled'
-                                    ? filtered
-                                    : [
-                                        ...filtered,
-                                        {
-                                          type: tiebreakerType,
-                                          position: newValue as
-                                            | 'before_addon'
-                                            | 'after_addon',
-                                        },
-                                      ];
-                                return {
-                                  ...prev,
-                                  deduplicator: {
-                                    ...prev.deduplicator,
-                                    tiebreakers: updated,
-                                  },
-                                };
-                              });
-                            }}
-                            options={[
-                              { label: 'Disabled', value: 'disabled' },
-                              {
-                                label: 'Before Addon Order',
-                                value: 'before_addon',
-                              },
-                              {
-                                label: 'After Addon Order',
-                                value: 'after_addon',
-                              },
-                            ]}
-                          />
-                        );
-                      })}
-                    </SettingsCard>
-                    <SettingsCard
-                      title="Merge Duplicates"
-                      description="Instead of just discarding duplicates, fold their info into the surviving result: extra same-release failover targets and richer metadata from other addons."
-                    >
-                      <Switch
-                        label="Enable Merging"
-                        side="right"
-                        disabled={!userData.deduplicator?.enabled}
-                        value={userData.deduplicator?.merge?.enabled ?? false}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              merge: {
-                                ...prev.deduplicator?.merge,
-                                enabled: value,
-                              },
-                            },
-                          }));
-                        }}
-                      />
-                      <Switch
-                        label="Harvest Failover Variants"
-                        side="right"
-                        help="Collect discarded duplicates' playback URLs as same-release failover targets, so failover can try another copy of the SAME release (e.g. a different indexer's NZB) before moving to a different release. Follows your Failover content-type settings."
-                        disabled={
-                          !userData.deduplicator?.enabled ||
-                          !userData.deduplicator?.merge?.enabled
-                        }
-                        value={
-                          userData.deduplicator?.merge?.failoverVariants ??
-                          false
-                        }
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              merge: {
-                                ...prev.deduplicator?.merge,
-                                failoverVariants: value,
-                              },
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        label="Merged Metadata Fields"
-                        multiple
-                        help="Which metadata to merge from discarded duplicates into the kept result. Languages/subtitles are merged accuracy-aware: an addon's accurate audio/subtitle split is never overwritten by inaccurate filename-parsed guesses."
-                        disabled={
-                          !userData.deduplicator?.enabled ||
-                          !userData.deduplicator?.merge?.enabled
-                        }
-                        value={userData.deduplicator?.merge?.fields ?? []}
-                        emptyMessage="No fields available"
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            deduplicator: {
-                              ...prev.deduplicator,
-                              merge: {
-                                ...prev.deduplicator?.merge,
-                                fields:
-                                  value as (typeof DEDUPLICATOR_MERGE_FIELDS)[number][],
-                              },
-                            },
-                          }));
-                        }}
-                        options={DEDUPLICATOR_MERGE_FIELDS.map((field) => ({
-                          label: field,
-                          value: field,
-                        }))}
-                      />
-                    </SettingsCard>
-                  </>
-                )}
-              </div>
-            </>
-          </TabsContent>
-          <TabsContent
-            id="filter-tab-miscellaneous"
-            value="miscellaneous"
-            className="space-y-4"
-          >
-            <>
-              <HeadingWithPageControls heading="Miscellaneous" />
-              <div className="mb-4">
-                <p className="text-sm text-[--muted]">
-                  Additional miscellaneous filters.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <SettingsCard
-                  id="digitalReleaseFilter"
-                  title="Digital Release Filter"
-                  description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime)."
-                >
-                  <Switch
-                    label="Enabled"
-                    side="right"
-                    value={userData.digitalReleaseFilter?.enabled ?? false}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        digitalReleaseFilter: {
-                          ...(prev.digitalReleaseFilter || {}),
-                          enabled: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Slider
-                        label="Tolerance"
-                        moreHelp="Ignore the digital release filter if the movie was released within this many days of the current date. This accounts for early releases, leaks, and server timezone differences."
-                        disabled={!userData.digitalReleaseFilter?.enabled}
-                        value={[userData.digitalReleaseFilter?.tolerance ?? 0]}
-                        min={0}
-                        max={365}
-                        step={1}
-                        defaultValue={[0]}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            digitalReleaseFilter: {
-                              ...prev.digitalReleaseFilter,
-                              tolerance: value[0],
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                    <div className="w-24">
-                      <NumberInput
-                        label="Value"
-                        step={1}
-                        value={userData.digitalReleaseFilter?.tolerance ?? 0}
-                        min={0}
-                        max={365}
-                        disabled={!userData.digitalReleaseFilter?.enabled}
-                        onValueChange={(newValue) => {
-                          if (newValue !== undefined) {
-                            setUserData((prev) => ({
-                              ...prev,
-                              digitalReleaseFilter: {
-                                ...prev.digitalReleaseFilter,
-                                tolerance: newValue,
-                              },
-                            }));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-sm text-[--muted]">Tolerance in days</p>
-                  <Switch
-                    label="Also Check Result Age"
-                    side="right"
-                    disabled={!userData.digitalReleaseFilter?.enabled}
-                    value={
-                      userData.digitalReleaseFilter?.checkResultAge ?? false
-                    }
-                    moreHelp="Blocks results uploaded before the release/air date (beyond tolerance). Only works when a result's age is known."
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        digitalReleaseFilter: {
-                          ...prev.digitalReleaseFilter,
-                          checkResultAge: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Combobox
-                        multiple
-                        disabled={!userData.digitalReleaseFilter?.enabled}
-                        label="Request Types"
-                        emptyMessage="There aren't any request types to choose from..."
-                        help="Request types that will use the digital release filter. Leave blank to apply to all request types."
-                        options={TYPES.map((type) => ({
-                          label: type,
-                          value: type,
-                          textValue: type,
-                        }))}
-                        value={userData.digitalReleaseFilter?.requestTypes}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            digitalReleaseFilter: {
-                              ...prev.digitalReleaseFilter,
-                              requestTypes: value,
-                            },
-                          }));
-                        }}
-                      />
-                      <Combobox
-                        multiple
-                        disabled={!userData.digitalReleaseFilter?.enabled}
-                        label="Addons"
-                        help="Addons that will use the digital release filter. Leave blank to apply to all addons."
-                        emptyMessage="You haven't installed any addons yet..."
-                        options={userData.presets.map((preset) => ({
-                          label: preset.options.name || preset.type,
-                          textValue: preset.options.name || preset.type,
-                          value: preset.instanceId,
-                        }))}
-                        value={userData.digitalReleaseFilter?.addons || []}
-                        onValueChange={(value) => {
-                          setUserData((prev) => ({
-                            ...prev,
-                            digitalReleaseFilter: {
-                              ...prev.digitalReleaseFilter,
-                              addons: value,
-                            },
-                          }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <Switch
-                    label="Show Info Stream When Filtered"
-                    side="right"
-                    defaultValue={true}
-                    disabled={!userData.digitalReleaseFilter?.enabled}
-                    value={
-                      userData.digitalReleaseFilter?.showInfoOnFilter ?? true
-                    }
-                    moreHelp="When the digital release filter triggers, show an info stream."
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({
-                        ...prev,
-                        digitalReleaseFilter: {
-                          ...prev.digitalReleaseFilter,
-                          showInfoOnFilter: value,
-                        },
-                      }));
-                    }}
-                  />
-                </SettingsCard>
-                <SettingsCard
-                  id="enableSeadex"
-                  title="SeaDex Integration"
-                  description="Fetch SeaDex data (releases.moe) for anime to identify best quality releases."
-                >
-                  <Switch
-                    label="Enable"
-                    side="right"
-                    value={userData.enableSeadex ?? true}
-                    defaultValue={true}
-                    onValueChange={(value) => {
-                      setUserData((prev) => ({ ...prev, enableSeadex: value }));
-                    }}
-                  />
-                </SettingsCard>
-                {status?.settings.remuxdb.enabled && (
-                  <SettingsCard
-                    id="remuxDb"
-                    title="RemuxDB Integration"
-                    description="Fill in missing audio and subtitle tracks, languages, channels, HDR and resolution from RemuxDB's database of probed files. Each lookup sends the title's IMDb ID (and season and episode) to RemuxDB. Usenet results can only be matched when they come from the Newznab addon: NZBHydra and Prowlarr replace the indexer's NZB link with their own, so the NZB's ID can't be read from it."
-                  >
-                    <Switch
-                      label="Enable"
-                      side="right"
-                      value={userData.remuxDb?.enabled ?? true}
-                      defaultValue={true}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          remuxDb: { ...prev.remuxDb, enabled: value },
-                        }));
-                      }}
-                    />
-                  </SettingsCard>
-                )}
-                {mode === 'pro' && userData.excludeSeasonPacks && (
-                  <SettingsCard
-                    id="excludeSeasonPacks"
-                    title="Exclude Season Packs"
-                    description="Whether to filter out results that contain entire seasons."
-                  >
-                    <Switch
-                      label="Enable"
-                      side="right"
-                      value={userData.excludeSeasonPacks}
-                      onValueChange={(value) => {
-                        setUserData((prev) => ({
-                          ...prev,
-                          excludeSeasonPacks: value,
-                        }));
-                      }}
-                    />
-                  </SettingsCard>
-                )}
-              </div>
-            </>
-          </TabsContent>
+          {FILTER_TAB_IDS.map((id) => (
+            <TabsContent
+              key={id}
+              id={`filter-tab-${id}`}
+              value={id}
+              className="space-y-4"
+            >
+              <HeadingWithPageControls heading={FILTER_TAB_LABELS[id]} />
+              {sections[id]}
+            </TabsContent>
+          ))}
         </div>
       </Tabs>
-
-      {/* Modal for Allowed Regex Patterns */}
-      <Modal
-        open={allowedRegexModal.isOpen}
-        onOpenChange={allowedRegexModal.close}
-        title="Allowed Regex Patterns"
-        description="These are regex patterns that you are allowed to use in your filters."
-      >
-        <div className="space-y-4">
-          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
-            <div className="space-y-2">
-              {status?.settings.regexAccess.patterns?.map(
-                (pattern: string, index: number) => (
-                  <div
-                    key={index}
-                    className="font-mono text-sm bg-gray-800 rounded px-3 py-2 break-all whitespace-pre-wrap"
-                  >
-                    {pattern}
-                  </div>
-                )
-              )}
-              {(!status?.settings.regexAccess.patterns ||
-                status.settings.regexAccess.patterns.length === 0) && (
-                <div className="text-muted-foreground text-sm text-center">
-                  No allowed regex patterns configured
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={whitelistedSelUrlsModal.isOpen}
-        onOpenChange={whitelistedSelUrlsModal.close}
-        title="Whitelisted Sync URLs"
-        description="These are URLs that are whitelisted for syncing stream expressions."
-      >
-        <div className="space-y-4">
-          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
-            <div className="space-y-2">
-              {status?.settings.selSyncAccess.trustedUrls?.map(
-                (url: string, index: number) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
-                  >
-                    <div className="flex-1 break-all whitespace-pre-wrap">
-                      {url}
-                    </div>
-                    <IconButton
-                      size="sm"
-                      intent="primary-subtle"
-                      icon={<FaRegCopy />}
-                      onClick={() =>
-                        copyToClipboard(url, {
-                          onSuccess: () =>
-                            toast.success('URL copied to clipboard'),
-                          onError: () => toast.error('Failed to copy URL'),
-                        })
-                      }
-                    />
-                  </div>
-                )
-              )}
-              {(!status?.settings.selSyncAccess.trustedUrls ||
-                status.settings.selSyncAccess.trustedUrls.length === 0) && (
-                <div className="text-muted-foreground text-sm text-center">
-                  No whitelisted sync URLs configured
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={allowedRegexUrlsModal.isOpen}
-        onOpenChange={allowedRegexUrlsModal.close}
-        title="Allowed Regex Pattern URLs"
-        description="These are URLs that you can import regex patterns from."
-      >
-        <div className="space-y-4">
-          <div className="border rounded-md bg-gray-900 border-gray-800 p-4 max-h-96 overflow-auto">
-            <div className="space-y-2">
-              {status?.settings.regexAccess.urls?.map(
-                (url: string, index: number) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 font-mono text-sm bg-gray-800 rounded px-3 py-2"
-                  >
-                    <div className="flex-1 break-all whitespace-pre-wrap">
-                      {url}
-                    </div>
-                    <IconButton
-                      size="sm"
-                      intent="primary-subtle"
-                      icon={<FaRegCopy />}
-                      onClick={() =>
-                        copyToClipboard(url, {
-                          onSuccess: () =>
-                            toast.success('URL copied to clipboard'),
-                          onError: () => toast.error('Failed to copy URL'),
-                        })
-                      }
-                    />
-                  </div>
-                )
-              )}
-              {(!status?.settings.regexAccess.urls ||
-                status.settings.regexAccess.urls.length === 0) && (
-                <div className="text-muted-foreground text-sm text-center">
-                  No allowed regex pattern URLs configured
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {modals}
     </>
   );
 }

@@ -573,7 +573,7 @@ function EntryCard({
     // card highlights. `ring-inset` keeps the ring inside the card box so it
     // isn't clipped by the tab content at the grid edges. Kept subtle (thin,
     // dimmed ring + barely-there fill) so it reads as selected, not alarming.
-    selectMode && 'cursor-pointer hover:bg-[--subtle]/30',
+    selectMode && 'cursor-pointer hover:bg-white/[0.018]',
     selected && 'ring-1 ring-inset ring-brand/60 bg-brand/[0.06]'
   );
   const onCardClick = selectMode

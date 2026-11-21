@@ -59,7 +59,7 @@ import {
 import { usePlayerKeys } from './keys';
 import { ScreenLock } from './lock';
 import { PauseScreen } from './pause-screen';
-import { fitLabel, OptionButtons } from './options';
+import { fitLabel, OptionButtons, type Quality } from './options';
 import { ScrubStrip } from './scrub-strip';
 import { SeekBar } from './seek-bar';
 import { skipLabel, type Segment, type SegmentSkip } from './segments';
@@ -102,6 +102,7 @@ export function PlayerControls({
   steps,
   playlist,
   onParty,
+  quality,
   live = false,
   showAtOpen = false,
 }: {
@@ -122,6 +123,7 @@ export function PlayerControls({
   steps?: 'episode' | 'trailer' | 'playlist';
   playlist?: { id: string; onPlay(entry: BaseItemDto, playlist: string): void };
   onParty?: () => void;
+  quality?: Quality;
   /** A channel: the programme in place of the seek bar, and zapping. */
   live?: boolean;
   showAtOpen?: boolean;
@@ -131,7 +133,8 @@ export function PlayerControls({
   const tv = !!currentHost().tv;
   const root = React.useRef<HTMLDivElement>(null);
   const bottomBar = React.useRef<HTMLDivElement>(null);
-  const rest = useIdle(IDLE_MS);
+  // Where no pause screen takes over, the controls stay while paused.
+  const rest = useIdle(IDLE_MS, () => state.paused && !pauseScreenFits);
   const { wake, hide, soon, brief } = rest;
   const [shown] = React.useState(() => createLive(false));
   // Some TVs' web views report a coarse pointer.
@@ -169,24 +172,21 @@ export function PlayerControls({
     chapters ||
     listing ||
     channels ||
-    scrub !== null;
-  const view = (idle: boolean, hidden: boolean) => {
-    const pauseScreen =
-      ready &&
-      !player.external &&
-      !locked &&
-      state.paused &&
-      idle &&
-      !busy &&
-      !state.error &&
-      !offeringNext &&
-      steps !== 'trailer';
+    scrub?.resume !== undefined;
+  const pauseScreenFits =
+    ready &&
+    !player.external &&
+    !locked &&
+    state.paused &&
+    !busy &&
+    !state.error &&
+    !offeringNext &&
+    steps !== 'trailer';
+  const view = (shownNow: boolean, idle: boolean) => {
+    const pauseScreen = pauseScreenFits && idle;
     const visible =
       !!player.external ||
-      (ready &&
-        !locked &&
-        !hidden &&
-        (!idle || busy || (state.paused && !pauseScreen)));
+      (ready && !locked && (busy || (shownNow && !pauseScreen)));
     return { visible, pauseScreen };
   };
   // The video appears without the controls, unless it opens paused.
@@ -200,8 +200,10 @@ export function PlayerControls({
   React.useEffect(() => {
     if (!ready) return;
     if (wasPaused.current && !state.paused) soon(BRIEF_IDLE_MS);
+    // The pause screen waits from the pause, which can leave the controls as they were.
+    if (wasPaused.current === false && state.paused) rest.stir();
     wasPaused.current = state.paused;
-  }, [ready, state.paused, soon]);
+  }, [ready, state.paused, soon, rest]);
 
   const [flash, showFlash] = useToggleFlash();
   const [seekFlash, showSeekFlash] = useSeekFlash();
@@ -336,7 +338,7 @@ export function PlayerControls({
       setScrub(null);
       if (commit && s && Math.abs(s.toMs - s.fromMs) >= 1000)
         latest.current.seek(s.toMs);
-      wake();
+      if (shown.get()) wake();
     },
     onPinch: player.fit
       ? (out) => {
@@ -353,12 +355,10 @@ export function PlayerControls({
     player,
     root,
     ready,
+    live,
     visible: shown.get,
     wake,
-    glance: () => {
-      wake();
-      soon(BRIEF_IDLE_MS);
-    },
+    stir: rest.stir,
     glancing: () => brief.current,
     hide,
     notice: showNotice,
@@ -725,7 +725,7 @@ export function PlayerControls({
             <ControlButton
               name="play"
               label={state.paused ? t`Play` : t`Pause`}
-              onClick={togglePlay}
+              onClick={() => endScrub(true) || togglePlay()}
             >
               {state.paused ? <LuPlay /> : <LuPause />}
             </ControlButton>
@@ -751,6 +751,7 @@ export function PlayerControls({
             onSyncByEar={() => setByEar(true)}
             onSyncToLine={pickLine}
             onParty={onParty}
+            quality={quality}
             notice={showNotice}
           />
         </div>
@@ -830,8 +831,8 @@ function ControlsLayer({
   rest: Rest;
   shown: LiveWriter<boolean>;
   view(
-    idle: boolean,
-    hidden: boolean
+    shown: boolean,
+    idle: boolean
   ): { visible: boolean; pauseScreen: boolean };
   root: React.RefObject<HTMLDivElement | null>;
   bottomBar: React.RefObject<HTMLDivElement | null>;
@@ -843,13 +844,16 @@ function ControlsLayer({
   under: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const idle = useLive(rest.idle);
-  const hidden = useLive(rest.hidden);
-  const { visible, pauseScreen } = view(idle, hidden);
+  const { visible, pauseScreen } = view(
+    useLive(rest.shown),
+    useLive(rest.idle)
+  );
   React.useLayoutEffect(() => shown.set(visible), [shown, visible]);
   useWindowButtons(visible);
   useFocusInside(root, visible, rest.wake);
   useLiftSubtitles(player, bottomBar, visible);
+  // A touch on hidden controls leaves them hidden, focus included.
+  const quietTouch = React.useRef(false);
   return (
     <ControlsShown.Provider value={shown}>
       <div
@@ -863,13 +867,19 @@ function ControlsLayer({
           'group/controls peer fixed inset-0 z-10 select-none',
           !visible && 'cursor-none'
         )}
-        onFocus={rest.wake}
-        onPointerMove={rest.wake}
+        onFocus={() => {
+          if (!quietTouch.current) rest.wake();
+        }}
+        onPointerMove={(e) => {
+          if (e.pointerType !== 'touch' || visible) rest.wake();
+        }}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={(e) => {
           onPointerType(e.pointerType);
           // A tap on hidden controls must not press what appears under it.
-          if (e.pointerType !== 'touch' || visible) rest.wake();
+          quietTouch.current = e.pointerType === 'touch' && !visible;
+          if (quietTouch.current) rest.stir();
+          else rest.wake();
         }}
       >
         {under}
@@ -954,31 +964,33 @@ function useFocusInside(
   }, [wake, root]);
 }
 
-function useLiftSubtitles(
+export function useLiftSubtitles(
   player: PlayerController,
   bottomBar: React.RefObject<HTMLElement | null>,
   visible: boolean
 ) {
   const latest = useLatest(player);
   React.useEffect(() => {
+    // The bar's own window, which can be a picture-in-picture one.
+    const view = bottomBar.current?.ownerDocument.defaultView ?? window;
     const lift = () => {
       const tops = Array.from(bottomBar.current?.children ?? [])
         .map((child) => child.getBoundingClientRect())
         .filter((r) => r.height > 0)
         .map((r) => r.top);
       latest.current.liftSubtitles?.(
-        visible && tops.length ? 1 - Math.min(...tops) / innerHeight : 0
+        visible && tops.length ? 1 - Math.min(...tops) / view.innerHeight : 0
       );
     };
     lift();
     if (!visible) return;
     // The bar grows with what opens in it, such as a remote's scrub.
-    const grows = new ResizeObserver(lift);
+    const grows = new view.ResizeObserver(lift);
     if (bottomBar.current) grows.observe(bottomBar.current);
-    window.addEventListener('resize', lift);
+    view.addEventListener('resize', lift);
     return () => {
       grows.disconnect();
-      window.removeEventListener('resize', lift);
+      view.removeEventListener('resize', lift);
     };
   }, [visible, latest, bottomBar]);
   React.useEffect(() => () => latest.current.liftSubtitles?.(0), [latest]);

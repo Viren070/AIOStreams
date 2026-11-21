@@ -13,8 +13,6 @@ import {
   AUTO_PLAY_METHOD_DETAILS,
 } from '../../../../../../core/src/utils/constants';
 
-// Note: NZB Failover and Auto Remove Downloads have been moved to the Services menu (Built-in tab).
-
 export function PlaybackBehavior() {
   const { userData, setUserData } = useUserData();
 
@@ -26,8 +24,8 @@ export function PlaybackBehavior() {
         description={
           <div className="space-y-2">
             <p>
-              Configure how AIOStreams suggests the next stream for Stremio's
-              auto-play feature.
+              Picks the stream that plays next in Stremio and the AIOStreams
+              app.
             </p>
             <Alert intent="info-basic">
               <p className="text-sm">
@@ -38,13 +36,14 @@ export function PlaybackBehavior() {
                     rel="noopener noreferrer"
                     href="https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/stream.md#additional-properties-to-provide-information--behaviour-flags"
                     target="_blank"
-                    className="text-[--brand] hover:text-[--brand]/80 hover:underline"
+                    className="text-[--brand] hover:text-brand-300/80 hover:underline"
                   >
                     bingeGroup
                   </a>
                 </code>{' '}
-                attribute to suggest the next stream to Stremio. For this to
-                work, you must have auto-play enabled in your Stremio settings.
+                attribute to suggest the next stream to Stremio and the
+                AIOStreams app. In Stremio, auto-play must also be on in its
+                settings.
               </p>
             </Alert>
           </div>

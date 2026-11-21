@@ -3,7 +3,7 @@ import { t } from '@lingui/core/macro';
 import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { usingKeys } from '@/lib/input';
-import { BarSurface } from '@/components/shell/bar-surface';
+import { GlassSurface } from '@/components/shell/glass-surface';
 import { ENTER_CURRENT, NavEntry, select } from './common';
 import { YouIcon } from './account';
 
@@ -106,7 +106,7 @@ export function CornerMenu({
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
       />
-      <BarSurface
+      <GlassSurface
         className="relative overflow-hidden rounded-[31px] transition-[width,height] duration-300 ease-out"
         style={{
           width: open ? size.width : CORNER_SHUT,
@@ -127,7 +127,7 @@ export function CornerMenu({
           {footerItems.map(entry)}
           {!tv && account}
         </div>
-      </BarSurface>
+      </GlassSurface>
     </nav>
   );
 }

@@ -54,6 +54,21 @@ import { z } from 'zod';
 
 const logger = createLogger('wrappers');
 
+/** The status, with the addon's own reason where it answers in this server's error shape. */
+async function failureOf(
+  res: Awaited<ReturnType<typeof makeRequest>>
+): Promise<string> {
+  const plain = `${res.status} - ${res.statusText}`;
+  if (!res.headers.get('content-type')?.includes('json')) return plain;
+  const body = (await res.json().catch(() => null)) as {
+    error?: { message?: unknown };
+  } | null;
+  const message = body?.error?.message;
+  return typeof message === 'string' && message
+    ? `${res.status} - ${message}`
+    : plain;
+}
+
 // `Cache.getInstance` accepts a lazy `maxSize` resolver so the per-resource
 // runtime-config override is honoured without reading it at module-load
 // (runtime config is not available before `initialiseConfig()` resolves).
@@ -219,7 +234,7 @@ export class Wrapper {
           forwardIp: this.addon.ip,
         });
         if (!res.ok) {
-          throw new Error(`${res.status} - ${res.statusText}`);
+          throw new Error(await failureOf(res));
         }
         const data = await res.json();
         const manifest = ManifestSchema.safeParse(data);
@@ -775,7 +790,7 @@ export class Wrapper {
       });
 
       if (!res.ok) {
-        throw new Error(`${res.status} - ${res.statusText}`);
+        throw new Error(await failureOf(res));
       }
 
       const data: unknown = await res.json();

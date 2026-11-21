@@ -59,7 +59,7 @@ export function ProfileCard() {
 
   return (
     <SettingsCard
-      title="Profile"
+      title="Saved configuration"
       description={
         profile
           ? `Saved to ${sessionUser.username}. Pick it from Load Configuration to reopen it without the password.`
@@ -97,11 +97,11 @@ export function ProfileCard() {
                     savePassword,
                     label.trim() || undefined
                   ),
-                'Saved to your profile'
+                'Saved to your account'
               )
             }
           >
-            Save as profile
+            Save to your account
           </Button>
         </div>
       ) : (
@@ -172,11 +172,11 @@ export function ProfileCard() {
             onClick={() =>
               run(
                 () => deleteConfigProfile(profile.id),
-                'Profile deleted. The configuration itself is untouched.'
+                'Removed from your account. The configuration itself is untouched.'
               )
             }
           >
-            Delete profile
+            Remove from your account
           </Button>
         </div>
       )}

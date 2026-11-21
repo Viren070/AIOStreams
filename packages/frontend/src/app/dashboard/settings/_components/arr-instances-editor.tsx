@@ -208,7 +208,7 @@ export function ArrInstancesEditor() {
       {drafts.map((d, index) => {
         const result = results[d.id];
         return (
-          <Card key={d.id} className="p-4 space-y-3 bg-[--subtle]/30">
+          <Card key={d.id} className="p-4 space-y-3 bg-white/[0.018]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Switch

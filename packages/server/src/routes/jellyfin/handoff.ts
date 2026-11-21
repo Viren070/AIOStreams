@@ -14,12 +14,15 @@ import {
   PlaybackHandoffRepository,
   providerIdsFor,
   refreshSinkIfStale,
-  retireOtherPersonaSinks,
+  retireOtherProfileSinks,
   retireUnusedSinks,
   type AIOStreams,
   type ContentRef,
   type JellyfinItem,
-  type JellyfinPersona,
+  isOwner,
+  ownerOf,
+  profilesOf,
+  type Profile,
   type PlaybackEventKind,
   type ResolvedPlaybackSink,
   type SinkStatus,
@@ -27,7 +30,6 @@ import {
 } from '@aiostreams/core';
 import {
   contextFromCredentials,
-  personasOf,
   type JellyfinRequestContext,
 } from './context.js';
 import { itemFromDescriptor } from './items.js';
@@ -44,11 +46,11 @@ const SINK_TTL_SECONDS = 300;
 const sinkAddress = (sink: ResolvedPlaybackSink) =>
   `${sink.baseUrl}?${sink.query}`;
 
-type HistoryMode = 'primary' | 'shared' | 'own';
+type HistoryMode = 'owner' | 'shared' | 'own';
 
 function modeOf(ctx: JellyfinRequestContext): HistoryMode {
-  if (!ctx.persona) return 'primary';
-  return ctx.persona.history === 'shared' ? 'shared' : 'own';
+  if (isOwner(ctx.profile)) return 'owner';
+  return ctx.profile.history === 'shared' ? 'shared' : 'own';
 }
 
 function picked(
@@ -61,8 +63,8 @@ function picked(
 }
 
 /**
- * A history of its own must not reach the primary user's trackers, so only
- * sinks the persona's variants added count. The same addon reached under both
+ * A history of its own must not reach the owner's trackers, so only sinks the
+ * profile's variants added count. The same addon reached under both
  * configurations is the same tracker account.
  */
 async function ownSinks(
@@ -70,51 +72,50 @@ async function ownSinks(
   sinks: ResolvedPlaybackSink[]
 ): Promise<ResolvedPlaybackSink[]> {
   if (!sinks.length) return [];
-  const primary = new Set(
-    (await ctx.primaryEngine()).getPlaybackSinks().map(sinkAddress)
+  const owner = new Set(
+    (await ctx.ownerEngine()).getPlaybackSinks().map(sinkAddress)
   );
-  return sinks.filter((sink) => !primary.has(sinkAddress(sink)));
+  return sinks.filter((sink) => !owner.has(sinkAddress(sink)));
 }
 
 function pickedByOthers(ctx: JellyfinRequestContext): Set<string> {
-  const presets = new Set(ctx.userData.jellyfin?.primary?.trackers);
-  for (const persona of personasOf(ctx.userData)) {
-    if (persona.id === ctx.persona?.id || persona.history === 'shared')
-      continue;
-    for (const id of persona.trackers ?? []) presets.add(id);
+  const presets = new Set<string>();
+  for (const profile of profilesOf(ctx.userData)) {
+    if (profile.id === ctx.profile.id || profile.history === 'shared') continue;
+    for (const id of profile.trackers ?? []) presets.add(id);
   }
   return presets;
 }
 
 /**
- * What the users ahead of this persona picked: the primary user, then personas
- * in order. Left on automatic, the primary user holds every tracker.
+ * What the profiles ahead of this one picked, the owner first. Left on
+ * automatic, the owner holds every tracker.
  */
 async function claimedBefore(
   ctx: JellyfinRequestContext
 ): Promise<Set<string>> {
-  const primaryPicks = ctx.userData.jellyfin?.primary?.trackers;
+  const [owner, ...others] = profilesOf(ctx.userData);
   const claimed = new Set(
-    primaryPicks ??
-      (await ctx.primaryEngine())
+    owner.trackers ??
+      (await ctx.ownerEngine())
         .getPlaybackSinks()
         .flatMap((sink) => (sink.presetId ? [sink.presetId] : []))
   );
-  for (const persona of personasOf(ctx.userData)) {
-    if (persona.id === ctx.persona?.id) break;
-    if (persona.history === 'shared') continue;
-    for (const id of persona.trackers ?? []) claimed.add(id);
+  for (const profile of others) {
+    if (profile.id === ctx.profile.id) break;
+    if (profile.history === 'shared') continue;
+    for (const id of profile.trackers ?? []) claimed.add(id);
   }
   return claimed;
 }
 
 function asViewer(
   sink: ResolvedPlaybackSink,
-  persona: JellyfinPersona | null
+  profile: Profile
 ): ResolvedPlaybackSink {
-  if (!sink.viewers || !persona) return sink;
+  if (!sink.viewers || isOwner(profile)) return sink;
   const query = new URLSearchParams(sink.query);
-  query.set('viewer', persona.id);
+  query.set('viewer', profile.id);
   return { ...sink, query: `?${query}` };
 }
 
@@ -130,31 +131,32 @@ function unloaded(
 }
 
 /**
- * Each tracker account belongs to one history. A user's explicit list is what
- * it claims, and a tracker two users pick goes to the first; left on automatic,
- * the primary user takes every tracker and a persona of its own history only
- * what its variants added. A tracker that keeps users apart serves them all.
+ * Each tracker account belongs to one history. A profile's explicit list is
+ * what it claims, and a tracker two profiles pick goes to the first; left on
+ * automatic, the owner takes every tracker and a profile of its own history
+ * only what its variants added. A tracker that keeps profiles apart serves
+ * them all.
  */
 async function resolveSinks(
   ctx: JellyfinRequestContext,
   mode: HistoryMode
 ): Promise<{ sinks: ResolvedPlaybackSink[]; unloaded: string[] }> {
-  const primaryPicks = ctx.userData.jellyfin?.primary?.trackers;
+  const ownerPicks = ownerOf(ctx.userData).trackers;
   if (mode !== 'own') {
     // Sharing the history means sharing its trackers, whatever its variants say.
-    const primary = await ctx.primaryEngine();
-    const all = primary.getPlaybackSinks();
+    const owner = await ctx.ownerEngine();
+    const all = owner.getPlaybackSinks();
     return {
-      sinks: primaryPicks ? picked(all, primaryPicks) : all,
-      unloaded: unloaded(primary, primaryPicks),
+      sinks: ownerPicks ? picked(all, ownerPicks) : all,
+      unloaded: unloaded(owner, ownerPicks),
     };
   }
   const engine = await ctx.engine();
-  // A different address, so `ownSinks` keeps it beside the primary user's.
+  // A different address, so `ownSinks` keeps it beside the owner's.
   const own = engine
     .getPlaybackSinks()
-    .map((sink) => asViewer(sink, ctx.persona));
-  const picks = ctx.persona?.trackers;
+    .map((sink) => asViewer(sink, ctx.profile));
+  const picks = ctx.profile.trackers;
   if (picks) {
     let sinks = picked(own, picks);
     if (sinks.some((sink) => !sink.viewers)) {
@@ -177,8 +179,8 @@ async function sinksFor(
   ctx: JellyfinRequestContext
 ): Promise<ResolvedPlaybackSink[]> {
   const mode = modeOf(ctx);
-  // Personas without variants share a scope but not their trackers.
-  const key = `${ctx.scope()}|${mode}|${ctx.persona?.id ?? ''}`;
+  // Profiles without variants share a scope but not their trackers.
+  const key = `${ctx.scope()}|${mode}|${ctx.profile.id}`;
   const cached = await sinkCache.get(key).catch(() => undefined);
   // A value that lost its `events` array in transit counts as a miss.
   if (cached?.every((sink) => Array.isArray(sink.events))) return cached;
@@ -198,29 +200,29 @@ async function sinksFor(
   return sinks;
 }
 
-/** The primary user, then each persona with a history of its own. */
+/** The owner, then each profile with a history of its own. */
 async function historyContexts(
   req: Request,
   uuid: string,
   encryptedPassword: string
 ): Promise<JellyfinRequestContext[] | null> {
-  const primary = await contextFromCredentials(req, uuid, encryptedPassword);
-  if (!primary) return null;
-  const personas = personasOf(primary.userData).filter(
-    (p) => p.history !== 'shared'
+  const owner = await contextFromCredentials(req, uuid, encryptedPassword);
+  if (!owner) return null;
+  const others = profilesOf(owner.userData).filter(
+    (p) => !isOwner(p) && p.history !== 'shared'
   );
   return [
-    primary,
+    owner,
     ...(await Promise.all(
-      personas.map(async (p) => {
+      others.map(async (p) => {
         const ctx = await contextFromCredentials(
           req,
           uuid,
           encryptedPassword,
           p.id
         );
-        // The same engine a persona's own would build, built once for all.
-        return ctx && { ...ctx, primaryEngine: primary.engine };
+        // The same engine a profile's own would build, built once for all.
+        return ctx && { ...ctx, ownerEngine: owner.engine };
       })
     )),
   ].filter((ctx) => ctx !== null);
@@ -235,9 +237,9 @@ export async function syncTrackerClaims(
   const contexts = await historyContexts(req, uuid, encryptedPassword);
   if (!contexts) return;
   await Promise.all(contexts.map((ctx) => sinksFor(ctx)));
-  await retireOtherPersonaSinks(
+  await retireOtherProfileSinks(
     uuid,
-    contexts.flatMap((ctx) => (ctx.persona ? [ctx.persona.id] : []))
+    contexts.flatMap((ctx) => (isOwner(ctx.profile) ? [] : [ctx.profile.id]))
   );
 }
 
@@ -248,8 +250,8 @@ interface TrackerExchange {
 
 export interface TrackerStatus {
   addon: string;
-  /** Absent for the primary user's trackers. */
-  persona?: string;
+  /** Absent for the owner's trackers. */
+  profile?: string;
   status: SinkStatus;
   /** Absent when the addon or this instance does not use that direction. */
   push?: TrackerExchange;
@@ -259,7 +261,7 @@ export interface TrackerStatus {
 }
 
 export interface TrackerOption {
-  /** Empty for the primary user. */
+  /** Empty for the owner. */
   user: string;
   presetId: string;
   addon: string;
@@ -269,8 +271,8 @@ export interface TrackerOption {
 
 /**
  * Every tracker the saved configuration syncs with, found the way playback
- * finds them so an addon shows before its first exchange. A persona sharing the
- * primary user's history has no trackers of its own to list.
+ * finds them so an addon shows before its first exchange. A profile sharing the
+ * owner's history has no trackers of its own to list.
  */
 export async function listTrackers(
   req: Request,
@@ -286,14 +288,14 @@ export async function listTrackers(
     Promise.all(contexts.map((ctx) => ctx.engine())),
   ]);
   const rowOf = new Map(
-    rows.map((row) => [`${row.persona}|${row.addonInstanceId}`, row])
+    rows.map((row) => [`${row.profile}|${row.addonInstanceId}`, row])
   );
   // With its address refused the manifest never loads, so only its row is left.
   const unloaded = contexts.map((ctx, i) => {
     const live = new Set(resolved[i].map((sink) => sink.instanceId));
     return rows.filter(
       (row) =>
-        row.persona === ctx.watch.persona &&
+        row.profile === ctx.watch.profile &&
         row.retiredAt === null &&
         !live.has(row.addonInstanceId) &&
         engines[i].getAddon(row.addonInstanceId)
@@ -322,11 +324,11 @@ export async function listTrackers(
     resolved[i].flatMap((sink): TrackerStatus[] => {
       const { push, pull } = exchanges(sink);
       if (!push && !pull) return [];
-      const row = rowOf.get(`${ctx.watch.persona}|${sink.instanceId}`);
+      const row = rowOf.get(`${ctx.watch.profile}|${sink.instanceId}`);
       return [
         {
           addon: sink.name,
-          persona: ctx.persona?.id,
+          profile: ctx.profile.id || undefined,
           status: row?.status ?? 'connected',
           push: push
             ? { lastAt: row?.lastPushAt ?? null, error: row?.lastError ?? null }
@@ -350,7 +352,7 @@ export async function listTrackers(
           row.addonName ??
           engines[i].getAddon(row.addonInstanceId)?.name ??
           row.addonInstanceId,
-        persona: ctx.persona?.id,
+        profile: ctx.profile.id || undefined,
         status: row.status,
         refused: true,
       });
@@ -365,7 +367,7 @@ export async function listTrackers(
       seen.add(sink.presetId);
       return [
         {
-          user: ctx.persona?.id ?? '',
+          user: ctx.profile.id,
           presetId: sink.presetId,
           addon: sink.name,
           viewers: !!sink.viewers,
@@ -568,7 +570,7 @@ const REFRESH_KEYS_MAX = 20_000;
 /** Never awaited: a shelf answers from what is stored, never from the addon. */
 export function refreshWatchState(ctx: JellyfinRequestContext): void {
   if (!appConfig.watchState.pullEnabled) return;
-  const key = `${ctx.watch.uuid}|${ctx.watch.persona}`;
+  const key = `${ctx.watch.uuid}|${ctx.watch.profile}`;
   const now = Date.now();
   const last = refreshedAt.get(key);
   if (last !== undefined && now - last < REFRESH_DEDUPE_MS) return;

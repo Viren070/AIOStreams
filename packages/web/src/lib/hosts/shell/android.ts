@@ -2,10 +2,10 @@ import { t } from '@lingui/core/macro';
 import { toast } from 'sonner';
 import type { Host } from '..';
 import { onSettingsChange, settings, type PlayerEngine } from '@/lib/settings';
-import { backGesture, backPressed, noteHomeScroll } from './back-slide';
+import { backGesture, backPressed } from './back-slide';
 import { appBridge, ask } from './bridge';
 import { shellDownloads } from './downloads';
-import { appEngine, setEngine } from './player';
+import { appEngine, setEngine, shellFeatures } from './player';
 import { resolveYouTube } from './youtube';
 
 let fullscreen = false;
@@ -38,7 +38,6 @@ export function setupAndroid(): () => void {
     else if (m.type === 'back-gesture' && !bridge.tv) backGesture(m);
     else if (m.type === 'player-engine') setEngine(m.name);
   });
-  const stopNotingHome = bridge?.tv ? undefined : noteHomeScroll();
   // The keyboard opening over a field that already had focus doesn't bring it into view.
   const showField = () => {
     const field = document.activeElement;
@@ -53,7 +52,6 @@ export function setupAndroid(): () => void {
   return () => {
     unsubscribeSettings();
     unsubscribe?.();
-    stopNotingHome?.();
     window.removeEventListener('resize', showField);
     window.visualViewport?.removeEventListener('resize', showField);
   };
@@ -122,7 +120,9 @@ export const androidHost: Host = {
   },
   device: () => ({ id: appBridge()?.deviceId, name: appBridge()?.device }),
   player: appEngine,
-  playerFeatures: ['audio', 'chapters', 'stats', 'headers', 'upscaling'],
+  get playerFeatures() {
+    return shellFeatures();
+  },
   // A TV has little storage and is always online.
   get downloads() {
     return appBridge()?.tv ? undefined : androidDownloads;

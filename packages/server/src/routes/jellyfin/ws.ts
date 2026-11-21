@@ -88,7 +88,7 @@ async function authenticateUpgrade(
 }
 
 function scopeKey(scope: WatchScope): string {
-  return `${scope.uuid}|${scope.persona}`;
+  return `${scope.uuid}|${scope.profile}`;
 }
 
 /**
@@ -103,7 +103,7 @@ export function attachJellyfinWebSocket(server: HttpServer): void {
     if (ws.readyState === ws.OPEN) ws.send(frame(type, data));
   };
 
-  // Per configuration, or personas would multiply the cap.
+  // Per configuration, or profiles would multiply the cap.
   const socketsOf = (uuid: string): number => {
     let count = 0;
     for (const [key, sockets] of byScope) {

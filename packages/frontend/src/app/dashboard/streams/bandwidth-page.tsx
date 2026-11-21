@@ -196,7 +196,7 @@ export function StreamsBandwidthPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[--subtle]/40 text-xs uppercase text-[--muted]">
+                    <thead className="bg-white/[0.024] text-xs uppercase text-[--muted]">
                       <tr className="text-left">
                         <th className="p-3">User</th>
                         <th className="p-3">Usage this window</th>
@@ -207,7 +207,7 @@ export function StreamsBandwidthPage() {
                       {d.byUser.map((u) => (
                         <tr
                           key={u.username || '(unidentified)'}
-                          className="border-t border-[--border]/50"
+                          className="border-t border-white/5"
                         >
                           <td className="p-3 font-medium">
                             {displayUser(u.username)}

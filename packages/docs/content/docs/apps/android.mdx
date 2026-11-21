@@ -128,11 +128,11 @@ Install **Downloader** from the TV's Play Store, allow it to install unknown app
 
 ### Signing in on a TV
 
-Typing on a TV is slow, so choose **Quick Connect** on the app's sign-in screen and approve the code it shows on the configure page, under **Save & Install → Jellyfin apps → Connect**. See [signing in](/apps#signing-in) for the other ways in.
+Typing on a TV is slow, so choose **Quick Connect** on the app's sign-in screen and approve the code it shows on the configure page, under **Connect** on **AIOStreams app → Setup**. See [signing in](/apps#signing-in) for the other ways in.
 
 ### TV settings
 
-Two settings under **Settings → Playback** show only on a TV:
+Two settings under **Settings → Player → Video** show only on a TV:
 
 - **Match the video's frame rate** switches the TV to a refresh rate that suits each video, so motion plays smoothly.
 - **Tunneled playback** lets the TV's decoder keep picture and sound in step, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black.
@@ -141,32 +141,34 @@ Two settings under **Settings → Playback** show only on a TV:
 
 ## Playing
 
-The app plays with one of two engines, under **Settings → Playback → Player → Engine**:
+The app plays with one of two engines, under **Settings → Player → Engine**:
 
-| Engine        | What it does                                                                                                                                  |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Automatic** | ExoPlayer, and mpv for a video ExoPlayer can't play. The default.                                                                             |
-| **ExoPlayer** | Android's own player. It uses less battery and shows the video at its own frame rate, but only plays what the device has a decoder for.       |
-| **mpv**       | Decodes nearly any video, in software where the device has no decoder for it, and takes your own `mpv.conf` under **Settings → Android app**. |
+| Engine        | What it does                                                                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic** | ExoPlayer, and mpv for a video ExoPlayer can't play. The default.                                                                        |
+| **ExoPlayer** | Android's own player. It uses less battery and shows the video at its own frame rate, but only plays what the device has a decoder for.  |
+| **mpv**       | Decodes nearly any video, in software where the device has no decoder for it, and takes your own `mpv.conf` under **Settings → Player**. |
 
 When a video fails to play, the error screen offers to try the other engine.
 
 - **Subtitles in time.** Subtitles from your subtitle addons, or a file you add, line up with the subtitles inside the video by themselves, whatever their language, within a moment of showing. Subtitles made for a version at another frame rate are stretched to fit first.
 - **Styled subtitles.** Subtitles with their own styling, such as most anime releases, are drawn by the same renderer mpv uses in both engines, so their fonts, positions and effects look the same in ExoPlayer as in mpv.
-- **Dolby Vision** plays as Dolby Vision where the screen and the device's decoder take it. Profile 7 releases are converted to profile 8.1 on the fly where the decoder only takes profile 8, and on a screen without Dolby Vision the HDR10 or HLG picture underneath plays instead. Profile 5, which has no such picture, plays in mpv with its colours worked out in software, which works but is heavy on the processor. If Dolby Vision looks dim or flickers, turn off **Dolby Vision** under **Settings → Playback → Video** to play the HDR10 picture most of these videos also carry. **Statistics** in the player's menu shows how a video is playing.
-- **Anime upscaling.** **Anime upscaling** under **Settings → Playback → Video** sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. It uses more battery, leaves HDR videos and videos about as large as the screen as they are, and turns itself off for a video the device can't keep up with. **Statistics** in the player's menu shows which applies in ExoPlayer.
-- **Your own mpv shaders.** Under **Settings → Android app**, **Add a shader** gives the built-in mpv a GLSL shader file, applied to what plays along with any your `mpv.conf` lists.
-- **Cache.** The player holds part of the video in memory: ahead, to ride out a slow or unsteady connection, and behind, so seeking back is instant. **Cache size**, under **Settings → Playback → Player**, sets how much; **Automatic** sizes it from the device's memory, and on mobile data the app reads only a little ahead. Intros and other segments set to skip aren't fetched, and for one with a skip button, the start of what follows it is fetched early, so skipping doesn't wait on the connection.
-- **Leaving the app.** On a phone or tablet, the picture-in-picture button in the player's controls moves the video into a small window, and **Picture-in-picture** under **Settings → Android app** does the same when you leave the app. **Play in the background**, there too, keeps the sound going with the screen off.
-- **Other players.** Under **Settings → Playback → Player**, **Play versions in** opens versions in VLC, MX Player, mpv, Vimu (on a TV) or another video app instead, which comes back to the app with your place saved.
+- **Dolby Vision** plays as Dolby Vision where the screen and the device's decoder take it. Profile 7 releases are converted to profile 8.1 on the fly where the decoder only takes profile 8, and on a screen without Dolby Vision the HDR10 or HLG picture underneath plays instead. Profile 5, which has no such picture, plays in mpv with its colours worked out in software, which works but is heavy on the processor. If Dolby Vision looks dim or flickers, turn off **Dolby Vision** under **Settings → Player → Video** to play the HDR10 picture most of these videos also carry. **Statistics** in the player's menu shows how a video is playing.
+- **Anime upscaling.** **Anime upscaling** under **Settings → Player → Video** sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime. It uses more battery, leaves HDR videos and videos about as large as the screen as they are, and turns itself off for a video the device can't keep up with. **Statistics** in the player's menu shows which applies in ExoPlayer.
+- **Your own mpv shaders.** Under **Settings → Player**, **Add a shader** gives the built-in mpv a GLSL shader file, applied to what plays along with any your `mpv.conf` lists.
+- **Cache.** The player holds part of the video in memory: ahead, to ride out a slow or unsteady connection, and behind, so seeking back is instant. **Cache size**, under **Settings → Player**, sets how much; **Automatic** sizes it from the device's memory, and on mobile data the app reads only a little ahead. Intros and other segments set to skip aren't fetched, and for one with a skip button, the start of what follows it is fetched early, so skipping doesn't wait on the connection.
+- **Leaving the app.** On a phone or tablet, the picture-in-picture button in the player's controls moves the video into a small window, and **Picture-in-picture** under **Settings → Player** does the same when you leave the app. **Play in the background**, there too, keeps the sound going with the screen off.
+- **Other players.** Under **Settings → Player**, **Play versions in** opens versions in VLC, MX Player, mpv, Vimu (on a TV) or another video app instead, which comes back to the app with your place saved.
 
 ### Touch controls
 
 - **Tap** shows or hides the controls; **double tap** either side to skip back or forward.
 - **Swipe** across the video to seek, up and down on the left for brightness and on the right for volume.
 - **Pinch** out to fill the screen, in to fit the whole picture.
-- **Press and hold** to play faster while you hold, at the **Held speed** under **Settings → Playback**.
+- **Press and hold** to play faster while you hold, at the **Held speed** under **Settings → Player**.
 - **Lock screen**, at the top of the player, ignores touches until you tap to unlock.
+
+**Gestures** under **Settings → Player → Controls** turns each of these off.
 
 ## Downloads
 

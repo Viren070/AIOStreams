@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageWrapper } from '../shared/page-wrapper';
+import { MenuHeader } from '../shared/menu-header';
 import { SettingsCard } from '../shared/settings-card';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -29,22 +30,22 @@ import { cn } from '@aiostreams/ui/core/styling';
 export function StatsMenu() {
   return (
     <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <Content />
+      <StatsContent />
     </PageWrapper>
   );
 }
 
-function Content() {
+export function StatsContent() {
   const { status } = useStatus();
   const user = useUserData();
   const [range, setRange] = React.useState<'24h' | '7d'>('7d');
 
-  const isSignedIn = Boolean(user.uuid && user.password);
+  const isSignedIn = Boolean(user.uuid);
   const enabledOnInstance = status?.settings.userAnalyticsEnabled === true;
 
   const query = useQuery({
     queryKey: ['user-analytics', user.uuid, range],
-    queryFn: () => fetchUserAnalytics(user.uuid!, user.password!, range),
+    queryFn: () => fetchUserAnalytics(user.uuid!, user.password, range),
     enabled: isSignedIn && enabledOnInstance,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
@@ -52,17 +53,18 @@ function Content() {
 
   return (
     <>
-      <div className="flex items-center w-full">
-        <div>
-          <h2>Stats</h2>
-          <p className="text-[--muted]">
+      <MenuHeader
+        title="Stats"
+        controls={false}
+        description={
+          <>
             Per-user breakdown of how your addons performed across recent stream
             requests. Data window is up to{' '}
             <strong>{range === '24h' ? '24 hours' : '7 days'}</strong>; older
             events are pruned automatically.
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {!isSignedIn && (
         <Alert
@@ -313,7 +315,7 @@ function AddonTable({
             return (
               <tr
                 key={`${r.presetType}-${r.instanceHash}`}
-                className="border-b border-[--border] last:border-0 hover:bg-[--subtle]/30"
+                className="border-b border-[--border] last:border-0 hover:bg-white/[0.018]"
               >
                 <Td>
                   <div className="font-medium">{displayName}</div>
@@ -377,7 +379,7 @@ function ServiceTable({ rows }: { rows: UserAnalyticsResponse['perService'] }) {
           {rows.map((r) => (
             <tr
               key={r.serviceId}
-              className="border-b border-[--border] last:border-0 hover:bg-[--subtle]/30"
+              className="border-b border-[--border] last:border-0 hover:bg-white/[0.018]"
             >
               <Td>
                 <span className="font-medium">{r.serviceId}</span>

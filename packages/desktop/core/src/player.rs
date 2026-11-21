@@ -17,7 +17,7 @@ use crate::playback::{
 };
 use crate::sound::{self, Filters, Sound};
 use crate::thumbnails::Previews;
-use crate::upscale::Upscale;
+use crate::upscale::{DisplayProbe, Upscale};
 
 pub type Emit = Arc<dyn Fn(Outbound) + Send + Sync>;
 
@@ -42,6 +42,8 @@ const VIDEO_GAMMA: u64 = 1002;
 const VIDEO_PRIMARIES: u64 = 1003;
 /// Observed for the app's picture-in-picture window.
 const VIDEO_ASPECT: u64 = 1004;
+/// Observed for the graphics card's upscaling, which fills the screen the window is on.
+const DISPLAY_NAMES: u64 = 1005;
 const READ_AHEAD_EVERY: Duration = Duration::from_secs(15);
 const READ_AHEAD_STEPS: usize = 500;
 
@@ -200,6 +202,7 @@ fn read_ahead(mpv: &Mpv) -> Vec<SubtitleLine> {
 struct Wanted {
     dolby_vision: AtomicBool,
     upscaling: AtomicBool,
+    super_resolution: AtomicBool,
     /// Until the event thread has applied it.
     sound: Mutex<Option<Sound>>,
 }
@@ -225,6 +228,8 @@ pub struct Player {
     styled: Mutex<HashMap<&'static str, String>>,
     /// None when the user's mpv.conf sizes the cache.
     auto_cache: Option<u64>,
+    /// What mpv plays for each YouTube address handed to the page.
+    youtube: Arc<Mutex<HashMap<String, String>>>,
     emit: Emit,
 }
 
@@ -236,6 +241,7 @@ impl Player {
         required: &[(&str, &str)],
         auto_cache: Option<u64>,
         upscaling_hook: PathBuf,
+        display: Option<DisplayProbe>,
         emit: Emit,
     ) -> Result<Self, String> {
         let mpv = Arc::new(Mpv::new(library, defaults)?);
@@ -253,6 +259,9 @@ impl Player {
         mpv.observe("video-params/gamma", Kind::String, VIDEO_GAMMA)?;
         mpv.observe("video-params/primaries", Kind::String, VIDEO_PRIMARIES)?;
         mpv.observe("video-params/aspect", Kind::Double, VIDEO_ASPECT)?;
+        if display.is_some() {
+            mpv.observe("display-names", Kind::String, DISPLAY_NAMES)?;
+        }
         let versions = (text(&mpv, "mpv-version"), text(&mpv, "ffmpeg-version"));
         log::info!(
             "mpv started version=\"{}\" ffmpeg={}",
@@ -266,6 +275,7 @@ impl Player {
         let wanted = Arc::new(Wanted {
             dolby_vision: AtomicBool::new(true),
             upscaling: AtomicBool::new(false),
+            super_resolution: AtomicBool::new(false),
             sound: Mutex::new(None),
         });
         let ac3_encoder = sound::encodes_ac3(&mpv);
@@ -278,7 +288,7 @@ impl Player {
                 let (mpv, emit, quit) = (mpv.clone(), emit.clone(), quit.clone());
                 let wanted = wanted.clone();
                 let (subtitles, reference) = (subtitles.clone(), reference.clone());
-                let upscale = Upscale::new(upscaling_hook);
+                let upscale = Upscale::new(upscaling_hook, display);
                 move || pump(&mpv, &emit, &quit, &wanted, &subtitles, &reference, upscale)
             })
             .map_err(|e| e.to_string())?;
@@ -307,16 +317,27 @@ impl Player {
             own_font,
             styled: Mutex::default(),
             auto_cache,
+            youtube: Arc::default(),
             emit,
         })
     }
 
     pub fn resolve_youtube(&self, request: String, id: String) {
-        let emit = self.emit.clone();
+        let (emit, youtube) = (self.emit.clone(), self.youtube.clone());
         let spawned = std::thread::Builder::new()
             .name("youtube".into())
             .spawn(move || {
                 let stream = crate::youtube::resolve(&id);
+                if let Some(s) = &stream
+                    && let Some(playable) = &s.playable
+                    && let Ok(mut youtube) = youtube.lock()
+                {
+                    // Its links expire within hours anyway.
+                    if youtube.len() >= 64 {
+                        youtube.clear();
+                    }
+                    youtube.insert(s.url.clone(), playable.clone());
+                }
                 emit(Outbound::YoutubeResolved {
                     request,
                     url: stream.as_ref().map(|s| s.url.clone()),
@@ -338,6 +359,13 @@ impl Player {
     pub fn set_upscaling(&self, on: bool) {
         if self.wanted.upscaling.swap(on, Ordering::SeqCst) != on {
             log::info!("set upscaling={on}");
+            self.mpv.wakeup();
+        }
+    }
+
+    pub fn set_super_resolution(&self, on: bool) {
+        if self.wanted.super_resolution.swap(on, Ordering::SeqCst) != on {
+            log::info!("set super-resolution={on}");
             self.mpv.wakeup();
         }
     }
@@ -365,8 +393,16 @@ impl Player {
 
     /// Errs only on refused requests; mpv's own errors reach the page as a message.
     pub fn load(&self, load: &Load, local: &dyn Fn(&str) -> bool) -> Result<(), String> {
-        let file = Loadfile::new(load, local)?;
+        let mut file = Loadfile::new(load, local)?;
         log::info!("load url={} options={}", file.url, file.options.join(","));
+        if let Some(playable) = self
+            .youtube
+            .lock()
+            .ok()
+            .and_then(|y| y.get(&load.url).cloned())
+        {
+            file.url = playable;
+        }
         if !load.append
             && let Ok(mut reference) = self.reference.lock()
         {
@@ -562,6 +598,7 @@ impl Player {
         }
         self.set_dolby_vision(settings.dolby_vision);
         self.set_upscaling(settings.upscaling);
+        self.set_super_resolution(settings.super_resolution);
         self.set_sound(settings.sound);
     }
 
@@ -878,7 +915,11 @@ fn pump(
             sound = next;
             filters.apply(mpv, sound);
         }
-        upscale.set(mpv, wanted.upscaling.load(Ordering::SeqCst));
+        upscale.set(
+            mpv,
+            wanted.upscaling.load(Ordering::SeqCst),
+            wanted.super_resolution.load(Ordering::SeqCst),
+        );
         if let Some(event) = mpv.wait_event(throttle.wait().as_secs_f64(), json) {
             match event {
                 Event::Shutdown => break,
@@ -984,6 +1025,9 @@ fn pump(
                 } => emit(Outbound::VideoAspect {
                     aspect: value.as_f64(),
                 }),
+                Event::Property {
+                    id: DISPLAY_NAMES, ..
+                } => upscale.display_changed(mpv),
                 Event::Property { name, value, .. } => {
                     follow_subtitle(mpv, subtitles, &name, &value);
                     if name == "track-list"

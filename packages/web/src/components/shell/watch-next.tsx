@@ -6,8 +6,8 @@ import { landscapeUrl } from '@/lib/artwork/urls';
 import {
   mergeRows,
   useNextUp,
+  upNextAt,
   useResume,
-  watchedAt,
 } from '@/lib/jellyfin/queries';
 import { useSession } from '@/lib/jellyfin/session';
 
@@ -26,7 +26,7 @@ export function WatchNextSync() {
       .map((item): WatchNextItem => {
         const episode = item.Type === 'Episode';
         const positionMs = ticksToMs(item.UserData?.PlaybackPositionTicks);
-        const playedAt = watchedAt(item);
+        const playedAt = upNextAt(item);
         return {
           id: item.Id!,
           kind: episode ? 'episode' : 'movie',

@@ -49,7 +49,7 @@ export const CalendarAnatomy = defineStyleAnatomy({
     'UI-Calendar__day',
     'h-9 w-9 text-center text-sm p-0 relative',
     '[&:has([aria-selected].range_end)]:rounded-e-[--radius]',
-    '[&:has([aria-selected].outside)]:bg-[--subtle]/50',
+    '[&:has([aria-selected].outside)]:bg-white/[0.03]',
     '[&:has([aria-selected])]:bg-[--subtle]',
     'first:[&:has([aria-selected])]:rounded-s-[--radius]',
     'last:[&:has([aria-selected])]:rounded-e-[--radius]',

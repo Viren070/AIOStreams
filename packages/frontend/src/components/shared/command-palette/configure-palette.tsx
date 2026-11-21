@@ -5,6 +5,8 @@ import {
   CommandShortcut,
 } from '@aiostreams/ui/command';
 import { useCommandPalette } from '@/context/command-palette';
+import { useMenu } from '@/context/menu';
+import { PAGES, pageOf } from '@/lib/configure-pages';
 import { useQuickActions } from '@/context/quick-actions';
 import { useMode } from '@/context/mode';
 import { useStatus } from '@/context/status';
@@ -109,10 +111,15 @@ const FIELD_ITEMS = Object.entries(FIELD_META)
       meta.menu === 'filters' && meta.subTab
         ? [`filter-tab-${meta.subTab}`]
         : undefined;
+    const page = PAGES[pageOf(meta.menu, meta.subTab, key)].title;
     return {
       key,
       label: meta.label,
       trail,
+      pageTrail:
+        meta.menu === 'filters' && meta.subTab && page === 'Filters'
+          ? `Filters → ${humanize(meta.subTab)}`
+          : page,
       sectionId: meta.sectionId ?? key,
       menu: meta.menu,
       subTab: meta.subTab,
@@ -134,13 +141,13 @@ const FILTER_TAB_ITEMS = FILTER_TABS.map((tab) => ({
 
 export function CommandPalette() {
   const { isOpen, close, navigate } = useCommandPalette();
+  const { layout, pages, setPage } = useMenu();
   const { actions: quickActions } = useQuickActions();
   const { mode } = useMode();
   const { status } = useStatus();
   const user = useUserData();
   const statsAvailable =
-    status?.settings.userAnalyticsEnabled === true &&
-    Boolean(user.uuid && user.password);
+    status?.settings.userAnalyticsEnabled === true && Boolean(user.uuid);
   const [query, setQuery] = useState('');
   // Keeps typing responsive while the (much larger) result list renders at a
   // lower priority.
@@ -192,7 +199,25 @@ export function CommandPalette() {
       }
     }
 
-    for (const menu of visibleMenus) {
+    for (const page of layout === 'new' ? pages : []) {
+      const { title } = PAGES[page];
+      const score = scoreItem(buildHaystack([title, page]), q);
+      if (score > 0) {
+        results.push({
+          id: `page-${page}`,
+          label: title,
+          trail: 'Page',
+          score,
+          onSelect: () => {
+            setQuery('');
+            close();
+            setPage(page);
+          },
+        });
+      }
+    }
+
+    for (const menu of layout === 'new' ? [] : visibleMenus) {
       const score = scoreItem(menu.haystack, q);
       if (score > 0) {
         results.push({
@@ -214,7 +239,7 @@ export function CommandPalette() {
       if (score > 0) {
         results.push({
           id: `filter-tab-${tab.id}`,
-          label: `Filters → ${tab.label}`,
+          label: `${layout === 'new' ? PAGES[pageOf('filters', tab.id)].title : 'Filters'} → ${tab.label}`,
           trail: 'Filter Tab',
           icon: <BiFilterAlt />,
           score,
@@ -236,13 +261,14 @@ export function CommandPalette() {
         results.push({
           id: field.key,
           label: field.label,
-          trail: field.trail,
+          trail: layout === 'new' ? field.pageTrail : field.trail,
           score,
           onSelect: () => {
             setQuery('');
             navigate({
               menu: field.menu,
               subTab: field.subTab,
+              field: field.key,
               sectionId: field.sectionId,
               fallbackSectionIds: field.fallbackSectionIds,
             });
@@ -252,7 +278,17 @@ export function CommandPalette() {
     }
 
     return results.sort((a, b) => b.score - a.score);
-  }, [deferredQuery, isIdle, quickActionItems, visibleMenus, navigate, close]);
+  }, [
+    deferredQuery,
+    isIdle,
+    quickActionItems,
+    visibleMenus,
+    navigate,
+    close,
+    layout,
+    pages,
+    setPage,
+  ]);
 
   return (
     <CommandPaletteShell

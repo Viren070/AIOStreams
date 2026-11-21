@@ -67,7 +67,7 @@ function RemoteSourcesCard() {
           </thead>
           <tbody>
             {sources.map((s) => (
-              <tr key={s.url} className="border-t border-[--border]/40">
+              <tr key={s.url} className="border-t border-white/[0.04]">
                 <td className="max-w-[360px] truncate py-1 pr-3 font-mono">
                   {s.url}
                 </td>
@@ -147,7 +147,7 @@ export function CommunityPublishedPage() {
               <Card className="overflow-hidden p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[--subtle]/40 text-xs uppercase text-[--muted]">
+                    <thead className="bg-white/[0.024] text-xs uppercase text-[--muted]">
                       <tr className="text-left">
                         <th className="p-3">Item</th>
                         <th className="p-3">Author</th>
@@ -224,7 +224,7 @@ function PublishedRow({ item }: { item: CommunityItem }) {
   });
 
   return (
-    <tr className="border-t border-[--border]/50 hover:bg-[--subtle]/30">
+    <tr className="border-t border-white/5 hover:bg-white/[0.018]">
       <ConfirmationDialog {...deleteDialog} />
       <ConfirmationDialog {...resetDialog} />
       <td className="p-3">

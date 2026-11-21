@@ -208,7 +208,7 @@ export function StreamsHistoryPage() {
             <Card className="overflow-hidden p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-[--subtle]/40 text-xs uppercase text-[--muted]">
+                  <thead className="bg-white/[0.024] text-xs uppercase text-[--muted]">
                     <tr className="text-left">
                       <th className="w-10 p-3">
                         <Checkbox
@@ -235,7 +235,7 @@ export function StreamsHistoryPage() {
                         <tr
                           key={e.id}
                           className={cn(
-                            'border-t border-[--border]/50 hover:bg-[--subtle]/30',
+                            'border-t border-white/5 hover:bg-white/[0.018]',
                             isSelected && 'bg-brand/[0.06]'
                           )}
                         >
@@ -297,7 +297,7 @@ export function StreamsHistoryPage() {
                 </table>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[--border]/50 p-3 text-xs text-[--muted]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 p-3 text-xs text-[--muted]">
                 <span className="tabular-nums">
                   Showing {(page - 1) * PAGE_SIZE + 1}–
                   {Math.min(page * PAGE_SIZE, total)} of {total}

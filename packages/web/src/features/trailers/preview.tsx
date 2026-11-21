@@ -24,6 +24,8 @@ import {
 import type { EngineFactory, VideoFrame } from '@/lib/playback/engine';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { useLatest } from '@/hooks/use-latest';
+import { pageRtl } from '@/lib/direction';
+import { useWashShown } from '@/lib/artwork/background';
 import { PlayerControls } from '@/features/player/controls';
 import { OBJECT_FIT, usePlayerPage } from '@/app/player/page';
 
@@ -108,27 +110,24 @@ function probe(): Probe {
   });
 }
 
+/** Whether trailers may start by themselves in `spot` at all, whatever is happening now. */
+export function useTrailersAllowed(spot: TrailerSpot): boolean {
+  const [on] = useSetting(settings.interface.trailer[spot]);
+  const still = useReducedMotion();
+  return on && !still && !saveData() && probe().framed;
+}
+
 /** Whether trailers may start by themselves in `spot` here and now. */
 export function useTrailersOn(spot: TrailerSpot): boolean {
-  const [on] = useSetting(settings.interface.trailer[spot]);
+  const allowed = useTrailersAllowed(spot);
   const shown = usePageShown();
   const playback = usePlayback();
   const party = useParty();
-  const still = useReducedMotion();
   const visible = React.useSyncExternalStore(
     visibility.subscribe,
     visibility.get
   );
-  return (
-    on &&
-    shown &&
-    visible &&
-    !playback &&
-    !party &&
-    !still &&
-    !saveData() &&
-    probe().framed
-  );
+  return allowed && shown && visible && !playback && !party;
 }
 
 let stopShown: (() => void) | null = null;
@@ -187,7 +186,7 @@ const MASK = ['mask-image', '-webkit-mask-image'];
  * The app's video lies beneath the page, which the page's background covers
  * but in `box`: what the page draws there itself still shows over it.
  */
-function useVideoHole(box: Box | null, radius: number) {
+function useVideoHole(box: Box | null, radius: number, soft: boolean) {
   React.useLayoutEffect(() => {
     const background = document.querySelector<HTMLElement>(
       '[data-ui=page-background]'
@@ -198,14 +197,25 @@ function useVideoHole(box: Box | null, radius: number) {
     const y = box.y - view.top;
     const { width: w, height: h } = box;
     const r = Math.min(radius, w / 2, h / 2);
-    /* eslint-disable lingui/no-unlocalized-strings -- SVG path data */
+    /* eslint-disable lingui/no-unlocalized-strings -- SVG */
     const arc = (dx: number, dy: number) => `A${r} ${r} 0 0 1 ${dx} ${dy}`;
     const path =
       `M0 0H${view.width}V${view.height}H0Z` +
       `M${x + r} ${y}H${x + w - r}${arc(x + w, y + r)}V${y + h - r}` +
       `${arc(x + w - r, y + h)}H${x + r}${arc(x, y + h - r)}V${y + r}${arc(x + r, y)}Z`;
+    const rtl = pageRtl();
+    const down = h * FADE;
+    const side = w * FADE;
+    // The page's background, fading back in over the hole's bottom and start,
+    // from a pixel past its edge so no seam shows there.
+    const edges = soft
+      ? `<defs><linearGradient id="d" x2="0" y2="1"><stop stop-opacity="0"/><stop offset="1"/></linearGradient>` +
+        `<linearGradient id="s" x1="${rtl ? 0 : 1}" x2="${rtl ? 1 : 0}"><stop stop-opacity="0"/><stop offset="1"/></linearGradient></defs>` +
+        `<rect x="${x - 1}" y="${y + h - down}" width="${w + 2}" height="${down + 1}" fill="url(#d)"/>` +
+        `<rect x="${rtl ? x + w - side : x - 1}" y="${y - 1}" width="${side + 1}" height="${h + 2}" fill="url(#s)"/>`
+      : '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${view.width}" height="${view.height}"><path fill-rule="evenodd" d="${path}"/>${edges}</svg>`;
     /* eslint-enable lingui/no-unlocalized-strings */
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${view.width}" height="${view.height}"><path fill-rule="evenodd" d="${path}"/></svg>`;
     const mask = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
     for (const name of MASK) background.style.setProperty(name, mask);
     const html = document.documentElement;
@@ -214,7 +224,30 @@ function useVideoHole(box: Box | null, radius: number) {
       for (const name of MASK) background.style.removeProperty(name);
       html.removeAttribute('data-video-hole');
     };
-  }, [box, radius]);
+  }, [box, radius, soft]);
+}
+
+/** How much of a soft trailer's height and width its bottom and start fade over. */
+const FADE = 0.5;
+
+/** Fades a soft trailer's hole at its bottom and start, for an element drawn over `frame`. */
+function fadeMask(frame: Box, hole: Box): React.CSSProperties {
+  const rtl = pageRtl();
+  const bottom = frame.y + frame.height - (hole.y + hole.height);
+  const start = rtl
+    ? frame.x + frame.width - (hole.x + hole.width)
+    : hole.x - frame.x;
+  /* eslint-disable lingui/no-unlocalized-strings -- CSS */
+  const image =
+    `linear-gradient(to top, transparent ${bottom}px, #000 ${bottom + hole.height * FADE}px), ` +
+    `linear-gradient(${rtl ? 'to left' : 'to right'}, transparent ${start}px, #000 ${start + hole.width * FADE}px)`;
+  /* eslint-enable lingui/no-unlocalized-strings */
+  return {
+    maskImage: image,
+    WebkitMaskImage: image,
+    maskComposite: 'intersect',
+    WebkitMaskComposite: 'source-in',
+  };
 }
 
 /**
@@ -247,6 +280,8 @@ export interface TrailerPreviewProps {
   over?: boolean;
   /** Over the whole window with the player's controls, with sound. */
   full?: boolean;
+  /** Fades out at its bottom and start into a background taken from artwork. */
+  soft?: boolean;
   /** Whether the picture shows, so what covers it can fade. */
   onShown?: (shown: boolean, trailer: Trailer) => void;
   onEnded(end: TrailerEnd): void;
@@ -283,6 +318,8 @@ export function TrailerPreview(props: TrailerPreviewProps) {
     [box, clip]
   );
   const next = React.useCallback(() => setAt((i) => i + 1), []);
+  const washShown = useWashShown();
+  const soft = !!props.soft && washShown;
 
   const none =
     details.isError || (!!known && !trailer) || (muted && probe().ownVolume);
@@ -309,6 +346,7 @@ export function TrailerPreview(props: TrailerPreviewProps) {
     hole,
     radius: props.radius ?? 0,
     over: !!props.over,
+    soft,
     muted,
     onShown: (shown: boolean) => props.onShown?.(shown, trailer),
     onFailed: next,
@@ -342,6 +380,7 @@ interface PreviewProps {
   radius: number;
   over: boolean;
   muted: boolean;
+  soft: boolean;
   onShown?: (shown: boolean) => void;
   onFailed(): void;
   onEnded(): void;
@@ -368,6 +407,7 @@ function PlayedPreview({
   radius,
   over,
   muted,
+  soft,
   full,
   several,
   onShown,
@@ -452,7 +492,7 @@ function PlayedPreview({
     },
     [host, setFrame]
   );
-  useVideoHole(host && shown && !full && !over ? hole : null, radius);
+  useVideoHole(host && shown && !full && !over ? hole : null, radius, soft);
   usePlayerPage(full);
   React.useEffect(() => {
     if (!full) return;
@@ -479,6 +519,7 @@ function PlayedPreview({
                     width: frame.width,
                     height: frame.height,
                     clipPath: clipTo(frame, hole, radius),
+                    ...(soft && fadeMask(frame, hole)),
                   }
             }
             className={cn(
@@ -542,6 +583,7 @@ function EmbeddedPreview({
   radius,
   over,
   muted,
+  soft,
   onShown,
   onFailed,
   onEnded,
@@ -596,6 +638,7 @@ function EmbeddedPreview({
         width: hole.width,
         height: hole.height,
         borderRadius: radius,
+        ...(soft && fadeMask(hole, hole)),
       }}
       className={cn(
         'pointer-events-none fixed overflow-hidden transition-opacity duration-500',

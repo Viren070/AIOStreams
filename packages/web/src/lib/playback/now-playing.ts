@@ -259,7 +259,7 @@ export function useNowPlaying(
   }, [session, paused, rate]);
 
   React.useEffect(() => {
-    if (!session || !durationMs) return;
+    if (!session || !durationMs || !Number.isFinite(durationMs)) return;
     const tell = () => {
       const { positionMs } = playhead;
       const last = told.current;

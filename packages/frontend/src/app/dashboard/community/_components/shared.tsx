@@ -45,7 +45,7 @@ export function PayloadView({
       <div className="space-y-2 text-xs">
         <div>
           <p className="mb-1 uppercase tracking-wide text-[--muted]">Name</p>
-          <pre className="whitespace-pre-wrap break-words rounded border border-[--border] bg-[--subtle]/40 p-2">
+          <pre className="whitespace-pre-wrap break-words rounded border border-[--border] bg-white/[0.024] p-2">
             {def.name}
           </pre>
         </div>
@@ -53,7 +53,7 @@ export function PayloadView({
           <p className="mb-1 uppercase tracking-wide text-[--muted]">
             Description
           </p>
-          <pre className="whitespace-pre-wrap break-words rounded border border-[--border] bg-[--subtle]/40 p-2">
+          <pre className="whitespace-pre-wrap break-words rounded border border-[--border] bg-white/[0.024] p-2">
             {def.description}
           </pre>
         </div>
@@ -70,7 +70,7 @@ export function PayloadView({
         {open ? 'Hide' : 'Show'} template JSON
       </button>
       {open && (
-        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre rounded border border-[--border] bg-[--subtle]/40 p-2">
+        <pre className="mt-2 max-h-96 overflow-auto whitespace-pre rounded border border-[--border] bg-white/[0.024] p-2">
           {JSON.stringify(payload, null, 2)}
         </pre>
       )}
@@ -92,7 +92,7 @@ export function ReviewSummaryView({
     p.urlOptions.some((o) => o.differsFromDefault)
   );
   return (
-    <div className="space-y-3 rounded border border-[--border] bg-[--subtle]/30 p-3 text-xs">
+    <div className="space-y-3 rounded border border-[--border] bg-white/[0.018] p-3 text-xs">
       <div>
         <p className="mb-1 uppercase tracking-wide text-[--muted]">Addons</p>
         {!summary.presetsInspected ? (

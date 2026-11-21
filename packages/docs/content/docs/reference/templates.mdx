@@ -40,7 +40,7 @@ All dynamic expressions inside `config` are evaluated at load time, before the c
 | `category`             | string (1–20)                             | **Yes**  | Shown in the browser filter bar (e.g. `"Debrid"`, `"Usenet"`)                          |
 | `services`             | `ServiceId[]`                             | No       | Controls the service selection screen — see [Service Handling](#service-handling)      |
 | `serviceRequired`      | boolean                                   | No       | Whether a service must be selected before applying                                     |
-| `setToSaveInstallMenu` | boolean                                   | No       | Redirects the UI to Save & Install after loading. Defaults to `true`                   |
+| `setToSaveInstallMenu` | boolean                                   | No       | Opens the install page after loading. Defaults to `true`                   |
 | `sourceUrl`            | URL string                                | No       | URL the template was fetched from — enables auto-update                                |
 | `changelog`            | `ChangelogEntry[]`                        | No       | Inline version history. See [Changelog](#changelog)                                    |
 | `changelogUrl`         | URL string                                | No       | URL to a remote `CHANGELOG.md`. See [Changelog](#changelog)                            |

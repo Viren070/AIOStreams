@@ -156,9 +156,9 @@ export function UsersPage() {
   return (
     <PageWrapper className="p-4 sm:p-8 space-y-4">
       <div>
-        <h2>Users</h2>
+        <h2>Configurations</h2>
         <p className="text-[--muted]">
-          {d ? `${d.total} configured users` : 'Browse user configs'}
+          {d ? `${d.total} configurations` : 'Browse configurations'}
         </p>
       </div>
 
@@ -226,7 +226,7 @@ export function UsersPage() {
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+                <thead className="text-[--muted] text-xs uppercase bg-white/[0.024]">
                   <tr className="text-left">
                     <th className="p-3 w-10">
                       <Checkbox
@@ -265,7 +265,7 @@ export function UsersPage() {
                   {pageItems.map((u) => (
                     <tr
                       key={u.uuid}
-                      className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                      className="border-t border-white/5 hover:bg-white/[0.018]"
                     >
                       <td className="p-3">
                         <Checkbox

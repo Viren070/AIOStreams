@@ -11,6 +11,7 @@ import { useGenres, useKey, useLiveTvView } from '@/lib/jellyfin/queries';
 import { storage, storedMap } from '@/lib/storage';
 import type { BaseItemDto, BaseItemDtoQueryResult } from '@/lib/jellyfin/types';
 import { createLive, useLive } from '@/lib/live-value';
+import { settings, useSetting } from '@/lib/settings';
 import { lacksDetails } from '@/lib/format';
 
 /** Groups of the app's own, before the server's. */
@@ -25,6 +26,13 @@ export interface ChannelGroup {
 
 const CHANNEL_PAGE = 100;
 const RECENT_MAX = 30;
+
+/** The server has channels, and the user keeps them in the navigation or, with `home`, on home too. */
+export function useLiveTvShown(home = false): boolean {
+  const view = useLiveTvView();
+  const [place] = useSetting(settings.interface.liveTv);
+  return !!view.data && (place === 'home' || (!home && place === 'nav'));
+}
 
 /** Channels played on this device, newest first, by user. */
 const recents = storedMap<string[]>('aiostreams-web-recent-channels', 20);
@@ -134,7 +142,11 @@ export function useChannelGroups(): {
   isLoading: boolean;
 } {
   const view = useLiveTvView();
-  const genres = useGenres(view.data?.Id ?? '');
+  // Elsewhere the view's genres are its programmes', which channels aren't listed by.
+  const grouped =
+    (view.data as { aiostreams?: { groups?: boolean } } | null | undefined)
+      ?.aiostreams?.groups === true;
+  const genres = useGenres(grouped ? (view.data?.Id ?? '') : '');
   const favourites = useChannelPages(FAVOURITES, { pageSize: 1 });
   const hasFavourites = !!favourites.data?.pages[0]?.TotalRecordCount;
   const recent = useChannelPages(RECENT);
@@ -144,7 +156,7 @@ export function useChannelGroups(): {
       ...(hasFavourites ? [{ id: FAVOURITES, name: t`Favourites` }] : []),
       ...(hasRecents ? [{ id: RECENT, name: t`Recent` }] : []),
       { id: ALL, name: t`All channels` },
-      ...(genres.data?.Items ?? []).map((g) => ({
+      ...((grouped && genres.data?.Items) || []).map((g) => ({
         id: g.Id!,
         name: g.Name ?? '',
       })),

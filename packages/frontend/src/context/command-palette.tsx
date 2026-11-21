@@ -9,6 +9,7 @@ export type NavigateTarget = {
   menu: MenuId;
   /** Sub-tab within the destination menu, if it has tabs. */
   subTab?: string;
+  field?: string;
   /** Preferred scroll target id, then fallbacks (the first that exists wins). */
   sectionId?: string;
   fallbackSectionIds?: string[];
@@ -36,19 +37,18 @@ export function CommandPaletteProvider({
   children: React.ReactNode;
 }) {
   const { isOpen, open, close, toggle } = useCommandPaletteState();
-  const { selectedMenu, setSelectedMenu } = useMenu();
+  const { openMenu, layout } = useMenu();
   const { setSubTab } = useSubTabContext();
 
   const navigate = useCallback(
     (target: NavigateTarget) => {
       // Always update the sub-tab first so the destination renders the right
       // tab content immediately, regardless of whether we are switching menus.
-      if (target.subTab) {
+      // The new layout keeps it in the address it opens instead.
+      if (target.subTab && layout === 'classic') {
         setSubTab(target.menu, target.subTab);
       }
-      if (selectedMenu !== target.menu) {
-        setSelectedMenu(target.menu);
-      }
+      openMenu(target.menu, target.subTab, target.field);
       close();
       const ids = [
         target.sectionId,
@@ -58,7 +58,7 @@ export function CommandPaletteProvider({
         scrollAndHighlight(ids);
       }
     },
-    [selectedMenu, setSelectedMenu, setSubTab, close]
+    [openMenu, setSubTab, close, layout]
   );
 
   return (

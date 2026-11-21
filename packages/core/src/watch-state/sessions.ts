@@ -35,7 +35,7 @@ export function sessionKeyFor(client: {
 export interface SessionContext {
   scope: WatchScope;
   sessionKey: string;
-  /** The signed-in persona, empty for the primary user. */
+  /** The signed-in profile, empty for the owner. */
   user?: string;
   client?: {
     name?: string;
@@ -61,7 +61,7 @@ export async function openWatchSession(
     mediaSourceId: opts.mediaSourceId,
     audioStreamIndex: opts.audioStreamIndex,
     subtitleStreamIndex: opts.subtitleStreamIndex,
-    userPersona: ctx.user ?? null,
+    userProfile: ctx.user ?? null,
     itemKey: identity.itemKey,
     kind: identity.kind,
     mediaType: identity.mediaType,
@@ -204,7 +204,7 @@ export async function sweepIdleWatchSessions(): Promise<{
       logger.warn(
         {
           uuid: session.uuid,
-          persona: session.persona,
+          profile: session.profile,
           itemKey: session.itemKey,
           err: error instanceof Error ? error.message : String(error),
         },

@@ -16,6 +16,7 @@ type SettingsCardProps = {
   action?: React.ReactNode;
   titleClassName?: string;
   id?: string;
+  danger?: boolean;
 };
 
 export function SettingsNavCard({ title, children }: SettingsCardProps) {
@@ -50,7 +51,79 @@ export function SettingsNavCard({ title, children }: SettingsCardProps) {
   );
 }
 
-export function SettingsCard({
+export const PlainSections = React.createContext(false);
+/** The heading of the group a section is in, which the section then doesn't repeat. */
+export const SectionGroup = React.createContext<string | null>(null);
+
+function SettingsSection({
+  title,
+  description,
+  children,
+  action,
+  id,
+  danger,
+}: SettingsCardProps) {
+  if (title === React.useContext(SectionGroup)) title = undefined;
+  return (
+    <section id={id} data-settings-card className="scroll-mt-24 space-y-2">
+      {(title || description || action) && (
+        <div className="flex items-end justify-between gap-4 px-1">
+          <div className="min-w-0">
+            {title && (
+              <h3
+                className={cn(
+                  'text-sm font-semibold',
+                  danger ? 'text-red-300' : 'text-gray-100'
+                )}
+              >
+                {title}
+              </h3>
+            )}
+            {description && (
+              <div className="mt-0.5 text-xs text-[--muted]">{description}</div>
+            )}
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
+        </div>
+      )}
+      <div
+        className={cn(
+          'space-y-3 rounded-xl border p-4',
+          danger
+            ? 'border-red-500/30 bg-red-950/20'
+            : 'border-[--border] bg-gray-950/50'
+        )}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Edge-to-edge rows in a plain section, else the given grid. */
+export function SettingsRows({
+  children,
+  grid,
+}: {
+  children: React.ReactNode;
+  grid: string;
+}) {
+  return React.useContext(PlainSections) ? (
+    <div className="-m-4 divide-y divide-[--border]">{children}</div>
+  ) : (
+    <div className={grid}>{children}</div>
+  );
+}
+
+export function SettingsCard(props: SettingsCardProps) {
+  return React.useContext(PlainSections) ? (
+    <SettingsSection {...props} />
+  ) : (
+    <CardLook {...props} />
+  );
+}
+
+function CardLook({
   title,
   description,
   children,
@@ -58,6 +131,7 @@ export function SettingsCard({
   titleClassName,
   action,
   id,
+  danger,
 }: SettingsCardProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -79,6 +153,7 @@ export function SettingsCard({
         data-settings-card
         className={cn(
           'group/settings-card relative lg:bg-gray-950/70 scroll-mt-24',
+          danger && 'lg:bg-red-700/70 border-red-500/20',
           className
         )}
         onMouseMove={handleMouseMove}
@@ -90,6 +165,8 @@ export function SettingsCard({
                 <CardTitle
                   className={cn(
                     'font-bold tracking-widest uppercase text-sm transition-colors duration-300 group-hover/settings-card:text-white group-hover/settings-card:from-brand-500/10 group-hover/settings-card:to-purple-500/5 px-4 py-2 border bg-transparent bg-gradient-to-br bg-[--subtle] border-t-0 border-l-0 w-fit rounded-tl-md rounded-br-md',
+                    danger &&
+                      'group-hover/settings-card:from-red-500/10 group-hover/settings-card:to-red-700/20',
                     titleClassName
                   )}
                 >

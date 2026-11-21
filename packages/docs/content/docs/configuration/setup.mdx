@@ -60,6 +60,7 @@ One configuration serves all of these at once, so you can start with one and add
 
     - **It plays streams with a link**: debrid, Usenet and direct links. P2P torrents stay in Stremio, so get a service in step 2.
     - **It only sees what your configuration provides**, so it needs catalogs and metadata from an addon inside AIOStreams. Step 7 adds one.
+    - **It needs an instance with its media server on.** The ElfHosted public instance has it off, so the app can't sign in there: pick another instance in step 4. A private ElfHosted instance has it off too until you turn it on.
 
   </Tab>
   <Tab value="Other apps">
@@ -67,8 +68,6 @@ One configuration serves all of these at once, so you can start with one and add
 
     | App                              | Platforms                                                                                                     | Discord                               |
     | -------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-    | [Fusion](https://fusionapp.dev)  | iPhone, iPad, Mac, Apple TV                                                                                   | [Join](https://discord.gg/CuwDRSKbCW) |
-    | [Omni](https://omni.stkc.win/)   | iPhone, iPad, Apple TV                                                                                        | [Join](https://discord.gg/hdPAnA3fck) |
     | [RealStream](https://rstream.app/) | Android TV, Desktop _(coming soon)_                                                                         | [Join](https://discord.gg/pn6UBHwHDq) |
     | [Nuvio](https://nuvioapp.space/) | Android, Android TV, iOS                                                                                      | [Join](https://discord.gg/JvAPmadRgX) |
     | [Seanime](https://seanime.app/)  | Windows, macOS, Linux, <br /> (and Android, Android TV, iOS, iPadOS [coming soon](https://seanime.app/tenji)) | [Join](https://discord.gg/GRMQ8yG4NG) |
@@ -77,8 +76,8 @@ One configuration serves all of these at once, so you can start with one and add
     Jellyfin apps such as Infuse and Swiftfin sign in to your configuration as a server: see [Jellyfin apps](/apps/jellyfin).
 
     <Callout type="info">
-      **Chillio, Seanime and Aniyomi** each have a card under **Other apps** on
-      the Save & Install page with their own instructions. Seanime also has a
+      **Chillio, Seanime and Aniyomi** each have a card on the **Other apps**
+      page with their own instructions. Seanime also has a
       [guide](/guides/seanime).
     </Callout>
 
@@ -265,10 +264,13 @@ Select a public instance below and click **Open Template**. This takes you direc
   [Public Instances](/getting-started/public-instances) for a comparison.
   **Yeb's** is the recommended starting point for most users. **ElfHosted** is
   a reliable and reputable option but the public instance disables P2P, HTTP,
-  and Live stream types. If you need those, consider a
+  and Live stream types, and has the media server off, so **the AIOStreams app
+  can't be used with it**. If you need those, consider a
   [private ElfHosted instance](/getting-started/deployment#elfhosted-paid-managed)
-  (paid, no restrictions, relaxed rate limits, direct ElfHosted support, and
-  33% of your subscription goes to the developer).
+  (paid, with no restrictions, rate limits you are unlikely to hit and direct
+  ElfHosted support; ElfHosted is a project sponsor). Its media server is off
+  until you turn on **Enable media server** under **Settings → Media server**
+  in its dashboard.
 </Callout>
 
 <TemplateOpener templateUrl="https://git.tamtaro.de/complete.json" defaultChannel="nightly">
@@ -327,7 +329,7 @@ After clicking **Open Template**, the configure page opens with a short setup th
     - **TorBox Tier** _(TorBox only, required)_: your plan, which sets the size
       limit for uncached downloads.
     - **Setup Variants**: **Include Variants** adds extra install links on the
-      Save & Install page, such as Debrid Only and Usenet Only.
+      **Stremio** page, such as Debrid Only and Usenet Only.
 
     **Show 10 advanced options** has the finer controls. Click **Continue**.
 
@@ -351,7 +353,7 @@ After clicking **Open Template**, the configure page opens with a short setup th
 
 ## Step 6: Save and install
 
-After the setup is applied you land on the **Save & Install** page.
+After the setup is applied you land on the **Stremio** page.
 
 <Steps>
   <Step>
@@ -362,14 +364,14 @@ After the setup is applied you land on the **Save & Install** page.
 
     <Callout type="warn">
       If you see an error like **"Failed to fetch manifest for &lt;addon&gt;"**,
-      go to the **Addons** menu and disable the addon mentioned in the error,
+      go to the **Addons** page and disable the addon mentioned in the error,
       then try clicking **Create** again. This is usually a temporary issue
       with that addon: you can re-enable it and save again later once it
       recovers.
 
       If you see **"Failed to validate TMDB API Key"**, double-check your TMDB
-      API key is correct. You can review it in the **Services** menu under the
-      **Metadata** section.
+      API key is correct. You can review it on the **Services** page under
+      **Metadata**.
     </Callout>
 
   </Step>
@@ -379,7 +381,7 @@ After the setup is applied you land on the **Save & Install** page.
     and updates itself whenever you save. It's optional: **Not now** closes it.
   </Step>
   <Step>
-    **Installation Options** has everything else:
+    The **Stremio**, **AIOStreams app → Setup** and **Other apps** pages have everything else:
 
     - **Stremio**: **Install to Stremio** opens the Stremio app on this device,
       **Install to Stremio Web** installs through Stremio Web (only if you are
@@ -396,7 +398,7 @@ After the setup is applied you land on the **Save & Install** page.
 </Steps>
 
 <Callout type="info">
-  Click **Export** in the **Backups** section to download a JSON copy of your
+  Click **Export** under **Configuration → Backups** to download a JSON copy of your
   configuration. You can use this to restore or transfer your setup later.
 </Callout>
 
@@ -418,22 +420,82 @@ The template brings streams but no catalogs. **[AIOMetadata](https://github.com/
 
     <Steps>
       <Step>
-        Copy AIOMetadata's manifest URL. In AIOStreams, go to **Addons →
-        Installed**, click **Add by URL** and paste it.
+        Copy AIOMetadata's manifest URL. In AIOStreams, go to **Addons**, click **Add
+        by URL** and paste it.
       </Step>
       <Step>
         Move AIOMetadata to the top of **My Addons** with the reorder button, so
         its metadata is used first.
       </Step>
-      <Step>Go to **Save & Install** and click **Save**.</Step>
+      <Step>Click **Save changes** at the top of the page.</Step>
     </Steps>
 
-    After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** card (**Addons → Installed → Catalogs**) and save, so AIOStreams picks up the new list.
+    After you change AIOMetadata's catalogs, press the refresh button on the **Catalogs** page and save, so AIOStreams picks up the new list.
 
-    Using Stremio too? Keep AIOMetadata out of your Stremio install with a variant, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
+    Using Stremio too? Keep AIOMetadata out of your Stremio install with **Who gets this**, so its catalogs don't show twice there: see [Different addons for the apps and Stremio](/apps/media-server#different-addons-for-the-apps-and-stremio).
 
   </Tab>
 </Tabs>
+
+---
+
+## Step 8 (optional): Track what you watch
+
+AIOMetadata can also be your tracker in the AIOStreams app: it records what you watch to the
+watch-history services you connect, and brings what they know you watched elsewhere into
+AIOStreams' **Continue Watching** and **Next Up**. Skip this step if you don't use one. It needs
+AIOMetadata inside AIOStreams, as in the **AIOStreams app** tab of step 7.
+
+<Steps>
+  <Step>
+    In AIOMetadata's configuration, go to **Integrations** and connect the services you use.
+    Watch tracking works with Simkl, MDBList, AniList, MyAnimeList and PublicMetaDB.
+  </Step>
+  <Step>
+    Go to **General → Watch Tracking** and turn on each service your plays should be recorded
+    to. The button beside each switch picks what it records, such as films, shows or anime.
+  </Step>
+  <Step>
+    Set **When to record** to **When playback starts and stops**.
+
+    AIOMetadata marks this **Jellyfin only**, as its pages are written for its own Jellyfin
+    server. Here, read Jellyfin as AIOStreams: the AIOStreams app reports playback the way
+    Jellyfin apps do. A title you stop partway through stays a resume point instead of being
+    marked watched, and what you watched on other devices shows in Continue Watching.
+
+    As AIOMetadata warns, watching anywhere else, Stremio included, then records nothing. If you
+    mostly watch in Stremio, leave it on **When a title is opened**, which records a title as
+    watched as soon as you open it, in any app; AIOStreams then gets nothing from AIOMetadata.
+
+  </Step>
+  <Step>
+    Save AIOMetadata's configuration. Then in AIOStreams, click **Save changes**, so it reads
+    AIOMetadata's changes. **AIOStreams app → Profiles** now lists it under **Trackers**.
+  </Step>
+</Steps>
+
+### AIOMetadata's Jellyfin button
+
+Once its configuration is saved, AIOMetadata may show a **Jellyfin** button next to **Install**.
+It's for AIOMetadata's own Jellyfin server, which you don't need: the AIOStreams app signs in to
+AIOStreams. So leave the dialog's server address, Quick Connect, client password and stream addon
+alone.
+
+One part of it matters if several people use your AIOStreams, each with their own watch-history
+accounts: **users**. Add a user for each person, with **Same person as you** off, and connect
+their own accounts on their card. Under **Also known as (AIOStreams)**, put their name on
+AIOStreams, and the **tracker id** that **AIOStreams app → Profiles** shows for them.
+Then pick AIOMetadata as their tracker there: see
+[trackers for each user](/apps/media-server#trackers-for-each-profile).
+
+No **Jellyfin** button means whoever runs that AIOMetadata instance hasn't turned its Jellyfin
+server on. Tracking still works for you, as above, but not for each person separately.
+
+<Callout type="tip">
+  Coming from Stremio or Nuvio? [Watch Import](https://watch-import.viren070.me) is a tracker
+  addon that brings your watch history, Continue Watching and library from there into
+  AIOStreams.
+</Callout>
 
 ---
 
@@ -444,7 +506,7 @@ To edit your configuration after installation:
 - In **Stremio**, click **Configure** next to the AIOStreams addon.
 - Or go to `https://your-instance/stremio/configure`, click **Sign In** and enter your UUID and password.
 
-Once you've made your changes, go to **Save & Install** and click **Save**.
+Once you've made your changes, click **Save changes** at the top of the page.
 
 <Callout type="info">
   Most changes apply immediately without reinstalling. Only reinstall if a

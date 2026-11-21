@@ -1,4 +1,5 @@
 import React from 'react';
+import { LuUser } from 'react-icons/lu';
 import { cn } from '@aiostreams/ui/core/styling';
 
 export interface VariantOption {
@@ -12,6 +13,8 @@ export interface VariantOption {
 interface VariantPillsProps {
   /** Already filtered by the caller; this renders exactly what it is given. */
   variants: VariantOption[];
+  /** Picked alone, as `@id`. */
+  profiles?: VariantOption[];
   /** Selected variant ids. Empty is the base config. */
   value: string[];
   onChange: (value: string[]) => void;
@@ -22,15 +25,18 @@ export const pill = (active: boolean) =>
   cn(
     'px-2.5 py-1 text-xs font-medium rounded-full border transition-colors',
     active
-      ? 'bg-[--brand]/20 text-[--brand] border-[--brand]/50'
+      ? 'bg-brand-300/20 text-[--brand] border-brand-300/50'
       : 'bg-transparent text-[--muted] border-[--border] hover:bg-[--subtle]'
   );
 
+const isProfile = (id: string) => id.startsWith('@');
+
 /**
- * Base config plus one pill per variant.
+ * Base config, the profiles, then one pill per variant.
  */
 export function VariantPills({
   variants,
+  profiles = [],
   value,
   onChange,
   className,
@@ -39,7 +45,7 @@ export function VariantPills({
     onChange(
       value.includes(id)
         ? value.filter((selected) => selected !== id)
-        : [...value, id]
+        : [...value.filter((selected) => !isProfile(selected)), id]
     );
 
   return (
@@ -51,6 +57,18 @@ export function VariantPills({
       >
         Base config
       </button>
+      {profiles.map((profile) => (
+        <button
+          key={profile.id}
+          type="button"
+          onClick={() => onChange([profile.id])}
+          className={cn(pill(value.includes(profile.id)), 'inline-flex')}
+          title="Follows this profile's variants"
+        >
+          <LuUser className="mr-1 h-3.5 w-3.5" />
+          {profile.name || profile.id}
+        </button>
+      ))}
       {variants.map((variant) => (
         <button
           key={variant.id}

@@ -11,7 +11,7 @@ export interface TokenPayload {
   u: string;
   p: string;
   d?: string;
-  /** Persona id; absent on tokens minted before personas existed. */
+  /** Profile id; absent on tokens minted before profiles existed. */
   k?: string;
   /** API key id; the token then acts for every user. */
   a?: string;
@@ -131,7 +131,7 @@ export interface QuickConnectEntry {
   dateAdded: string;
   uuid?: string;
   encryptedPassword?: string;
-  persona?: string;
+  profile?: string;
 }
 
 const QUICK_CONNECT_TTL = 10 * 60;
@@ -178,7 +178,7 @@ export function quickConnectByCode(
 
 export async function quickConnectAuthorize(
   code: string,
-  credentials: { uuid: string; encryptedPassword: string; persona?: string }
+  credentials: { uuid: string; encryptedPassword: string; profile?: string }
 ): Promise<QuickConnectEntry | null> {
   const entry = await quickConnectByCode(code);
   if (!entry || entry.uuid) return null;

@@ -29,6 +29,12 @@ declare module '*.wgsl' {
   export default source;
 }
 
+/** hls.js without subtitles, extra audio or DRM, which ships no types of its own. */
+declare module 'hls.js/light' {
+  export { default } from 'hls.js';
+  export * from 'hls.js';
+}
+
 /** A translation catalog, compiled by `@lingui/loader`. */
 declare module '*.po' {
   import type { Messages } from '@lingui/core';

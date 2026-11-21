@@ -7,6 +7,7 @@ import {
   FULL_LANGUAGE_MAPPING,
   getLanguageDisplayName,
   normaliseLanguage,
+  normaliseLangCode,
   ServiceId,
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
@@ -720,8 +721,9 @@ class StreamParser {
   }
 
   protected convertISO6392ToLanguage(code: string): string | undefined {
+    const normalised = normaliseLangCode(code);
     const lang = FULL_LANGUAGE_MAPPING.find(
-      (language) => language.iso_639_2 === code
+      (language) => language.iso_639_2 === normalised
     );
     return lang ? getLanguageDisplayName(lang) : undefined;
   }

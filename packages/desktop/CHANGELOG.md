@@ -1,5 +1,118 @@
 # Changelog
 
+## [0.27.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.26.0...desktop-v0.27.0) (2026-11-19)
+
+
+### Features
+
+* add settings for everyone and let the owner change other profiles' settings ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** give the saved servers one shared profile picker ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** keep the pages Back returns to mounted ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** list other saved servers' profiles on the profile picker ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** open settings sections with the slide-over ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+
+
+### Bug Fixes
+
+* **ui:** pass the Combobox's className to its trigger ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** add Path to the version list's fields ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** ask for addon subtitles once a version plays ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** don't retrace the jump out of a navigation box ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** hide the pages' wash under a back slide to a page without it ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** keep a scrolled-away bar away while a page scrolls down from its top ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** leave the player's controls hidden on swipes, skips and pauses ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** line up page titles and controls across pages ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** paint the guide as an art wash panel ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** put AVPlay's object under the page's background on Samsung TVs ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** ring a TV list's whole filter row ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** send live streams a VLC user agent from the apps' players ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** slide a page back the same way from either edge ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** time the pause screen from the last input ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+
+## [0.26.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.25.0...desktop-v0.26.0) (2026-11-17)
+
+
+### Features
+
+* **android:** blend subtitles on the GPU ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **desktop:** add graphics card super resolution ([5a8ed53](https://github.com/Viren070/AIOStreams/commit/5a8ed536a8aa343034ec8dcb111fb95ca998c66b))
+* **web:** add a Live TV setting that takes channels off home or hides them ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** add switches for each player gesture ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** make the card preview one switch that opens by keys and pops out by mouse ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** pick the pages the artwork background shows behind ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** regroup the settings and add a search ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+
+
+### Bug Fixes
+
+* **desktop:** leave chapters out of the trailer EDL ([1ac57d7](https://github.com/Viren070/AIOStreams/commit/1ac57d77c92a30e2dd709a43844b729f52814e53))
+* **desktop:** place the video frame by the web view's rasterization scale on Windows ([e5e404c](https://github.com/Viren070/AIOStreams/commit/e5e404cd3f4f764920ab3e0c6f2586acac763ab9))
+* **desktop:** set tls-verify in the Flatpak ([e953181](https://github.com/Viren070/AIOStreams/commit/e9531811f75f52cf95d9c312940c1e810cd4d400))
+* **desktop:** show the picture-in-picture window on every Space on macOS ([44e31fc](https://github.com/Viren070/AIOStreams/commit/44e31fc88602876b0571b73ffc4c4c099ab77cb7)), closes [#1818](https://github.com/Viren070/AIOStreams/issues/1818)
+* **ui:** scroll carousels with sideways wheel gestures in place of the wheel drag plugin ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **ui:** stop sideways wheel scrolling from flickering carousels ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** bring up the controls on OK during a live stream ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** clear the paper behind a select's scroll arrows on glass panels ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** clip a card grid while its preview pushes cards aside ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** ignore a keyup with no key while nothing is held ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** save a found server at the address it answered at after redirects ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+* **web:** skip the browser's position state for live streams ([23450cc](https://github.com/Viren070/AIOStreams/commit/23450ccc3b94e1d5a59fc93632e2a8b037b9cd1d))
+
+## [0.25.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.24.0...desktop-v0.25.0) (2026-11-14)
+
+
+### Features
+
+* **desktop:** add picture-in-picture on macOS ([616d045](https://github.com/Viren070/AIOStreams/commit/616d045b40c01aae67b6b5c341b02d0a19b27738))
+* **ui:** open a combobox's list with the keys on its filter ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** add a background taken from the title's artwork ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** add sorts and more filters to libraries and favourites ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** approve another device's Quick Connect code from Account settings ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** follow the user's download and preference permissions ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** move the player into a Document Picture-in-Picture window ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** offer the in progress, watched and favourite filters on stock servers only ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** play a server's transcode where the player can't take a version ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** play a title's only version without listing it ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** play any HLS link through hls.js where the browser has no HLS ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** put card grids under the preview host ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** search collections and episodes on servers without extensions ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** ship a web app manifest in the standalone build served on the web ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** sort Continue watching by the later of the last watch and the next episode's airing ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** sort home library rows newest first on servers without extensions ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** treat titles with an Anime genre or tag as anime ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** use the server's chapters and trickplay pictures in the player ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+
+
+### Bug Fixes
+
+* **desktop:** add --device=input to the Flatpak ([c219455](https://github.com/Viren070/AIOStreams/commit/c219455de02bd400799a75b7ee579299176dbdc1)), closes [#1578](https://github.com/Viren070/AIOStreams/issues/1578)
+* **desktop:** load a YouTube trailer's largest H.264 variant and its audio as an EDL ([8eb12ba](https://github.com/Viren070/AIOStreams/commit/8eb12ba680775d546cc2e9bf84c966568326fbcd))
+* **desktop:** set the macOS OpenGL video layer to sRGB outside HDR ([128aa07](https://github.com/Viren070/AIOStreams/commit/128aa078983fc7f15f5ced6bc44b88f2d2d9e9e2)), closes [#1637](https://github.com/Viren070/AIOStreams/issues/1637)
+* **ui:** replace opacity modifiers on CSS variable colours ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** add useSearchParam to keep a page's choices in its address ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** clear the following heroes' shades and trailer veil over the artwork background ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** end a remote's scrub from the bar's Play button ([#1774](https://github.com/Viren070/AIOStreams/issues/1774)) ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** fade the version list's art out with a mask ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** fall back to Safari's prefixed fullscreen API and hide the button without one ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** give a page swiped back a copy of the artwork wash ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** hold the next episode prompt until the episode plays, and play on once ([#1773](https://github.com/Viren070/AIOStreams/issues/1773)) ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** let webOS open its keyboard on a text field ([#1585](https://github.com/Viren070/AIOStreams/issues/1585)) ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** offer Live TV groups only where the view marks its genres as groups ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** open a TV's keyboard from an open list's filter ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** open versions through the stream route of servers without extensions ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** put the favourites sort beside the tabs and Random pick at the end ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** replace opacity modifiers on CSS variable colours ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** replace the guide and calendar loading skeletons ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** send ApiKey on the session socket ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** word settings help for servers without addons ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+
+
+### Performance Improvements
+
+* **ui:** reuse the number formats formatBytes makes ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** ask for 20 items in a grid's first page ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+* **web:** switch settings tabs as soon as one takes focus ([fb075f1](https://github.com/Viren070/AIOStreams/commit/fb075f1e10a00f7a4fecc93b406846a4c25fe9c8))
+
 ## [0.24.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.23.0...desktop-v0.24.0) (2026-11-12)
 
 

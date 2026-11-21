@@ -171,8 +171,8 @@ export function useItemTrailer(item: BaseItemDto | undefined) {
               full && 'opacity-0'
             )}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-[--background] via-[--background]/60 via-40% to-transparent rtl:bg-gradient-to-l" />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[--background] via-[--background]/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[--background] to-transparent rtl:bg-gradient-to-l" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[--background] to-transparent" />
           </div>
           <TrailerVeil shown={shown} />
         </div>,
@@ -183,6 +183,7 @@ export function useItemTrailer(item: BaseItemDto | undefined) {
           item={item}
           spot={spot}
           full={full}
+          soft
           onShown={(on, trailer) => {
             setShown(on);
             setName(trailer.name);

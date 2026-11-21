@@ -230,7 +230,7 @@ export function TemplateExportModal({
                 <a
                   href="https://aiostreams.org/guides/templates"
                   target="_blank"
-                  className="text-[--brand] hover:text-[--brand]/80 hover:underline"
+                  className="text-[--brand] hover:text-brand-300/80 hover:underline"
                   rel="noopener noreferrer"
                 >
                   Templates docs

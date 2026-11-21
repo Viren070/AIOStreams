@@ -20,9 +20,15 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  ServerSubtitle,
 } from './engine';
 import { ownTrackLabel } from './controller';
-import { isFullscreen, toggleDocumentFullscreen } from './fullscreen';
+import {
+  canFullscreen,
+  isFullscreen,
+  onFullscreenChange,
+  toggleDocumentFullscreen,
+} from './fullscreen';
 import {
   drawSubtitle,
   ownLines,
@@ -33,6 +39,36 @@ import {
 /** A cue would show `{\an8}`-style tags as text. */
 const cueText = (text: string) => text.replace(/\{\\[^}]*\}/g, '');
 
+/** HLS through a script, for a browser with no player for it, until the next file. */
+async function openHls(
+  el: HTMLVideoElement,
+  file: EngineFile,
+  current: () => boolean,
+  failed: (error: string) => void
+): Promise<{ destroy(): void } | null> {
+  const { default: Hls } = await import('hls.js/light');
+  if (!current()) return null;
+  if (!Hls.isSupported()) {
+    failed(browserCannot());
+    return null;
+  }
+  const hls = new Hls({
+    startPosition: file.source.IsInfiniteStream ? -1 : file.startMs / 1000,
+  });
+  hls.on(Hls.Events.ERROR, (_, data) => {
+    if (data.fatal)
+      failed(
+        t({
+          comment: 'Follows "Playback failed:"',
+          message: 'the stream stopped loading',
+        })
+      );
+  });
+  hls.loadSource(file.url);
+  hls.attachMedia(el);
+  return hls;
+}
+
 /** Null before the video says. */
 function bufferedAhead(el: HTMLVideoElement): number | null {
   const { buffered, currentTime } = el;
@@ -42,18 +78,29 @@ function bufferedAhead(el: HTMLVideoElement): number | null {
   return buffered.length ? 0 : null;
 }
 
+const browserCannot = () =>
+  t({
+    comment: 'Follows "Playback failed:"',
+    message:
+      'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
+  });
+
+const HLS = 'application/vnd.apple.mpegurl';
+
 const LINK_TYPES = new Map([
-  ['m3u8', 'application/vnd.apple.mpegurl'],
-  ['m3u', 'application/vnd.apple.mpegurl'],
+  ['m3u8', HLS],
+  ['m3u', HLS],
   ['ts', 'video/mp2t'],
 ]);
 
+function linkType(url: string): string | undefined {
+  const name = url.split(/[?#]/)[0].split('/').pop() ?? '';
+  return LINK_TYPES.get(name.slice(name.lastIndexOf('.') + 1).toLowerCase());
+}
+
 /** A failed load from another site hides its cause, but a link's type can be asked about. */
 function declinesLink(el: HTMLVideoElement, url: string): boolean {
-  const name = url.split(/[?#]/)[0].split('/').pop() ?? '';
-  const type = LINK_TYPES.get(
-    name.slice(name.lastIndexOf('.') + 1).toLowerCase()
-  );
+  const type = linkType(url);
   return !!type && !el.canPlayType(type);
 }
 
@@ -81,6 +128,19 @@ interface FileTrack {
   text: string;
 }
 
+function trackElement(
+  video: HTMLVideoElement,
+  subtitle: ServerSubtitle
+): HTMLTrackElement {
+  const track = document.createElement('track');
+  track.kind = 'subtitles';
+  track.src = subtitle.url;
+  track.label = subtitle.label;
+  if (subtitle.lang) track.srclang = subtitle.lang;
+  video.append(track);
+  return track;
+}
+
 /**
  * The page's own `<video>`. Styled scripts and a file's own pictures draw in
  * layers over it; text shows as its text tracks.
@@ -90,6 +150,7 @@ export function videoEngine(
 ): EngineFactory {
   return (emit) => {
     let file: EngineFile | null = null;
+    let subtitles: ServerSubtitle[] = [];
     let elements: HTMLTrackElement[] = [];
     let files: FileTrack[] = [];
     let delayMs = 0;
@@ -104,6 +165,11 @@ export function videoEngine(
     let ownText: { el: HTMLVideoElement; track: TextTrack } | null = null;
     let stopOwnText = () => {};
     let detach = () => {};
+    let hls: { destroy(): void } | null = null;
+    const dropHls = () => {
+      hls?.destroy();
+      hls = null;
+    };
     // A text track's cues load late, so each one remembers the shift it has.
     const shifted = new WeakMap<TextTrack, number>();
     // Browsers disagree on where a cue the file leaves unplaced goes.
@@ -208,14 +274,14 @@ export function videoEngine(
       shiftCues();
     };
     const setSubtitle = (id: string | null) => {
-      const at = file?.subtitles.findIndex((s) => s.id === id) ?? -1;
+      const at = subtitles.findIndex((s) => s.id === id);
       layer?.destroy();
       layer = null;
       hideOwnText();
       const el = video.current;
       const picked = drawSubtitle(
         id,
-        { own: ownTracks, embedded, server: file?.subtitles ?? [] },
+        { own: ownTracks, embedded, server: subtitles },
         el && videoSurface(el),
         { delayMs, height },
         {
@@ -240,7 +306,7 @@ export function videoEngine(
       }
       elements.forEach((e, i) => {
         e.track.mode =
-          !layer && file?.subtitles[i]?.id === id ? 'showing' : 'disabled';
+          !layer && subtitles[i]?.id === id ? 'showing' : 'disabled';
       });
       for (const f of files)
         f.track.mode = f.id === id ? 'showing' : 'disabled';
@@ -264,18 +330,12 @@ export function videoEngine(
         const el = video.current;
         if (!el) return;
         detach();
+        dropHls();
         removeElements();
         file = next;
+        subtitles = next.subtitles;
         delayMs = next.subtitleDelayMs;
-        elements = next.subtitles.map((s) => {
-          const track = document.createElement('track');
-          track.kind = 'subtitles';
-          track.src = s.url;
-          track.label = s.label;
-          if (s.lang) track.srclang = s.lang;
-          el.append(track);
-          return track;
-        });
+        elements = subtitles.map((s) => trackElement(el, s));
         if (next.volume) {
           el.volume = Math.min(1, next.volume.volume);
           el.muted = next.volume.muted;
@@ -336,16 +396,23 @@ export function videoEngine(
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
           ended: () => emit({ type: 'ended' }),
-          error: () =>
+          error: () => {
+            // A file the browser can't read may still play as the server converts it.
+            if (
+              !next.source.IsInfiniteStream &&
+              el.error?.code !== MediaError.MEDIA_ERR_NETWORK
+            )
+              return emit({
+                type: 'unplayable',
+                reason: browserCannot(),
+                positionMs: el.currentTime ? el.currentTime * 1000 : undefined,
+              });
             emit({
               type: 'failed',
-              error: t({
-                comment: 'Follows "Playback failed:"',
-                message:
-                  'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
-              }),
+              error: browserCannot(),
               unsupported: declinesLink(el, next.url),
-            }),
+            });
+          },
         };
         for (const [event, handler] of Object.entries(handlers))
           el.addEventListener(event, handler);
@@ -355,25 +422,39 @@ export function videoEngine(
           audio?.addEventListener(event, listTracks);
         for (const e of elements) e.addEventListener('load', onTrackLoad);
         const onFullscreen = () => set({ fullscreen: isFullscreen() });
-        document.addEventListener('fullscreenchange', onFullscreen);
+        const stopFullscreen = onFullscreenChange(onFullscreen);
         detach = () => {
           for (const [event, handler] of Object.entries(handlers))
             el.removeEventListener(event, handler);
           for (const event of audioEvents)
             audio?.removeEventListener(event, listTracks);
           for (const e of elements) e.removeEventListener('load', onTrackLoad);
-          document.removeEventListener('fullscreenchange', onFullscreen);
+          stopFullscreen();
         };
         onFullscreen();
         el.autoplay = !next.paused;
         if (next.paused) set({ paused: true });
-        el.src = next.url;
+        if (linkType(next.url) === HLS && !el.canPlayType(HLS))
+          void openHls(
+            el,
+            next,
+            () => file === next,
+            // One that never loaded, as from a site without CORS, is the link's fault.
+            (error) =>
+              emit({ type: 'failed', error, unsupported: !el.readyState })
+          ).then((opened) => {
+            if (file === next) hls = opened;
+            else opened?.destroy();
+          });
+        else el.src = next.url;
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {
         detach();
         detach = () => {};
+        dropHls();
         removeElements();
+        file = null;
         const el = video.current;
         if (!el) return;
         el.pause();
@@ -405,6 +486,16 @@ export function videoEngine(
         set({ audio: id });
       },
       setSubtitle,
+      setSubtitles(next) {
+        const el = video.current;
+        if (!file || !el) return;
+        for (const s of next.slice(subtitles.length)) {
+          const track = trackElement(el, s);
+          track.addEventListener('load', onTrackLoad);
+          elements.push(track);
+        }
+        subtitles = next;
+      },
       setSubtitleDelay(ms) {
         delayMs = ms;
         shiftCues();
@@ -418,7 +509,7 @@ export function videoEngine(
         if (nextFit !== fit) layer?.place();
         fit = nextFit;
       },
-      toggleFullscreen: toggleDocumentFullscreen,
+      toggleFullscreen: canFullscreen() ? toggleDocumentFullscreen : undefined,
       ...(document.pictureInPictureEnabled && {
         togglePictureInPicture() {
           const el = video.current;

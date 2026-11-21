@@ -104,7 +104,8 @@ The app looks for `libmpv.so.2` next to the binary, then in the system library f
 
 The download is a Flatpak, which `scripts/make-flatpak.sh` builds from `linux/io.github.viren070.aiostreams.yml`
 after the page: the GNOME 51 runtime, with libmpv and the libraries it needs built in. It needs
-`flatpak`, `flatpak-builder`, `python3-aiohttp`, `python3-tomlkit` and the Flathub remote. Under
+`flatpak` 1.15.6 or newer, `flatpak-builder`, `python3-aiohttp`, `python3-tomlkit` and the Flathub
+remote. Ubuntu 24.04's Flatpak is older; `ppa:flatpak/stable` has a newer one. Under
 WSL, point `FLATPAK_WORK` at a folder on the Linux filesystem, since the builder's state cannot live
 on a Windows drive. Install the bundle it prints with `flatpak install --user`.
 

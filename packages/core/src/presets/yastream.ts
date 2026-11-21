@@ -1,11 +1,28 @@
-import { Addon, Option, UserData } from '../db/index.js';
+import { Addon, Option, ParsedStream, Stream, UserData } from '../db/index.js';
 import { constants, createLogger, ServiceId } from '../utils/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { config as appConfig } from '../config/index.js';
+import { StreamParser } from '../parser/index.js';
 
 const logger = createLogger('core');
 
+/** Its HLS playlists are films and episodes, not channels. */
+class YastreamStreamParser extends StreamParser {
+  protected override getStreamType(
+    stream: Stream,
+    service: ParsedStream['service'],
+    currentParsedStream: ParsedStream
+  ): ParsedStream['type'] {
+    const type = super.getStreamType(stream, service, currentParsedStream);
+    return type === 'live' ? 'http' : type;
+  }
+}
+
 export class YastreamPreset extends Preset {
+  static override getParser(): typeof StreamParser {
+    return YastreamStreamParser;
+  }
+
   static override get METADATA() {
     const supportedResources = [
       constants.STREAM_RESOURCE,

@@ -19,6 +19,19 @@ export function setFormatLocale(locale: string | undefined): void {
   formatLocale = locale;
 }
 
+const sizeFormats = new Map<string, Intl.NumberFormat>();
+
+/** Made once per locale and digits, as making one is far slower than using it. */
+function sizeFormat(locale: string, digits: number): Intl.NumberFormat {
+  const key = `${locale} ${digits}`;
+  let format = sizeFormats.get(key);
+  if (!format) {
+    format = new Intl.NumberFormat(locale, { maximumFractionDigits: digits });
+    sizeFormats.set(key, format);
+  }
+  return format;
+}
+
 interface BytesOptions {
   /** Returned when the value is null/undefined/NaN. Defaults to `'—'`. */
   placeholder?: string;
@@ -42,9 +55,7 @@ export function formatBytes(
   );
   const scaled = bytes / SI ** i;
   const value = formatLocale
-    ? scaled.toLocaleString(formatLocale, {
-        maximumFractionDigits: i === 0 ? 0 : 1,
-      })
+    ? sizeFormat(formatLocale, i === 0 ? 0 : 1).format(scaled)
     : scaled.toFixed(i === 0 ? 0 : 1).replace(/\.0$/, '');
   return `${value} ${BYTE_UNITS[i]}`;
 }

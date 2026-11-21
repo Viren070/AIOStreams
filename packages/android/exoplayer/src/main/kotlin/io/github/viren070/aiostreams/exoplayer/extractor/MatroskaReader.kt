@@ -65,6 +65,7 @@ internal class MatroskaReader(private val host: MatroskaHost, private val uri: U
             seeking
                 .filterTracks(C.TRACK_TYPE_VIDEO) { _, track -> SampleDependencies(track) }
                 .filterTracks(C.TRACK_TYPE_VIDEO) { id, track -> withFrameRate(track, matroska.frameDurationNs(id)) }
+                .filterTracks(C.TRACK_TYPE_AUDIO) { _, track -> withFlacInputSize(track) }
                 .filterTracks(C.TRACK_TYPE_TEXT) { _, track -> SubtitleCapture(track, subtitles) },
         )
     }
@@ -89,6 +90,14 @@ internal class MatroskaReader(private val host: MatroskaHost, private val uri: U
             override fun format(format: Format) = track.format(
                 if (format.frameRate > 0) format else format.buildUpon().setFrameRate(1e9f / durationNs).build(),
             )
+        }
+    }
+
+    // Media3 leaves it unset, and a device decoder's own size can be too small.
+    private fun withFlacInputSize(track: TrackOutput) = object : TrackOutput by track {
+        override fun format(format: Format) {
+            val size = if (format.maxInputSize == Format.NO_VALUE) flacMaxFrameSize(format) else null
+            track.format(size?.let { format.buildUpon().setMaxInputSize(it).build() } ?: format)
         }
     }
 

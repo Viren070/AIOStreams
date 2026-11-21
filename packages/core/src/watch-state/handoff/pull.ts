@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { config as appConfig } from '../../config/index.js';
 import { createLogger } from '../../logging/logger.js';
-import { makeRequest } from '../../utils/http.js';
-import { readBodyCapped } from '../../utils/safe-fetch.js';
+import { makeRequest } from '../../utils/http/index.js';
+import { readBodyCapped } from '../../utils/http/safe-fetch.js';
 import { getDb } from '../../db/db.js';
 import { TaskManager } from '../../tasks/index.js';
 import { randomUUID } from 'node:crypto';
@@ -423,20 +423,23 @@ async function importItems(
 ): Promise<ImportResult> {
   if (!items.length) return { written: 0, skipped: 0, listed: [], rekeyed: [] };
 
-  const keys = items.map((i) =>
-    i.episode != null || splitVideoId(i.videoId).episode != null
-      ? episodeKeyOf(i.videoId)
-      : `m|${i.metaId}`
-  );
+  const newest = new Map<string, z.infer<typeof StateItemSchema>>();
+  for (const item of items) {
+    const key =
+      item.episode != null || splitVideoId(item.videoId).episode != null
+        ? episodeKeyOf(item.videoId)
+        : `m|${item.metaId}`;
+    const held = newest.get(key);
+    if (!held || atMs(item.at, 0) > atMs(held.at, 0)) newest.set(key, item);
+  }
+  const keys = [...newest.keys()];
   const existingRows = await WatchStateRepository.getMany(scope, keys, db);
   const ownRows = await ownSpellings(scope, keys, matches, db);
 
   const rows: ImportRow[] = [];
   const listed: string[] = [];
   let skipped = 0;
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const key = keys[i];
+  for (const [key, item] of newest) {
     const existing = existingRows.get(key);
     const at = atMs(item.at, now);
 
@@ -874,7 +877,35 @@ async function fetchState(sink: SinkRow): Promise<PlaybackStatePayload | null> {
   for (const [what, got, max] of counts) {
     if (got > max) throw new Error(`${what} list of ${got} exceeds ${max}`);
   }
-  return parsed.data;
+  return withUsableIds(parsed.data);
+}
+
+/** Placeholder ids name no title, so different shows share one. */
+function isUsableId(id: string | undefined): boolean {
+  return id === undefined || (id.trim() !== '' && !id.startsWith('__'));
+}
+
+function withUsableIds(state: PlaybackStatePayload): PlaybackStatePayload {
+  const { watched } = state;
+  return {
+    ...state,
+    items: state.items?.filter(
+      (row) => isUsableId(row.metaId) && isUsableId(row.videoId)
+    ),
+    watchlist: state.watchlist?.filter((row) => isUsableId(row.metaId)),
+    ratings: state.ratings?.filter(
+      (row) => isUsableId(row.metaId) && isUsableId(row.videoId)
+    ),
+    watched: watched && {
+      ...watched,
+      movies: watched.movies?.filter(isUsableId),
+      episodes: watched.episodes?.filter(isUsableId),
+      dropped: watched.dropped?.filter(isUsableId),
+      nextUp: watched.nextUp?.filter(
+        (row) => isUsableId(row.metaId) && isUsableId(row.videoId)
+      ),
+    },
+  };
 }
 
 /** How long a claimed read is held before another instance may take it over. */
@@ -924,6 +955,50 @@ export async function pullSink(
   }
   if (!payload) return EMPTY;
 
+  let outcome: PullOutcome;
+  try {
+    outcome = await importState(sink, payload, now);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const failures = sink.pullFailures + 1;
+    await PlaybackHandoffRepository.finishPull(sink.id, token, {
+      at: now,
+      nextPullAt: Date.now() + pullBackoffMs(failures),
+      error: message,
+      failures,
+    });
+    logger.warn(
+      { addon: sink.addonName, err: message, failures },
+      'failed to import watch state from addon'
+    );
+    return EMPTY;
+  }
+
+  await PlaybackHandoffRepository.finishPull(sink.id, token, {
+    at: now,
+    nextPullAt: Date.now() + cfg.pullIntervalSeconds * 1000,
+    version: payload.version ?? null,
+    failures: 0,
+    status: sink.status === 'connected' ? undefined : 'connected',
+  });
+  if (
+    outcome.items ||
+    outcome.watched ||
+    outcome.watchlist ||
+    outcome.dropped ||
+    outcome.ratings ||
+    outcome.removed
+  ) {
+    logger.debug({ addon: sink.addonName, ...outcome }, 'imported watch state');
+  }
+  return outcome;
+}
+
+async function importState(
+  sink: SinkRow,
+  payload: PlaybackStatePayload,
+  now: number
+): Promise<PullOutcome> {
   const scope = scopeOf(sink);
   let items: ImportResult = {
     written: 0,
@@ -1100,15 +1175,7 @@ export async function pullSink(
     }
   });
 
-  await PlaybackHandoffRepository.finishPull(sink.id, token, {
-    at: now,
-    nextPullAt: Date.now() + cfg.pullIntervalSeconds * 1000,
-    version: payload.version ?? null,
-    failures: 0,
-    status: sink.status === 'connected' ? undefined : 'connected',
-  });
-
-  const outcome: PullOutcome = {
+  return {
     unchanged,
     items: items.written,
     watched: watchedWritten,
@@ -1118,17 +1185,6 @@ export async function pullSink(
     removed,
     skipped: items.skipped + watchedSkipped,
   };
-  if (
-    outcome.items ||
-    outcome.watched ||
-    outcome.watchlist ||
-    outcome.dropped ||
-    outcome.ratings ||
-    outcome.removed
-  ) {
-    logger.debug({ addon: sink.addonName, ...outcome }, 'imported watch state');
-  }
-  return outcome;
 }
 
 /** The scheduled read. Sinks are created by a request, never by this. */

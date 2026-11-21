@@ -218,7 +218,7 @@ function EntriesView({
           <Card className="p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+                <thead className="text-[--muted] text-xs uppercase bg-white/[0.024]">
                   <tr className="text-left">
                     <th className="p-3">Key</th>
                     <th className="p-3">Kind</th>
@@ -243,7 +243,7 @@ function EntriesView({
                   {page_.entries.map((entry) => (
                     <tr
                       key={entry.key}
-                      className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                      className="border-t border-white/5 hover:bg-white/[0.018]"
                     >
                       <td
                         className="p-3 font-mono text-xs max-w-[260px] truncate cursor-pointer"
@@ -354,7 +354,7 @@ function EntriesView({
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-t border-[--border]/50 text-xs text-[--muted]">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-t border-white/5 text-xs text-[--muted]">
               <span className="tabular-nums">
                 Showing{' '}
                 {(page_.page - 1) * page_.pageSize +

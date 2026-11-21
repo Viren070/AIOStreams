@@ -5,7 +5,7 @@ import {
   bootstrap,
   config as appConfig,
   settingsStore,
-} from '../config/index.js';
+} from '../../config/index.js';
 import { isBlockedAddress } from './url-safety.js';
 
 const DEFAULT_PORTS: Record<string, string> = {
@@ -95,8 +95,11 @@ const checkedLookup = ((hostname, options, callback) => {
   });
 }) as LookupFunction;
 
-const plainConnect = buildConnector({});
-const checkedConnect = buildConnector({ lookup: checkedLookup });
+const plainConnect = buildConnector({ allowH2: false });
+const checkedConnect = buildConnector({
+  allowH2: false,
+  lookup: checkedLookup,
+});
 
 const connect: buildConnector.connector = (options, callback) => {
   const port = options.port || DEFAULT_PORTS[options.protocol];

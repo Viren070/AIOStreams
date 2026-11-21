@@ -186,7 +186,7 @@ export function AddonFetchingBehaviorCard() {
 
   const placeholderExitConditions = [
     'count(resolution(totalStreams, "2160p")) > 0 or totalTimeTaken > 5000',
-    "queryType == 'anime' ? (count(resolution(totalStreams, '1080p')) > 0 or totalTimeTaken > 5000) : false",
+    "queryType == 'anime.series' ? (count(resolution(totalStreams, '1080p')) > 0 or totalTimeTaken > 5000) : false",
     "'addon' in queriedAddons and (totalTimeTaken >= 6000 or count(totalStreams) >= 5)",
     "count(seeders(size(totalStreams, '5GB', '20GB'), 50)) > 0",
     "queryType == 'movie' ? count(cached(resolution(totalStreams, '2160p'))) > 0 : count(resolution(totalStreams, '1080p')) >= 2",
@@ -249,9 +249,7 @@ export function AddonFetchingBehaviorCard() {
                   groups: {
                     ...prev.groups,
                     onConditionFailure: value as
-                      | 'stop'
-                      | 'skip'
-                      | 'includeFinished',
+                      'stop' | 'skip' | 'includeFinished',
                   },
                 }));
               }}
@@ -307,15 +305,16 @@ export function AddonFetchingBehaviorCard() {
               . The following variables are available:
               <ul className="list-disc list-inside space-y-1 ml-2 mt-2">
                 <li>
-                  <code>totalStreams</code>: The total number of streams
+                  <code>totalStreams</code>: The streams found so far, after
+                  filtering and removing duplicates
                 </li>
                 <li>
-                  <code>totalTimeTaken</code>: The total time taken to fetch the
-                  streams
+                  <code>totalTimeTaken</code>: The time taken so far, in
+                  milliseconds
                 </li>
                 <li>
-                  <code>queryType</code>: The type of query e.g. 'movie',
-                  'series', or 'anime'
+                  <code>queryType</code>: The type of query: 'movie', 'series',
+                  'anime.movie' or 'anime.series'
                 </li>
                 <li>
                   <code>queriedAddons</code>: The addons that have been queried.

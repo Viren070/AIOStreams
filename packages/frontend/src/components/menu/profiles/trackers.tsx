@@ -9,8 +9,12 @@ import { watchStateTrackersQuery } from '@/lib/queries';
 import { DOCS_BASE_URL } from '@/lib/changelog';
 import { relativeTime } from '@aiostreams/ui/core/format';
 import type { TrackerExchange, WatchStateTracker } from '@/lib/api';
+import { profileLabel } from '@/lib/audiences';
+import { profilesOf } from '../../../../../core/src/utils/profiles';
 
 const RESOURCE_DOCS_URL = `${DOCS_BASE_URL}/reference/addon-protocol/watch-state`;
+
+const NAME_LIST = new Intl.ListFormat('en', { type: 'conjunction' });
 
 function EmptyState({
   title,
@@ -120,7 +124,11 @@ function TrackerRow({
   );
 }
 
-export function JellyfinTrackers() {
+export function JellyfinTrackers({
+  onChooseTrackers,
+}: {
+  onChooseTrackers: () => void;
+}) {
   const { uuid, password, userData } = useUserData();
   const credentials = React.useMemo(
     () => (uuid ? { uuid, password } : null),
@@ -176,6 +184,29 @@ export function JellyfinTrackers() {
   }
 
   if (!data.trackers.length) {
+    const names = [...new Set(data.available.map((option) => option.addon))];
+    if (names.length) {
+      return (
+        <EmptyState
+          title="No user syncs with a tracker"
+          action={
+            <Button
+              intent="gray-outline"
+              size="sm"
+              rounded
+              onClick={onChooseTrackers}
+            >
+              Choose trackers
+            </Button>
+          }
+        >
+          {NAME_LIST.format(names)} can record what you play in the apps and
+          bring in what you watched elsewhere, but no user syncs with{' '}
+          {names.length === 1 ? 'it' : 'them'}. Pick trackers for your users,
+          then save.
+        </EmptyState>
+      );
+    }
     return (
       <EmptyState
         title="No tracker addons"
@@ -198,11 +229,9 @@ export function JellyfinTrackers() {
     );
   }
 
-  const personas = userData.jellyfin?.personas ?? [];
-  const primaryName =
-    userData.jellyfin?.primary?.name || userData.addonName || 'Primary user';
+  const profiles = profilesOf(userData);
   // Only worth naming whose trackers they are once there is more than one history.
-  const named = data.trackers.some((t) => t.persona);
+  const named = data.trackers.some((t) => t.profile);
 
   return (
     <div className="space-y-3">
@@ -216,22 +245,25 @@ export function JellyfinTrackers() {
       <ul className="divide-y divide-gray-800 rounded-md border border-gray-800">
         {data.trackers.map((tracker) => (
           <TrackerRow
-            key={`${tracker.persona ?? ''}|${tracker.addon}`}
+            key={`${tracker.profile ?? ''}|${tracker.addon}`}
             tracker={tracker}
             owner={
               !named
                 ? undefined
-                : tracker.persona
-                  ? (personas.find((p) => p.id === tracker.persona)?.name ??
-                    tracker.persona)
-                  : primaryName
+                : profileLabel(
+                    userData,
+                    profiles.find((p) => p.id === (tracker.profile ?? '')) ?? {
+                      id: tracker.profile ?? '',
+                      name: tracker.profile,
+                    }
+                  )
             }
           />
         ))}
       </ul>
       <p className="text-xs text-gray-500">
-        From your saved configuration. To choose which trackers each user syncs
-        with, edit them under Users. To stop an addon syncing, untick Watch
+        From your saved configuration. To choose which trackers each profile
+        syncs with, edit the profile. To stop an addon syncing, untick Watch
         State in its Resources option.
       </p>
     </div>

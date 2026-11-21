@@ -7,10 +7,11 @@ import { Tooltip } from '@aiostreams/ui/tooltip';
 import { cn } from '@aiostreams/ui/core/styling';
 import { toast } from 'sonner';
 import {
+  type Download,
   downloadsHost,
   useDownloadOf,
   useEpisodesToDownload,
-  type Download,
+  useMayDownload,
 } from '@/lib/downloads';
 import { navigate, to } from '@/lib/paths';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
@@ -87,7 +88,8 @@ export function DownloadButton({
 }) {
   const picker = useVersionPicker();
   const download = useDownloadOf(item.Id);
-  if (!downloadsHost()) return null;
+  const mayDownload = useMayDownload();
+  if (!downloadsHost() || (!download && !mayDownload)) return null;
   const state = download?.state;
   const label = describe(download);
   const icon = !download ? (
@@ -137,8 +139,9 @@ export function ShowDownloadMenu({
 }) {
   const picker = useVersionPicker();
   const episodes = useEpisodesToDownload();
+  const mayDownload = useMayDownload();
   const seasonName = season?.Name;
-  if (!downloadsHost()) return null;
+  if (!mayDownload) return null;
   const run = (opts: { seasonId?: string; unwatched?: boolean }) =>
     void episodes(series.Id!, opts).then(
       (items) =>

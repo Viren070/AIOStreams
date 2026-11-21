@@ -10,6 +10,8 @@ export interface SavedServer {
   name: string;
   logo: string | null;
   lastUsed: number;
+  /** False keeps it off the shared profile picker, and the other servers off its own. */
+  onPicker?: boolean;
 }
 
 const SERVERS_KEY = 'aiostreams-web-servers';
@@ -36,6 +38,15 @@ export function enterServer(server: SavedServer): void {
 
 export function leaveServer(): void {
   storage.remove(CURRENT_KEY);
+}
+
+export function setOnPicker(base: string, onPicker: boolean): void {
+  storage.set(
+    SERVERS_KEY,
+    savedServers().map((s) =>
+      s.base === base ? { ...s, onPicker: onPicker ? undefined : false } : s
+    )
+  );
 }
 
 export function forgetServer(base: string): void {
@@ -73,7 +84,7 @@ interface PublicInfo {
 async function quickGet<T>(
   url: string,
   headers?: Record<string, string>
-): Promise<{ status: number; body: T | null } | null> {
+): Promise<{ status: number; body: T | null; url: string } | null> {
   // Older engines lack AbortSignal.timeout.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -82,6 +93,7 @@ async function quickGet<T>(
     return {
       status: res.status,
       body: res.ok ? ((await res.json()) as T) : null,
+      url: res.url || url,
     };
   } catch {
     return null;
@@ -99,10 +111,21 @@ function labelOf(info: PublicInfo, base: string): Label {
   };
 }
 
-async function publicInfo(base: string): Promise<PublicInfo | null> {
-  return (
-    (await quickGet<PublicInfo>(`${base}/System/Info/Public`))?.body ?? null
-  );
+const INFO_PATH = '/System/Info/Public';
+
+/**
+ * With the address the server answered at: a browser drops the Authorization
+ * header when it follows a redirect to another origin, such as http to https.
+ */
+async function publicInfo(
+  base: string
+): Promise<{ info: PublicInfo; base: string } | null> {
+  const res = await quickGet<PublicInfo>(`${base}${INFO_PATH}`);
+  if (!res?.body) return null;
+  const answered = res.url.endsWith(INFO_PATH)
+    ? res.url.slice(0, -INFO_PATH.length)
+    : base;
+  return { info: res.body, base: answered };
 }
 
 export type ServerStatus =
@@ -168,9 +191,11 @@ export async function findServer(input: string): Promise<SavedServer> {
       '/jellyfin$1'
     );
   for (const candidate of path ? [path] : ['/jellyfin', '']) {
-    const base = url.origin + candidate;
-    const info = await publicInfo(base);
-    if (info?.Id) return { base, ...labelOf(info, base), lastUsed: Date.now() };
+    const found = await publicInfo(url.origin + candidate);
+    if (found?.info.Id) {
+      const { info, base } = found;
+      return { base, ...labelOf(info, base), lastUsed: Date.now() };
+    }
   }
   throw new Error(t`No server answered at that address.`);
 }

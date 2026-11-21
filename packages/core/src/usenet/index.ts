@@ -658,6 +658,7 @@ export class UsenetEngine {
         inferred: f.sizeInferred || undefined,
         segments: nzb.files[f.index]?.segments.length,
         firstSegmentNumber: nzb.files[f.index]?.segments[0]?.number,
+        headMissing: f.error === 'article_not_found' || undefined,
       }));
       // Split-7z middle volumes skipped at probe time inherit volume 1's exact
       // size (fixed-size slicing). Marked `inferred` so a failed parse can fall

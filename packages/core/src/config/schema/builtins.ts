@@ -675,16 +675,6 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
-    zyclopsHealthProxyEndpoint: {
-      schema: urlString,
-      default: 'https://zyclops.elfhosted.com',
-      label: 'Zyclops health proxy endpoint',
-      description:
-        'Base URL of the Zyclops health proxy used by the Newznab preset.',
-      env: 'ZYCLOPS_HEALTH_PROXY_ENDPOINT',
-      requiresRestart: false,
-      secret: false,
-    },
   },
   zilean: {
     url: {

@@ -36,6 +36,7 @@ import {
   forgetServer,
   savedServers,
   serverAddress,
+  setOnPicker,
   type SavedServer,
   type ServerStatus,
 } from '@/lib/jellyfin/servers';
@@ -48,6 +49,7 @@ import {
   RISE,
   Screen,
   SPRING,
+  TILE,
   useShake,
 } from '@/app/sign-in/page';
 
@@ -119,11 +121,6 @@ function AddServer({
     </form>
   );
 }
-
-const TILE = {
-  hidden: { opacity: 0, y: 14, scale: 0.96 },
-  shown: { opacity: 1, y: 0, scale: 1 },
-};
 
 /** Wraps, as configurations on one host differ only at the end. */
 function Address({ base }: { base: string }) {
@@ -236,7 +233,18 @@ function ServerCard({
   });
   const { name, logo } = check.data?.label ?? server;
   const status = check.data?.status;
+  const [onPicker, setPicker] = React.useState(server.onPicker !== false);
   const actions = [
+    {
+      label: onPicker
+        ? t`Leave off the profile picker`
+        : t`Show on the profile picker`,
+      run: () => {
+        setOnPicker(server.base, !onPicker);
+        setPicker(!onPicker);
+      },
+      className: undefined,
+    },
     ...(status?.kind === 'signed-in'
       ? [{ label: t`Sign out`, run: onSignOut, className: undefined }]
       : []),

@@ -13,7 +13,9 @@ import {
   similarPreviews,
   type FilmographyKind,
   Cache,
+  canonicalDescriptor,
   collectionMembers,
+  collectionPart,
   config as appConfig,
   contentItemType,
   defaultUserData,
@@ -298,6 +300,51 @@ function applySort(req: Request, items: JellyfinItem[]): JellyfinItem[] {
   return out;
 }
 
+/** What a watch-state list sorts by, for Jellyfin's sorts its rows can't answer. */
+const ITEM_SORTS: Record<string, (item: JellyfinItem) => string | number> = {
+  sortname: (i) => String(i.SortName ?? i.Name).toLowerCase(),
+  name: (i) => String(i.Name).toLowerCase(),
+  premieredate: (i) => String(i.PremiereDate ?? i.ProductionYear ?? ''),
+  productionyear: (i) => Number(i.ProductionYear ?? 0),
+  communityrating: (i) => Number(i.CommunityRating ?? 0),
+  runtime: (i) => Number(i.RunTimeTicks ?? 0),
+};
+
+/**
+ * A watch-state list in the request's sort. Its own order is newest first,
+ * which a date sort keeps or turns round; a name sort reads the rows' names
+ * where all have one; other sorts build every title to read it.
+ */
+async function sortRows(
+  req: Request,
+  ctx: JellyfinRequestContext,
+  rows: WatchStateRow[],
+  types: Set<string> | null
+): Promise<{ rows: WatchStateRow[] } | { items: JellyfinItem[] }> {
+  const key = qlist(req, 'SortBy')[0]?.toLowerCase() ?? '';
+  const sign = sortDescending(req) ? -1 : 1;
+  const compare = (a: string | number, b: string | number) =>
+    (a < b ? -1 : a > b ? 1 : 0) * sign;
+  if (/^date/.test(key))
+    return { rows: sortDescending(req) === false ? [...rows].reverse() : rows };
+  const read = ITEM_SORTS[key];
+  if (!read) return { rows };
+  if (
+    (key === 'sortname' || key === 'name') &&
+    rows.every((row) => row.snapshot?.name)
+  )
+    return {
+      rows: [...rows].sort((a, b) =>
+        compare(
+          a.snapshot!.name!.toLowerCase(),
+          b.snapshot!.name!.toLowerCase()
+        )
+      ),
+    };
+  const items = filterByType(await itemsFromRows(ctx, rows), types);
+  return { items: items.sort((a, b) => compare(read(a), read(b))) };
+}
+
 /**
  * Jellyfin skips the count when a client opts out and answers with the page
  * length instead, so a client that never reads the total does not make us walk
@@ -325,6 +372,14 @@ export function send(
   if (req.jf) rememberListMarkers(req.jf, items);
   const out = items.map(stripInternal);
   res.json(listResult(out, wantsTotal(req) ? total : out.length, startIndex));
+}
+
+function untilClosed(res: Response): AbortSignal {
+  const controller = new AbortController();
+  res.on('close', () => {
+    if (!res.writableFinished) controller.abort();
+  });
+  return controller.signal;
 }
 
 /** Rows in flight while building a shelf; each one costs a meta lookup. */
@@ -535,22 +590,41 @@ async function handleItems(
   }
   if (
     pd?.k === 'boxset' ||
+    pd?.k === 'part' ||
     (pd?.k === 'movie' && !pd.p) ||
     (pd?.k === 'series' && collectionParent)
   ) {
     const meta = await getMeta(ctx, pd.t, pd.i).catch(() => null);
-    if (meta?.collection) {
-      const page = await collectionMembers(engine, meta, {
-        startIndex,
-        limit,
-        exactTotal: isKodi(ctx) && wantsTotal(req),
-        cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${pd.t}|${pd.i}`,
-        select: pageFilter(req, ctx, types, { parentId }),
-        kinds: searchKindsFor(types),
-        collectionsOnly: isBoxsetOnly(types),
-      });
+    const collection =
+      meta?.collection && pd.k === 'part'
+        ? collectionPart(
+            meta.collection,
+            pd.st && pd.c
+              ? { type: pd.st, catalogId: pd.c, genre: pd.g }
+              : undefined
+          )
+        : meta?.collection;
+    if (collection) {
+      const page = await collectionMembers(
+        engine,
+        { collection },
+        {
+          startIndex,
+          limit,
+          exactTotal: isKodi(ctx) && wantsTotal(req),
+          cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${canonicalDescriptor(pd)}`,
+          select: pageFilter(req, ctx, types, { parentId }),
+          kinds: searchKindsFor(types),
+          collectionsOnly: isBoxsetOnly(types),
+          signal: untilClosed(res),
+        }
+      );
       const items = await itemsFromPreviews(ctx, page.items, { parentId });
       send(req, res, applySort(req, items), page.total, startIndex);
+      return;
+    }
+    if (pd.k === 'part') {
+      send(req, res, [], 0, startIndex);
       return;
     }
     const r = await boxSetChildren(ctx, pd);
@@ -643,10 +717,21 @@ async function handleItems(
             )
           )
         : await provider.listPlayed(ctx.watch, kinds);
+    const sorted = await sortRows(req, ctx, rows, types);
+    if ('items' in sorted) {
+      send(
+        req,
+        res,
+        sorted.items.slice(startIndex, startIndex + limit),
+        sorted.items.length,
+        startIndex
+      );
+      return;
+    }
     const items = applySort(
       req,
       filterByType(
-        await itemsFromRows(ctx, rows.slice(0, startIndex + limit)),
+        await itemsFromRows(ctx, sorted.rows.slice(0, startIndex + limit)),
         types
       )
     );
@@ -720,6 +805,7 @@ async function handleItems(
       exactTotal: isKodi(ctx) && wantsTotal(req),
       cursorKey: `${ctx.scope()}|${filterShape(req, types)}`,
       select: pageFilter(req, ctx, types, { parentId, catalog }),
+      signal: untilClosed(res),
     });
     const items = await itemsFromPreviews(ctx, page.items, {
       parentId,
@@ -926,6 +1012,12 @@ function withShowWatchedAt(
   };
 }
 
+function availableAt(item: JellyfinItem, row: WatchStateRow): number {
+  const aired =
+    typeof item.PremiereDate === 'string' ? Date.parse(item.PremiereDate) : 0;
+  return Math.max(row.sortAt, Math.min(aired || 0, Date.now()));
+}
+
 /** How many of the most recently watched shows Next Up looks through. */
 const NEXT_UP_SHOWS = 200;
 
@@ -976,13 +1068,26 @@ router.get(
         // A part-played anchor can still come back to resume.
         if (row.played && (await caughtUpOn(ctx, d).catch(() => false)))
           return null;
-        return nextUpForSeries(ctx, d, row, { includeResumable }).then(
-          (item) => item && withShowWatchedAt(item, row),
-          () => null
+        const item = await nextUpForSeries(ctx, d, row, {
+          includeResumable,
+        }).catch(() => null);
+        return (
+          item && {
+            item: withShowWatchedAt(item, row),
+            at: availableAt(item, row),
+          }
         );
       };
+      const found: NonNullable<Awaited<ReturnType<typeof check>>>[] = [];
+      const take = (next: Awaited<ReturnType<typeof check>>) => {
+        if (!next || (next.item.UserData as { Played: boolean }).Played) return;
+        const series = String(next.item.SeriesId ?? next.item.Id);
+        if (shown.has(series)) return;
+        shown.add(series);
+        found.push(next);
+      };
       // A new check starts as each one ends, and answers are taken in the shows' order.
-      const running: Promise<JellyfinItem | null>[] = [];
+      const running: ReturnType<typeof check>[] = [];
       let started = 0;
       const fill = async () => {
         while (running.length < ROW_CONCURRENCY && started < NEXT_UP_SHOWS) {
@@ -993,15 +1098,15 @@ router.get(
         }
       };
       await fill();
-      while (running.length && items.length < limit) {
+      while (running.length && found.length < limit) {
         const next = await running.shift()!;
         await fill();
-        if (!next || (next.UserData as { Played: boolean }).Played) continue;
-        const series = String(next.SeriesId ?? next.Id);
-        if (shown.has(series)) continue;
-        shown.add(series);
-        items.push(next);
+        take(next);
       }
+      // Checks already started cost nothing more, and may find an episode out since.
+      for (const next of await Promise.all(running)) take(next);
+      found.sort((a, b) => b.at - a.at);
+      items.push(...found.slice(0, limit).map((f) => f.item));
     }
     send(req, res, items, items.length, 0);
   })

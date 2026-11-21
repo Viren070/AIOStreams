@@ -38,7 +38,7 @@ jobs:
       - name: Detect changes
         id: diff
         run: |
-          if git diff --quiet -- packages/core/src/utils/header-presets.ts; then
+          if git diff --quiet -- packages/core/src/utils/http/header-presets.ts; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
           else
             echo 'changed=true' >> "$GITHUB_OUTPUT"
@@ -54,7 +54,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git checkout -B chore/update-header-presets
-          git add packages/core/src/utils/header-presets.ts
+          git add packages/core/src/utils/http/header-presets.ts
           git commit -m 'chore: update header presets'
           git push --force origin chore/update-header-presets
 

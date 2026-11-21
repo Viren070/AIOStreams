@@ -1,6 +1,7 @@
 import pLimit from 'p-limit';
 import { RandomAccess } from '../random-access.js';
 import { createLogger } from '../../../../logging/logger.js';
+import { ArticleNotFoundError } from '../../../nntp/errors.js';
 import { ArchiveEntry, DataFragment } from '../types.js';
 import {
   RarVolumeError,
@@ -43,6 +44,7 @@ export class RarReader {
   private byName = new Map<string, ArchiveEntry>();
   /** File currently spanning volumes (awaiting its split-after continuation). */
   private pending: ArchiveEntry | null = null;
+  private bridged = new Set<ArchiveEntry>();
   /** Per-volume parse failures from the last {@link parse} run. */
   readonly volumeErrors: RarVolumeError[] = [];
 
@@ -76,6 +78,7 @@ export class RarReader {
     const limit = pLimit(Math.max(1, opts.concurrency ?? 1));
     this.entries = [];
     this.byName.clear();
+    this.bridged.clear();
     this.pending = null;
     this.volumeErrors.length = 0;
 
@@ -116,21 +119,35 @@ export class RarReader {
     let version: 4 | 5 | undefined;
     let blocks = 0;
     let encrypted = false;
+    let gaps: number[] = [];
+    let lastVolume = -1;
     for (const vi of order) {
       const vp = results[vi];
       version ??= vp.version;
       if (vp.encrypted) encrypted = true;
       if (vp.error) {
         this.volumeErrors.push({ volume: vi, error: vp.error });
+        if (perVolume && this.canBridge(vp.error)) {
+          gaps.push(vi);
+          continue;
+        }
         // The gap breaks any file spanning this volume: its fragment map is no
         // longer contiguous, so close it out as incomplete.
+        gaps = [];
         this.closePendingIncomplete();
         continue;
+      }
+      if (gaps.length > 0) {
+        if (!this.bridge(gaps, ranges, lastVolume, vi, results, vp)) {
+          this.closePendingIncomplete();
+        }
+        gaps = [];
       }
       for (const b of vp.blocks) {
         blocks++;
         this.addFile(b.file, b.fragment);
       }
+      lastVolume = vi;
     }
     // A file still awaiting its continuation at the end of the set means the
     // NZB is missing trailing volumes; don't let it stream truncated.
@@ -181,6 +198,7 @@ export class RarReader {
     const startedAt = Date.now();
     this.entries = [];
     this.byName.clear();
+    this.bridged.clear();
     this.pending = null;
     this.volumeErrors.length = 0;
 
@@ -566,10 +584,77 @@ export class RarReader {
 
   // ---- entry assembly -------------------------------------------------------
 
+  private canBridge(error: Error): boolean {
+    const open = this.pending;
+    if (!open || !open.stored || open.encrypted || open.crypt) return false;
+    for (let e: unknown = error; e instanceof Error; e = e.cause) {
+      if (e instanceof ArticleNotFoundError) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Gives the open file a fragment in each volume whose header is missing,
+   * laid out like the volumes around it, when the volume after them continues
+   * it. The file's exact size checks the guess.
+   */
+  private bridge(
+    gaps: number[],
+    ranges: Array<{ start: number; end: number }>,
+    before: number,
+    after: number,
+    results: VolumeParse[],
+    vp: VolumeParse
+  ): boolean {
+    const open = this.pending;
+    const next = vp.blocks[0];
+    const last = open?.fragments.at(-1);
+    if (!open || !last || before < 0 || !next) return false;
+    if (next.file.first || next.file.name !== open.name) return false;
+    // Where both sides state their volume numbers, the gap must fill the difference.
+    const from = results[before].volumeNumber;
+    const to = vp.volumeNumber;
+    if (
+      from !== undefined &&
+      to !== undefined &&
+      to - from !== gaps.length + 1
+    ) {
+      return false;
+    }
+    const header = next.fragment.offset - ranges[after].start;
+    // A volume the file continues past ends the same way the gap volumes do.
+    const trailer = next.file.last
+      ? ranges[before].end - (last.offset + last.length)
+      : ranges[after].end - (next.fragment.offset + next.fragment.length);
+    const added: DataFragment[] = [];
+    for (const g of gaps) {
+      const length = ranges[g].end - ranges[g].start - header - trailer;
+      if (header < 0 || trailer < 0 || length <= 0) return false;
+      added.push({ offset: ranges[g].start + header, length });
+    }
+    for (const f of added) {
+      open.fragments.push(f);
+      open.packedSize += f.length;
+    }
+    this.bridged.add(open);
+    logger.debug(
+      { name: open.name, volumes: gaps, header, trailer },
+      'bridged volumes whose headers are missing'
+    );
+    return true;
+  }
+
   /** Recompute stored sizes from fragment sums (skips encrypted/pending). */
   private finalizeSizes(): void {
     for (const e of this.entries) {
       const fragTotal = e.fragments.reduce((a, f) => a + f.length, 0);
+      if (this.bridged.has(e) && fragTotal !== e.size) {
+        logger.debug(
+          { name: e.name, size: e.size, fragTotal },
+          'bridged volumes do not add up to the file size'
+        );
+        e.incomplete = true;
+      }
       // A stored plaintext file's unpacked size equals its fragment sum; trust
       // that if the header looked truncated. Encrypted entries' fragments carry
       // up to 15 trailing AES pad bytes, so never overwrite their header size.

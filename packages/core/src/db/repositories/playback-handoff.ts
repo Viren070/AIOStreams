@@ -14,7 +14,7 @@ export type DeliveryStatus = 'pending' | 'delivered' | 'failed';
 export interface SinkRow {
   id: string;
   uuid: string;
-  persona: string;
+  profile: string;
   addonInstanceId: string;
   addonName: string | null;
   baseUrl: string;
@@ -181,7 +181,7 @@ function toSink(r: DbSink): SinkRow {
   return {
     id: r.id,
     uuid: r.uuid,
-    persona: r.persona,
+    profile: r.persona,
     addonInstanceId: r.addon_instance_id,
     addonName: r.addon_name,
     baseUrl: r.base_url,
@@ -242,7 +242,7 @@ export class PlaybackHandoffRepository {
   ): Promise<SinkRow | null> {
     const row = await getDb().maybeOne<DbSink>(
       sql`SELECT * FROM watch_sinks
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND addon_instance_id = ${addonInstanceId}`
     );
     return row ? toSink(row) : null;
@@ -293,7 +293,7 @@ export class PlaybackHandoffRepository {
              query, events, types, id_prefixes, status,
              consecutive_failures, created_at, updated_at,
              routing_hash, status_at, active_at, next_pull_at, pull_failures)
-          VALUES (${randomUUID()}, ${scope.uuid}, ${scope.persona},
+          VALUES (${randomUUID()}, ${scope.uuid}, ${scope.profile},
                   ${input.addonInstanceId}, ${name},
                   ${input.baseUrl}, ${pullUrl}, ${query}, ${events}, ${types},
                   ${idPrefixes}, 'connected', 0, ${now}, ${now},
@@ -316,7 +316,7 @@ export class PlaybackHandoffRepository {
     );
     const row = await getDb().maybeOne<DbSink>(
       sql`SELECT * FROM watch_sinks
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND addon_instance_id = ${input.addonInstanceId}`
     );
     if (!row) throw new Error('failed to persist playback sink');
@@ -326,7 +326,7 @@ export class PlaybackHandoffRepository {
   static async listSinks(scope: WatchScope): Promise<SinkRow[]> {
     const rows = await getDb().query<DbSink>(
       sql`SELECT * FROM watch_sinks
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND retired_at IS NULL
            ORDER BY addon_name, addon_instance_id`
     );
@@ -343,19 +343,19 @@ export class PlaybackHandoffRepository {
       : raw('');
     const res = await getDb().exec(
       sql`UPDATE watch_sinks SET retired_at = ${now}
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND retired_at IS NULL ${keep}`
     );
     return res.rowCount ?? 0;
   }
 
-  static async retireOtherPersonas(
+  static async retireOtherProfiles(
     uuid: string,
-    keepPersonaIds: readonly string[],
+    keepProfileIds: readonly string[],
     now: number
   ): Promise<number> {
-    const keep = keepPersonaIds.length
-      ? sql`AND persona NOT IN (${join(keepPersonaIds.map((id) => sql`${id}`))})`
+    const keep = keepProfileIds.length
+      ? sql`AND persona NOT IN (${join(keepProfileIds.map((id) => sql`${id}`))})`
       : raw('');
     const res = await getDb().exec(
       sql`UPDATE watch_sinks SET retired_at = ${now}
@@ -365,7 +365,7 @@ export class PlaybackHandoffRepository {
     return res.rowCount ?? 0;
   }
 
-  /** Every persona's sinks, for the configuration's own diagnostics. */
+  /** Every profile's sinks, for the configuration's own diagnostics. */
   static async listAllSinks(uuid: string): Promise<SinkRow[]> {
     const rows = await getDb().query<DbSink>(
       sql`SELECT * FROM watch_sinks WHERE uuid = ${uuid}

@@ -219,9 +219,9 @@ export function BackgroundOptimization() {
               </p>
               <ul className="mt-2 space-y-1 list-disc list-inside">
                 <li>
-                  <strong>Top 5 streams (default):</strong>
+                  <strong>Top 2 streams (default):</strong>
                   <br />
-                  <code className="text-xs">slice(streams, 0, 5)</code>
+                  <code className="text-xs">{DEFAULT_PRELOAD_SELECTOR}</code>
                 </li>
                 <li>
                   <strong>Top 5 usenet streams only:</strong>

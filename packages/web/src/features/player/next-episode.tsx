@@ -207,7 +207,8 @@ export function useUpNextPrompt({
     playhead,
     (h) => h.positionMs >= (at ?? durationMs - OPEN_LEAD_MS)
   );
-  const due = !!next && pastPrompt;
+  // Until it starts, a file still has the length of the one before it.
+  const due = !!next && pastPrompt && player.state.started;
   const [dismissed, setDismissed] = React.useState(false);
   // Seeking back before the prompt brings it back next time.
   if (!due && dismissed) setDismissed(false);
@@ -415,7 +416,11 @@ export function useUpNextPrompt({
   }, [shown, countdown]);
   React.useEffect(() => {
     if (!counting) return;
-    const timer = setInterval(() => setLeftMs((ms) => ms - 250), 250);
+    // Stopping at zero, so that reaching it plays on once.
+    const timer = setInterval(
+      () => setLeftMs((ms) => Math.max(0, ms - 250)),
+      250
+    );
     return () => clearInterval(timer);
   }, [counting]);
   React.useEffect(() => {
@@ -506,7 +511,7 @@ export function useUpNextPrompt({
               className="flex-1"
               onClick={() => void playNext()}
             >
-              {counting ? t`Play in ${seconds}s` : t`Play now`}
+              {counting && leftMs > 0 ? t`Play in ${seconds}s` : t`Play now`}
             </PlayerAction>
             <PlayerAction
               data-ui="next-episode-action"

@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import type { SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
-import { BarSurface } from '@/components/shell/bar-surface';
+import { GlassSurface } from '@/components/shell/glass-surface';
 import { Logo, NavTab, select } from './common';
 import { YouIcon } from './account';
 
@@ -55,7 +55,7 @@ export function TouchRail({
         data-shape="floating"
         className="pointer-events-none fixed inset-y-0 start-0 z-50 hidden items-center py-4 ps-[calc(1rem+env(safe-area-inset-left))] lg:flex"
       >
-        <BarSurface
+        <GlassSurface
           className={cn(
             'pointer-events-auto flex max-h-full flex-col gap-1 overflow-y-auto rounded-[1.375rem] p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
             named ? 'w-[calc(4.75rem+2px)]' : 'w-[calc(3.75rem+2px)]'
@@ -65,7 +65,7 @@ export function TouchRail({
           <div className="mx-2 my-1 h-px flex-none bg-white/10" />
           {footerItems.map(railItem)}
           {account}
-        </BarSurface>
+        </GlassSurface>
       </nav>
     );
   }

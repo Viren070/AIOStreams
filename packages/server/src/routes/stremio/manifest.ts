@@ -56,6 +56,7 @@ const manifest = async (config?: UserData): Promise<Manifest> => {
       `https://raw.githubusercontent.com/Viren070/AIOStreams/refs/heads/main/packages/frontend/public/logo${
         appConfig.branding.alternateDesign ? '_alt' : ''
       }.png`,
+    background: config?.addonBackground,
     behaviorHints: {
       configurable: true,
       configurationRequired: config ? false : true,

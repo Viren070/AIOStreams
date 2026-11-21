@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { shuffled } from '../utils/shuffle.js';
 
 export type RepeatMode = 'RepeatOne' | 'RepeatAll' | 'RepeatNone';
 export type ShuffleMode = 'Sorted' | 'Shuffle';
@@ -28,15 +29,6 @@ export interface SavedQueue {
 }
 
 export const syncId = () => randomUUID().replace(/-/g, '');
-
-function shuffled<T>(list: T[]): T[] {
-  const out = [...list];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
 
 /** A group's playlist, with shuffle and repeat, as Jellyfin's SyncPlay keeps it. */
 export class PlayQueue {

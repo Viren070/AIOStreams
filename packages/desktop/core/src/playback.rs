@@ -192,6 +192,9 @@ pub struct Settings {
     pub dolby_vision: bool,
     #[serde(default)]
     pub upscaling: bool,
+    /// The graphics card's own upscaling, where the app has it.
+    #[serde(default)]
+    pub super_resolution: bool,
     /// Zero sizes the cache from the computer's memory.
     #[serde(default)]
     pub cache_mb: u64,

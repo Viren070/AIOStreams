@@ -5,18 +5,14 @@ import {
   encryptString,
   getSimpleTextHash,
   isConfigUuid,
-  JellyfinRepository,
   liveCatalogs,
   mintToken,
-  personaUserId,
+  profileUserId,
   quickConnectConsume,
   resolveConfigAlias,
   serverId as instanceServerId,
   sessionKeyFor,
   msToTicks,
-  AUDIO_TYPES,
-  SUBTITLE_MODES,
-  SUBTITLE_TYPES,
   WatchSessionRepository,
   buildMediaStreams,
   resolveByItem,
@@ -24,23 +20,22 @@ import {
   subtitleFormatFor,
   type ClientInfo,
   type JellyfinMediaStream,
-  type JellyfinPersona,
+  isOwner,
+  ownerOf,
+  profileById,
+  profilesOf,
+  type Profile,
   type UserData,
-  type WatchScope,
   type WatchSessionRow,
 } from '@aiostreams/core';
 import {
   jf,
   jfOptional,
   param,
-  personaById,
-  personaByName,
-  accountLocked,
+  profileByName,
   PIN_REQUIRED,
-  personaLocked,
   lockTag,
   userUnlocks,
-  personasOf,
   watchScopeOf,
   qs,
   resolveConfig,
@@ -48,6 +43,13 @@ import {
   type JellyfinRequestContext,
 } from './context.js';
 import { subtitleUrlFor, summaryItem } from './items.js';
+import {
+  everyoneUserId,
+  prefsScope,
+  saveUserConfiguration,
+  storedUserConfiguration,
+  userConfiguration,
+} from './preferences.js';
 import { pickSource } from './playback.js';
 import { serverName } from './system.js';
 import { sessionIdOf } from './session-sockets.js';
@@ -55,96 +57,6 @@ import { controllableDevices, type RemoteDevice } from './remote.js';
 
 const logger = createLogger('jellyfin');
 const router: Router = Router({ mergeParams: true });
-
-export function userConfiguration() {
-  return {
-    AudioLanguagePreference: '',
-    AudioLanguages: [] as string[],
-    PlayDefaultAudioTrack: true,
-    AudioTypes: [...AUDIO_TYPES] as string[],
-    SubtitleLanguagePreference: '',
-    SubtitleLanguages: [] as string[],
-    SubtitleTypes: [...SUBTITLE_TYPES] as string[],
-    ListPreferredSubtitlesOnly: true,
-    DisplayMissingEpisodes: true,
-    GroupedFolders: [],
-    SubtitleMode: 'Default',
-    DisplayCollectionsView: false,
-    EnableLocalPassword: false,
-    OrderedViews: [],
-    LatestItemsExcludes: [],
-    MyMediaExcludes: [],
-    HidePlayedInLatest: true,
-    RememberAudioSelections: true,
-    RememberSubtitleSelections: true,
-    EnableNextEpisodeAutoPlay: true,
-    CastReceiverId: '',
-  };
-}
-
-const isLanguage = (v: unknown) => typeof v === 'string' && v.length <= 16;
-const isRanking = (all: readonly string[]) => (v: unknown) =>
-  Array.isArray(v) &&
-  v.length <= all.length &&
-  new Set(v).size === v.length &&
-  v.every((t) => all.includes(t));
-const isLanguageList = (v: unknown) =>
-  Array.isArray(v) && v.length <= 10 && v.every((l) => isLanguage(l) && l);
-
-/** The playback preferences a user can set and this server keeps. */
-const USER_PREFERENCES: Record<string, (value: unknown) => boolean> = {
-  AudioLanguagePreference: isLanguage,
-  AudioLanguages: isLanguageList,
-  SubtitleLanguagePreference: isLanguage,
-  SubtitleLanguages: isLanguageList,
-  SubtitleMode: (v) => SUBTITLE_MODES.some((mode) => mode === v),
-  SubtitleTypes: isRanking(SUBTITLE_TYPES),
-  AudioTypes: isRanking(AUDIO_TYPES),
-  ListPreferredSubtitlesOnly: (v) => typeof v === 'boolean',
-  PlayDefaultAudioTrack: (v) => typeof v === 'boolean',
-  RememberAudioSelections: (v) => typeof v === 'boolean',
-  RememberSubtitleSelections: (v) => typeof v === 'boolean',
-  EnableNextEpisodeAutoPlay: (v) => typeof v === 'boolean',
-};
-
-function userPreferences(body: unknown): Record<string, unknown> {
-  const source = body && typeof body === 'object' ? body : {};
-  return Object.fromEntries(
-    Object.entries(source).filter(([key, value]) =>
-      USER_PREFERENCES[key]?.(value)
-    )
-  );
-}
-
-const LANGUAGE_LISTS = [
-  ['AudioLanguagePreference', 'AudioLanguages'],
-  ['SubtitleLanguagePreference', 'SubtitleLanguages'],
-] as const;
-
-/**
- * Keeps each single language the first of its list. A client that only knows
- * the single one may send back the list it read, so a single language that
- * isn't that list's first is its choice, and goes to the front.
- */
-function withLanguageLists(
-  config: Record<string, unknown>,
-  sent: Record<string, unknown>
-): Record<string, unknown> {
-  for (const [single, list] of LANGUAGE_LISTS) {
-    if (!(single in sent) && !(list in sent)) continue;
-    const languages = (config[list] as string[] | undefined) ?? [];
-    const one = config[single] as string;
-    if (single in sent && one !== (languages[0] ?? ''))
-      config[list] = one ? [one, ...languages.filter((l) => l !== one)] : [];
-    config[single] = (config[list] as string[] | undefined)?.[0] ?? '';
-  }
-  return config;
-}
-
-export async function storedUserConfiguration(scope: WatchScope) {
-  const stored = await JellyfinRepository.getUserConfiguration(scope);
-  return { ...userConfiguration(), ...userPreferences(stored) };
-}
 
 export function userPolicy(
   opts: { admin?: boolean; hidden?: boolean; forKey?: boolean } = {}
@@ -198,11 +110,10 @@ export function userPolicy(
   };
 }
 
-type Faced = Pick<UserData, 'addonName' | 'jellyfin'>;
+type Faced = Pick<UserData, 'addonName'>;
 
-/** The primary user's name, which stood in for a configuration before it had one. */
-export function accountName(userData: Faced): string {
-  return userData.jellyfin?.primary?.name || userData.addonName || serverName();
+export function profileName(userData: Faced, profile: Profile): string {
+  return profile.name || userData.addonName || serverName();
 }
 
 /** Changes whenever the picture would, so a client drops its cached copy. */
@@ -210,33 +121,39 @@ function avatarTag(avatar: string | undefined): string | undefined {
   return avatar ? getSimpleTextHash(avatar).slice(0, 16) : undefined;
 }
 
-/** `forKey` rows make the primary user the administrator an API key acts as. */
+/** `forKey` rows make the owner the administrator an API key acts as. */
 export function userDto(
   uuid: string,
   userData: Faced,
-  persona: JellyfinPersona | null,
+  profile: Profile,
   opts: { forKey?: boolean } = {}
 ) {
-  const locked = persona ? personaLocked(persona) : accountLocked(userData);
   const now = new Date().toISOString();
-  const tag = avatarTag(
-    persona ? persona.avatar : userData.jellyfin?.primary?.avatar
-  );
+  const tag = avatarTag(profile.avatar);
   return {
-    Name: persona?.name ?? accountName(userData),
+    Name: profileName(userData, profile),
     ServerId: instanceServerId(),
     ServerName: serverName(),
-    Id: personaUserId(uuid, persona?.id ?? ''),
+    Id: profileUserId(uuid, profile.id),
     ...(tag ? { PrimaryImageTag: tag } : {}),
     HasPassword: true,
     HasConfiguredPassword: true,
     HasConfiguredEasyPassword: false,
-    EnableAutoLogin: !locked,
+    EnableAutoLogin: !profile.lock,
     LastLoginDate: now,
     LastActivityDate: now,
     Configuration: userConfiguration(),
+    aiostreams: {
+      profile: profile.id,
+      owner: isOwner(profile),
+      everyone: everyoneUserId(uuid),
+    },
     Policy: opts.forKey
-      ? userPolicy({ admin: !persona, hidden: persona?.hidden, forKey: true })
+      ? userPolicy({
+          admin: isOwner(profile),
+          hidden: profile.hidden,
+          forKey: true,
+        })
       : userPolicy(),
   };
 }
@@ -256,12 +173,12 @@ async function withLiveTv<T extends { Policy: object }>(
 export function sessionInfo(
   uuid: string,
   userData: Faced,
-  persona: JellyfinPersona | null,
+  profile: Profile,
   client: ClientInfo,
   remoteIp: string | undefined
 ) {
   const now = new Date().toISOString();
-  const userId = personaUserId(uuid, persona?.id ?? '');
+  const userId = profileUserId(uuid, profile.id);
   return {
     PlayState: {
       CanSeek: true,
@@ -281,7 +198,7 @@ export function sessionInfo(
     PlayableMediaTypes: ['Video'],
     Id: sessionIdOf(client, userId),
     UserId: userId,
-    UserName: persona?.name ?? accountName(userData),
+    UserName: profileName(userData, profile),
     Client: client.name,
     LastActivityDate: now,
     LastPlaybackCheckIn: new Date(0).toISOString(),
@@ -314,83 +231,72 @@ export async function authenticationResult(
   uuid: string,
   encryptedPassword: string,
   userData: UserData,
-  persona: JellyfinPersona | null,
+  profile: Profile,
   opts: { provedPassword?: boolean } = {}
 ) {
   const client = clientOf(req);
   return {
     User: {
-      ...userDto(uuid, userData, persona),
-      Configuration: await storedUserConfiguration(watchScopeOf(uuid, persona)),
+      ...userDto(uuid, userData, profile),
+      Configuration: await storedUserConfiguration(watchScopeOf(uuid, profile)),
     },
-    SessionInfo: sessionInfo(uuid, userData, persona, client, req.userIp),
+    SessionInfo: sessionInfo(uuid, userData, profile, client, req.userIp),
     AccessToken: mintToken({
       u: uuid,
       p: encryptedPassword,
       d: client.deviceId,
-      k: persona?.id,
-      l: lockTag(userData, persona) || undefined,
-      ...(persona && opts.provedPassword ? { o: 1 as const } : {}),
+      k: profile.id || undefined,
+      l: lockTag(profile) || undefined,
+      ...(!isOwner(profile) && opts.provedPassword ? { o: 1 as const } : {}),
     }),
     ServerId: instanceServerId(),
   };
 }
 
-/** Off the sign-in picker and out of other users' lists. */
-function isHidden(userData: Faced, user: JellyfinPersona | null): boolean {
-  return !!(user ? user.hidden : userData.jellyfin?.primary?.hidden);
+/** A hidden profile sees only itself; a hidden owner is only off the picker. */
+export function listedFor(caller: Profile, profile: Profile): boolean {
+  if (caller.id === profile.id) return true;
+  return (isOwner(caller) || !caller.hidden) && !profile.hidden;
 }
 
-/** A list shows its caller and the users not hidden; a hidden persona sees only itself. */
-export function listedFor(
-  userData: Faced,
-  caller: JellyfinPersona | null,
-  user: JellyfinPersona | null
-): boolean {
-  if ((caller?.id ?? '') === (user?.id ?? '')) return true;
-  return !caller?.hidden && !isHidden(userData, user);
-}
-
-/** The account first; an API key lists every user it can act as. */
+/** The owner first; an API key lists every profile it can act as. */
 function allUsers(
   uuid: string,
   userData: UserData,
-  caller: JellyfinPersona | null,
+  caller: Profile,
   opts: { forKey?: boolean } = {}
 ) {
-  return [null, ...personasOf(userData)]
-    .filter((p) =>
-      opts.forKey ? !p || !personaLocked(p) : listedFor(userData, caller, p)
-    )
+  return profilesOf(userData)
+    .filter((p) => (opts.forKey ? isOwner(p) || !p.lock : listedFor(caller, p)))
     .map((p) => userDto(uuid, userData, p, opts));
 }
 
-/** A personal address lists its own user, any other picker everyone not hidden. */
+/** A personal address lists its own profile, any other picker everyone not hidden. */
 export function pickerListed(
   mount: PickerMount,
   userData: UserData
-): (JellyfinPersona | null)[] {
-  return mount.persona
-    ? personasOf(userData).filter((p) => p.id === mount.persona && p.hidden)
-    : [null, ...personasOf(userData)].filter((p) => !isHidden(userData, p));
+): Profile[] {
+  return profilesOf(userData).filter((p) =>
+    mount.profile
+      ? p.id === mount.profile && !isOwner(p) && p.hidden
+      : !p.hidden
+  );
 }
 
 /**
- * The persona a sign-in named. The account answers to its own name and to an
- * empty one; anything else must be a persona, since a picker posts back the
- * exact name it was shown.
+ * The profile a sign-in named. The owner answers to its own name and to an
+ * empty one; anything else must be another profile, since a picker posts back
+ * the exact name it was shown.
  */
-function resolveSignIn(
-  userData: UserData,
-  name: string
-): { persona: JellyfinPersona | null } | null {
-  if (!name) return { persona: null };
-  const persona = personaByName(userData, name);
-  if (persona) return { persona };
-  if (name.trim().toLowerCase() === accountName(userData).toLowerCase()) {
-    return { persona: null };
-  }
-  return null;
+function resolveSignIn(userData: UserData, name: string): Profile | null {
+  if (!name) return ownerOf(userData);
+  const named = profileByName(userData, name);
+  if (named) return named;
+  const owner = ownerOf(userData);
+  return name.trim().toLowerCase() ===
+    profileName(userData, owner).toLowerCase()
+    ? owner
+    : null;
 }
 
 router.get(
@@ -433,19 +339,19 @@ async function checkPassword(
 function parseSignIn(
   username: string,
   mount: { uuid: string } | undefined
-): { account: string; personaName: string } | null {
+): { account: string; profile: string } | null {
   if (mount) {
     if (username.includes('/')) return null;
     return isConfigUuid(username)
-      ? { account: username, personaName: '' }
-      : { account: mount.uuid, personaName: username };
+      ? { account: username, profile: '' }
+      : { account: mount.uuid, profile: username };
   }
   const slash = username.lastIndexOf('/');
   return slash < 0
-    ? { account: username, personaName: '' }
+    ? { account: username, profile: '' }
     : {
         account: username.slice(0, slash),
-        personaName: username.slice(slash + 1),
+        profile: username.slice(slash + 1),
       };
 }
 
@@ -453,27 +359,27 @@ type PickerMount = NonNullable<Request['jfMount']>;
 
 interface PickerTarget {
   userData: UserData;
-  persona: JellyfinPersona;
+  profile: Profile;
 }
 
-/** The persona a picker sign-in names. A personal address takes only its own user's name, or none. */
+/** A personal address takes only its own profile's name, or none. */
 async function pickerTarget(
   mount: PickerMount,
   name: string
 ): Promise<PickerTarget | null> {
   const userData = await resolveConfig(mount.uuid, mount.encryptedPassword);
   if (!userData) return null;
-  if (!mount.persona) {
-    const persona = personaByName(userData, name);
-    return persona ? { userData, persona } : null;
+  if (!mount.profile) {
+    const profile = profileByName(userData, name);
+    return profile ? { userData, profile } : null;
   }
-  const persona = personaById(userData, mount.persona);
-  if (!persona?.hidden) return null;
+  const profile = profileById(userData, mount.profile);
+  if (!profile || isOwner(profile) || !profile.hidden) return null;
   const wanted = name.trim().toLowerCase();
   return !wanted ||
-    wanted === persona.id ||
-    wanted === persona.name.trim().toLowerCase()
-    ? { userData, persona }
+    wanted === profile.id ||
+    wanted === profile.name?.trim().toLowerCase()
+    ? { userData, profile }
     : null;
 }
 
@@ -489,10 +395,7 @@ async function pinOnlySignIn(
   if (!appConfig.jellyfin.pinSignIn || !PIN_ONLY_PATTERN.test(pin)) {
     return false;
   }
-  return (
-    personaLocked(target.persona) &&
-    userUnlocks(mount.uuid, target.userData, target.persona, pin)
-  );
+  return !!target.profile.lock && userUnlocks(mount.uuid, target.profile, pin);
 }
 
 router.post(
@@ -510,7 +413,7 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    const { account, personaName } = named;
+    const { account, profile: wanted } = named;
     if (!account) {
       res.status(401).json({
         Message: 'Username (configuration UUID or alias) is required',
@@ -525,16 +428,15 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    const own = mount?.persona ? await pickerTarget(mount, personaName) : null;
-    if (mount?.persona && !own) {
+    const own = mount?.profile ? await pickerTarget(mount, wanted) : null;
+    if (mount?.profile && !own) {
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
     const proven = await checkPassword(uuid, pw);
     if (!proven) {
       const byPin =
-        own ??
-        (mount && personaName ? await pickerTarget(mount, personaName) : null);
+        own ?? (mount && wanted ? await pickerTarget(mount, wanted) : null);
       if (!mount || !byPin || !(await pinOnlySignIn(mount, byPin, pw))) {
         res.status(401).json({ Message: 'Invalid username or password' });
         return;
@@ -543,7 +445,7 @@ router.post(
       logger.info(
         {
           uuid: mount.uuid,
-          persona: byPin.persona.id,
+          profile: byPin.profile.id,
           client: client.name,
           device: client.device,
         },
@@ -555,7 +457,7 @@ router.post(
           mount.uuid,
           mount.encryptedPassword,
           byPin.userData,
-          byPin.persona
+          byPin.profile
         )
       );
       return;
@@ -567,20 +469,20 @@ router.post(
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    // On a picker address the account also answers to its alias, after its users.
-    const signIn = own
-      ? { persona: own.persona }
-      : (resolveSignIn(userData, personaName) ??
-        (mount &&
-        (await resolvePickerAlias(personaName))?.uuid.toLowerCase() ===
-          uuid.toLowerCase()
-          ? { persona: null }
-          : null));
-    if (!signIn) {
+    // On a picker address the owner also answers to the alias, after the other profiles.
+    const profile =
+      own?.profile ??
+      resolveSignIn(userData, wanted) ??
+      (mount &&
+      (await resolvePickerAlias(wanted))?.uuid.toLowerCase() ===
+        uuid.toLowerCase()
+        ? ownerOf(userData)
+        : null);
+    if (!profile) {
       res.status(401).json({ Message: 'Invalid username or password' });
       return;
     }
-    if (!(await userUnlocks(uuid, userData, signIn.persona, pin))) {
+    if (!(await userUnlocks(uuid, profile, pin))) {
       res.status(401).json({ Message: PIN_REQUIRED });
       return;
     }
@@ -588,7 +490,7 @@ router.post(
     logger.info(
       {
         uuid,
-        persona: signIn.persona?.id,
+        profile: profile.id,
         client: client.name,
         device: client.device,
       },
@@ -600,8 +502,10 @@ router.post(
         uuid,
         encryptedPassword,
         userData,
-        signIn.persona,
-        { provedPassword: true }
+        profile,
+        {
+          provedPassword: true,
+        }
       )
     );
   })
@@ -624,17 +528,18 @@ router.post(
       res.status(401).json({ Message: 'Configuration is no longer valid' });
       return;
     }
-    const persona = entry.persona ? personaById(userData, entry.persona) : null;
-    if (entry.persona && !persona) {
+    const named = profileById(userData, entry.profile ?? '');
+    if (!named) {
       logger.warn(
-        { uuid: entry.uuid, persona: entry.persona },
-        'quick connect persona no longer exists, signing in as the account'
+        { uuid: entry.uuid, profile: entry.profile },
+        'quick connect profile no longer exists, signing in as the owner'
       );
     }
+    const profile = named ?? ownerOf(userData);
     logger.info(
       {
         uuid: entry.uuid,
-        persona: persona?.id,
+        profile: profile.id,
         client: entry.appName,
         device: entry.deviceName,
       },
@@ -646,7 +551,7 @@ router.post(
         entry.uuid,
         entry.encryptedPassword,
         userData,
-        persona
+        profile
       )
     );
   })
@@ -660,7 +565,7 @@ router.get(
       return;
     }
     res.json({
-      ...(await withLiveTv(ctx, userDto(ctx.uuid, ctx.userData, ctx.persona))),
+      ...(await withLiveTv(ctx, userDto(ctx.uuid, ctx.userData, ctx.profile))),
       Configuration: await storedUserConfiguration(ctx.watch),
     });
   })
@@ -669,48 +574,47 @@ router.get(
   '/Users',
   jf(async (_req, res, ctx) => {
     res.json(
-      allUsers(ctx.uuid, ctx.userData, ctx.persona, { forKey: !!ctx.apiKey })
+      allUsers(ctx.uuid, ctx.userData, ctx.profile, { forKey: !!ctx.apiKey })
     );
   })
 );
-/* Read only: a user token's persona is its own, never the id in the URL. */
 router.get(
   '/Users/:userId',
   jf(async (req, res, ctx) => {
     const wanted = param(req, 'userId').toLowerCase();
-    const found = [null, ...personasOf(ctx.userData)].find(
+    const found = profilesOf(ctx.userData).find(
       (p) =>
-        personaUserId(ctx.uuid, p?.id ?? '') === wanted &&
-        (!ctx.persona || listedFor(ctx.userData, ctx.persona, p))
+        profileUserId(ctx.uuid, p.id) === wanted &&
+        (isOwner(ctx.profile) || listedFor(ctx.profile, p))
     );
-    const persona = found === undefined ? ctx.persona : found;
+    const profile = found ?? ctx.profile;
     res.json({
       ...(await withLiveTv(
         ctx,
-        userDto(ctx.uuid, ctx.userData, persona, { forKey: !!ctx.apiKey })
+        userDto(ctx.uuid, ctx.userData, profile, { forKey: !!ctx.apiKey })
       )),
       Configuration: await storedUserConfiguration(
-        watchScopeOf(ctx.uuid, persona)
+        watchScopeOf(ctx.uuid, profile)
       ),
     });
   })
 );
-/* A user token only ever reads and writes its own preferences. */
 router.get(
   '/Users/:userId/Configuration',
-  jf(async (_req, res, ctx) => {
-    res.json(await storedUserConfiguration(ctx.watch));
+  jf(async (req, res, ctx) => {
+    const scope = prefsScope(ctx, param(req, 'userId'), false)!;
+    res.json(await storedUserConfiguration(scope));
   })
 );
 router.post(
   ['/Users/Configuration', '/Users/:userId/Configuration'],
   jf(async (req, res, ctx) => {
-    const stored = await JellyfinRepository.getUserConfiguration(ctx.watch);
-    const sent = userPreferences(req.body);
-    await JellyfinRepository.setUserConfiguration(
-      ctx.watch,
-      withLanguageLists({ ...userPreferences(stored), ...sent }, sent)
-    );
+    const scope = prefsScope(ctx, param(req, 'userId'), true);
+    if (!scope) {
+      res.status(403).json({ Message: 'Only the owner sets these' });
+      return;
+    }
+    await saveUserConfiguration(scope, req.body);
     res.status(204).end();
   })
 );
@@ -757,7 +661,7 @@ async function playingStreams(
 export async function sessionFromRow(
   ctx: JellyfinRequestContext,
   row: WatchSessionRow,
-  user: JellyfinPersona | null,
+  user: Profile,
   own: { remoteIp: string | undefined } | null,
   opts: { streams?: boolean } = {}
 ) {
@@ -836,23 +740,21 @@ async function deviceSessions(
   devices: RemoteDevice[]
 ) {
   const found = devices.flatMap((device) => {
-    const user = device.persona
-      ? personaById(ctx.userData, device.persona)
-      : null;
-    if (device.persona && !user) return [];
+    const user = profileById(ctx.userData, device.profile);
+    if (!user) return [];
     const scope = watchScopeOf(ctx.uuid, user);
     const key = sessionKeyFor(device.client);
-    return [{ device, user, scope, key, at: `${scope.persona}|${key}` }];
+    return [{ device, user, scope, key, at: `${scope.profile}|${key}` }];
   });
-  const scopes = new Map(found.map((f) => [f.scope.persona, f.scope]));
+  const scopes = new Map(found.map((f) => [f.scope.profile, f.scope]));
   const rows = new Map<string, WatchSessionRow>();
   await Promise.all(
     [...scopes.values()].map(async (scope) => {
       const keys = found
-        .filter((f) => f.scope.persona === scope.persona)
+        .filter((f) => f.scope.profile === scope.profile)
         .map((f) => f.key);
       for (const row of await WatchSessionRepository.getMany(scope, keys))
-        rows.set(`${scope.persona}|${row.sessionKey}`, row);
+        rows.set(`${scope.profile}|${row.sessionKey}`, row);
     })
   );
   return Promise.all(
@@ -932,9 +834,8 @@ router.get(
       const sessions = [];
       for (const row of rows) {
         if (row.lastCheckinAt < since || !onDevice(row.deviceId)) continue;
-        const userKey = row.userPersona ?? row.persona;
-        const user = userKey ? personaById(ctx.userData, userKey) : null;
-        if (userKey && !user) continue;
+        const user = profileById(ctx.userData, row.userProfile ?? row.profile);
+        if (!user) continue;
         sessions.push(sessionFromRow(ctx, row, user, null));
       }
       send(res, await withDevices(ctx, await Promise.all(sessions), devices));
@@ -960,18 +861,18 @@ router.get(
 
     const own = onDevice(ctx.client.deviceId)
       ? ownRow
-        ? sessionFromRow(ctx, ownRow, ctx.persona, { remoteIp: req.userIp })
+        ? sessionFromRow(ctx, ownRow, ctx.profile, { remoteIp: req.userIp })
         : sessionInfo(
             ctx.uuid,
             ctx.userData,
-            ctx.persona,
+            ctx.profile,
             ctx.client,
             req.userIp
           )
       : null;
     const sessions = await Promise.all([
       ...(own ? [own] : []),
-      ...others.map((r) => sessionFromRow(ctx, r, ctx.persona, null)),
+      ...others.map((r) => sessionFromRow(ctx, r, ctx.profile, null)),
     ]);
     send(res, await withDevices(ctx, sessions, devices));
   })
@@ -999,7 +900,7 @@ router.get(
         {
           Name: ctx.client.device,
           Id: ctx.client.deviceId,
-          LastUserName: ctx.persona?.name ?? accountName(ctx.userData),
+          LastUserName: profileName(ctx.userData, ctx.profile),
           AppName: ctx.client.name,
           AppVersion: ctx.client.version,
           LastUserId: ctx.userId,

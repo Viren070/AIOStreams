@@ -62,7 +62,7 @@ docker compose up -d aiostreams
 
 #### Keeping your instance private
 
-Anyone who finds your address can create configurations on it. To keep it to the people you choose, give them accounts with `AIOSTREAMS_AUTH` (or [SSO](/guides/sso)) and turn on **Require authentication for the config page** (`AIOSTREAMS_AUTH_REQUIRED`). See [Profiles](/guides/config-profiles) for how accounts and configuration passwords fit together.
+Anyone who finds your address can create configurations on it. To keep it to the people you choose, give them accounts with `AIOSTREAMS_AUTH` (or [SSO](/guides/sso)) and turn on **Require authentication for the config page** (`AIOSTREAMS_AUTH_REQUIRED`). See [Saved configurations](/guides/config-profiles) for how accounts and configuration passwords fit together.
 
 #### Traefik (HTTPS)
 
@@ -175,12 +175,9 @@ docker run -p 8080:3000 \
 
 ## ElfHosted (paid, managed)
 
-<Callout type="info">
-  Using the link below supports the project — 33% of your AIOStreams
-  subscription goes to the author.
-</Callout>
+AIOStreams is available as a [paid product on ElfHosted](https://store.elfhosted.com/product/aiostreams/elf/viren070/), a project sponsor. Private instances have Torrentio enabled, rate limits relaxed enough that you are unlikely to hit them, and require no self-hosting knowledge.
 
-AIOStreams is available as a [paid product on ElfHosted](https://store.elfhosted.com/product/aiostreams/elf/viren070/). Private instances have Torrentio enabled, avoid rate-limits, and require no self-hosting knowledge.
+The media server, which the [AIOStreams app](/apps) and Jellyfin apps sign in to, is off on a new private instance. Turn on **Enable media server** under **Settings → Media server** in its dashboard (`JELLYFIN_ENABLED`).
 
 ---
 

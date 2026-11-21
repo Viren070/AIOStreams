@@ -9,10 +9,13 @@ import { Toaster } from '@aiostreams/ui/toaster';
 import { DirectionProvider } from '@aiostreams/ui/core/direction';
 import { LoadingOverlay } from '@aiostreams/ui/loading-spinner';
 import {
+  asksWho,
+  enterOn,
   pickerAccount,
   SessionProvider,
   useSessionPhase,
 } from './lib/jellyfin/session';
+import { pickerServers, usePickerProfiles } from './lib/profiles';
 import { webRouter } from './router';
 import { SignInScreen, Unreachable, UserPicker } from './app/sign-in/page';
 import { PageBackground } from './components/shell/layout';
@@ -78,7 +81,7 @@ export default function JellyfinWebApp() {
             offset={{ top: 'calc(24px + env(safe-area-inset-top))' }}
             mobileOffset={{ top: 'calc(16px + env(safe-area-inset-top))' }}
           />
-          <PageBackground />
+          <PageBackground router={webRouter} />
           <ThemeStyles />
           <InputSetup router={webRouter} />
           {shellHost() && <ShellSetup />}
@@ -129,6 +132,11 @@ function Served() {
 function Standalone() {
   const queryClient = useQueryClient();
   const [base, setBase] = React.useState(currentServer);
+  // Who's watching, asked across the saved servers.
+  const [picking, setPicking] = React.useState(() => {
+    const here = currentServer();
+    return !!here && pickerServers(here).length > 0 && asksWho(here);
+  });
   // A linked server fills in the add form; it never connects on its own.
   const [linked, setLinked] = React.useState<string | null>(null);
   const [asking, setAsking] = React.useState<string | null>(null);
@@ -136,14 +144,25 @@ function Standalone() {
   const choose = React.useCallback((server: SavedServer) => {
     enterServer(server);
     setLinked(null);
+    setPicking(false);
     setBase(server.base);
   }, []);
   const leave = React.useCallback(() => {
     leaveServer();
     navigate(to.home, { replace: true });
     queryClient.clear();
+    setPicking(false);
     setBase(null);
   }, [queryClient]);
+  const openServer = React.useCallback(
+    (server: SavedServer) => {
+      if (server.base === base) return setPicking(false);
+      leave();
+      choose(server);
+    },
+    [base, choose, leave]
+  );
+  const askAll = React.useCallback(() => setPicking(true), []);
 
   const from = base ? serverAddress(base) : '';
   const adding = asking ? serverAddress(asking) : '';
@@ -205,14 +224,22 @@ function Standalone() {
     <>
       <AnimatePresence mode="wait">
         <motion.div
-          key={base ?? 'servers'}
+          key={picking && base ? 'picker' : (base ?? 'servers')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
-          {base ? (
-            <Session base={base} changeServer={leave} />
+          {picking && base ? (
+            <ServerInfoProvider value={NO_SERVER_INFO}>
+              <SharedPicker base={base} onOpen={openServer} onManage={leave} />
+            </ServerInfoProvider>
+          ) : base ? (
+            <Session
+              base={base}
+              changeServer={leave}
+              askAll={pickerServers(base).length > 0 ? askAll : undefined}
+            />
           ) : (
             <ServerInfoProvider value={NO_SERVER_INFO}>
               <ServersPage key={linked} onChoose={choose} address={linked} />
@@ -227,15 +254,47 @@ function Standalone() {
   );
 }
 
+function SharedPicker({
+  base,
+  onOpen,
+  onManage,
+}: {
+  base: string;
+  onOpen: (server: SavedServer) => void;
+  onManage: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const profiles = usePickerProfiles(base);
+  if (!profiles.some((p) => p.server.base === base)) return <LoadingOverlay />;
+  return (
+    <>
+      <UserPicker
+        users={profiles.flatMap((p) => (p.state === 'ready' ? p.users : []))}
+        servers={profiles.flatMap((p) => (p.state === 'ready' ? [] : [p]))}
+        onPick={async ({ user, server }, secret) => {
+          if (await enterOn(server!.base, user.Id!, secret))
+            queryClient.removeQueries({ queryKey: ['jf'] });
+          onOpen(server!);
+        }}
+        onOpenServer={onOpen}
+        links={[{ label: t`Manage servers`, onClick: onManage }]}
+      />
+      <SplashEnd />
+    </>
+  );
+}
+
 function Session({
   base,
   changeServer: leave,
+  askAll,
 }: {
   base: string;
   changeServer?: () => void;
+  askAll?: () => void;
 }) {
   const { phase, signIn, signInWithQuickConnect, switchUser, signOut, retry } =
-    useSessionPhase(base);
+    useSessionPhase(base, askAll);
   const changeServer = leave ?? currentHost().selectServer;
 
   React.useEffect(() => currentHost().start?.({ base }), [base]);
@@ -306,7 +365,7 @@ function Session({
       screen = (
         <UserPicker
           users={phase.users}
-          onPick={phase.choose}
+          onPick={(user, secret) => phase.choose(user.user.Id!, secret)}
           onChangeServer={changeServer}
         />
       );

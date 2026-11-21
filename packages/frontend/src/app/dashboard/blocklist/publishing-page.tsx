@@ -280,7 +280,7 @@ function FilesModal({
         {files.map((file) => (
           <div
             key={file.key}
-            className="rounded-[--radius] border border-[--border]/60 bg-[--subtle]/30 p-3 space-y-1.5"
+            className="rounded-[--radius] border border-white/[0.06] bg-white/[0.018] p-3 space-y-1.5"
           >
             <div className="text-sm font-mono break-all">{file.label}</div>
             <div className="text-xs text-[--muted]">{describeFile(file)}</div>
@@ -394,7 +394,7 @@ function PublishingView({
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-[--muted] text-xs uppercase bg-[--subtle]/40">
+            <thead className="text-[--muted] text-xs uppercase bg-white/[0.024]">
               <tr className="text-left">
                 <th className="p-3">Name</th>
                 <th className="p-3">Provider</th>
@@ -415,7 +415,7 @@ function PublishingView({
               {snapshot.targets.map((target) => (
                 <tr
                   key={target.id}
-                  className="border-t border-[--border]/50 hover:bg-[--subtle]/30"
+                  className="border-t border-white/5 hover:bg-white/[0.018]"
                 >
                   <td className="p-3 font-medium">
                     {target.name}
@@ -568,7 +568,7 @@ function PublicExportRow({
   });
 
   return (
-    <tr className="border-t border-[--border]/50 bg-[--subtle]/20">
+    <tr className="border-t border-white/5 bg-white/[0.012]">
       <td className="p-3 font-medium">This instance</td>
       <td className="p-3">
         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
@@ -984,7 +984,7 @@ function TargetEditorModal({
           {artifacts.map((artifact, index) => (
             <div
               key={index}
-              className="rounded-[--radius] border border-[--border]/60 bg-[--subtle]/30 p-3 space-y-3"
+              className="rounded-[--radius] border border-white/[0.06] bg-white/[0.018] p-3 space-y-3"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono text-[--muted]">

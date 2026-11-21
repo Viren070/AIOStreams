@@ -6,7 +6,7 @@
 
 import { maybeSaved, noteSaved, saving, schedulePrune } from '@/lib/cache';
 import { artworkKey, drawnArtwork, keepDrawn, type Drawn } from './drawn';
-import type { ShrinkJob, ShrinkReply } from './messages';
+import type { ShrinkJob, ShrinkReply, WashJob } from './messages';
 import { imageAccept, noteRead, refused } from './reads';
 
 export type Shrunk =
@@ -62,6 +62,8 @@ let broken = false;
 let nextId = 0;
 const queue: Pending[] = [];
 const running = new Map<number, { job: Pending; slot: Slot }>();
+/** Washes asked of the first worker, which keeps each title's. */
+const washing = new Map<number, (made: Washed | null | undefined) => void>();
 /** Blobs a worker is making an address for, kept to make one here if it fails. */
 const addressing = new Map<
   number,
@@ -135,6 +137,19 @@ function start(): Slot | null {
       const { url, ...entry } = e.data.encoded;
       keepDrawn(url, { ...entry, maker: worker });
     }
+    const washed = washing.get(e.data.id);
+    if (washed) {
+      washing.delete(e.data.id);
+      const { bitmap, tint, panel, unsupported } = e.data;
+      washed(
+        unsupported
+          ? undefined
+          : bitmap && tint && panel
+            ? { bitmap, tint, panel }
+            : null
+      );
+      return;
+    }
     const asked = addressing.get(e.data.id);
     if (asked) {
       addressing.delete(e.data.id);
@@ -168,6 +183,8 @@ function start(): Slot | null {
     for (const { blob, resolve } of addressing.values())
       resolve(addressHere(blob));
     addressing.clear();
+    for (const resolve of washing.values()) resolve(undefined);
+    washing.clear();
   };
   slots.push(slot);
   return slot;
@@ -321,4 +338,33 @@ export function shrinkArtwork(
       if (at >= 0) queue.splice(at, 1);
     },
   };
+}
+
+export interface Washed {
+  bitmap: ImageBitmap;
+  tint: string;
+  panel: string;
+}
+
+/**
+ * The artwork's wash, drawn out by a worker: undefined where none can draw,
+ * null when the image couldn't be read.
+ */
+export function washArtwork(url: string): Promise<Washed | null | undefined> {
+  const slot = broken ? undefined : slots[0];
+  if (!slot) return Promise.resolve(undefined);
+  if (refused(url)) return Promise.resolve(null);
+  const id = nextId++;
+  const save = saving('artwork');
+  return new Promise((resolve) => {
+    washing.set(id, resolve);
+    slot.worker.postMessage({
+      id,
+      wash: true,
+      url,
+      save,
+      look: save && maybeSaved(url),
+      accept: imageAccept(),
+    } satisfies WashJob);
+  });
 }

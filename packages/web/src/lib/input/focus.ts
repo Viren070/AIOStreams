@@ -855,6 +855,8 @@ export function move(dir: Direction): boolean {
   const came = out ? cameFrom.get(exit!) : undefined;
   if (came?.isConnected && canFocus(came)) {
     moveTo(came, dir);
+    // A jump, not a step, so the other way from there is found afresh.
+    lastMove = null;
     return true;
   }
   // Going back the way it came returns to where it was.

@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop"
-version = "0.24.0"
+version = "0.27.0"
 dependencies = [
  "aiostreams-desktop-core",
  "base64 0.22.1",
@@ -53,6 +53,7 @@ dependencies = [
  "tao",
  "velopack",
  "webkit6",
+ "webview2-com",
  "windows",
  "windows-sys 0.61.2",
  "winresource",
@@ -61,7 +62,7 @@ dependencies = [
 
 [[package]]
 name = "aiostreams-desktop-core"
-version = "0.24.0"
+version = "0.27.0"
 dependencies = [
  "aiostreams-container",
  "aiostreams-thumbs",

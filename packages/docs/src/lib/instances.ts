@@ -30,9 +30,9 @@ export const instances: Instance[] = [
     hostedBy: 'ElfHosted',
     hostedByUrl: 'https://elfhosted.com',
     description:
-      'Hosted by ElfHosted, a well-known and reputable addon hosting service. The most stable option due to being a professional service, but the public instance forcefully excludes P2P, HTTP, and Live stream types. A private instance (no restrictions, relaxed rate limits, direct ElfHosted support) is available for a monthly fee — see the Deployment page.',
+      'Hosted by ElfHosted, a well-known and reputable addon hosting service. The most stable option due to being a professional service, but the public instance forcefully excludes P2P, HTTP, and Live stream types. A private instance (no restrictions, rate limits you are unlikely to hit, direct ElfHosted support) is available for a monthly fee — see the Deployment page.',
     warning:
-      'P2P, HTTP, and Live stream types are forcefully excluded on this public instance. If you need those stream types, use a private ElfHosted instance (see the Deployment page), choose a different community instance, or self-host.',
+      'P2P, HTTP, and Live stream types are forcefully excluded on this public instance, and its media server is off, so the AIOStreams app can’t sign in to it. If you need those, use a private ElfHosted instance (see the Deployment page) and turn its media server on for the app, choose a different community instance, or self-host.',
     stable: 'https://aiostreams.elfhosted.com',
   },
   {
