@@ -364,6 +364,34 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   > :not([data-ui='open-card']) {
   visibility: hidden;
 }
+/* On a TV an opened card's words sit on a darker shade, from its foot and its
+   corner under them, the picture dimmed a little all over. */
+:root[data-tv] [data-ui='card-preview-shade'] {
+  background:
+    linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.95),
+      rgb(0 0 0 / 0.7) 45%,
+      rgb(0 0 0 / 0.3)
+    ),
+    linear-gradient(to top right, rgb(0 0 0 / 0.5), transparent 60%);
+}
+:root[data-tv][dir='rtl'] [data-ui='card-preview-shade'] {
+  background:
+    linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.95),
+      rgb(0 0 0 / 0.7) 45%,
+      rgb(0 0 0 / 0.3)
+    ),
+    linear-gradient(to top left, rgb(0 0 0 / 0.5), transparent 60%);
+}
+/* Opened on its own art, a film's wide card keeps it showing as it grows. */
+[data-ui='media-row-item'][data-open]:not([data-trailer])
+  [data-focus-frame]:has(> [data-ui='open-card'] > [data-art='card'])
+  > :is(img, canvas) {
+  visibility: visible;
+}
 [data-ui='media-row-item'][data-opening] [data-focus-frame],
 [data-ui='media-row-item'][data-trailer] [data-focus-frame] {
   background: transparent;

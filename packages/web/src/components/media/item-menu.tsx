@@ -224,8 +224,8 @@ export function ItemMenu({
       preview?.onFocus(e);
       art?.onFocus(e);
     },
-    onBlur: () => {
-      preview?.onBlur();
+    onBlur: (e: React.FocusEvent<HTMLElement>) => {
+      preview?.onBlur(e);
       art?.onBlur();
     },
   };
