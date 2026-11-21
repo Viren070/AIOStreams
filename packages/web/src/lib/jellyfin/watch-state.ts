@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from './session';
 import { useFeature } from './server-info';
-import type { BaseItemDto, BaseItemDtoQueryResult } from './types';
+import { fetchShowEpisodes } from './show-episodes';
+import type { BaseItemDto } from './types';
 import { useKey } from './queries';
 
 /** Watch-state edits change every list, so each one refreshes them all. */
@@ -71,10 +72,8 @@ export function useSetPlayedUpTo() {
   return useMutation({
     mutationFn: async (episode: BaseItemDto) => {
       if (native) return client.post(`/AIOStreams/PlayedUpTo/${episode.Id}`);
-      const res = await client.get<BaseItemDtoQueryResult>(
-        `/Shows/${episode.SeriesId}/Episodes`,
-        { userId: user.Id }
-      );
+      // The whole show, page by page: one answer stops at 1000 episodes.
+      const res = await fetchShowEpisodes(client, user.Id!, episode.SeriesId!);
       const all = res.Items ?? [];
       const ts = episode.ParentIndexNumber ?? 0;
       const te = episode.IndexNumber ?? 0;
