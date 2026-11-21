@@ -45,11 +45,14 @@ cp -r "$web" "$APPDIR/share/aiostreams-desktop/web"
 cp -r "$libs/licenses" "$APPDIR/lib/aiostreams-desktop/licenses"
 crates=$desktop/licences/$(uname -m)-unknown-linux-gnu.json
 [ -f "$crates" ] && install -Dm644 "$crates" "$APPDIR/lib/aiostreams-desktop/third-party-licenses.json"
-# The bundled libva looks only in Arch's driver folder.
+# The bundled libva looks only in Arch's driver folder, and sandboxed processes see the
+# system's libraries only under /lib and /lib64.
 cat >>"$APPDIR/.env" <<'EOF'
 AIOSTREAMS_WEB_DIR=${SHARUN_DIR}/share/aiostreams-desktop/web
 AIOSTREAMS_LIBMPV=${SHARUN_DIR}/lib/aiostreams-desktop/libmpv.so.2
 LIBVA_DRIVERS_PATH=${LIBVA_DRIVERS_PATH}:/usr/lib/x86_64-linux-gnu/dri:/usr/lib/aarch64-linux-gnu/dri:/usr/lib64/dri:/usr/lib/dri:/run/opengl-driver/lib/dri
+GBM_BACKENDS_PATH=/lib/x86_64-linux-gnu/gbm:/lib/aarch64-linux-gnu/gbm:/lib64/gbm:/lib/gbm
+LIBGL_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri:/usr/lib/aarch64-linux-gnu/dri:/usr/lib64/dri:/usr/lib/dri:/lib/x86_64-linux-gnu/dri:/lib/aarch64-linux-gnu/dri:/lib64/dri:/lib/dri
 EOF
 ln -s usr/AppRun "$out/AppRun"
 cp "$APPDIR/$id.desktop" "$APPDIR/$id.png" "$APPDIR/.DirIcon" "$out/"
