@@ -610,3 +610,39 @@ jobs:
       - name: Attach to the release
         if: ${{ inputs.release != '' }}
         run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.deb" --clobber
+
+  # Arch's recipe for this release's .debs, as the AUR would hold it.
+  pkgbuild:
+    needs: deb
+    if: inputs.release != '' && (inputs.platforms == 'all' || inputs.platforms == 'linux')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      RELEASE: ${{ inputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: packages/desktop/linux/aur
+          sparse-checkout-cone-mode: false
+
+      - name: Fill in the version and checksums
+        run: |
+          gh release download "$RELEASE" -p 'aiostreams-desktop-linux-*.deb' -D debs
+          x64=$(sha256sum debs/aiostreams-desktop-linux-x64.deb | cut -d' ' -f1)
+          arm64=$(sha256sum debs/aiostreams-desktop-linux-arm64.deb | cut -d' ' -f1)
+          mkdir -p aiostreams-desktop-bin
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256_X86_64@/$x64/" -e "s/@SHA256_AARCH64@/$arm64/" \
+            packages/desktop/linux/aur/PKGBUILD >aiostreams-desktop-bin/PKGBUILD
+          # makepkg also fetches the x64 .deb by the recipe's own URL and checks its sum.
+          docker run --rm -v "$PWD/aiostreams-desktop-bin:/pkg" archlinux:latest bash -c '
+            set -e
+            pacman -Sy --noconfirm --needed base-devel >/dev/null
+            useradd -m builder && cp /pkg/PKGBUILD /home/builder/ && chown builder /home/builder/PKGBUILD
+            su builder -c "cd && makepkg --verifysource >&2 && makepkg --printsrcinfo" >/pkg/.SRCINFO'
+          cat aiostreams-desktop-bin/PKGBUILD aiostreams-desktop-bin/.SRCINFO
+          tar -czf aiostreams-desktop-bin.tar.gz aiostreams-desktop-bin
+
+      - name: Attach to the release
+        run: gh release upload "$RELEASE" aiostreams-desktop-bin.tar.gz --clobber

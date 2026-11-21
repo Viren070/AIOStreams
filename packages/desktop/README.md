@@ -128,7 +128,9 @@ There are three downloads, each for x64 and arm64:
 
 `scripts/smoke-linux.sh <command>` starts a build on a virtual display and checks its log, as CI
 does for the AppImage and the .deb. Where WebKit's sandbox can't start, the app turns it off and
-logs why.
+logs why. `linux/aur/PKGBUILD` is a template that repackages the .deb for Arch: each stable
+release attaches it with its version and checksums filled in, and its `.SRCINFO`, as
+`aiostreams-desktop-bin.tar.gz`.
 
 ### macOS
 
