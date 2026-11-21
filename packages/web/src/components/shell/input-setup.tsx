@@ -26,6 +26,7 @@ import {
   type Direction,
 } from '@/lib/input';
 import { navigate, to } from '@/lib/paths';
+import { leaveThenOpen } from '@/lib/page-open';
 import { settings, useSetting } from '@/lib/settings';
 import { KeyCaps } from '@/components/key-caps';
 
@@ -44,7 +45,7 @@ function back(history: History): boolean {
   }
   const host = currentHost();
   if (host.back?.()) return true;
-  if (history.canGoBack()) history.back();
+  if (history.canGoBack()) leaveThenOpen(() => history.back());
   else if (host.exit) host.exit();
   else return false;
   return true;
