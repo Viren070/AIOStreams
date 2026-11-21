@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -184,6 +185,23 @@ fn current_fbo() -> i32 {
     }
 }
 
+/// For a frame with no render context, whose buffer would show whatever was left in it.
+fn clear() {
+    const COLOR_BUFFER_BIT: u32 = 0x4000;
+    type ClearColor = unsafe extern "C" fn(f32, f32, f32, f32);
+    type Clear = unsafe extern "C" fn(u32);
+    // SAFETY: looked up for the current context, with gl.h's types.
+    unsafe {
+        let color = get_proc_address(std::ptr::null_mut(), c"glClearColor".as_ptr());
+        let clear = get_proc_address(std::ptr::null_mut(), c"glClear".as_ptr());
+        if color.is_null() || clear.is_null() {
+            return;
+        }
+        std::mem::transmute::<*mut c_void, ClearColor>(color)(0.0, 0.0, 0.0, 1.0);
+        std::mem::transmute::<*mut c_void, Clear>(clear)(COLOR_BUFFER_BIT);
+    }
+}
+
 /// Looked up by name, since GTK may be built without one of the backends.
 fn native_display(display: &gtk4::gdk::Display) -> Option<NativeDisplay> {
     type Get = unsafe extern "C" fn(*mut c_void) -> *mut c_void;
@@ -212,7 +230,13 @@ type Render = Rc<RefCell<Option<RenderContext>>>;
 thread_local! {
     static AREA: RefCell<Option<gtk4::GLArea>> = const { RefCell::new(None) };
     static RENDER: RefCell<Option<Render>> = const { RefCell::new(None) };
+    static MPV: RefCell<Option<Arc<Mpv>>> = const { RefCell::new(None) };
 }
+
+/// Files loaded so far, so a release timed from an earlier stop leaves a later file's context.
+static LOADS: AtomicU64 = AtomicU64::new(0);
+static IDLE: AtomicBool = AtomicBool::new(true);
+const RELEASE_AFTER: Duration = Duration::from_secs(30);
 
 /// Draws the next frame when it is due, not in mpv's own wait, which would hold up the UI thread.
 fn update_video() {
@@ -373,14 +397,17 @@ impl VideoSurface {
         area.connect_render({
             let render = render.clone();
             move |area, _| {
-                if let Some(r) = render.borrow().as_ref() {
-                    let scale = area.scale_factor();
-                    r.draw(
-                        current_fbo(),
-                        area.width() * scale,
-                        area.height() * scale,
-                        true,
-                    );
+                match render.borrow().as_ref() {
+                    Some(r) => {
+                        let scale = area.scale_factor();
+                        r.draw(
+                            current_fbo(),
+                            area.width() * scale,
+                            area.height() * scale,
+                            true,
+                        );
+                    }
+                    None => clear(),
                 }
                 glib::Propagation::Stop
             }
@@ -451,44 +478,7 @@ impl VideoSurface {
     }
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
-        let start = {
-            let render = self.render.clone();
-            move |area: &gtk4::GLArea| {
-                area.make_current();
-                if let Some(e) = area.error() {
-                    return log::error!("OpenGL context: {e}");
-                }
-                let display = native_display(&area.display());
-                let gl = area.context().map(|c| {
-                    let (major, minor) = c.version();
-                    format!("{:?} {major}.{minor}", c.api())
-                });
-                log::info!("mpv render context display={display:?} gl={gl:?}");
-                match RenderContext::new(
-                    mpv.clone(),
-                    get_proc_address,
-                    std::ptr::null_mut(),
-                    display,
-                    render_node(),
-                    true, // advanced control
-                    8,    // a GtkGLArea's default framebuffer is 8 bits a channel
-                ) {
-                    Ok(mut ctx) => {
-                        ctx.on_update(|| {
-                            glib::idle_add_once(update_video);
-                        });
-                        *render.borrow_mut() = Some(ctx);
-                        area.queue_render();
-                    }
-                    Err(e) => log::error!("{e}"),
-                }
-            }
-        };
-        if self.area.is_realized() {
-            start(&self.area);
-        } else {
-            self.area.connect_realize(start);
-        }
+        MPV.with(|m| *m.borrow_mut() = Some(mpv));
         self.area.connect_unrealize({
             let render = self.render.clone();
             move |area| {
@@ -507,14 +497,78 @@ impl VideoSurface {
     pub fn resize(&self, _width: u32, _height: u32) {}
 }
 
-/// With no file mpv stops drawing, and the last frame would show where the page is see-through.
-pub fn clear_video() {
-    glib::idle_add_once(|| {
-        AREA.with(|a| {
-            if let Some(a) = a.borrow().as_ref() {
-                a.queue_render();
+fn make_render(area: &gtk4::GLArea, render: &Render, mpv: Arc<Mpv>) {
+    area.make_current();
+    if let Some(e) = area.error() {
+        return log::error!("OpenGL context: {e}");
+    }
+    let display = native_display(&area.display());
+    let gl = area.context().map(|c| {
+        let (major, minor) = c.version();
+        format!("{:?} {major}.{minor}", c.api())
+    });
+    log::info!("mpv render context display={display:?} gl={gl:?}");
+    match RenderContext::new(
+        mpv,
+        get_proc_address,
+        std::ptr::null_mut(),
+        display,
+        render_node(),
+        true, // advanced control
+        8,    // a GtkGLArea's default framebuffer is 8 bits a channel
+    ) {
+        Ok(mut ctx) => {
+            ctx.on_update(|| {
+                glib::idle_add_once(update_video);
+            });
+            *render.borrow_mut() = Some(ctx);
+            area.queue_render();
+        }
+        Err(e) => log::error!("{e}"),
+    }
+}
+
+/// Before a file loads, as mpv's video output needs a render context to start. None is kept
+/// while nothing plays: one sets up every hardware decoder mpv has, in video memory.
+pub fn prepare_video() {
+    LOADS.fetch_add(1, Ordering::SeqCst);
+    let area = AREA.with(|a| a.borrow().clone());
+    let render = RENDER.with(|r| r.borrow().clone());
+    let mpv = MPV.with(|m| m.borrow().clone());
+    if let (Some(area), Some(render), Some(mpv)) = (area, render, mpv)
+        && render.borrow().is_none()
+        && area.is_realized()
+    {
+        make_render(&area, &render, mpv);
+    }
+}
+
+/// Called on mpv's threads. With no file mpv stops drawing, and its last frame would show where
+/// the page is see-through.
+pub fn player_idle(idle: bool) {
+    IDLE.store(idle, Ordering::SeqCst);
+    if !idle {
+        return;
+    }
+    let loads = LOADS.load(Ordering::SeqCst);
+    glib::idle_add_once(move || {
+        let Some(area) = AREA.with(|a| a.borrow().clone()) else {
+            return;
+        };
+        area.queue_render();
+        glib::timeout_add_local_once(RELEASE_AFTER, move || {
+            if !IDLE.load(Ordering::SeqCst) || LOADS.load(Ordering::SeqCst) != loads {
+                return;
             }
-        })
+            let Some(render) = RENDER.with(|r| r.borrow().clone()) else {
+                return;
+            };
+            area.make_current();
+            if render.borrow_mut().take().is_some() {
+                log::info!("mpv render context released");
+                area.queue_render();
+            }
+        });
     });
 }
 
