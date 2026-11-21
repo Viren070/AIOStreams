@@ -2,6 +2,7 @@ import React from 'react';
 import { themeVariables } from '@aiostreams/ui/utils/palette';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import { useSession } from '@/lib/jellyfin/session';
+import { useCachedItem } from '@/lib/jellyfin/queries';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { usePageShown } from '@/lib/page-shown';
 import { settings, useSetting, type ArtPage } from '@/lib/settings';
@@ -126,6 +127,9 @@ let paused = false;
 let making: string | undefined;
 
 let frame: WashFrame | null = null;
+/** Until the next frame: the last went at once, as another title's, not faded. */
+let dropped = false;
+export const washDropped = () => dropped;
 /** False on a page the user keeps it from. */
 let visible = true;
 const listeners = new Set<() => void>();
@@ -187,6 +191,17 @@ export const useWashShown = () =>
 const newest = (over: boolean) =>
   shown.filter((entry) => entry.over === over).pop()?.src;
 
+/** Clears the wash without a fade, as it showed another title's art. */
+function dropAtOnce() {
+  const was = frame;
+  frame = null;
+  dropped = true;
+  markRoot();
+  paintPanels(null);
+  for (const listener of listeners) listener();
+  if (was) retire(was);
+}
+
 /** The art of the page a back swipe shows beneath, over all the open page asks for. */
 let held: string | undefined;
 /** Shown at once rather than faded to, as a back swipe starts or turns back. */
@@ -209,6 +224,7 @@ function apply() {
     }
     const was = frame;
     frame = next;
+    dropped = false;
     markRoot();
     paintPanels(next.panel);
     // The layers draw it as they hear of it, so the last can go.
@@ -281,7 +297,13 @@ export function useArtBackground(
     const arriving = !last.current;
     last.current = src;
     if (!src) return;
-    if (arriving && !over) selectedSrc = undefined;
+    if (arriving && !over) {
+      selectedSrc = undefined;
+      // Another title's art, kept from before, goes at once, so it doesn't
+      // show over this page while its own is made. Not the art a back swipe
+      // holds, which is this page's as it was left.
+      if (!held && frame && frame.src !== src) dropAtOnce();
+    }
     const entry: Shown = { src, over };
     shown.push(entry);
     apply();
@@ -295,6 +317,7 @@ export function useArtBackground(
 /** A card's handlers that put its artwork behind the pages once it is rested on. */
 export function useArtTarget(item: BaseItemDto) {
   const { client } = useSession();
+  const cachedItem = useCachedItem();
   const [pages] = useSetting(settings.theme.artBackground);
   const src = pages.length ? artSrc(client, item) : undefined;
   if (!src) return undefined;
@@ -304,7 +327,10 @@ export function useArtTarget(item: BaseItemDto) {
     restingOn = src;
     restTimer = setTimeout(() => {
       restingOn = undefined;
-      selectedSrc = src;
+      // A list knows a title's poster, its details its backdrop, which its
+      // page shows behind it: by then fetched ahead, so the art doesn't change.
+      const full = item.Id ? cachedItem(item.Id) : undefined;
+      selectedSrc = (full && artSrc(client, full)) || src;
       apply();
     }, REST_MS);
   };
