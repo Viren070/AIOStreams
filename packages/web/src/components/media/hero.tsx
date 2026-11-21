@@ -922,6 +922,8 @@ function FollowBackdrop({
   // Kept behind a title's page, which settles its backdrop on its details.
   useBackdropsSettled();
   const src = item && backdropSrc(client, item);
+  // Its page opens on the picture shown here, as the hero's does.
+  React.useEffect(() => noteShownBackdrop(item?.Id, src), [item?.Id, src]);
   const fade = cn(
     'transition-opacity duration-700',
     trailer.shown && 'opacity-0'
