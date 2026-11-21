@@ -231,6 +231,7 @@ class ExoEngine(private val context: Context) : Engine {
         if (url == null) return@post
         resyncedAtMs = null
         seekTo(positionMs.toLong(), (snapMs * 1000).toLong())
+        recovering = false
     }
 
     private fun seekTo(positionMs: Long, snapUs: Long) {
@@ -257,11 +258,15 @@ class ExoEngine(private val context: Context) : Engine {
         unsticks++
         AppLog.w(TAG, "the tunnel stood still with ${player.totalBufferedDuration} ms queued, so it starts again")
         seekTo(player.currentPosition - RESYNC_BACK_MS, 0)
+        recovering = true
     }
     private var unsticks = 0
 
+    /** The seek under way is the player's own restart, which can stand still in turn. */
+    private var recovering = false
+
     private fun stuck() =
-        player.isTunnelingEnabled && AMLOGIC && url != null && loaded && !seeking &&
+        player.isTunnelingEnabled && AMLOGIC && url != null && loaded && (!seeking || recovering) &&
             player.playWhenReady && player.playbackState == Player.STATE_BUFFERING &&
             !player.isLoading && player.totalBufferedDuration >= STUCK_QUEUED_MS
 
@@ -277,6 +282,7 @@ class ExoEngine(private val context: Context) : Engine {
         resyncedAtMs = position
         // Now, not queued: behind a seek or a load of the page's it would undo that one.
         seekTo(position - RESYNC_BACK_MS, 0)
+        recovering = true
     }
 
     override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
@@ -650,6 +656,7 @@ class ExoEngine(private val context: Context) : Engine {
                     }
                     state(PlayerState(buffering = false))
                     unsticks = 0
+                    recovering = false
                 }
                 Player.STATE_BUFFERING -> if (loaded && !seeking) state(PlayerState(buffering = true))
                 Player.STATE_ENDED -> {
