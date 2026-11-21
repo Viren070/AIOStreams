@@ -134,9 +134,12 @@ function linksFor(item: BaseItemDto, season?: BaseItemDto) {
 export function Header({
   item,
   season,
+  hero,
 }: {
   item: BaseItemDto;
   season?: BaseItemDto;
+  /** The page has art across its top. */
+  hero: boolean;
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
@@ -147,6 +150,25 @@ export function Header({
   const logo = logoUrl(client, item, { maxWidth: 416 });
   const [logoFailed, setLogoFailed] = React.useState(false);
   const poster = posterUrl(client, item, { maxWidth: 320 });
+  const collection = item.Type === 'BoxSet';
+  const badge = collection && !hero && !(logo && !logoFailed) ? poster : null;
+  const name =
+    logo && !logoFailed ? (
+      <CachedImage
+        data-ui="item-logo"
+        src={logo}
+        alt={item.Name ?? ''}
+        onError={() => setLogoFailed(true)}
+        className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
+      />
+    ) : (
+      <h1
+        data-ui="item-title"
+        className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+      >
+        {item.Name}
+      </h1>
+    );
   const links = React.useMemo(() => linksFor(item, season), [item, season]);
   const overviewImage = React.useMemo(
     () => landscapeUrls(client, item, { maxWidth: 480 }),
@@ -201,7 +223,7 @@ export function Header({
       data-nav-top
       className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8"
     >
-      {poster && (
+      {poster && !collection && (
         <CachedImage
           data-ui="item-poster"
           src={poster}
@@ -216,21 +238,26 @@ export function Header({
       )}
       <div className="min-w-0 max-w-3xl flex-1 space-y-4">
         <div data-ui="item-heading" className="space-y-4">
-          {logo && !logoFailed ? (
-            <CachedImage
-              data-ui="item-logo"
-              src={logo}
-              alt={item.Name ?? ''}
-              onError={() => setLogoFailed(true)}
-              className="max-h-24 max-w-[min(26rem,85%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-32"
-            />
-          ) : (
-            <h1
-              data-ui="item-title"
-              className="text-3xl font-bold leading-tight max-sm:text-center sm:text-4xl lg:text-5xl"
+          {badge ? (
+            <div
+              data-ui="item-name"
+              className="flex items-center gap-4 max-sm:justify-center"
             >
-              {item.Name}
-            </h1>
+              <CachedImage
+                data-ui="item-badge"
+                src={badge}
+                alt=""
+                className={cn(
+                  'flex-none rounded-lg object-cover ring-1 ring-white/10',
+                  cardShape(item) === 'poster'
+                    ? 'aspect-[2/3] h-20'
+                    : 'aspect-video h-14 lg:h-16'
+                )}
+              />
+              {name}
+            </div>
+          ) : (
+            name
           )}
           {item.Taglines?.[0] && (
             <p

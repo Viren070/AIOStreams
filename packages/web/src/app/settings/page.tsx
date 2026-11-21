@@ -38,10 +38,10 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
 import { navigate, to } from '@/lib/paths';
+import { pageOpening } from '@/lib/page-open';
 import { canPlayWithWebGpu } from '@/lib/playback/player-choice';
 import { BackButton } from '@/components/back-button';
 import { PageBody } from '@/components/shell/page';
-import { PageScroll } from '@/components/shell/page-scroll';
 import { useSession } from '@/lib/jellyfin/session';
 import type { AiostreamsUser, WebActivity } from '@/lib/jellyfin/types';
 import { SettingsLayer, useLayer } from '@/lib/settings';
@@ -403,92 +403,79 @@ function NarrowSettings({
   onQuery,
   onDonate,
 }: SettingsProps & { picked: Section | undefined }) {
-  const [listY, setListY] = React.useState(0);
-  const open = (id: string) => {
-    setListY(window.scrollY);
-    navigate(to.settings(id, who));
-  };
-  return (
-    <div className="relative">
-      {/* Kept under an open section, where a back swipe shows it as it was left. */}
-      <div
-        data-back-under={to.settings(undefined, who)}
-        data-back-y={listY}
-        inert={!!picked}
-        className={cn(
-          'isolate',
-          picked &&
-            'invisible absolute inset-x-0 top-0 [content-visibility:hidden]'
-        )}
-      >
-        <PageBody>
-          <h1 data-ui="page-title" className="text-3xl font-bold">
-            <Trans>Settings</Trans>
-          </h1>
-          {whoseField}
-          <SearchField value={query} onChange={onQuery} />
-          {words.length ? (
-            <SearchResults all={all} words={words} />
-          ) : (
-            <div data-ui="settings-tabs" data-nav-start className="space-y-4">
-              {grouped(all).map(([group, items]) => (
-                <div key={group} className="space-y-2">
-                  <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
-                    {groupLabel(group)}
-                  </p>
-                  <Card
-                    data-ui="settings-tab-group"
-                    data-name={group}
-                    className="art-glass divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
-                  >
-                    {items.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        data-ui="settings-tab"
-                        data-name={s.id}
-                        className="flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
-                        onClick={() => open(s.id)}
-                      >
-                        <s.icon className="flex-none text-xl text-[--muted]" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold">{s.label}</span>
-                          <span className="block text-sm text-[--muted]">
-                            {s.description}
-                          </span>
-                        </span>
-                        <LuChevronRight className="flex-none text-[--muted] rtl:-scale-x-100" />
-                      </button>
-                    ))}
-                  </Card>
-                </div>
-              ))}
-              <DonateButton onClick={onDonate} />
-            </div>
+  // Latched, or a class added on a later render plays the entrance then.
+  const [slidIn] = React.useState(pageOpening);
+  if (picked)
+    return (
+      <PageBody>
+        <div
+          data-ui="settings-panel"
+          data-name={picked.id}
+          className={cn(
+            'over-art space-y-6',
+            !slidIn &&
+              'duration-300 animate-in fade-in-0 slide-in-from-bottom-2'
           )}
-        </PageBody>
-      </div>
-      {picked && (
-        <div data-back-slide className="relative isolate">
-          <PageBody>
-            <div
-              data-ui="settings-panel"
-              data-name={picked.id}
-              className="over-art space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
-            >
-              <SettingsPageHeader
-                title={picked.label}
-                description={picked.description}
-                icon={picked.icon}
-                leading={<BackButton fallback={to.settings(undefined, who)} />}
-              />
-              <SectionContent section={picked} />
+        >
+          <SettingsPageHeader
+            title={picked.label}
+            description={picked.description}
+            icon={picked.icon}
+            leading={<BackButton fallback={to.settings(undefined, who)} />}
+          />
+          <SectionContent section={picked} />
+        </div>
+      </PageBody>
+    );
+  return (
+    <PageBody>
+      <h1 data-ui="page-title" className="text-3xl font-bold">
+        <Trans>Settings</Trans>
+      </h1>
+      {whoseField}
+      <SearchField value={query} onChange={onQuery} />
+      {words.length ? (
+        <SearchResults all={all} words={words} />
+      ) : (
+        <div data-ui="settings-tabs" data-nav-start className="space-y-4">
+          {grouped(all).map(([group, items]) => (
+            <div key={group} className="space-y-2">
+              <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
+                {groupLabel(group)}
+              </p>
+              <Card
+                data-ui="settings-tab-group"
+                data-name={group}
+                className="art-glass divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
+              >
+                {items.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    data-ui="settings-tab"
+                    data-name={s.id}
+                    className="flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
+                    onClick={() =>
+                      navigate(to.settings(s.id, who), { over: true })
+                    }
+                  >
+                    <s.icon className="flex-none text-xl text-[--muted]" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">{s.label}</span>
+                      <span className="block text-sm text-[--muted]">
+                        {s.description}
+                      </span>
+                    </span>
+                    <LuChevronRight className="flex-none text-[--muted] rtl:-scale-x-100" />
+                  </button>
+                ))}
+              </Card>
             </div>
-          </PageBody>
+          ))}
+          <DonateButton onClick={onDonate} />
         </div>
       )}
-      <PageScroll key={picked?.id ?? 'list'} />
-    </div>
+    </PageBody>
   );
 }
 

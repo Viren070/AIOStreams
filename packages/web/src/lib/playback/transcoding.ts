@@ -294,6 +294,11 @@ export function transcodingEngine(
         wanted = id;
         reopen();
       },
+      setSubtitles(subtitles) {
+        // Each conversion opens with them too.
+        if (file) file = { ...file, subtitles };
+        engine.setSubtitles(subtitles);
+      },
       // Pictures would come from the conversion, not the file.
       thumbnails: undefined,
       picksTracks: false,

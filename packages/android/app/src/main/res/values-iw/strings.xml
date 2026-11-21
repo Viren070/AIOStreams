@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">הורדות</string>
+    <plurals name="downloading_items">
+        <item quantity="one">מתבצעת הורדה של פריט %d</item>
+        <item quantity="two">מתבצעת הורדה של %d פריטים</item>
+        <item quantity="other">מתבצעת הורדה של %d פריטים</item>
+    </plurals>
+    <string name="channel_updates">עדכונים</string>
+    <string name="updated_to">עודכן לגרסה %1$s</string>
+    <string name="tap_to_open">הקשה לפתיחה</string>
+    <string name="update_no_build">אין גרסה למעבד של המכשיר הזה</string>
+    <string name="update_damaged">הקובץ שהורד פגום</string>
+    <string name="update_install_failed">ההתקנה נכשלה: %1$s</string>
+    <string name="update_feed_answered">ההזנה החזירה %1$d</string>
+    <string name="download_folder_title">בחירת מיקום ההורדות</string>
+    <string name="download_folder_free">%1$s · %2$s פנויים</string>
+    <string name="file_saved">%1$s נשמר בתיקיית ההורדות</string>
+    <string name="file_not_saved">לא ניתן לשמור את %1$s</string>
+    <string name="webview_version_unknown">לא ידוע</string>
+    <string name="webview_too_old">גרסת WebView במכשיר הזה ישנה מדי לאפליקציה: גרסה %1$s, ונדרשת גרסה %2$d ומעלה.</string>
+    <string name="webview_update">יש לעדכן את Android System WebView או את מערכת ההפעלה, ואז לפתוח שוב את האפליקציה.</string>
+</resources>

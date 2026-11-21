@@ -1,5 +1,5 @@
 import { GrabCache } from './grab-cache.js';
-import { makeRequest, makeUrlLogSafe } from './http.js';
+import { makeRequest, makeUrlLogSafe } from './http/index.js';
 import { config as appConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 

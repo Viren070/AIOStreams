@@ -3,7 +3,7 @@ import { Cache, appConfig, formatZodError, ParsedId } from '../utils/index.js';
 import { Metadata, MetadataTitle } from './utils.js';
 import { iso6392ToIso6391 } from '../utils/languages.js';
 import { normaliseCountryCode } from '../utils/countries.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 import { z, ZodError } from 'zod';
 
 const logger = createLogger('tvdb');

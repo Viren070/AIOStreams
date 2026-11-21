@@ -27,7 +27,7 @@ export interface WashFrame {
 }
 
 const PANELS =
-  '.UI-Popover__root, .UI-DropdownMenu__root, .UI-DropdownMenu__subContent, .UI-ContextMenu__root, .UI-Select__content, .UI-Tooltip__root, .UI-Modal__content, .UI-Drawer__content, .UI-Input__root, [data-ui=settings-card], [data-ui=settings-tab-group], [data-ui=pill-tabs]';
+  '.UI-Popover__root, .UI-DropdownMenu__root, .UI-DropdownMenu__subContent, .UI-ContextMenu__root, .UI-Select__content, .UI-Tooltip__root, .UI-Modal__content, .UI-Drawer__content, .UI-Input__root, [data-ui=settings-card], [data-ui=settings-tab-group], [data-ui=pill-tabs], [data-ui=guide]';
 
 let panelStyle: HTMLStyleElement | null = null;
 
@@ -90,7 +90,21 @@ async function washHere(src: string): Promise<WashFrame | null> {
   return { src, image, tint: wash.tint, panel: wash.panel };
 }
 
+/** The last few replaced, newest last, for a page Back returns to. */
+const recent: WashFrame[] = [];
+const RECENT = 3;
+
+function retire(was: WashFrame) {
+  recent.push(was);
+  while (recent.length > RECENT) {
+    const old = recent.shift()!;
+    if (old.image instanceof ImageBitmap) old.image.close();
+  }
+}
+
 async function frameOf(src: string): Promise<WashFrame | null> {
+  const kept = recent.findIndex((f) => f.src === src);
+  if (kept !== -1) return recent.splice(kept, 1)[0];
   const made = await washArtwork(src);
   if (made === undefined) return washHere(src).catch(() => null);
   return (
@@ -152,7 +166,7 @@ export const washShownOn = (pathname: string) =>
   settings.theme.artBackground.read().includes(artPageOf(pathname));
 
 export function washCopy(): HTMLElement | null {
-  if (!frame) return null;
+  if (!frame || !visible) return null;
   const layer = document.createElement('div');
   layer.dataset.ui = 'art-wash';
   layer.style.cssText = 'pointer-events: none; overflow: hidden';
@@ -173,18 +187,24 @@ export const useWashShown = () =>
 const newest = (over: boolean) =>
   shown.filter((entry) => entry.over === over).pop()?.src;
 
+/** The art of the page a back swipe shows beneath, over all the open page asks for. */
+let held: string | undefined;
+/** Shown at once rather than faded to, as a back swipe starts or turns back. */
+let cut: string | undefined;
+
 /** A dialog's title over the card rested on, over the page's own. */
+const wanted = () => held ?? newest(true) ?? selectedSrc ?? newest(false);
+
 function apply() {
-  const src = newest(true) ?? selectedSrc ?? newest(false);
+  const src = wanted();
   // A page without art keeps the last.
   if (paused || !src || src === frame?.src || src === making) return;
   making = src;
   void frameOf(src).then((next) => {
     if (making === src) making = undefined;
-    const wanted = newest(true) ?? selectedSrc ?? newest(false);
-    if (!next || paused || wanted !== src) {
-      if (next?.image instanceof ImageBitmap) next.image.close();
-      if (next && wanted !== src) apply();
+    if (!next || paused || wanted() !== src) {
+      if (next) retire(next);
+      if (next && wanted() !== src) apply();
       return;
     }
     const was = frame;
@@ -193,8 +213,29 @@ function apply() {
     paintPanels(next.panel);
     // The layers draw it as they hear of it, so the last can go.
     for (const listener of listeners) listener();
-    if (was?.image instanceof ImageBitmap) was.image.close();
+    if (was) retire(was);
   });
+}
+
+/** The art of the page beneath a back swipe, or null as the swipe turns back. */
+export function holdArt(src: string | null) {
+  if (held === (src ?? undefined)) return;
+  held = src ?? undefined;
+  const next = wanted();
+  cut = next !== frame?.src ? next : undefined;
+  apply();
+}
+
+/** Back opened the page beneath, which asks for the same art once it shows. */
+export function keepHeldArt() {
+  held = undefined;
+}
+
+/** Whether `src` replaces the last at once; true once. */
+export function takeCut(src: string): boolean {
+  if (cut !== src) return false;
+  cut = undefined;
+  return true;
 }
 
 export function setWashPaused(on: boolean) {
@@ -212,7 +253,8 @@ export function releaseArtSelection() {
 }
 
 export function clearArtBackground() {
-  if (frame?.image instanceof ImageBitmap) frame.image.close();
+  for (const f of [frame, ...recent.splice(0)])
+    if (f?.image instanceof ImageBitmap) f.image.close();
   frame = null;
   markRoot();
   paintPanels(null);

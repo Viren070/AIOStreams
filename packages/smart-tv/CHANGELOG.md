@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.12.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.11.0...smart-tv-v0.12.0) (2026-11-19)
+
+
+### Features
+
+* add settings for everyone and let the owner change other profiles' settings ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** give the saved servers one shared profile picker ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** keep the pages Back returns to mounted ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** list other saved servers' profiles on the profile picker ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** open settings sections with the slide-over ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+
+
+### Bug Fixes
+
+* **ui:** pass the Combobox's className to its trigger ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** add Path to the version list's fields ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** ask for addon subtitles once a version plays ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** don't retrace the jump out of a navigation box ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** hide the pages' wash under a back slide to a page without it ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** keep a scrolled-away bar away while a page scrolls down from its top ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** leave the player's controls hidden on swipes, skips and pauses ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** line up page titles and controls across pages ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** paint the guide as an art wash panel ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** put AVPlay's object under the page's background on Samsung TVs ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** ring a TV list's whole filter row ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** send live streams a VLC user agent from the apps' players ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** slide a page back the same way from either edge ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+* **web:** time the pause screen from the last input ([e44297f](https://github.com/Viren070/AIOStreams/commit/e44297f2d148712d6c203096d54130aab0bdcbeb))
+
 ## [0.11.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.10.0...smart-tv-v0.11.0) (2026-11-17)
 
 
