@@ -197,12 +197,49 @@ function clampX(box: Element, left: number): number {
  * the browser's own smooth scroll starts again from a standstill, so quick
  * presses stutter.
  */
+/**
+ * The furthest `box` scrolls down once jumps under way end. A layer still drawn
+ * lower stretches the overflow until it's home, and a place past the end of
+ * the page would be taken back then, with a jump.
+ */
+function maxTop(box: Element): number {
+  // Whole pixels, as the browser keeps it: half of one would never be reached.
+  return Math.max(
+    0,
+    Math.floor(box.scrollHeight - box.clientHeight - stretch(box))
+  );
+}
+
+/**
+ * How far below its place the lowest of `box`'s layers is still drawn. Each
+ * layer carries the ones inside it, so that's the largest of their running
+ * totals, outermost first, not their sum.
+ */
+function stretch(box: Element): number {
+  const layer = layerOf(box);
+  const jumps = (layer && eased.get(layer)?.jumps) ?? [];
+  let drawn = 0;
+  let most = 0;
+  for (let i = 0; i < jumps.length; i++) {
+    const jump = jumps[i];
+    if (jump) drawn += toGo(jump)[1];
+    most = Math.max(most, drawn);
+  }
+  return most;
+}
+
 export function glideTo(box: Element, left: number, top: number): void {
   const to: [number, number] = [
     left === box.scrollLeft ? left : clampX(box, left),
-    Math.max(0, Math.min(top, box.scrollHeight - box.clientHeight)),
+    Math.max(0, Math.min(top, maxTop(box))),
   ];
-  if (!glides.has(box) && to[0] === box.scrollLeft && to[1] === box.scrollTop)
+  // Under a pixel away is there already; a jump that small would only restart
+  // the eases under way.
+  if (
+    !glides.has(box) &&
+    Math.abs(to[0] - box.scrollLeft) < 1 &&
+    Math.abs(to[1] - box.scrollTop) < 1
+  )
     return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     glides.delete(box);
