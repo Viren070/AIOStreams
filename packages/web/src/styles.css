@@ -162,12 +162,19 @@ html.playing .page-background {
   display: none !important;
 }
 
+/*
+ * Rules on html[data-art-wash] name their subjects by a class, over-art or
+ * art-glass, never by data-ui, even inside :is(): every element with a data-ui
+ * would restyle as a page turns the wash on or off, which a TV takes a frame
+ * or more over.
+ */
 /* Over the artwork, a row's hover lifts it rather than painting it over. */
-html[data-art-wash] [data-ui='settings-card-item']:hover {
+html[data-art-wash] .over-art[data-ui='settings-card-item']:hover {
   background-color: var(--subtle);
 }
 /* A fading ancestor cuts glass off from what's behind it, so the tab only rises. */
-html[data-art-wash][data-art-glass]:not(.playing) [data-ui='settings-panel'] {
+html[data-art-wash][data-art-glass]:not(.playing)
+  .over-art[data-ui='settings-panel'] {
   animation-name: rise;
 }
 @keyframes rise {
@@ -181,31 +188,31 @@ html[data-art-wash][data-art-glass]:not(.playing)
   background-color: transparent;
 }
 /* Background from artwork: title art fades out into its own blur. */
-html[data-art-wash] [data-ui='item-backdrop'],
-html[data-art-wash] [data-ui='item-trailer'],
-html[data-art-wash] [data-ui='hero'],
-html[data-art-wash] [data-ui='hero-shade'],
-html[data-art-wash] [data-ui='hero-trailer'] {
+html[data-art-wash] .over-art[data-ui='item-backdrop'],
+html[data-art-wash] .over-art[data-ui='item-trailer'],
+html[data-art-wash] .over-art[data-ui='hero'],
+html[data-art-wash] .over-art[data-ui='hero-shade'],
+html[data-art-wash] .over-art[data-ui='hero-trailer'] {
   --background: transparent;
 }
-html[data-art-wash] [data-ui='item-backdrop'],
-html[data-art-wash] [data-ui='hero-art'] {
+html[data-art-wash] .over-art[data-ui='item-backdrop'],
+html[data-art-wash] .over-art[data-ui='hero-art'] {
   --fade-down: linear-gradient(to top, transparent, #000 50%);
   -webkit-mask-image: var(--fade-down);
   mask-image: var(--fade-down);
 }
 /* Beside the details, the art fades on their side too. */
 @media (orientation: landscape), (min-width: 1024px) {
-  html[data-art-wash] [data-ui='item-backdrop'],
-  html[data-art-wash] [data-ui='hero-art'] {
+  html[data-art-wash] .over-art[data-ui='item-backdrop'],
+  html[data-art-wash] .over-art[data-ui='hero-art'] {
     --fade-side: linear-gradient(to right, transparent, #000 50%);
     -webkit-mask-image: var(--fade-down), var(--fade-side);
     -webkit-mask-composite: source-in;
     mask-image: var(--fade-down), var(--fade-side);
     mask-composite: intersect;
   }
-  html[dir='rtl'][data-art-wash] [data-ui='item-backdrop'],
-  html[dir='rtl'][data-art-wash] [data-ui='hero-art'] {
+  html[dir='rtl'][data-art-wash] .over-art[data-ui='item-backdrop'],
+  html[dir='rtl'][data-art-wash] .over-art[data-ui='hero-art'] {
     --fade-side: linear-gradient(to left, transparent, #000 50%);
   }
 }
@@ -443,9 +450,7 @@ html[data-art-wash][data-art-glass]:not(.playing)
     .UI-Tooltip__root,
     .UI-Modal__content,
     .UI-Drawer__content,
-    [data-ui='settings-card-body'],
-    [data-ui='settings-tab-group'],
-    [data-ui='pill-tabs']
+    .art-glass
   ) {
   border: 1px solid rgb(255 255 255 / 0.1);
   background-color: rgb(14 14 18 / 0.55);
@@ -468,9 +473,7 @@ html[data-art-wash][data-art-glass='liquid']:not(.playing)
     .UI-Tooltip__root,
     .UI-Modal__content,
     .UI-Drawer__content,
-    [data-ui='settings-card-body'],
-    [data-ui='settings-tab-group'],
-    [data-ui='pill-tabs']
+    .art-glass
   ) {
   background-color: rgb(14 14 18 / 0.12);
   border-color: rgb(255 255 255 / 0.14);

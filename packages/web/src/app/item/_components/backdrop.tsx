@@ -114,6 +114,7 @@ export function Backdrop({
       data-band={band || undefined}
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
       className={cn(
+        'over-art',
         'pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden transition-opacity duration-500 [mask-image:linear-gradient(to_top,transparent,black_2px)]',
         band
           ? 'landscape:h-[calc(min(85vh,var(--hero-height))+var(--top-bar,0px))] lg:h-[calc(min(85vh,var(--hero-height))+var(--top-bar,0px))]'
