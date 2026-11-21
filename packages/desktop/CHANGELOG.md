@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.27.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.26.0...desktop-v0.27.0) (2026-11-19)
+
+
+### Features
+
+* add settings for everyone and let the owner change other profiles' settings ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** give the saved servers one shared profile picker ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** keep the pages Back returns to mounted ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** list other saved servers' profiles on the profile picker ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** open settings sections with the slide-over ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+
+
+### Bug Fixes
+
+* **ui:** pass the Combobox's className to its trigger ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** add Path to the version list's fields ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** ask for addon subtitles once a version plays ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** don't retrace the jump out of a navigation box ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** hide the pages' wash under a back slide to a page without it ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** keep a scrolled-away bar away while a page scrolls down from its top ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** leave the player's controls hidden on swipes, skips and pauses ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** line up page titles and controls across pages ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** paint the guide as an art wash panel ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** put AVPlay's object under the page's background on Samsung TVs ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** ring a TV list's whole filter row ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** send live streams a VLC user agent from the apps' players ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** slide a page back the same way from either edge ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+* **web:** time the pause screen from the last input ([014a0da](https://github.com/Viren070/AIOStreams/commit/014a0da20938f8ef8eaa50f591d0d760dbde54c3))
+
 ## [0.26.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.25.0...desktop-v0.26.0) (2026-11-17)
 
 

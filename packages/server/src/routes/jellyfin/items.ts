@@ -28,6 +28,7 @@ import {
   liveCatalogs,
   Cache,
   collectionMembers,
+  collectionParts,
   viewCollectionType,
   config as appConfig,
   contentDescriptor,
@@ -253,6 +254,7 @@ export async function attachUserData(
       d.k === 'genre' ||
       d.k === 'person' ||
       d.k === 'source' ||
+      d.k === 'part' ||
       d.k === 'season' ||
       d.k === 'livetv' ||
       d.k === 'program'
@@ -331,6 +333,35 @@ function knownMemberCount(
   if (!meta.collection) return meta.videos?.length;
   if (!meta.collection.sources?.length) return meta.collection.items?.length;
   return undefined;
+}
+
+async function withCollectionParts(
+  ctx: JellyfinRequestContext,
+  item: JellyfinItem,
+  d: { t: string; i: string },
+  meta: ParsedMeta
+): Promise<void> {
+  const parts = await collectionParts(await ctx.engine(), meta);
+  if (parts.length < 2) return;
+  item.aiostreams = {
+    ...(item.aiostreams as object | undefined),
+    ...(meta.collection?.layout === 'rows' && { layout: 'rows' }),
+    ...(meta.collection?.showAll === false && { showAll: false }),
+    sources: parts.map(({ source, name, kind }) => ({
+      id: encodeItemId({
+        k: 'part',
+        t: d.t,
+        i: d.i,
+        ...(source && {
+          st: source.type,
+          c: source.catalogId,
+          ...(source.genre && { g: source.genre }),
+        }),
+      }),
+      name: name ?? item.Name,
+      ...(kind && { collectionType: kind }),
+    })),
+  };
 }
 
 export async function itemsFromPreviews(
@@ -629,10 +660,13 @@ export async function itemFromDescriptor(
         { ...meta, type: d.t },
         { boxset: true, childCount: knownMemberCount(meta) }
       );
+      await withCollectionParts(ctx, item, d, meta);
       return opts.bare
         ? item
         : attachUserData(ctx, [item]).then(([built]) => built);
     }
+    case 'part':
+      return null;
     case 'movie':
     case 'series': {
       const meta = await getMeta(ctx, d.t, d.i);
@@ -674,7 +708,10 @@ export async function itemFromDescriptor(
             ? meta?.videos?.length || undefined
             : undefined,
       });
-      if (asBoxset) item.Id = encodeItemId(d);
+      if (asBoxset) {
+        item.Id = encodeItemId(d);
+        await withCollectionParts(ctx, item, d, meta!);
+      }
       if (!meta) item.aiostreams = { noMeta: true };
       if (d.k === 'movie' && !asBoxset) {
         const ids = item.ProviderIds as Record<string, string> | undefined;

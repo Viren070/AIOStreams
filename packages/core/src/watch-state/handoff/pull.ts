@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { config as appConfig } from '../../config/index.js';
 import { createLogger } from '../../logging/logger.js';
-import { makeRequest } from '../../utils/http.js';
-import { readBodyCapped } from '../../utils/safe-fetch.js';
+import { makeRequest } from '../../utils/http/index.js';
+import { readBodyCapped } from '../../utils/http/safe-fetch.js';
 import { getDb } from '../../db/db.js';
 import { TaskManager } from '../../tasks/index.js';
 import { randomUUID } from 'node:crypto';

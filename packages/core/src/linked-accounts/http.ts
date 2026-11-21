@@ -1,6 +1,6 @@
 import { APIError, ErrorCode } from '../utils/constants.js';
-import { makeRequest } from '../utils/http.js';
-import { isRefusedUrl } from '../utils/private-addresses.js';
+import { makeRequest } from '../utils/http/index.js';
+import { isRefusedUrl } from '../utils/http/private-addresses.js';
 
 const TIMEOUT_MS = 15000;
 
@@ -86,13 +86,10 @@ export async function requestJson<T = any>(
       ...init.headers,
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    rawOptions: { redirect: 'manual' },
+    redirect: 'manual',
   });
 
-  const redirected =
-    (response.status >= 300 && response.status < 400) ||
-    // A manual redirect can also arrive filtered to an opaque status-0 response.
-    response.status === 0;
+  const redirected = response.status >= 300 && response.status < 400;
 
   const text = redirected ? '' : await response.text();
   let json: T | null = null;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { BackdropFrame } from '@/components/media/hero';
+import { useTrailersOn } from '@/features/trailers/preview';
 import { CachedImage } from '@/components/cached-image';
 
 /** Art that arrives within this was never seen missing, so it just appears. */
@@ -11,15 +12,27 @@ export function Backdrop({
   images,
   poster,
   trailer,
+  video,
+  band,
+  onBare,
   onShown,
 }: {
   images: string[];
   poster: string | null;
-  /** The picture it settled on, which it keeps as the title's details come. */
-  onShown?: (src: string) => void;
   /** A trailer plays in its place, behind the whole page. */
   trailer?: boolean;
+  video?: string;
+  /** As tall as Home's hero. */
+  band?: boolean;
+  /** Everything it was given has failed to load. */
+  onBare?: () => void;
+  /** The picture it settled on, which it keeps as the title's details come. */
+  onShown?: (src: string) => void;
 }) {
+  const playable = useTrailersOn('item');
+  const [playing, setPlaying] = React.useState<string>();
+  const [videoFailed, setVideoFailed] = React.useState<string>();
+  const usable = video !== videoFailed ? video : undefined;
   const sources = poster ? [...images, poster] : images;
   const key = sources.join('|');
   // Tied to the sources, not reset by an effect, which a cached image can load before.
@@ -80,21 +93,53 @@ export function Backdrop({
       )}
     />
   );
+  const moving = usable && playable && (
+    <video
+      key={usable}
+      data-ui="item-backdrop-video"
+      src={usable}
+      autoPlay
+      muted
+      loop
+      playsInline
+      onPlaying={() => setPlaying(usable)}
+      onError={() => setVideoFailed(usable)}
+      className={cn(
+        'absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-700',
+        playing === usable ? 'opacity-100' : 'opacity-0'
+      )}
+    />
+  );
+  const bare = !src && !usable;
+  React.useEffect(() => {
+    if (bare) onBare?.();
+  }, [bare, onBare]);
   return (
     <div
       aria-hidden
       data-ui="item-backdrop"
+      data-band={band || undefined}
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
       className={cn(
-        'pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden transition-opacity duration-500 [mask-image:linear-gradient(to_top,transparent,black_2px)] landscape:h-[calc(85vh+var(--top-bar,0px))] lg:h-[calc(85vh+var(--top-bar,0px))]',
+        'pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden transition-opacity duration-500 [mask-image:linear-gradient(to_top,transparent,black_2px)]',
+        band
+          ? 'landscape:h-[calc(min(85vh,var(--hero-height))+var(--top-bar,0px))] lg:h-[calc(min(85vh,var(--hero-height))+var(--top-bar,0px))]'
+          : 'landscape:h-[calc(85vh+var(--top-bar,0px))] lg:h-[calc(85vh+var(--top-bar,0px))]',
         trailer && 'opacity-0'
       )}
     >
-      {wash ? (
+      {wash && !moving ? (
         image
       ) : (
-        <BackdropFrame className="max-w-[calc(55vh*2.6)] landscape:max-w-[calc(85vh*2.6)] lg:max-w-[calc(85vh*2.6)]">
-          {image}
+        <BackdropFrame
+          className={
+            band
+              ? 'max-w-[calc(55vh*2.6)] landscape:max-w-[calc(min(85vh,var(--hero-height))*2.6)] lg:max-w-[calc(min(85vh,var(--hero-height))*2.6)]'
+              : 'max-w-[calc(55vh*2.6)] landscape:max-w-[calc(85vh*2.6)] lg:max-w-[calc(85vh*2.6)]'
+          }
+        >
+          {!wash && image}
+          {moving}
         </BackdropFrame>
       )}
       <div
