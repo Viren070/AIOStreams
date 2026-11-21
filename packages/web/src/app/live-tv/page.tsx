@@ -409,59 +409,57 @@ export function LiveTvPage({
       <PageHeader
         title={<Trans>Live TV</Trans>}
         actions={
-          (picked || guide) && (
-            <>
-              {picked && (
-                <Combobox
-                  data-ui="live-group-picker"
-                  aria-label={t`Group`}
-                  placeholder={t`Groups`}
-                  emptyMessage={t`Nothing matches.`}
-                  keepOpenOnSelect={false}
-                  className="rounded-full"
-                  fieldClass="sm:w-64"
-                  options={addonGroups.map((g) => ({
-                    value: g.id,
-                    label: g.name,
-                    textValue: g.name,
-                  }))}
-                  value={addonGroups.some((g) => g.id === group) ? [group] : []}
-                  onValueChange={(next) => next[0] && chooseGroup(next[0])}
-                  {...pickOnFocus(
-                    addonGroup && addonGroup !== group
-                      ? () => chooseGroup(addonGroup)
-                      : undefined
-                  )}
-                />
-              )}
-              {guide && (
-                <DayPicker
-                  days={days}
-                  value={dayOffset}
-                  onChange={(offset) => {
-                    setDayOffset(offset);
-                    // Another day opens at the same time of day.
-                    place(
-                      active,
-                      new Date(now).setDate(new Date(now).getDate() + offset)
-                    );
-                  }}
-                />
-              )}
-            </>
+          guide && (
+            <DayPicker
+              days={days}
+              value={dayOffset}
+              onChange={(offset) => {
+                setDayOffset(offset);
+                // Another day opens at the same time of day.
+                place(
+                  active,
+                  new Date(now).setDate(new Date(now).getDate() + offset)
+                );
+              }}
+            />
           )
         }
       />
       <div data-ui="live-controls" className="flex flex-col gap-3">
-        <PillTabs
-          name="live-group"
-          options={(picked ? ownGroups : groups).map((g) => ({
-            value: g.id,
-            label: g.name,
-          }))}
-          value={group}
-          onChange={chooseGroup}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <PillTabs
+            name="live-group"
+            options={(picked ? ownGroups : groups).map((g) => ({
+              value: g.id,
+              label: g.name,
+            }))}
+            value={group}
+            onChange={chooseGroup}
+          />
+          {picked && (
+            <Combobox
+              data-ui="live-group-picker"
+              aria-label={t`Group`}
+              placeholder={t`Groups`}
+              emptyMessage={t`Nothing matches.`}
+              keepOpenOnSelect={false}
+              className="rounded-full"
+              fieldClass="sm:w-64"
+              options={addonGroups.map((g) => ({
+                value: g.id,
+                label: g.name,
+                textValue: g.name,
+              }))}
+              value={addonGroups.some((g) => g.id === group) ? [group] : []}
+              onValueChange={(next) => next[0] && chooseGroup(next[0])}
+              {...pickOnFocus(
+                addonGroup && addonGroup !== group
+                  ? () => chooseGroup(addonGroup)
+                  : undefined
+              )}
+            />
+          )}
+        </div>
         {wide && hasGuide && (
           <PillTabs
             name="live-view"
