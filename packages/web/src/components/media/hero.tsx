@@ -16,7 +16,7 @@ import { useFetchNextUp, useItem } from '@/lib/jellyfin/queries';
 import { focusOn, keyboardFocus, useAction } from '@/lib/input';
 import { ScrollRoot, watch } from '@/hooks/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '@/lib/artwork/urls';
-import { itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
+import { itemSubtitle, itemTitle, runtimeText, ticksToMs } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
 import { useVersionPicker } from '@/features/versions/version-picker';
 import { Scores, scoresOf } from './scores';
@@ -276,6 +276,8 @@ function HeroDetails({
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
       : ['year', item.ProductionYear],
+    // As a title's page shows it; a show's is how long an episode runs.
+    ['runtime', runtimeText(ticksToMs(item.RunTimeTicks))],
     ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
     ['genres', item.Genres?.slice(0, 3).join(', ')],
   ];

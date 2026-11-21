@@ -19,7 +19,11 @@ import {
   useFetchNextUp,
   useSeasons,
 } from '@/lib/jellyfin/queries';
+import { usePlaybackInfo } from '@/lib/jellyfin/playback-info';
 import { offersFavourite } from '@/lib/jellyfin/watch-state';
+import { playableSources } from '@/lib/playback/sources';
+import { versionText } from '@/lib/versions';
+import { matchBadges } from '@/lib/badges';
 import {
   cardShape,
   landscapeUrls,
@@ -29,7 +33,7 @@ import {
 import {
   clock,
   dayLabel,
-  duration,
+  runtimeText,
   episodeCode,
   ticksToMs,
   untilLabel,
@@ -41,6 +45,7 @@ import {
   usePreloadVersions,
   useVersionPicker,
 } from '@/features/versions/version-picker';
+import { BadgeChip, useBadges } from '@/features/versions/version-badges';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { useHold } from '@/hooks/use-hold';
 import { focusDialog, useDialogStart } from '@/lib/input';
@@ -97,18 +102,21 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
     ]);
   }
   const runtime = ticksToMs(item.RunTimeTicks);
-  if (runtime && item.Type !== 'Series') {
-    parts.push(['runtime', duration(runtime)]);
+  // A show's is how long an episode runs, as IMDb gives it.
+  if (runtime) {
+    parts.push(['runtime', runtimeText(runtime)]);
   }
   if (scoresOf(item).length) parts.push(['score', <Scores item={item} />]);
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }
-  if (!parts.length) return null;
+  // A film's badges can show without the other facts.
+  if (!parts.length && item.Type !== 'Movie') return null;
   return (
     <div
       data-ui="item-meta"
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
+      // Empty when a film has neither, so it takes no room in the header.
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 empty:hidden max-sm:justify-center"
     >
       {parts.map(([name, part], i) => (
         <React.Fragment key={name}>
@@ -116,9 +124,57 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
           <span data-name={name}>{part}</span>
         </React.Fragment>
       ))}
+      {item.Type === 'Movie' && (
+        <TopVersionBadges item={item} separated={parts.length > 0} />
+      )}
     </div>
   );
 });
+
+/**
+ * The badges of the version the list shows first, once its versions are
+ * found: as the page opens with that setting on, or by an earlier list.
+ */
+function TopVersionBadges({
+  item,
+  separated,
+}: {
+  item: BaseItemDto;
+  /** After another fact, so a separator goes before them. */
+  separated: boolean;
+}) {
+  const badges = useBadges();
+  // Only watches the list's own answer, so opening the list reuses it.
+  const info = usePlaybackInfo(item.Id!, { enabled: false });
+  const top = playableSources(info.data)[0];
+  const shown = React.useMemo(
+    () => (top ? matchBadges(versionText(top), badges) : []),
+    [top, badges]
+  );
+  if (!badges.length || (!info.isLoading && !shown.length)) return null;
+  return (
+    <>
+      {separated && <Dot />}
+      {info.isLoading ? (
+        <Skeleton data-name="badges" className="h-5 w-16 rounded-md" />
+      ) : (
+        <span
+          data-name="badges"
+          className="flex flex-wrap items-center gap-1 duration-300 animate-in fade-in-0 max-sm:justify-center"
+        >
+          {shown.map((badge) => (
+            // As tall as the row's text, so the row keeps its height.
+            <BadgeChip
+              key={badge.image ?? badge.label}
+              badge={badge}
+              className="h-5"
+            />
+          ))}
+        </span>
+      )}
+    </>
+  );
+}
 
 /** The show's links, with the selected season's own in place of the show's. */
 function linksFor(item: BaseItemDto, season?: BaseItemDto) {

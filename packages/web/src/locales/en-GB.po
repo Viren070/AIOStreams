@@ -113,6 +113,10 @@ msgstr "{help} {bytes}."
 msgid "{host}'s party"
 msgstr "{host}'s party"
 
+#: src/lib/format.ts
+msgid "{hours, plural, one {# hour} other {# hours}}"
+msgstr "{hours, plural, one {# hour} other {# hours}}"
+
 #. Hours, as in 2h
 #: src/lib/format.ts
 msgid "{hours}h"
@@ -206,6 +210,10 @@ msgstr "{relay} didn't answer."
 #: src/app/history/page.tsx
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
 msgstr "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
+
+#: src/lib/format.ts
+msgid "{rest, plural, one {# minute} other {# minutes}}"
+msgstr "{rest, plural, one {# minute} other {# minutes}}"
 
 #: src/features/party/not-in-party.tsx
 msgid "{rest, plural, one {# more} other {# more}}"

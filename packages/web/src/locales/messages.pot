@@ -112,6 +112,10 @@ msgstr ""
 msgid "{host}'s party"
 msgstr ""
 
+#: src/lib/format.ts
+msgid "{hours, plural, one {# hour} other {# hours}}"
+msgstr ""
+
 #. Hours, as in 2h
 #: src/lib/format.ts
 msgid "{hours}h"
@@ -204,6 +208,10 @@ msgstr ""
 
 #: src/app/history/page.tsx
 msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
+msgstr ""
+
+#: src/lib/format.ts
+msgid "{rest, plural, one {# minute} other {# minutes}}"
 msgstr ""
 
 #: src/features/party/not-in-party.tsx

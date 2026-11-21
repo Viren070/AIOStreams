@@ -1,4 +1,4 @@
-import { t } from '@lingui/core/macro';
+import { plural, t } from '@lingui/core/macro';
 import { formatLocale } from './i18n';
 import { settings } from './settings';
 import { appBridge } from './hosts/shell/bridge';
@@ -50,6 +50,23 @@ export function duration(ms: number): string {
         message: `${hours}h ${rest}m`,
       })
     : t({ comment: 'Hours, as in 2h', message: `${hours}h` });
+}
+
+/** A title's length in words, as in 2 hours 30 minutes, where it is shown on its own. */
+export function runtimeText(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  if (minutes <= 0) return '';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const h = plural(hours, { one: '# hour', other: '# hours' });
+  const m = plural(rest, { one: '# minute', other: '# minutes' });
+  if (!hours) return m;
+  if (!rest) return h;
+  // As the language joins units, as in 2 hours 30 minutes.
+  return new Intl.ListFormat(formatLocale(), {
+    style: 'narrow',
+    type: 'unit',
+  }).format([h, m]);
 }
 
 export function relativeTime(at: number | null | undefined): string {
