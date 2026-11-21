@@ -8,7 +8,9 @@
   makeUrlLogSafe,
   readBodyUpTo,
   registerLockErrorClass,
+  resolveHeaderOverride,
 } from '../../../utils/index.js';
+import { buildNabQuery, newTraceparent } from './query.js';
 import { config as appConfig } from '../../../config/index.js';
 import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
@@ -295,7 +297,9 @@ export class BaseNabApi<N extends NabNamespace> {
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
-      fetchFn: () => this.request(searchFunction, 'search', params),
+      // Prowlarr always sends an offset, 0 on the first page.
+      fetchFn: () =>
+        this.request(searchFunction, 'search', { offset: 0, ...params }),
       isEmptyResult: (result) => result.results.length === 0,
       logger: this.logger,
     });
@@ -338,10 +342,11 @@ export class BaseNabApi<N extends NabNamespace> {
     };
 
     try {
+      // Prowlarr's test: a bare `t=search&extended=1`, no limit or offset.
       const response = await this._request(
         'search',
         'search',
-        { limit: 1 },
+        { extended: 1 },
         NAB_TEST_TIMEOUT
       );
       const missingInfoHash =
@@ -374,6 +379,15 @@ export class BaseNabApi<N extends NabNamespace> {
       Accept: 'application/rss+xml, text/rss+xml, application/xml, text/xml',
       'User-Agent': this.userAgent,
     };
+    // Prowlarr's .NET HttpClient adds this inside an API request; the preset
+    // headers replace the ones above but keep this one, last, as Prowlarr does.
+    const override = resolveHeaderOverride(
+      new URL(this.baseUrl),
+      this.namespace
+    );
+    if (override?.presetName === 'prowlarr') {
+      headers.traceparent = newTraceparent();
+    }
     return headers;
   };
 
@@ -403,19 +417,14 @@ export class BaseNabApi<N extends NabNamespace> {
   ): Promise<NabRequestResult<N, K>> {
     const start = Date.now();
     const url = new URL(`${this.baseUrl}${this.apiPath}`);
-    const searchParams = new URLSearchParams({
-      t: func,
-      ...Object.fromEntries(
+    url.search = buildNabQuery(
+      func,
+      Object.fromEntries(
         Object.entries(params).map(([k, v]) => [k, String(v)])
       ),
-    });
-    for (const [key, value] of Object.entries(this.params)) {
-      if (!searchParams.has(key)) {
-        searchParams.set(key, value);
-      }
-    }
-    if (this.apiKey) searchParams.set('apikey', this.apiKey);
-    url.search = searchParams.toString();
+      this.params,
+      this.apiKey
+    );
     const urlString = url.toString();
 
     this.logger.info(
