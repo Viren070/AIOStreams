@@ -15,12 +15,14 @@ import { ExpressionContext } from '../streams/context.js';
 import { formRegexFromKeywordsSync } from '../utils/regex.js';
 import { ObjectFilter, compileObjectFilter } from '../utils/object-filter.js';
 import { describedTracks } from '../utils/media-info.js';
+import { parseTorrentTitleCached } from './title.js';
 
 const logger = createLogger('stream-expression');
 
 export abstract class StreamExpressionEngine {
   protected parser: Parser;
   protected _pinInstructions: Map<string, 'top' | 'bottom'> = new Map();
+  private requestedEpisodes: number[] = [];
 
   constructor() {
     // only allow comparison and logical operators
@@ -79,6 +81,14 @@ export abstract class StreamExpressionEngine {
   }
 
   protected setupExpressionContextConstants(context: ExpressionContext) {
+    this.requestedEpisodes = [
+      context.episode,
+      context.absoluteEpisode,
+      context.relativeAbsoluteEpisode,
+    ].filter(
+      (episode): episode is number =>
+        typeof episode === 'number' && Number.isInteger(episode) && episode > 0
+    );
     this.setupHealthFunction(context.health);
     this.parser.consts.queryType = context.queryType ?? '';
     this.parser.consts.isAnime = context.isAnime ?? false;
@@ -1236,6 +1246,30 @@ export abstract class StreamExpressionEngine {
           stream.parsedFile?.episodes &&
           stream.parsedFile.episodes.length >= minEpisodes
       );
+    };
+
+    this.parser.functions.notFirstEpisode = (streams: ParsedStream[]) => {
+      if (!Array.isArray(streams) || streams.some((stream) => !stream?.type)) {
+        throw new Error('Your streams input must be an array of streams');
+      }
+      if (!this.requestedEpisodes.length) return [];
+
+      return streams.filter((stream) => {
+        // Merged metadata may contain a folder's range or seasonPack flag.
+        // Prefer the actual filename, including combined files inside packs.
+        const episodes = stream.filename
+          ? parseTorrentTitleCached(stream.filename).episodes
+          : !stream.folderName && !stream.parsedFile?.seasonPack
+            ? stream.parsedFile?.episodes
+            : undefined;
+        if (!episodes || episodes.length < 2) return false;
+
+        return (
+          this.requestedEpisodes.some((episode) =>
+            episodes.includes(episode)
+          ) && !this.requestedEpisodes.includes(Math.min(...episodes))
+        );
+      });
     };
 
     this.parser.functions.addon = function (
