@@ -205,6 +205,7 @@ export class TorrentGrabber {
             size: file.length,
             id: index,
             name: file.name,
+            path: file.path,
           })
         ),
         sources,
