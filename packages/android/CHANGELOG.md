@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.18.0](https://github.com/Viren070/AIOStreams/compare/android-v0.17.0...android-v0.18.0) (2026-11-21)
+
+
+### Features
+
+* add a hero band and backgroundVideo to collection pages ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* show a collection's sources as tabs or rows ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* **web:** add a picture-in-picture shortcut ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+
+
+### Bug Fixes
+
+* **android:** give Matroska FLAC tracks their largest frame as the input size ([b3dc825](https://github.com/Viren070/AIOStreams/commit/b3dc825762785d3c14ca40da92b0294fb74d5f19))
+* **web:** dock the mini player only in a shown page ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* **web:** give each page-drawn subtitle line its own direction ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* **web:** keep a touch's focus from waking the player's hidden controls ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* **web:** leave mixed libraries out of Discover's collection picker ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+* **web:** size the page background to the tallest viewport ([52b2d3d](https://github.com/Viren070/AIOStreams/commit/52b2d3d3d71bde409c3e9f96ceb0a24caa3c837a))
+
 ## [0.17.0](https://github.com/Viren070/AIOStreams/compare/android-v0.16.1...android-v0.17.0) (2026-11-19)
 
 
