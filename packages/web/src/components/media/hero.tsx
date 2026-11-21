@@ -637,8 +637,11 @@ function HeroTrailer({
         <TrailerPreview
           item={item}
           spot={spot}
-          within={spot.parentElement ?? undefined}
-          soft
+          // A TV's fills the screen, past the hero's box and unfaded.
+          within={
+            currentHost().tv ? undefined : (spot.parentElement ?? undefined)
+          }
+          soft={!currentHost().tv}
           onShown={(on) => {
             setShown(on);
             onShown(on);
@@ -941,6 +944,8 @@ function FollowBackdrop({
   return (
     <div
       aria-hidden
+      // On a TV its trailer fills the screen, see styles.css.
+      data-ui="follow-backdrop"
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       {box}
