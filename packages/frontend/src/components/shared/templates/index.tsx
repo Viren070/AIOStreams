@@ -54,7 +54,7 @@ export function ConfigTemplatesModal({
 }: ConfigTemplatesModalProps) {
   const { setUserData, userData, uuid, password } = useUserData();
   const { status } = useStatus();
-  const { setSelectedMenu } = useMenu();
+  const { setPage } = useMenu();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -75,7 +75,7 @@ export function ConfigTemplatesModal({
     setUserData,
     validationModal,
     templateValidations: loader.templateValidations,
-    setSelectedMenu,
+    openInstallPage: () => setPage('stremio'),
     onOpenChange,
     initialStep: startAtWelcome ? 'welcome' : 'browse',
   });
@@ -91,7 +91,7 @@ export function ConfigTemplatesModal({
   });
 
   // Each opening starts from the caller's entry step; the hook's initial value
-  // is only read once, and the About page picks the step after mount.
+  // is only read once, and the Home page picks the step after mount.
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       wizard.resetTo(startAtWelcome ? 'welcome' : 'browse');

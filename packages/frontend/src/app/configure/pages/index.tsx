@@ -1,12 +1,11 @@
 import React from 'react';
 import { LuExternalLink, LuStore } from 'react-icons/lu';
 import { Button } from '@aiostreams/ui/button';
-import { Switch } from '@aiostreams/ui/switch';
 import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { useMenu } from '@/context/menu';
 import { useMode } from '@/context/mode';
 import { useStatus } from '@/context/status';
-import { useParentInheritance, useUserData } from '@/context/userData';
+import { useUserData } from '@/context/userData';
 import { SectionGroup, SettingsCard } from '@/components/shared/settings-card';
 import { InheritedBadge } from '@/components/shared/inherited-badge';
 import { ModeSwitch } from '@/components/mode-switch/mode-switch';
@@ -96,19 +95,12 @@ function useAppsEnabled() {
   return status?.settings?.jellyfin?.enabled ?? false;
 }
 
-function Inherited({ section }: { section: string }) {
-  const { isInherited, hasParent } = useParentInheritance();
-  return hasParent && isInherited(section as any) ? (
-    <InheritedBadge section={section as any} />
-  ) : null;
-}
-
 function ServicesPage() {
   const { mode } = useMode();
   return (
     <>
       <Group title="Accounts">
-        <Inherited section="services" />
+        <InheritedBadge section="services" />
         <StreamServices />
       </Group>
       <Group title="Metadata">
@@ -136,7 +128,7 @@ function AddonsPage() {
         </DrillIn>
       ) : (
         <>
-          <Inherited section="presets" />
+          <InheritedBadge section="presets" />
           {installed}
         </>
       )}
@@ -164,6 +156,7 @@ function ResultsPage() {
     <>
       {mode === 'pro' && (
         <Group title="Sort order">
+          <InheritedBadge section="sorting" />
           <SortingContent />
         </Group>
       )}
@@ -184,7 +177,12 @@ function ResultsPage() {
 }
 
 function FormatterPage() {
-  return <FormatterContent />;
+  return (
+    <>
+      <InheritedBadge section="formatter" />
+      <FormatterContent />
+    </>
+  );
 }
 
 function PlaybackPage() {
@@ -192,6 +190,7 @@ function PlaybackPage() {
   return (
     <>
       <Group title="Proxy">
+        <InheritedBadge section="proxy" />
         <ProxyContent />
       </Group>
       <Group title="Preloading">
@@ -385,7 +384,6 @@ function OtherAppsPage() {
 function ConfigurationPage() {
   const { status } = useStatus();
   const { userData, uuid } = useUserData();
-  const { setLayout } = useMenu();
   const { mode, setMode } = useMode();
   const { account, backup, dangerZone, modals } = useSaveInstall({
     offerStremio: false,
@@ -431,15 +429,6 @@ function ConfigurationPage() {
               className="w-full shrink-0 sm:h-10 sm:w-48"
             />
           </Row>
-          <div className="border-t border-[--border] pt-3">
-            <Switch
-              side="right"
-              label="Use the classic layout"
-              help="The layout before pages were regrouped. It will be removed in a later release."
-              value={false}
-              onValueChange={(on) => on && setLayout('classic')}
-            />
-          </div>
         </SettingsCard>
       </Group>
       <Group title="Danger zone">{dangerZone}</Group>

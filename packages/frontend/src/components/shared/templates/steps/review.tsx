@@ -158,7 +158,7 @@ export function ReviewStep({
 
       <Alert
         intent="info"
-        description="Applying this replaces the matching parts of your current configuration. Nothing is saved to your account until you save on the Save & Install page."
+        description="Applying this replaces the matching parts of your current configuration. Nothing is saved to your account until you save it."
       />
 
       {currentUserData && (

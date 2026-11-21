@@ -1,5 +1,6 @@
 import { FiLink } from 'react-icons/fi';
 import { Tooltip } from '@aiostreams/ui/tooltip';
+import { useParentInheritance } from '@/context/userData';
 
 type Props = {
   section:
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export function InheritedBadge({ section }: Props) {
+  const { isInherited } = useParentInheritance();
+  if (!isInherited(section)) return null;
   return (
     <Tooltip
       trigger={
@@ -24,7 +27,7 @@ export function InheritedBadge({ section }: Props) {
       }
     >
       This section is inherited from your parent config. Change the merge
-      strategy in Miscellaneous → Parent Config to override it.
+      strategy in Advanced → Parent config to override it.
     </Tooltip>
   );
 }

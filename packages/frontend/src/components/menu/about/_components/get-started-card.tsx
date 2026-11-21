@@ -39,8 +39,7 @@ export function GetStartedCard({
             : 'Pick a ready-made setup or build one yourself. It takes a couple of minutes.'}
           {hasConfig && !isSignedIn && (
             <span className="block text-xs text-gray-500 mt-1">
-              Not saved yet — finish on Save &amp; Install to get your install
-              link.
+              Not saved yet. Create it with a password to get your install link.
             </span>
           )}
         </p>

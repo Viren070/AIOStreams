@@ -1,23 +1,11 @@
-import { FIELD_META, type MenuId } from '../../../core/src/utils/fieldMeta';
+import {
+  FIELD_META,
+  PAGE_IDS,
+  type FilterTabId,
+  type PageId,
+} from '../../../core/src/utils/fieldMeta';
 
-export const PAGE_IDS = [
-  'home',
-  'services',
-  'addons',
-  'catalogs',
-  'filters',
-  'results',
-  'formatter',
-  'playback',
-  'app',
-  'profiles',
-  'stremio',
-  'other-apps',
-  'configuration',
-  'advanced',
-  'stats',
-] as const;
-export type PageId = (typeof PAGE_IDS)[number];
+export type { PageId };
 
 /** Pages with grid-sized editors take the full width. */
 export const WIDE_PAGES: readonly PageId[] = [
@@ -105,60 +93,17 @@ export const PAGE_GROUPS: { label?: string; pages: PageId[] }[] = [
   { label: 'Manage', pages: ['configuration', 'advanced', 'stats'] },
 ];
 
-/** Fields whose page doesn't follow from their classic menu and tab. */
-const FIELD_PAGES: Partial<Record<string, PageId>> = {
-  addonName: 'configuration',
-  addonLogo: 'configuration',
-  addonBackground: 'configuration',
-  addonDescription: 'configuration',
-  accessKey: 'configuration',
-  showChanges: 'configuration',
-  profiles: 'profiles',
-  jellyfin: 'app',
-  pmdbApiKey: 'app',
-  cacheAndPlay: 'playback',
-  failover: 'playback',
-};
+const RESULTS_FILTER_TABS: readonly FilterTabId[] = ['limit', 'deduplicator'];
 
-const TAB_PAGES: Partial<Record<MenuId, Record<string, PageId>>> = {
-  services: { posters: 'catalogs' },
-  addons: { catalogs: 'catalogs' },
-  filters: { limit: 'results', deduplicator: 'results' },
-  miscellaneous: {
-    background: 'playback',
-    playback: 'playback',
-    display: 'results',
-  },
-};
-
-const MENU_PAGES: Record<MenuId, PageId> = {
-  about: 'home',
-  services: 'services',
-  addons: 'addons',
-  filters: 'filters',
-  sorting: 'results',
-  formatter: 'formatter',
-  proxy: 'playback',
-  miscellaneous: 'advanced',
-  stats: 'stats',
-  'save-install': 'stremio',
-};
-
-export function pageOf(menu: MenuId, subTab?: string, field?: string): PageId {
-  return (
-    (field && FIELD_PAGES[field]) ||
-    (subTab && TAB_PAGES[menu]?.[subTab]) ||
-    MENU_PAGES[menu]
-  );
-}
+export const filterTabPage = (tab: FilterTabId): PageId =>
+  RESULTS_FILTER_TABS.includes(tab) ? 'results' : 'filters';
 
 export function pageOfField(field: string): PageId | undefined {
-  const meta = (
+  return (
     FIELD_META as Partial<
       Record<string, (typeof FIELD_META)[keyof typeof FIELD_META]>
     >
-  )[field];
-  return FIELD_PAGES[field] ?? (meta && pageOf(meta.menu, meta.subTab, field));
+  )[field]?.page;
 }
 
 export function isPageId(value: unknown): value is PageId {

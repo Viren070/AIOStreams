@@ -14,17 +14,10 @@ import {
   CreateUserResponse,
 } from '@/lib/api';
 import { JellyfinApiKeys } from './jellyfin-api-keys';
-import { ProfileList } from './profiles/profile-list';
-import { JellyfinTrackers } from './profiles/trackers';
 import { profileLabel } from '@/lib/audiences';
 import { profilesOf } from '../../../../core/src/utils/profiles';
-import { PageWrapper } from '@/components/shared/page-wrapper';
 import { Alert } from '@aiostreams/ui/alert';
-import {
-  PlainSections,
-  SettingsCard,
-  SettingsRows,
-} from '../shared/settings-card';
+import { SettingsCard, SettingsRows } from '../shared/settings-card';
 import { toast } from 'sonner';
 import {
   Code2,
@@ -57,10 +50,8 @@ import { IconButton } from '@aiostreams/ui/button';
 import { useStatus } from '@/context/status';
 import { BiCopy } from 'react-icons/bi';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
-import { PageControls } from '../shared/page-controls';
 import { useDisclosure } from '@aiostreams/ui/hooks/disclosure';
 import { Modal } from '@aiostreams/ui/modal';
-import { MenuTabs } from '../shared/menu-tabs';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
 import { NumberInput } from '@aiostreams/ui/number-input';
@@ -81,8 +72,6 @@ import { UserData, VariantSelectorLocation } from '@aiostreams/core';
 import { sanitiseTemplateConfig } from '../../../../core/src/utils/template-sanitise';
 import { useSave } from '@/context/save';
 import { FiExternalLink } from 'react-icons/fi';
-import { ProfileCard } from './profile-card';
-import { LinkedAccountsSection } from './linked-accounts';
 import { LinkOfferModal, linkOfferDismissed } from './link-offer-modal';
 import {
   VariantPills,
@@ -149,80 +138,32 @@ function AppCard({
   disabled,
   disabledReason,
 }: AppCardProps) {
-  if (React.useContext(PlainSections)) {
-    return (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors first:rounded-t-xl last:rounded-b-xl enabled:hover:bg-[--subtle] focus-visible:bg-[--subtle] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-brand-400">
-          {logoSrc ? (
-            <img
-              src={logoSrc}
-              alt=""
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            icon
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2 text-sm text-white">
-            {name}
-            {unofficial && (
-              <span className="text-[11px] text-[--muted]">Unofficial</span>
-            )}
-          </span>
-          <span className="block truncate text-xs text-[--muted]">
-            {disabledReason ??
-              (author ? `${description}, by ${author}` : description)}
-          </span>
-        </span>
-        <LuChevronRight className="h-4 w-4 shrink-0 text-[--muted]" />
-      </button>
-    );
-  }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`group relative flex items-center gap-3 rounded-xl border-2 border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-800/30 p-3 text-left transition-all focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-400 ${
-        disabled
-          ? 'cursor-not-allowed opacity-60'
-          : 'hover:border-brand-400 hover:from-brand-400/10 hover:to-brand-400/5'
-      }`}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors first:rounded-t-xl last:rounded-b-xl enabled:hover:bg-[--subtle] focus-visible:bg-[--subtle] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <div className="flex-shrink-0 h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center text-brand-400">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-brand-400">
         {logoSrc ? (
-          <img
-            src={logoSrc}
-            alt={name}
-            className="h-full w-full object-contain"
-          />
+          <img src={logoSrc} alt="" className="h-full w-full object-contain" />
         ) : (
           icon
         )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-white">{name}</span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-sm text-white">
+          {name}
           {unofficial && (
-            <span className="rounded-full border border-gray-600 bg-gray-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
-              Unofficial
-            </span>
+            <span className="text-[11px] text-[--muted]">Unofficial</span>
           )}
-        </div>
-        <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-        {author && (
-          <p className="text-[11px] text-gray-500 mt-0.5">
-            Integration author: {author}
-          </p>
-        )}
-        {disabledReason && (
-          <p className="text-[11px] text-amber-300 mt-1">{disabledReason}</p>
-        )}
-      </div>
+        </span>
+        <span className="block truncate text-xs text-[--muted]">
+          {disabledReason ??
+            (author ? `${description}, by ${author}` : description)}
+        </span>
+      </span>
+      <LuChevronRight className="h-4 w-4 shrink-0 text-[--muted]" />
     </button>
   );
 }
@@ -717,7 +658,6 @@ export function AppBlock({
   onOpenServer: (tab: ServerTab) => void;
   disabled?: boolean;
 }) {
-  const { layout } = useMenu();
   const download = useDesktopDownload();
   const android = /Android/.test(navigator.userAgent);
   const own = download.os ? 'desktop' : android ? 'android' : null;
@@ -814,9 +754,7 @@ export function AppBlock({
                 leftIcon={<Users className="h-4 w-4" />}
                 onClick={() => onOpenServer('users')}
               >
-                {layout === 'new'
-                  ? 'Profiles and trackers'
-                  : 'Profiles, trackers and playback'}
+                Profiles and trackers
               </Button>
               <Button
                 size="sm"
@@ -858,7 +796,7 @@ export function AppBlock({
   );
 }
 
-export interface InstallCardProps {
+export interface InstallProps {
   encodedManifest: string;
   manifestUrl: string;
   usingAlias: boolean;
@@ -867,7 +805,6 @@ export interface InstallCardProps {
   onCopyManifestUrl: () => void;
   onOpenChillio: () => void;
   onOpenSeanime: () => void;
-  onOpenJellyfin: (tab: ServerTab) => void;
   onOpenAniyomi: () => void;
   onOpenNabIndexer: () => void;
   onOpenSearchApi: () => void;
@@ -882,54 +819,12 @@ export interface InstallCardProps {
   variantSelector?: React.ReactNode;
 }
 
-function InstallCard(props: InstallCardProps) {
-  const { webAppUrl, desktopLink, onOpenJellyfin, manifestUrl } = props;
-  return (
-    <SettingsCard
-      title="Installation Options"
-      description="Install your addon using your preferred method. If a reinstall is necessary, a pop-up will tell you — otherwise, you do not need to reinstall."
-    >
-      <div className="flex flex-col gap-6">
-        {props.variantSelector}
-        <StremioInstall {...props} />
-
-        <AppBlock
-          webAppUrl={webAppUrl}
-          desktopLink={desktopLink}
-          onOpenServer={onOpenJellyfin}
-          disabled={props.disableJellyfinCard}
-        />
-
-        <LinkedAccountsSection manifestUrl={manifestUrl} />
-
-        <div>
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <div className="h-px bg-gray-700 flex-1"></div>
-            Other apps
-            <div className="h-px bg-gray-700 flex-1"></div>
-          </h3>
-          <OtherAppCards {...props} />
-        </div>
-
-        <div>
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <div className="h-px bg-gray-700 flex-1"></div>
-            Programmatic / API access
-            <div className="h-px bg-gray-700 flex-1"></div>
-          </h3>
-          <ApiCards {...props} />
-        </div>
-      </div>
-    </SettingsCard>
-  );
-}
-
 export function StremioInstall({
   encodedManifest,
   manifestUrl,
   usingAlias,
   onCopyManifestUrl,
-}: InstallCardProps) {
+}: InstallProps) {
   return (
     <div className="w-full rounded-xl border border-gray-700 bg-gray-800/30 p-5 shadow-inner">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 lg:items-center">
@@ -1008,7 +903,6 @@ export function StremioInstall({
   );
 }
 
-/** `jellyfin` false where the media server apps have a page of their own. */
 export function OtherAppCards({
   onOpenChillio,
   onOpenSeanime,
@@ -1018,10 +912,9 @@ export function OtherAppCards({
   seanimeDisabledReason,
   disableJellyfinCard,
   jellyfinDisabledReason,
-  jellyfin = true,
-}: InstallCardProps & { jellyfin?: boolean }) {
+}: InstallProps & { onOpenJellyfin: () => void }) {
   return (
-    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <SettingsRows>
       <AppCard
         logoSrc="https://seanime.app/seanime-logo.png"
         name="Seanime"
@@ -1030,16 +923,14 @@ export function OtherAppCards({
         disabled={disableSeanimeCard}
         disabledReason={seanimeDisabledReason}
       />
-      {jellyfin && (
-        <AppCard
-          logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
-          name="Jellyfin apps"
-          description="Use your configuration in any Jellyfin app"
-          onClick={() => onOpenJellyfin('connect')}
-          disabled={disableJellyfinCard}
-          disabledReason={jellyfinDisabledReason}
-        />
-      )}
+      <AppCard
+        logoSrc="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/refs/heads/master/logos/PNG-4x/jellyfin-icon--color-on-dark.png"
+        name="Jellyfin apps"
+        description="Use your configuration in any Jellyfin app"
+        onClick={onOpenJellyfin}
+        disabled={disableJellyfinCard}
+        disabledReason={jellyfinDisabledReason}
+      />
       <AppCard
         logoSrc="https://link.chillio.app/app-icon.png"
         name="Chillio"
@@ -1065,9 +956,9 @@ export function ApiCards({
   nabIndexerDisabledReason,
   disableSearchApiCard,
   searchApiDisabledReason,
-}: InstallCardProps) {
+}: InstallProps) {
   return (
-    <SettingsRows grid="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <SettingsRows>
       <AppCard
         icon={<Rss className="h-5 w-5" />}
         name="Newznab / Torznab"
@@ -1914,16 +1805,6 @@ function StremioCustomSourceModal({
   );
 }
 
-export function SaveInstallMenu() {
-  return (
-    <>
-      <PageWrapper className="space-y-4 p-4 sm:p-8">
-        <Content />
-      </PageWrapper>
-    </>
-  );
-}
-
 /** `offerStremio`: a configuration created here offers to install it in Stremio. */
 export function useSaveInstall({ offerStremio = true } = {}) {
   const {
@@ -2000,7 +1881,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
   const deleteUserModal = useDisclosure(false);
   const [confirmDeletionPassword, setConfirmDeletionPassword] =
     React.useState('');
-  const { setSelectedMenu, firstMenu, layout } = useMenu();
+  const { setPage } = useMenu();
   const templateExportModal = useDisclosure(false);
   const templatesModal = useDisclosure(false);
   const exportMenuModal = useDisclosure(false);
@@ -2035,9 +1916,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
   const chillLinkModal = useDisclosure(false);
   const seanimeModal = useDisclosure(false);
   const stremioCustomSourceModal = useDisclosure(false);
-  const jellyfinModal = useDisclosure(false);
   const jellyfinApiKeysModal = useDisclosure(false);
-  const [jellyfinTab, setJellyfinTab] = React.useState('connect');
   const [quickConnectCode, setQuickConnectCode] = React.useState('');
   const [quickConnectPending, setQuickConnectPending] =
     React.useState<QuickConnectPending | null>(null);
@@ -2061,7 +1940,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
     actionIntent: 'alert',
     onConfirm: () => {
       setUserData(null);
-      setSelectedMenu(firstMenu);
+      setPage('home');
       toast.success('Configuration reset successfully');
     },
   });
@@ -2106,11 +1985,8 @@ export function useSaveInstall({ offerStremio = true } = {}) {
     try {
       const result = await createUserConfig(userData, newPassword);
       toast.success('Configuration created', {
-        description: `Keep its UUID and password somewhere safe: neither can be recovered. ${
-          layout === 'new'
-            ? 'Copy the UUID from the Configuration page.'
-            : 'The UUID is on this page.'
-        }`,
+        description:
+          'Keep its UUID and password somewhere safe: neither can be recovered. Copy the UUID from the Configuration page.',
         duration: 10_000,
       });
       setUuid(result.uuid);
@@ -2431,7 +2307,7 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       setEncryptedPassword(null);
       setPassword(null);
       setUserData(null);
-      setSelectedMenu(firstMenu);
+      setPage('home');
       deleteUserModal.close();
     } catch (err) {
       toast.error(
@@ -2759,9 +2635,6 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       </div>
     </div>
   );
-  const jellyfinTrackers = (
-    <JellyfinTrackers onChooseTrackers={() => setJellyfinTab('users')} />
-  );
   const jellyfinVersions = (
     <div className="space-y-5">
       <Switch
@@ -2956,16 +2829,8 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       )}
     </div>
   ) : null;
-  const jellyfinPlayback = (
-    <div className="space-y-5">
-      {jellyfinVersions}
-      {jellyfinMarkers && (
-        <div className="border-t border-gray-800 pt-4">{jellyfinMarkers}</div>
-      )}
-    </div>
-  );
 
-  const installProps: InstallCardProps = {
+  const installProps: InstallProps = {
     encodedManifest,
     manifestUrl,
     usingAlias: !!aliasForInstall,
@@ -2985,10 +2850,6 @@ export function useSaveInstall({ offerStremio = true } = {}) {
     onCopyManifestUrl: copyManifestUrl,
     onOpenChillio: chillLinkModal.open,
     onOpenSeanime: seanimeModal.open,
-    onOpenJellyfin: (tab) => {
-      setJellyfinTab(tab);
-      jellyfinModal.open();
-    },
     onOpenAniyomi: aniyomiModal.open,
     onOpenNabIndexer: nabIndexerModal.open,
     onOpenSearchApi: searchApiModal.open,
@@ -3056,8 +2917,6 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       />
     ),
     jellyfinConnect,
-    jellyfinTrackers,
-    jellyfinPlayback,
     jellyfinVersions,
     jellyfinMarkers,
     modals: (
@@ -3507,44 +3366,6 @@ export function useSaveInstall({ offerStremio = true } = {}) {
         </Modal>
 
         <Modal
-          open={jellyfinModal.isOpen}
-          onOpenChange={jellyfinModal.toggle}
-          title="Media server"
-          description="Your configuration as a server for the AIOStreams app and Jellyfin apps, such as Swiftfin, Findroid, Streamyfin, Android TV, Kodi and Infuse."
-          contentClass="max-w-2xl w-full"
-        >
-          <MenuTabs
-            activeTab={jellyfinTab}
-            onTabChange={setJellyfinTab}
-            defaultMobileOpen="connect"
-            animated={false}
-            tabs={[
-              {
-                value: 'connect',
-                label: 'Connect',
-                content: jellyfinConnect,
-              },
-              {
-                value: 'users',
-                label: 'Profiles',
-                content: <ProfileList />,
-              },
-              {
-                value: 'trackers',
-                label: 'Trackers',
-                content: jellyfinTrackers,
-              },
-              {
-                value: 'playback',
-                label: 'Playback',
-                content: jellyfinPlayback,
-              },
-            ]}
-          />
-          <p className="mt-4 text-xs text-gray-500">Save to apply changes.</p>
-        </Modal>
-
-        <Modal
           open={aniyomiModal.isOpen}
           onOpenChange={aniyomiModal.toggle}
           title="AIOStreams for Aniyomi / Animiru"
@@ -3697,34 +3518,4 @@ export function useSaveInstall({ offerStremio = true } = {}) {
       </>
     ),
   };
-}
-
-function Content() {
-  const { uuid } = useUserData();
-  const { installProps, account, backup, dangerZone, modals } =
-    useSaveInstall();
-  return (
-    <>
-      <div className="flex items-center w-full">
-        <div>
-          <h2>Install Addon</h2>
-          <p className="text-[--muted]">
-            Configure and install your personalized addon
-          </p>
-        </div>
-        <div className="hidden lg:block lg:ml-auto">
-          <PageControls />
-        </div>
-      </div>
-
-      <div className="space-y-4 mt-6">
-        {account}
-        {uuid && <InstallCard {...installProps} />}
-        {uuid && <ProfileCard />}
-        {backup}
-        {dangerZone}
-        {modals}
-      </div>
-    </>
-  );
 }

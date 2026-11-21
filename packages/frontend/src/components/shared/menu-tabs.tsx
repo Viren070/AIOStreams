@@ -21,8 +21,6 @@ interface MenuTabsProps {
   tabs: MenuTabItem[];
   activeTab: string;
   onTabChange: (value: string) => void;
-  /** Which accordion item to expand by default on mobile. Defaults to none. */
-  defaultMobileOpen?: string;
   /**
    * On tab change, scroll the page so the selected tab's content is fully
    * visible (only when it fits on screen).
@@ -48,7 +46,6 @@ export function MenuTabs({
   tabs,
   activeTab,
   onTabChange,
-  defaultMobileOpen = '',
   revealOnChange = false,
   animated = true,
 }: MenuTabsProps) {
@@ -93,10 +90,8 @@ export function MenuTabs({
   }, [activeTab, revealOnChange]);
 
   // Mobile accordion tracks its own open state so it can be fully collapsed.
-  // When an item is opened we still sync the shared tab state (URL params etc.).
-  const [mobileOpen, setMobileOpen] = React.useState(
-    defaultMobileOpen || activeTab
-  );
+  // When an item is opened we still sync the shared tab state.
+  const [mobileOpen, setMobileOpen] = React.useState(activeTab);
 
   React.useEffect(() => {
     setMobileOpen(activeTab);

@@ -1,7 +1,5 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PageWrapper } from '../shared/page-wrapper';
-import { MenuHeader } from '../shared/menu-header';
 import { SettingsCard } from '../shared/settings-card';
 import { useStatus } from '@/context/status';
 import { useUserData } from '@/context/userData';
@@ -27,14 +25,6 @@ import { cn } from '@aiostreams/ui/core/styling';
  * (typically 7d). If the instance owner disables analytics globally OR
  * per-user, the API returns 403 and we fall back to a friendly message.
  */
-export function StatsMenu() {
-  return (
-    <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <StatsContent />
-    </PageWrapper>
-  );
-}
-
 export function StatsContent() {
   const { status } = useStatus();
   const user = useUserData();
@@ -53,19 +43,6 @@ export function StatsContent() {
 
   return (
     <>
-      <MenuHeader
-        title="Stats"
-        controls={false}
-        description={
-          <>
-            Per-user breakdown of how your addons performed across recent stream
-            requests. Data window is up to{' '}
-            <strong>{range === '24h' ? '24 hours' : '7 days'}</strong>; older
-            events are pruned automatically.
-          </>
-        }
-      />
-
       {!isSignedIn && (
         <Alert
           intent="info"
@@ -176,7 +153,6 @@ function StatsView({ data }: { data: UserAnalyticsResponse }) {
         <SettingsCard
           title="Removed addons (still in retention)"
           description="These addons used to be in your config and still have stats within the retention window. They will disappear naturally once their data ages out."
-          titleClassName="text-[--muted]"
         >
           <AddonTable
             rows={removed}

@@ -1,7 +1,4 @@
 import { useEffect } from 'react';
-import { PageWrapper } from '../../shared/page-wrapper';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@aiostreams/ui/tabs';
-import { SettingsNavCard } from '../../shared/settings-card';
 import { useUserData } from '@/context/userData';
 import {
   FaBolt,
@@ -31,7 +28,6 @@ import { TbFilterCode } from 'react-icons/tb';
 import { Select } from '@aiostreams/ui/select';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { SettingsCard } from '../../shared/settings-card';
-import { Card } from '@aiostreams/ui/card';
 import {
   RESOLUTIONS,
   QUALITIES,
@@ -58,10 +54,7 @@ import {
 } from '../../../../../core/src/utils/constants';
 import { Switch } from '@aiostreams/ui/switch';
 import { useStatus } from '@/context/status';
-import {
-  FILTER_TAB_IDS,
-  type FilterTabId,
-} from '../../../../../core/src/utils/fieldMeta';
+import type { FilterTabId } from '../../../../../core/src/utils/fieldMeta';
 import { NumberInput } from '@aiostreams/ui/number-input';
 import { IconButton, Button } from '@aiostreams/ui/button';
 import { Tooltip } from '@aiostreams/ui/tooltip';
@@ -72,9 +65,6 @@ import { Slider } from '@aiostreams/ui/slider';
 import MarkdownLite from '../../shared/markdown-lite';
 import { useMode } from '@/context/mode';
 import { copyToClipboard } from '@aiostreams/ui/utils/clipboard';
-import { useParentInheritance } from '@/context/userData';
-import { useSubTab } from '@/context/sub-tab';
-import { InheritedBadge } from '../../shared/inherited-badge';
 
 import { FilterSettings } from './_components/filter-settings';
 import {
@@ -103,13 +93,7 @@ import {
   defaultPreferredStreamTypes,
   defaultPreferredVisualTags,
   defaultPreferredAudioTags,
-  tabsRootClass,
-  tabsTriggerClass,
-  tabsListClass,
-  tabsContentClass,
-  tabsGroupClass,
   formatAgeDisplay,
-  HeadingWithPageControls,
   deduplicatorMultiGroupBehaviourHelp,
   defaultDeduplicatorMultiGroupBehaviour,
 } from './_components/filter-utils';
@@ -177,16 +161,6 @@ function extractFieldForPlaceholder(
   if (entry?.pattern !== undefined) return entry.pattern;
   if (entry?.expression !== undefined) return entry.expression;
   return '';
-}
-
-export function FiltersMenu() {
-  return (
-    <>
-      <PageWrapper className="p-4 sm:p-8 space-y-4">
-        <Content />
-      </PageWrapper>
-    </>
-  );
 }
 
 export const FILTER_TAB_ICONS: Record<FilterTabId, IconType> = {
@@ -4037,173 +4011,4 @@ export function useFilterSections(): {
     </>
   );
   return { sections, modals };
-}
-
-function Content() {
-  const { tab, setTab } = useSubTab('filters');
-  const { mode } = useMode();
-  const { status } = useStatus();
-  const { isInherited, hasParent } = useParentInheritance();
-  const { sections, modals } = useFilterSections();
-  return (
-    <>
-      <Tabs
-        value={tab}
-        onValueChange={setTab}
-        variant="pill"
-        className={tabsRootClass}
-        triggerClass={tabsTriggerClass}
-        listClass={tabsListClass}
-        contentClass={tabsContentClass}
-      >
-        <TabsList className="flex-wrap max-w-full lg:space-y-2">
-          <SettingsNavCard>
-            <div className="w-full my-2">
-              <div className="flex items-center gap-2 justify-center">
-                <h4>Filters</h4>
-                {hasParent && isInherited('filters') && (
-                  <InheritedBadge section="filters" />
-                )}
-              </div>
-            </div>
-
-            <div className="overflow-x-none overflow-y-scroll lg:overflow-y-hidden h-40 lg:h-auto rounded-[--radius-md] border lg:border-none lg:space-y-3 [--webkit-overflow-scrolling:touch]">
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="cache">
-                  <FaBolt className="text-lg mr-3" />
-                  Cache
-                </TabsTrigger>
-                {mode === 'pro' && (
-                  <TabsTrigger value="stream-type">
-                    <MdVideoLibrary className="text-lg mr-3" />
-                    Stream Type
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="seeders">
-                  <MdPerson className="text-lg mr-3" />
-                  Seeders
-                </TabsTrigger>
-                <TabsTrigger value="age">
-                  <FaClock className="text-lg mr-3" />
-                  Age
-                </TabsTrigger>
-              </Card>
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="resolution">
-                  <BiSolidCameraMovie className="text-lg mr-3" />
-                  Resolution
-                </TabsTrigger>
-                {mode === 'pro' && (
-                  <>
-                    <TabsTrigger value="quality">
-                      <MdMovieFilter className="text-lg mr-3" />
-                      Quality
-                    </TabsTrigger>
-                    <TabsTrigger value="encode">
-                      <FaFilm className="text-lg mr-3" />
-                      Encode
-                    </TabsTrigger>
-                    <TabsTrigger value="visual-tag">
-                      <MdHdrOn className="text-lg mr-3" />
-                      Visual Tag
-                    </TabsTrigger>
-                    <TabsTrigger value="audio-tag">
-                      <BsSpeakerFill className="text-lg mr-3" />
-                      Audio Tag
-                    </TabsTrigger>
-                    <TabsTrigger value="audio-channel">
-                      <MdSurroundSound className="text-lg mr-3" />
-                      Audio Channel
-                    </TabsTrigger>
-                  </>
-                )}
-              </Card>
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="language">
-                  <FaLanguage className="text-lg mr-3" />
-                  Language
-                </TabsTrigger>
-                <TabsTrigger value="subtitle">
-                  <MdSubtitles className="text-lg mr-3" />
-                  Subtitle
-                </TabsTrigger>
-              </Card>
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="size">
-                  <GoFileBinary className="text-lg mr-3" />
-                  Size
-                </TabsTrigger>
-                <TabsTrigger value="bitrate">
-                  <FaTachometerAlt className="text-lg mr-3" />
-                  Bitrate
-                </TabsTrigger>
-              </Card>
-              {mode === 'pro' && (
-                <Card className={tabsGroupClass}>
-                  <TabsTrigger value="matching">
-                    <FaEquals className="text-lg mr-3" />
-                    Matching
-                  </TabsTrigger>
-                </Card>
-              )}
-              {mode === 'pro' && (
-                <Card className={tabsGroupClass}>
-                  <TabsTrigger value="keyword">
-                    <MdTextFields className="text-lg mr-3" />
-                    Keyword
-                  </TabsTrigger>
-                  <TabsTrigger value="release-group">
-                    <FaTextSlash className="text-lg mr-3" />
-                    Release Group
-                  </TabsTrigger>
-                  <TabsTrigger value="stream-expression">
-                    <TbFilterCode className="text-lg mr-3" />
-                    Stream Expression
-                  </TabsTrigger>
-                  {(status?.settings.regexAccess.level !== 'none' ||
-                    (status?.settings.regexAccess.patterns?.length ?? 0) > 0 ||
-                    (status?.settings.regexAccess.urls?.length ?? 0) > 0) && (
-                    <TabsTrigger value="regex">
-                      <BsRegex className="text-lg mr-3" />
-                      Regex
-                    </TabsTrigger>
-                  )}
-                </Card>
-              )}
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="limit">
-                  <GoContainer className="text-lg mr-3" />
-                  Result Limits
-                </TabsTrigger>
-                <TabsTrigger value="deduplicator">
-                  <MdCleaningServices className="text-lg mr-3" />
-                  Deduplicator
-                </TabsTrigger>
-              </Card>
-              <Card className={tabsGroupClass}>
-                <TabsTrigger value="miscellaneous">
-                  <MdMiscellaneousServices className="text-lg mr-3" />
-                  Miscellaneous
-                </TabsTrigger>
-              </Card>
-            </div>
-          </SettingsNavCard>
-        </TabsList>
-        <div className="space-y-0 relative">
-          {FILTER_TAB_IDS.map((id) => (
-            <TabsContent
-              key={id}
-              id={`filter-tab-${id}`}
-              value={id}
-              className="space-y-4"
-            >
-              <HeadingWithPageControls heading={FILTER_TAB_LABELS[id]} />
-              {sections[id]}
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
-      {modals}
-    </>
-  );
 }
