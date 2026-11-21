@@ -270,7 +270,9 @@ class ExoEngine(private val context: Context) : Engine {
     private fun stuck() =
         player.isTunnelingEnabled && AMLOGIC && url != null && loaded && (!seeking || recovering) &&
             player.playWhenReady && player.playbackState == Player.STATE_BUFFERING &&
-            !player.isLoading && player.totalBufferedDuration >= STUCK_QUEUED_MS
+            !player.isLoading && player.totalBufferedDuration >= STUCK_QUEUED_MS &&
+            // A file that can't seek Exo would start over, as for a resync.
+            player.isCurrentMediaItemSeekable
 
     private fun watchStuck() {
         main.removeCallbacks(unstick)
