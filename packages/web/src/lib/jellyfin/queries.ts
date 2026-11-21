@@ -491,6 +491,13 @@ export function useFetchItem() {
   return (itemId: string) => queryClient.fetchQuery(options(itemId));
 }
 
+/** A title's details already in, however old, without asking for them. */
+export function useCachedItem() {
+  const queryClient = useQueryClient();
+  const options = useItemOptions();
+  return (itemId: string) => queryClient.getQueryData(options(itemId).queryKey);
+}
+
 export function useItem(itemId: string, opts: { page?: boolean } = {}) {
   const { client, user } = useSession();
   const queryClient = useQueryClient();
@@ -539,6 +546,8 @@ function useShowOptions() {
             userId: user.Id,
             SeriesId: seriesId,
             Limit: 1,
+            // The hero tells of it; stock Jellyfin sends it only when asked.
+            Fields: 'Overview',
           }),
       }),
   };
@@ -598,6 +607,29 @@ export function useShowAhead(
       if (id) void queryClient.prefetchQuery(show.episodes(seriesId, id));
     })
     .catch(() => {});
+}
+
+/**
+ * As `useShowAhead`, when asked: a show's seasons, then the episodes of
+ * `seasonId` or the one its page opens on, and of its latest season, where its
+ * page looks for the next airing.
+ */
+export function useFetchShowAhead() {
+  const queryClient = useQueryClient();
+  const show = useShowOptions();
+  return (seriesId: string, seasonId?: string) =>
+    queryClient.fetchQuery(show.seasons(seriesId)).then((result) => {
+      const seasons = result.Items ?? [];
+      const latest = seasons
+        .filter((s) => (s.IndexNumber ?? 0) > 0)
+        .sort((a, b) => (b.IndexNumber ?? 0) - (a.IndexNumber ?? 0))[0]?.Id;
+      const ids = new Set([seasonId ?? openingSeason(seasons)?.Id, latest]);
+      return Promise.all(
+        [...ids]
+          .filter((id): id is string => !!id)
+          .map((id) => queryClient.prefetchQuery(show.episodes(seriesId, id)))
+      );
+    });
 }
 
 export function useSimilar(itemId: string, enabled: boolean) {

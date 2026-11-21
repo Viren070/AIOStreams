@@ -391,6 +391,48 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
   box-shadow: inset 0 0 0 2px var(--ring);
 }
 
+/* Read from across a room, the hero's overview shows in full. */
+[data-tv] [data-ui='hero-overview'] {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  max-width: 50vw;
+  font-size: 1rem;
+  line-height: 1.625;
+}
+/* The hero's buttons stay one above the other, both as wide as the wider,
+   their icons and words lined up at the start; the start's room a little
+   less, as the icons' own drawings leave room at their edges. */
+[data-tv] [data-ui='hero-actions'] {
+  align-items: stretch;
+}
+[data-tv] [data-ui='hero-action'],
+[data-tv] [data-ui='hero-action']:focus-visible {
+  justify-content: flex-start;
+  height: 3rem;
+  padding-inline: 0.875rem 1.25rem;
+  border: 0;
+  border-radius: 0.5rem;
+  outline: none !important;
+  box-shadow: none;
+  font-size: 1.0625rem;
+  transition: none;
+}
+/* Clear over the picture at rest, white with focus. By :focus, as the page
+   places focus on Play without a key, where it may not count as visible. */
+[data-tv] [data-ui='hero-action']:not(:focus) {
+  background-color: transparent;
+  color: #fff;
+}
+[data-tv] [data-ui='hero-action']:focus {
+  background-color: #fff;
+  color: #000;
+}
+/* The icon as far from the words as from the button's edges around it. */
+[data-tv] [data-ui='hero-action'] > .UI-Button__icon {
+  margin-inline-end: 0.875rem !important;
+}
+
 /* A guide programme's title moves with the day's scroll to stay beside the
    channels, until its cell's end leaves no room. */
 [data-ui='guide-cell'] > [data-name='text'] {
@@ -627,4 +669,26 @@ html[data-blur-spoilers]:not([data-tv])
     transform: translateY(-12rem);
     opacity: 0;
   }
+}
+
+/* A light running under a title's scores while fresh ones are fetched. */
+@keyframes score-refresh {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+/* In a facts line a badge keeps to the line's height, however large a theme
+   draws badges elsewhere, so the line doesn't grow as they come. Listed, not
+   :is(), as older TV browsers take no list. */
+[data-ui='item-meta'] [data-ui='version-badge'],
+[data-ui='hero-meta'] [data-ui='version-badge'] {
+  height: 1.5rem;
+}
+[data-ui='item-meta'] [data-ui='version-badge'] img,
+[data-ui='hero-meta'] [data-ui='version-badge'] img {
+  max-height: 1.125rem;
 }
