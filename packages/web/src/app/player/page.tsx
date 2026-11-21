@@ -702,8 +702,9 @@ function SubtitleText({
         transitionTimingFunction: SUBTITLE_LIFT_EASE,
       }}
     >
+      {/* Each line takes its own direction, as native cues do. */}
       <span
-        className="whitespace-pre-line px-2"
+        className="whitespace-pre-line px-2 [unicode-bidi:plaintext]"
         style={{
           fontSize: `calc(${subtitleScale(style)} * 5${unit})`,
           fontWeight,
