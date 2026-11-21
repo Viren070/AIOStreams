@@ -31,7 +31,7 @@ import { tab, tabList } from '@/lib/input';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { MixedGrid } from '@/components/media/mixed-grid';
 import { NoCatalogs } from '@/components/media/no-catalogs';
-import { PageMessage } from '@/components/shell/page';
+import { PageBody, PageHeader, PageMessage } from '@/components/shell/page';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 const FILTERS: { value: ItemFilter | undefined; label: string }[] = [
@@ -136,7 +136,8 @@ function GenreFilter({
         placeholder={t`Search`}
         emptyMessage={t`Nothing matches.`}
         keepOpenOnSelect={false}
-        className="w-full rounded-full sm:w-56"
+        className="rounded-full"
+        fieldClass="sm:w-56"
         options={[
           ...(withAll
             ? [{ value: ALL, label: t`All`, textValue: t`All` }]
@@ -198,7 +199,8 @@ function CatalogPicker({
       placeholder={t`Search`}
       emptyMessage={t`Nothing matches.`}
       keepOpenOnSelect={false}
-      className="w-full rounded-full sm:w-64"
+      className="rounded-full"
+      fieldClass="sm:w-64"
       options={views.map((v) => ({
         value: v.Id!,
         label: v.Name ?? '',
@@ -242,7 +244,10 @@ export function DiscoverPage({
   // and filters it.
   const untyped = all.some((v) => !kindOf(v));
   const siblings = all.filter(
-    (v) => kindOf(v) === current || !kindOf(v) || v.Id === viewId
+    (v) =>
+      kindOf(v) === current ||
+      (!kindOf(v) && current !== 'BoxSet') ||
+      v.Id === viewId
   );
   const offered = KINDS.filter(
     (k) =>
@@ -344,94 +349,109 @@ export function DiscoverPage({
     [items.length, viewId, genre, current, filter]
   );
 
+  const genreFilter = pickable.length > 0 && (
+    <GenreFilter
+      genres={pickable}
+      withAll={withAll}
+      value={genre ?? (withAll ? null : (opening?.Name ?? null))}
+      onChange={(name) =>
+        navigate(
+          to.discover(viewId, {
+            genre: name ?? undefined,
+            kind: kindOf(view) === current ? undefined : current,
+            ...kept,
+          })
+        )
+      }
+    />
+  );
+  const genrePills = fitsAsPills(pickable.map((g) => g.Name ?? ''));
+
   return (
-    <div className="space-y-6 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
-      <div
-        data-ui="page-header"
-        className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
-      >
-        <h1 data-ui="page-title" className="text-3xl font-bold">
-          {view?.Name ?? t`Discover`}
-        </h1>
-        {label && (
-          <span data-ui="discover-label" className="text-[--muted]">
-            {label}
-          </span>
-        )}
-        {total != null && !filter && (
-          <span data-ui="discover-count" className="text-sm text-[--muted]">
-            {plural(total, { one: '# title', other: '# titles' })}
-          </span>
-        )}
-      </div>
-
-      <div
-        data-ui="discover-filters"
-        className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
-      >
-        {offered.length > 1 && (
-          <PillTabs
-            name="kind"
-            options={offered.map((k) => ({ value: k.kind, label: k.label }))}
-            value={current}
-            onChange={switchKind}
-          />
-        )}
-        <CatalogPicker
-          views={siblings}
-          viewId={viewId}
-          onChange={(id) => open(id, kindFor(all.find((v) => v.Id === id)))}
+    <PageBody>
+      <div className="space-y-6">
+        <PageHeader
+          title={view?.Name ?? t`Discover`}
+          beside={
+            <>
+              {label && (
+                <span data-ui="discover-label" className="text-[--muted]">
+                  {label}
+                </span>
+              )}
+              {total != null && !filter && (
+                <span
+                  data-ui="discover-count"
+                  className="text-sm text-[--muted]"
+                >
+                  {plural(total, { one: '# title', other: '# titles' })}
+                </span>
+              )}
+            </>
+          }
+          actions={
+            <>
+              <CatalogPicker
+                views={siblings}
+                viewId={viewId}
+                onChange={(id) =>
+                  open(id, kindFor(all.find((v) => v.Id === id)))
+                }
+              />
+              {!genrePills && genreFilter}
+              {stock && (
+                <SortPicker
+                  keys={LIBRARY_SORTS}
+                  value={sort}
+                  onChange={setSort}
+                />
+              )}
+            </>
+          }
         />
-        {pickable.length > 0 && (
-          <GenreFilter
-            genres={pickable}
-            withAll={withAll}
-            value={genre ?? (withAll ? null : (opening?.Name ?? null))}
-            onChange={(name) =>
-              navigate(
-                to.discover(viewId, {
-                  genre: name ?? undefined,
-                  kind: kindOf(view) === current ? undefined : current,
-                  ...kept,
-                })
-              )
-            }
-          />
-        )}
-        <PillTabs
-          name="filter"
-          options={filters}
-          value={filter}
-          onChange={setFilterParam}
-        />
-        {stock && (
-          <SortPicker keys={LIBRARY_SORTS} value={sort} onChange={setSort} />
-        )}
-      </div>
 
-      {pages.isError ? (
-        <LuffyError title={t`Could not load this catalog`} />
-      ) : (
-        <>
-          <div data-nav-start>
-            <MixedGrid
-              items={items}
-              client={client}
-              loading={pages.isLoading}
+        <div data-ui="discover-filters" className="flex flex-col gap-3">
+          {offered.length > 1 && (
+            <PillTabs
+              name="kind"
+              options={offered.map((k) => ({ value: k.kind, label: k.label }))}
+              value={current}
+              onChange={switchKind}
             />
-          </div>
-          {!pages.isLoading && !items.length && (
-            <p className="text-[--muted]">
-              <Trans>Nothing here.</Trans>
-            </p>
           )}
-        </>
-      )}
-      {pages.isFetchingNextPage && (
-        <Skeleton className="h-40 w-full rounded-xl" />
-      )}
-      <div ref={sentinel} />
-    </div>
+          {genrePills && genreFilter}
+          <PillTabs
+            name="filter"
+            options={filters}
+            value={filter}
+            onChange={setFilterParam}
+          />
+        </div>
+
+        {pages.isError ? (
+          <LuffyError title={t`Could not load this catalog`} />
+        ) : (
+          <>
+            <div data-nav-start>
+              <MixedGrid
+                items={items}
+                client={client}
+                loading={pages.isLoading}
+              />
+            </div>
+            {!pages.isLoading && !items.length && (
+              <p className="text-[--muted]">
+                <Trans>Nothing here.</Trans>
+              </p>
+            )}
+          </>
+        )}
+        {pages.isFetchingNextPage && (
+          <Skeleton className="h-40 w-full rounded-xl" />
+        )}
+        <div ref={sentinel} />
+      </div>
+    </PageBody>
   );
 }
 
@@ -460,9 +480,9 @@ export function DiscoverIndex({ lastViewId }: { lastViewId: string | null }) {
     );
   }
   return (
-    <div className="space-y-4 px-4 pb-16 pt-6 lg:ps-0 lg:pe-10 lg:pt-10">
+    <PageBody>
       <Skeleton className="h-10 w-64" />
       <Skeleton className="h-64 w-full rounded-xl" />
-    </div>
+    </PageBody>
   );
 }

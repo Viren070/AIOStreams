@@ -6,7 +6,7 @@ import {
 } from '../builtins/utils/debrid.js';
 import { createLogger } from '../logging/logger.js';
 import { GrabCache } from './grab-cache.js';
-import { makeRequest, makeUrlLogSafe } from './http.js';
+import { makeRequest, makeUrlLogSafe } from './http/index.js';
 import parseTorrent, { Instance } from 'parse-torrent';
 import { config as appConfig } from '../config/index.js';
 import { getTimeTakenSincePoint } from './index.js';
@@ -143,7 +143,7 @@ export class TorrentGrabber {
       // User-agent comes from a `[torrent_grabs]` (or per-host) entry in
       // REQUEST_HEADER_OVERRIDES, applied inside makeRequest.
       context: 'torrent_grabs',
-      rawOptions: { redirect: 'manual' },
+      redirect: 'manual',
     });
 
     let metadata: TorrentMetadata;

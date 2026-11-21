@@ -20,6 +20,9 @@ const HOME = '/';
 const keyOf = (location: ParsedLocation) =>
   location.state.__TSR_key ?? location.href;
 
+const pageOf = (location: ParsedLocation | undefined) =>
+  location?.pathname.split('/')[1];
+
 const labelOf = (el: Element) =>
   (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
 
@@ -35,17 +38,22 @@ function spotOf(el: HTMLElement): Spot {
   };
 }
 
+// Pages kept hidden behind this one can have the same rows and items.
+const shown = (el: Element) => !el.closest('[inert]');
+
 function find(spot: Spot): HTMLElement | null {
   const row =
-    spot.row && document.querySelector(`[data-row="${CSS.escape(spot.row)}"]`);
+    spot.row &&
+    [...document.querySelectorAll(`[data-row="${CSS.escape(spot.row)}"]`)].find(
+      shown
+    );
   return (
     [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find(
       (el) =>
         (spot.href
           ? addressOf(el) === spot.href
           : labelOf(el) === spot.label) &&
-        // Home, kept hidden behind other pages, has many of the same items.
-        !el.closest('[inert]') &&
+        shown(el) &&
         // Nor one a stylesheet hides, as the phone bar's, which would keep the page's start from standing in.
         el.getClientRects().length > 0
     ) ?? null
@@ -84,30 +92,43 @@ export function returnFocus(
     if (fromLocation.pathname === HOME && inContent?.isConnected)
       home = spotOf(inContent);
   });
-  const arrive = router.subscribe('onRendered', ({ toLocation }) => {
-    cancelAnimationFrame(frame);
-    inContent = null;
-    const spot =
-      (toLocation.pathname === HOME && usingKeys() ? home : null) ??
-      spots.get(keyOf(toLocation));
-    if (!spot && !usingKeys() && !remote) return;
-    const until = performance.now() + (spot ? RETRY_MS : START_RETRY_MS);
-    const gone = performance.now() + GONE_MS;
-    // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
-    const look = () => {
-      const active = document.activeElement;
-      // Focus left on a page kept hidden (inert) is on its way out.
-      if (active && active !== document.body && !active.closest('[inert]'))
-        return;
-      const el =
-        (spot && find(spot)) ||
-        (!spot || performance.now() >= gone ? startOf() : null);
-      // Back where it was, not scrolled there from the page's top.
-      if (el?.getClientRects().length) jumpingTo(() => focusOn(el));
-      else if (performance.now() < until) frame = requestAnimationFrame(look);
-    };
-    look();
-  });
+  const arrive = router.subscribe(
+    'onRendered',
+    ({ fromLocation, toLocation }) => {
+      cancelAnimationFrame(frame);
+      inContent = null;
+      const spot =
+        (toLocation.pathname === HOME && usingKeys() ? home : null) ??
+        spots.get(keyOf(toLocation));
+      if (!spot && !usingKeys() && !remote) return;
+      // A new entry of the same kind of page keeps the keys on the same control, where it has one.
+      const same =
+        !spot &&
+        onPage?.isConnected &&
+        pageOf(fromLocation) === pageOf(toLocation)
+          ? spotOf(onPage)
+          : undefined;
+      const until = performance.now() + (spot ? RETRY_MS : START_RETRY_MS);
+      const gone = performance.now() + GONE_MS;
+      // Rows and catalogs can render a while after the page; anything focused meanwhile wins.
+      const look = () => {
+        const active = document.activeElement;
+        // Focus left on a page now kept hidden (inert) counts as none.
+        if (active && active !== document.body && !active.closest('[inert]'))
+          return;
+        const el = spot
+          ? (find(spot) ?? (performance.now() >= gone ? startOf() : null))
+          : ((same && find(same)) ?? startOf());
+        if (el?.getClientRects().length) {
+          // Back where it was, not scrolled there from the page's top.
+          if (spot) jumpingTo(() => focusOn(el));
+          else focusOn(el);
+        } else if (performance.now() < until)
+          frame = requestAnimationFrame(look);
+      };
+      look();
+    }
+  );
   return () => {
     document.removeEventListener('focusin', track);
     leave();

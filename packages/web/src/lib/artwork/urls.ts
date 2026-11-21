@@ -200,6 +200,12 @@ export function logoUrl(
   );
 }
 
+export function backgroundVideoOf(item: BaseItemDto): string | undefined {
+  const url = (item as { aiostreams?: { backgroundVideo?: unknown } })
+    .aiostreams?.backgroundVideo;
+  return typeof url === 'string' ? url : undefined;
+}
+
 export function animatedPosterOf(item: BaseItemDto): string | undefined {
   const url = (item as { aiostreams?: { animatedPoster?: unknown } }).aiostreams
     ?.animatedPoster;

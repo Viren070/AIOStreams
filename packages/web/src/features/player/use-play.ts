@@ -103,8 +103,9 @@ export function usePlay() {
     }
     const player = chosenPlayer();
     if (player.kind === 'link') {
+      // The link carries the subtitles.
       const info = await queryClient
-        .fetchQuery(infoOptions(item.Id!, source.Id))
+        .fetchQuery(infoOptions(item.Id!, source.Id, { addonSubtitles: true }))
         .catch(() => undefined);
       const named = playableSources(info).find((s) => s.Id === source.Id);
       if (!openLink(player.template, item, named ?? source, startMs))

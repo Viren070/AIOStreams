@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { config as appConfig } from '../../../config/index.js';
-import { makeRequest } from '../../../utils/http.js';
+import { makeRequest } from '../../../utils/http/index.js';
 import type { ContentKind } from '../../library.js';
 import type { SuggestionProvider } from '../types.js';
 import { completes, distinctNames, titleWords } from '../words.js';

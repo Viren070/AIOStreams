@@ -1,5 +1,5 @@
 import { BasePosterService } from './base.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 import { RPDBIsValidResponse } from '../db/schemas.js';
 import { config } from '../config/index.js';
 

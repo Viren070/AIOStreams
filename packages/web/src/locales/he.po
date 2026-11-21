@@ -1,0 +1,6028 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-16 20:39+0100\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Weblate 2026.12.dev0\n"
+"Language: he\n"
+"Last-Translator: Dan <danko80@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Hebrew <https://hosted.weblate.org/projects/aiostreams/web-app/he/>\n"
+"Plural-Forms: nplurals=4; plural=(n == 1) ? 0 : ((n == 2) ? 1 : ((n > 10 && n % 10 == 0) ? 2 : 3));\n"
+"PO-Revision-Date: 2026-11-20 15:16+0000\n"
+
+#: src/features/party/in-party.tsx
+msgid "(you)"
+msgstr "(את/ה)"
+
+#: src/app/sign-in/page.tsx
+msgid "{address} did not answer. Check that it is running, then try again."
+msgstr "לא התקבלה תשובה מ־{address}. יש לבדוק שהוא פועל ולנסות שוב."
+
+#: src/features/live-tv/live-reminders.tsx
+msgid "{at} on {channelName}"
+msgstr "{at} בערוץ {channelName}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{badgeCount, plural, one {# badge of your own} other {# badges of your own}}"
+msgstr "{badgeCount, plural, one {# תג משלך} two {# תגים משלך} other {# תגים משלך}}"
+
+#: src/app/history/page.tsx
+msgid "{cleared, plural, one {Removed # title from the history} other {Removed # titles from the history}}"
+msgstr "{cleared, plural, one {הוסר כותר אחד מההיסטוריה} two {הוסרו # כותרים מההיסטוריה} other {הוסרו # כותרים מההיסטוריה}}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{count, plural, one {# badge} other {# badges}}"
+msgstr "{count, plural, one {תג אחד} two {# תגים} other {# תגים}}"
+
+#: src/app/settings/playback.tsx
+msgid "{count, plural, one {# minute} other {# minutes}}"
+msgstr "{count, plural, one {דקה אחת} two {שתי דקות} other {# דקות}}"
+
+#: src/app/settings/_components/common.tsx
+msgid "{count, plural, one {# second} other {# seconds}}"
+msgstr "{count, plural, one {שנייה אחת} two {שתי שניות} other {# שניות}}"
+
+#: src/features/playlists/playlists.tsx
+msgid "{count, plural, one {# title} other {# titles}}"
+msgstr "{count, plural, one {כותר אחד} two {# כותרים} other {# כותרים}}"
+
+#: src/features/party/not-in-party.tsx
+msgid "{count, plural, one {# watching · on {on}} other {# watching · on {on}}}"
+msgstr "{count, plural, one {צופה אחד · ב־{on}} two {# צופים · ב־{on}} other {# צופים · ב־{on}}}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{count, plural, one {Added # badge} other {Added # badges}}"
+msgstr "{count, plural, one {נוסף תג אחד} two {נוספו # תגים} other {נוספו # תגים}}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{count, plural, one {Added # quick filter} other {Added # quick filters}}"
+msgstr "{count, plural, one {נוסף מסנן מהיר אחד} two {נוספו # מסננים מהירים} other {נוספו # מסננים מהירים}}"
+
+#: src/lib/downloads/index.ts
+msgid "{count, plural, one {Download added} other {# downloads added}}"
+msgstr "{count, plural, one {נוספה הורדה} two {נוספו # הורדות} other {נוספו # הורדות}}"
+
+#: src/app/item/_components/trailers.tsx
+msgid "{count, plural, one {Trailer} other {Trailers}}"
+msgstr "{count, plural, one {קדימון} two {קדימונים} other {קדימונים}}"
+
+#: src/app/downloads/page.tsx
+msgid "{downloaded} downloaded"
+msgstr "{downloaded} הורדו"
+
+#: src/app/history/page.tsx
+msgid "{episodeCount, plural, one {# episode watched} other {# episodes watched}}"
+msgstr "{episodeCount, plural, one {נצפה פרק אחד} two {נצפו # פרקים} other {נצפו # פרקים}}"
+
+#: src/app/downloads/page.tsx
+#: src/app/history/page.tsx
+#: src/app/item/_components/seasons.tsx
+msgid "{episodeCount, plural, one {# episode} other {# episodes}}"
+msgstr "{episodeCount, plural, one {פרק אחד} two {# פרקים} other {# פרקים}}"
+
+#: src/app/history/page.tsx
+msgid "{favorites, plural, one {# favourite} other {# favourites}}"
+msgstr "{favorites, plural, one {מועדף אחד} two {# מועדפים} other {# מועדפים}}"
+
+#: src/app/settings/downloads.tsx
+msgid "{folder}. New downloads go here; ones already saved stay where they are."
+msgstr "{folder}. הורדות חדשות יישמרו כאן; הורדות שכבר נשמרו יישארו במקומן."
+
+#: src/features/versions/version-list.tsx
+msgid "{found, plural, one {# version} other {# versions}}"
+msgstr "{found, plural, one {גרסה אחת} two {# גרסאות} other {# גרסאות}}"
+
+#: src/features/versions/version-list.tsx
+msgid "{found, plural, one {Filter # version} other {Filter # versions}}"
+msgstr "{found, plural, one {סינון גרסה אחת} two {סינון # גרסאות} other {סינון # גרסאות}}"
+
+#: src/app/downloads/page.tsx
+msgid "{got} of {size}"
+msgstr "{got} מתוך {size}"
+
+#: src/lib/playback/quality.ts
+msgid "{height}, {mbps} Mbps"
+msgstr "{height}, {mbps} Mbps"
+
+#: src/features/player/options.tsx
+msgid "{height}%"
+msgstr "{height}%"
+
+#: src/app/settings/cache.tsx
+msgid "{help} {bytes}."
+msgstr "{help} {bytes}."
+
+#: src/features/party/not-in-party.tsx
+msgid "{host}'s party"
+msgstr "מסיבת הצפייה של {host}"
+
+#. Hours, as in 2h
+#: src/lib/format.ts
+msgid "{hours}h"
+msgstr "{hours} שע׳"
+
+#. Hours and minutes, as in 1h 15m
+#: src/lib/format.ts
+msgid "{hours}h {rest}m"
+msgstr "{hours} שע׳ ו־{rest} דק׳"
+
+#: src/app/history/page.tsx
+msgid "{inProgress, plural, one {# in progress} other {# in progress}}"
+msgstr "{inProgress, plural, one {אחת בתהליך} two {# בתהליך} other {# בתהליך}}"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "{key} is taken by {taken}"
+msgstr "המקש {key} כבר משמש עבור {taken}"
+
+#: src/app/downloads/page.tsx
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/components/media/card-preview.tsx
+#: src/components/media/episodes.tsx
+msgid "{left} left"
+msgstr "נותרו {left}"
+
+#: src/features/party/not-in-party.tsx
+msgid "{members, plural, one {# watching} other {# watching}}"
+msgstr "{members, plural, one {צופה אחד} two {# צופים} other {# צופים}}"
+
+#. Minutes, as in 45m
+#: src/lib/format.ts
+msgid "{minutes}m"
+msgstr "{minutes} דק׳"
+
+#: src/app/history/page.tsx
+msgid "{movieCount, plural, one {# movie watched} other {# movies watched}}"
+msgstr "{movieCount, plural, one {נצפה סרט אחד} two {נצפו # סרטים} other {נצפו # סרטים}}"
+
+#: src/app/history/page.tsx
+msgid "{movieCount, plural, one {# movie} other {# movies}}"
+msgstr "{movieCount, plural, one {סרט אחד} two {# סרטים} other {# סרטים}}"
+
+#: src/app/history/page.tsx
+msgid "{movies} and {episodes} watched"
+msgstr "נצפו {movies} ו־{episodes}"
+
+#: src/app/settings/playback.tsx
+msgid "{n, plural, one {After # episode} other {After # episodes}}"
+msgstr "{n, plural, one {לאחר פרק אחד} two {לאחר # פרקים} other {לאחר # פרקים}}"
+
+#: src/features/versions/unaired-question.tsx
+msgid "{name} airs {day} ({until}). Download it anyway?"
+msgstr "{name} ישודר ביום {day} ({until}). להוריד בכל זאת?"
+
+#: src/features/versions/unaired-question.tsx
+msgid "{name} airs {day} ({until}). Play it anyway?"
+msgstr "{name} ישודר ביום {day} ({until}). להפעיל בכל זאת?"
+
+#: src/features/party/party-host.tsx
+msgid "{name} joined the party"
+msgstr "{name} הצטרף/ה למסיבת הצפייה"
+
+#: src/features/party/party-host.tsx
+msgid "{name} left the party"
+msgstr "{name} עזב/ה את מסיבת הצפייה"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "{off} off"
+msgstr "{off} כבויים"
+
+#: src/features/versions/version-list.tsx
+msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
+msgstr "{others, plural, one {יש לבחור את הגרסה להורדה. הפרק האחר יקבל את אותה ההפצה, אם היא זמינה עבורו.} two {יש לבחור את הגרסה להורדה. # הפרקים האחרים יקבלו את אותה ההפצה, אם היא זמינה עבורם.} other {יש לבחור את הגרסה להורדה. # הפרקים האחרים יקבלו את אותה ההפצה, אם היא זמינה עבורם.}}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{packCount, plural, one {# pack} other {# packs}}"
+msgstr "{packCount, plural, one {מארז אחד} two {# מארזים} other {# מארזים}}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "{packs} and {own}"
+msgstr "{packs} ו־{own}"
+
+#: src/app/settings/player.tsx
+msgid "{r}×"
+msgstr "{r}×"
+
+#: src/lib/party/party.ts
+msgid "{relay} didn't answer."
+msgstr "לא התקבלה תשובה מ־{relay}."
+
+#: src/app/history/page.tsx
+msgid "{removed, plural, one {Removed # from the history} other {Removed # from the history}}"
+msgstr "{removed, plural, one {הוסר פריט אחד מההיסטוריה} two {הוסרו # פריטים מההיסטוריה} other {הוסרו # פריטים מההיסטוריה}}"
+
+#: src/features/party/not-in-party.tsx
+msgid "{rest, plural, one {# more} other {# more}}"
+msgstr "{rest, plural, one {עוד אחד} two {עוד #} other {עוד #}}"
+
+#: src/app/settings/player.tsx
+msgid "{s}%"
+msgstr "{s}%"
+
+#: src/features/party/in-party.tsx
+msgid "{seconds}s ahead"
+msgstr "{seconds} שנ׳ קדימה"
+
+#: src/features/party/in-party.tsx
+msgid "{seconds}s behind"
+msgstr "{seconds} שנ׳ מאחור"
+
+#: src/app/history/page.tsx
+msgid "{selected, plural, one {# selected} other {# selected}}"
+msgstr "{selected, plural, one {פריט אחד נבחר} two {# פריטים נבחרו} other {# פריטים נבחרו}}"
+
+#: src/features/player/keys.ts
+msgid "{shown}×"
+msgstr "{shown}×"
+
+#: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
+msgid "{stepSeconds, plural, one {Back # second} other {Back # seconds}}"
+msgstr "{stepSeconds, plural, one {שנייה אחת אחורה} two {שתי שניות אחורה} other {# שניות אחורה}}"
+
+#: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
+msgid "{stepSeconds, plural, one {Forward # second} other {Forward # seconds}}"
+msgstr "{stepSeconds, plural, one {שנייה אחת קדימה} two {שתי שניות קדימה} other {# שניות קדימה}}"
+
+#: src/app/history/page.tsx
+msgid "{time} watched"
+msgstr "זמן צפייה: {time}"
+
+#: src/lib/party/follow.ts
+msgid "{title} isn't on your server."
+msgstr "{title} אינו נמצא בשרת שלך."
+
+#: src/app/discover/page.tsx
+msgid "{total, plural, one {# title} other {# titles}}"
+msgstr "{total, plural, one {כותר אחד} two {# כותרים} other {# כותרים}}"
+
+#: src/app/item/_components/seasons.tsx
+msgid "{unairedCount, plural, one {# unaired} other {# unaired}}"
+msgstr "{unairedCount, plural, one {אחד טרם שודר} two {# טרם שודרו} other {# טרם שודרו}}"
+
+#: src/features/player/options.tsx
+msgid "{unread, plural, one {Watch party, # new message} other {Watch party, # new messages}}"
+msgstr "{unread, plural, one {מסיבת צפייה, הודעה חדשה אחת} two {מסיבת צפייה, # הודעות חדשות} other {מסיבת צפייה, # הודעות חדשות}}"
+
+#. Each {name} is written in the player link as it is here.
+#: src/app/settings/player.tsx
+msgid "{url} is the stream address, {encodedUrl} the same address URL-encoded, {scheme} its scheme, {filename} the file's name, {subtitles} each external subtitle (its parameter repeats per file), {title} the title with the episode, {position} the second to start at ({positionMs} in milliseconds), and {returnUrl} a link back here for a player that reports where it stopped. Values other than {url} are URL-encoded. After intent://, {url} goes without its scheme."
+msgstr "{url} היא כתובת ההזרמה, {encodedUrl} היא אותה הכתובת בקידוד URL, ‏{scheme} היא הסכמה שלה, {filename} הוא שם הקובץ, {subtitles} הן כל כתוביות חיצוניות (הפרמטר חוזר עבור כל קובץ), {title} הוא הכותר עם הפרק, {position} היא שניית ההתחלה ({positionMs} באלפיות שנייה), ו־{returnUrl} הוא קישור חזרה לכאן עבור נגן שמדווח היכן נעצר. כל הערכים מלבד {url} מקודדים בקידוד URL. אחרי intent://, יש לציין את {url} ללא הסכמה שלה."
+
+#: src/app/settings/cache.tsx
+msgid "{used} used. Past this, what was used longest ago goes first."
+msgstr "{used} בשימוש. מעבר לכך, יימחקו תחילה הפריטים שלא היו בשימוש במשך הזמן הרב ביותר."
+
+#: src/features/party/party-layer.tsx
+msgid "{who} jumped to {to}"
+msgstr "{who} דילג/ה אל {to}"
+
+#: src/features/party/party-layer.tsx
+msgid "{who} paused"
+msgstr "{who} השהה/תה"
+
+#: src/features/party/party-layer.tsx
+msgid "{who} resumed"
+msgstr "{who} המשיך/ה"
+
+#: src/features/party/party-layer.tsx
+msgid "{who} started {title}"
+msgstr "{who} התחיל/ה את {title}"
+
+#: src/lib/playback/sound.ts
+msgid "+{amount} ms"
+msgstr "+{amount} ms"
+
+#: src/lib/playback/sound.ts
+msgid "+{db} dB"
+msgstr "+{db} dB"
+
+#: src/lib/subtitles/delay.ts
+msgid "+{seconds}s"
+msgstr "+{seconds} שנ׳"
+
+#: src/lib/subtitles/delay.ts
+msgid "+{time}"
+msgstr "+{time}"
+
+#: src/lib/playback/sound.ts
+msgid "−{amount} ms"
+msgstr "−{amount} ms"
+
+#: src/lib/subtitles/delay.ts
+msgid "−{seconds}s"
+msgstr "−{seconds} שנ׳"
+
+#: src/lib/subtitles/delay.ts
+msgid "−{time}"
+msgstr "−{time}"
+
+#: src/lib/input/actions.ts
+msgid "0 to 9"
+msgstr "0 עד 9"
+
+#: src/lib/input/actions.ts
+msgid "1 jumps a tenth of the way in, 5 halfway and 0 back to the start."
+msgstr "1 מדלג לעשירית מהמשך, 5 לאמצע ו־0 בחזרה להתחלה."
+
+#: src/app/settings/interface.tsx
+msgid "12-hour ({twelve})"
+msgstr "12 שעות ({twelve})"
+
+#: src/app/settings/interface.tsx
+msgid "24-hour ({twentyFour})"
+msgstr "24 שעות ({twentyFour})"
+
+#: src/app/settings/audio.tsx
+msgid "5.1 surround"
+msgstr "צליל היקפי 5.1"
+
+#: src/app/settings/audio.tsx
+msgid "7.1 surround"
+msgstr "צליל היקפי 7.1"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "A badge shows on each version whose text matches its pattern: the name and description your formatter writes, the file name, and the tags read from it."
+msgstr "תג מוצג בכל גרסה שהטקסט שלה תואם לתבנית שלו: השם והתיאור שיוצר מעצב הפלט, שם הקובץ והתגיות שנקראות ממנו."
+
+#: src/features/party/not-in-party.tsx
+msgid "A code is looked up on the relay picked above."
+msgstr "הקוד נבדק בשרת התיווך שנבחר למעלה."
+
+#: src/app/settings/cache.tsx
+msgid "A day"
+msgstr "יום"
+
+#: src/app/settings/cache.tsx
+msgid "A month"
+msgstr "חודש"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "A regular expression. Case never matters."
+msgstr "ביטוי רגולרי. אין הבחנה בין אותיות גדולות לקטנות."
+
+#: src/features/party/not-in-party.tsx
+msgid "A relay someone else runs, for people on other servers."
+msgstr "שרת תיווך שמפעיל אדם אחר, עבור אנשים בשרתים אחרים."
+
+#: src/components/shell/input-setup.tsx
+msgid "A remote's or gamepad's buttons work too."
+msgstr "אפשר להשתמש גם בכפתורי שלט רחוק או בקר משחק."
+
+#: src/app/settings/playback.tsx
+msgid "A set time before the end."
+msgstr "זמן קבוע לפני הסיום."
+
+#: src/app/settings/player.tsx
+msgid "A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top."
+msgstr "חלון קטן שמכיל את הנגן: כתוביות, פקדים וסרגל דילוג. הדפדפן מוסיף סרגל משלו בחלק העליון."
+
+#: src/app/settings/audio.tsx
+msgid "A track the version marks as its default plays even when another is in one of your languages. Turn this off for your languages to always win."
+msgstr "רצועה שסומנה כברירת המחדל של הגרסה תופעל גם כשיש רצועה אחרת באחת השפות שלך. יש לכבות זאת כדי לתת תמיד עדיפות לשפות שלך."
+
+#: src/app/settings/audio.tsx
+msgid "A version plays the first of these it has, otherwise its own default. Original language is the one the title was made in."
+msgstr "תופעל השפה הראשונה ברשימה שזמינה בגרסה, ואחרת ברירת המחדל שלה. שפת המקור היא השפה שבה נוצר הכותר."
+
+#: src/app/settings/cache.tsx
+msgid "A week"
+msgstr "שבוע"
+
+#: src/app/settings/page.tsx
+msgid "About"
+msgstr "אודות"
+
+#: src/app/settings/theme.tsx
+msgid "Accent"
+msgstr "צבע הדגשה"
+
+#: src/app/settings/page.tsx
+#: src/components/shell/layout.tsx
+#: src/components/shell/nav/mobile-nav.tsx
+msgid "Account"
+msgstr "חשבון"
+
+#: src/app/settings/cache.tsx
+msgid "Account and server"
+msgstr "חשבון ושרת"
+
+#: src/app/history/page.tsx
+msgid "Actions"
+msgstr "פעולות"
+
+#: src/app/history/page.tsx
+#: src/app/home/page.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/cache.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+msgid "Activity"
+msgstr "פעילות"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Add"
+msgstr "הוספה"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Add a badge"
+msgstr "הוספת תג"
+
+#: src/features/player/options.tsx
+msgid "Add a file…"
+msgstr "הוספת קובץ…"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Add a filter"
+msgstr "הוספת מסנן"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Add a key for {label}"
+msgstr "הוספת מקש עבור {label}"
+
+#: src/app/settings/_components/common.tsx
+msgid "Add a language"
+msgstr "הוספת שפה"
+
+#: src/app.tsx
+#: src/app/servers/page.tsx
+msgid "Add a server"
+msgstr "הוספת שרת"
+
+#: src/app/settings/_components/common.tsx
+msgid "Add a shader"
+msgstr "הוספת מצלל"
+
+#: src/app/settings/_components/common.tsx
+msgid "Add another language"
+msgstr "הוספת שפה נוספת"
+
+#: src/components/media/no-catalogs.tsx
+msgid "Add catalogs to your configuration, then refresh."
+msgstr "יש להוסיף קטלוגים לתצורה שלך ואז לרענן."
+
+#: src/app/item/_components/actions.tsx
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/components/media/item-menu.tsx
+msgid "Add favourite"
+msgstr "הוספה למועדפים"
+
+#: src/features/playlists/playlists.tsx
+msgid "Add from Continue watching"
+msgstr "הוספה מהמשך צפייה"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/media/item-menu.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Add to playlist"
+msgstr "הוספה לרשימת צפייה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Add to this playlist"
+msgstr "הוספה לרשימת הצפייה הזאת"
+
+#: src/features/player/controls.tsx
+msgid "Added {name}"
+msgstr "{name} נוסף"
+
+#: src/app/player/page.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Added to {name}"
+msgstr "נוסף אל {name}"
+
+#: src/app/settings/account.tsx
+msgid "Addons, catalogs and profiles are set up on the configuration page."
+msgstr "תוספים, קטלוגים ופרופילים מוגדרים בדף התצורה."
+
+#: src/app/settings/about.tsx
+msgid "Address"
+msgstr "כתובת"
+
+#: src/app/settings/playback.tsx
+msgid "Ads"
+msgstr "פרסומות"
+
+#: src/lib/i18n.ts
+msgid "AIOStreams is a solo project built and maintained by me in my free time. If you find it useful, please consider supporting my work. Your donation helps me keep the project alive and improve it for everyone!"
+msgstr "AIOStreams הוא פרויקט אישי שאני מפתח ומתחזק בזמני הפנוי. אם הוא מועיל לך, אשמח לתמיכה בעבודה שלי. התרומה שלך עוזרת לי להמשיך לקיים את הפרויקט ולשפר אותו עבור כולם!"
+
+#: src/app/item/_components/details.tsx
+msgid "Airs"
+msgstr "מועד שידור"
+
+#: src/lib/format.ts
+msgid "Airs {day} · {until}"
+msgstr "ישודר ביום {day} · {until}"
+
+#: src/app/discover/page.tsx
+#: src/app/favourites/page.tsx
+#: src/components/media/kind-tabs.tsx
+#: src/features/versions/version-list.tsx
+msgid "All"
+msgstr "הכול"
+
+#: src/app/home/page.tsx
+#: src/features/live-tv/live-tv.ts
+msgid "All channels"
+msgstr "כל הערוצים"
+
+#: src/app/item/_components/seasons.tsx
+msgid "All episodes"
+msgstr "כל הפרקים"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "All fields"
+msgstr "כל השדות"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "All on"
+msgstr "הפעלת הכול"
+
+#: src/features/playlists/playlists.tsx
+msgid "All playlists"
+msgstr "כל רשימות הצפייה"
+
+#: src/lib/downloads/index.ts
+msgid "Already downloaded or on the way"
+msgstr "כבר הורד או נמצא בהורדה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Already in {name}"
+msgstr "כבר נמצא ב־{name}"
+
+#: src/components/send-report.tsx
+msgid "Also send to the developer"
+msgstr "שליחה גם למפתח"
+
+#: src/app/settings/account.tsx
+msgid "Also when you come back to it after half an hour. Whoever was watching carries on without their PIN."
+msgstr "גם בחזרה לאפליקציה לאחר חצי שעה. מי שכבר צפה יוכל להמשיך ללא קוד ה־PIN שלו."
+
+#: src/lib/input/keys.ts
+msgid "Alt"
+msgstr "Alt"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/interface.tsx
+#: src/app/settings/subtitles.tsx
+msgid "Always"
+msgstr "תמיד"
+
+#: src/app/settings/subtitles.tsx
+msgid "Always shows subtitles, in your language when the version has them."
+msgstr "הצגת כתוביות תמיד, בשפה שלך אם הן זמינות בגרסה."
+
+#: src/app/settings/audio.tsx
+msgid "An audio track you pick while watching a show sets the language for its other episodes. Picking what the settings above would play forgets it."
+msgstr "בחירת רצועת שמע במהלך צפייה בסדרה תקבע את השפה גם לפרקים האחרים שלה. בחירת השפה שההגדרות שלמעלה היו מפעילות תבטל את הבחירה השמורה."
+
+#: src/app/settings/about.tsx
+#: src/app/settings/page.tsx
+#: src/lib/hosts/jellyfin-android.ts
+msgid "Android app"
+msgstr "אפליקציית Android"
+
+#: src/app/settings/player.tsx
+msgid "Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv."
+msgstr "הנגן המובנה של Android צורך פחות סוללה: המסך מציג את הווידאו כפי שהמכשיר מפענח אותו, בקצב הפריימים של הווידאו. מנגן וידאו שהמכשיר מסוגל לפענח. כתוביות מעוצבות נראות כמו ב־mpv."
+
+#: src/app/settings/player.tsx
+#: src/lib/input/actions.ts
+msgid "Anime upscaling"
+msgstr "שיפור רזולוציה לאנימה"
+
+#: src/features/player/keys.ts
+msgid "Anime upscaling: off"
+msgstr "שיפור רזולוציה לאנימה: כבוי"
+
+#: src/features/player/keys.ts
+msgid "Anime upscaling: on"
+msgstr "שיפור רזולוציה לאנימה: פעיל"
+
+#: src/features/party/not-in-party.tsx
+msgid "Another relay"
+msgstr "שרת תיווך אחר"
+
+#: src/features/party/not-in-party.tsx
+msgid "Anyone with the invite can join, from any server."
+msgstr "כל מי שמחזיק בהזמנה יכול להצטרף, מכל שרת."
+
+#: src/app/settings/page.tsx
+#: src/lib/hosts/native-shell.ts
+msgid "App"
+msgstr "אפליקציה"
+
+#: src/app/settings/interface.tsx
+msgid "App language"
+msgstr "שפת האפליקציה"
+
+#: src/app/settings/apps.tsx
+msgid "App settings"
+msgstr "הגדרות האפליקציה"
+
+#: src/app/settings/theme.tsx
+msgid "Applied on top of the theme. Parts of the app carry a <0>data-ui</0> attribute to style them by, such as <1>[data-ui=\"progress-bar\"]</1>. If it ever hides the page, add <2>?safe</2> to the address to turn it off. See the <3>guide</3> for every selector and examples."
+msgstr "מוחל מעל ערכת הנושא. חלקים באפליקציה כוללים מאפיין <0>data-ui</0> שאפשר לעצב לפיו, למשל <1>[data-ui=\"progress-bar\"]</1>. אם הוא מסתיר את הדף, יש להוסיף <2>?safe</2> לכתובת כדי להשבית אותו. ב<3>מדריך</3> מופיעים כל הבוררים ודוגמאות."
+
+#: src/app/settings/theme.tsx
+msgid "Apply CSS"
+msgstr "החלת CSS"
+
+#: src/app/settings/subtitles.tsx
+msgid "Apply to styled subtitles too"
+msgstr "החלה גם על כתוביות מעוצבות"
+
+#: src/app/settings/account.tsx
+msgid "Approve"
+msgstr "אישור"
+
+#: src/app/sign-in/page.tsx
+msgid "Approved. Signing in…"
+msgstr "אושר. מתבצעת כניסה…"
+
+#: src/features/player/next-episode.tsx
+msgid "Are you still watching?"
+msgstr "עדיין צופים?"
+
+#: src/lib/i18n.ts
+msgid "Are you sure you want to continue?"
+msgstr "להמשיך?"
+
+#: src/app/settings/cache.tsx
+msgid "Artwork"
+msgstr "תמונות"
+
+#: src/features/party/in-party.tsx
+msgid "As the host"
+msgstr "בתור המארח/ת"
+
+#: src/components/media/sort-picker.tsx
+msgid "Ascending"
+msgstr "סדר עולה"
+
+#: src/app/settings/playback.tsx
+msgid "Ask if you are still watching"
+msgstr "שאלה אם עדיין צופים"
+
+#: src/app/settings/account.tsx
+msgid "Ask when the app opens"
+msgstr "שאלה בפתיחת האפליקציה"
+
+#: src/app/settings/subtitles.tsx
+msgid "At 0% there is no background."
+msgstr "ב־0% אין רקע."
+
+#: src/app/settings/page.tsx
+#: src/features/player/options.tsx
+#: src/features/remote/remote-sheet.tsx
+msgid "Audio"
+msgstr "שמע"
+
+#: src/app/settings/audio.tsx
+msgid "Audio description, narrating what is on screen"
+msgstr "תיאור קולי של המתרחש על המסך"
+
+#: src/app/settings/audio.tsx
+msgid "Audio languages"
+msgstr "שפות שמע"
+
+#: src/app/settings/audio.tsx
+msgid "Audio types"
+msgstr "סוגי שמע"
+
+#: src/features/player/keys.ts
+msgid "Audio: {label}"
+msgstr "שמע: {label}"
+
+#: src/app/settings/playback.tsx
+msgid "Auto-play the first version"
+msgstr "הפעלה אוטומטית של הגרסה הראשונה"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx
+#: src/app/settings/player.tsx
+msgid "Automatic"
+msgstr "אוטומטי"
+
+#: src/app/settings/browsing.tsx
+msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
+msgstr "במצב אוטומטי הפרקים מוצגים כרשימה במסכים צרים ובשורה במסכים רחבים."
+
+#: src/app/player/page.tsx
+#: src/app/servers/page.tsx
+#: src/app/settings/_components/licenses.tsx
+#: src/app/sign-in/page.tsx
+#: src/app/trailer/page.tsx
+#: src/components/back-button.tsx
+#: src/components/shell/history-buttons.tsx
+#: src/features/party/not-in-party.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/next-episode.tsx
+#: src/lib/input/actions.ts
+msgid "Back"
+msgstr "חזרה"
+
+#: src/lib/input/keys.ts
+msgid "Back button"
+msgstr "כפתור חזרה"
+
+#: src/app/settings/player.tsx
+msgid "Back in the player"
+msgstr "חזרה בנגן"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/subtitles.tsx
+#: src/app/settings/theme.tsx
+msgid "Background"
+msgstr "רקע"
+
+#: src/app/settings/theme.tsx
+msgid "Background from artwork"
+msgstr "רקע מתמונות הכותר"
+
+#: src/lib/input/keys.ts
+msgid "Backspace"
+msgstr "Backspace"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Badges"
+msgstr "תגים"
+
+#: src/app/settings/interface.tsx
+msgid "Bar"
+msgstr "סרגל"
+
+#: src/app/settings/playback.tsx
+msgid "Before the end"
+msgstr "לפני הסיום"
+
+#: src/app/settings/audio.tsx
+msgid "Below zero plays the sound earlier, as for wireless headphones that lag behind the picture."
+msgstr "ערך שלילי מקדים את השמע, למשל באוזניות אלחוטיות שהצליל בהן מתעכב ביחס לתמונה."
+
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Bigger subtitles"
+msgstr "הגדלת כתוביות"
+
+#: src/lib/i18n.ts
+msgid "Black"
+msgstr "שחור"
+
+#: src/app/settings/player.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Only for videos ExoPlayer plays. Turn it off if subtitles look wrong."
+msgstr "מיזוג הכתוביות באמצעות הכרטיס הגרפי במקום המעבד, להפחתת העומס על המעבד. חל רק על סרטונים ש־ExoPlayer מנגן. יש לכבות אם הכתוביות מוצגות בצורה שגויה."
+
+#: src/app/settings/player.tsx
+msgid "Blends subtitles on the graphics card instead of the processor, which takes less processor time. Turn it off if subtitles look wrong."
+msgstr "מיזוג הכתוביות באמצעות הכרטיס הגרפי במקום המעבד, להפחתת העומס על המעבד. יש לכבות אם הכתוביות מוצגות בצורה שגויה."
+
+#: src/lib/i18n.ts
+msgid "Blue"
+msgstr "כחול"
+
+#: src/app/settings/browsing.tsx
+msgid "Blur episodes you haven't started"
+msgstr "טשטוש פרקים שטרם התחלת לצפות בהם"
+
+#: src/app/settings/browsing.tsx
+msgid "Blurs their pictures, titles and descriptions until the pointer, keyboard or remote is on one."
+msgstr "התמונות, הכותרות והתיאורים מטושטשים עד שמצביעים על הפרק בעכבר או מתמקדים בו במקלדת או בשלט."
+
+#: src/app/settings/subtitles.tsx
+msgid "Bold"
+msgstr "מודגש"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Border"
+msgstr "מסגרת"
+
+#: src/app/person/page.tsx
+msgid "Born {date}"
+msgstr "תאריך לידה: {date}"
+
+#: src/app/person/page.tsx
+msgid "Born {date} (age {age})"
+msgstr "תאריך לידה: {date} (גיל {age})"
+
+#: src/app/person/page.tsx
+msgid "Born {date} (age {age}) in {place}"
+msgstr "תאריך לידה: {date} (גיל {age}), מקום לידה: {place}"
+
+#: src/app/person/page.tsx
+msgid "Born {date} in {place}"
+msgstr "תאריך לידה: {date}, מקום לידה: {place}"
+
+#: src/app/person/page.tsx
+msgid "Born in {place}"
+msgstr "מקום לידה: {place}"
+
+#: src/app/settings/interface.tsx
+msgid "Bottom bar"
+msgstr "סרגל תחתון"
+
+#: src/features/player/gestures.ts
+msgid "Brightness {percent}%"
+msgstr "בהירות {percent}%"
+
+#: src/lib/input/keys.ts
+msgid "Browser Home"
+msgstr "דף הבית בדפדפן"
+
+#: src/lib/input/keys.ts
+msgid "Browser Search"
+msgstr "חיפוש בדפדפן"
+
+#: src/app/settings/page.tsx
+#: src/lib/discord.ts
+msgid "Browsing"
+msgstr "גלישה"
+
+#: src/lib/playback/player-choice.ts
+msgid "Built-in mpv"
+msgstr "mpv מובנה"
+
+#: src/lib/playback/player-choice.ts
+msgid "Built-in player"
+msgstr "נגן מובנה"
+
+#: src/app/settings/theme.tsx
+msgid "Buttons, progress bars and highlights."
+msgstr "כפתורים, סרגלי התקדמות והדגשות."
+
+#: src/app/settings/page.tsx
+#: src/lib/hosts/shell/player.ts
+msgid "Cache"
+msgstr "מטמון"
+
+#: src/app/settings/player.tsx
+msgid "Cache size"
+msgstr "גודל המטמון"
+
+#: src/app/calendar/page.tsx
+#: src/app/home/page.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+msgid "Calendar"
+msgstr "לוח שנה"
+
+#: src/app/servers/page.tsx
+#: src/app/sign-in/page.tsx
+msgid "Can’t reach"
+msgstr "אין גישה"
+
+#: src/app/sign-in/page.tsx
+#: src/components/shell/unreachable.tsx
+#: src/lib/jellyfin/client.ts
+msgid "Can't reach the server"
+msgstr "לא ניתן להתחבר לשרת"
+
+#: src/app/sign-in/page.tsx
+msgid "Can’t reach the server"
+msgstr "לא ניתן להתחבר לשרת"
+
+#: src/app/downloads/page.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/components/send-report.tsx
+#: src/features/playlists/playlists.tsx
+#: src/lib/i18n.ts
+msgid "Cancel"
+msgstr "ביטול"
+
+#: src/app/settings/browsing.tsx
+msgid "Cards"
+msgstr "כרטיסים"
+
+#: src/components/media/people.tsx
+msgid "Cast"
+msgstr "צוות שחקנים"
+
+#: src/app/settings/subtitles.tsx
+msgid "Casual"
+msgstr "יומיומי"
+
+#: src/app/discover/page.tsx
+msgid "Catalog"
+msgstr "קטלוג"
+
+#: src/app/settings/downloads.tsx
+msgid "Change"
+msgstr "שינוי"
+
+#: src/app/downloads/page.tsx
+msgid "Change folder"
+msgstr "שינוי תיקייה"
+
+#: src/app/settings/_components/reaction-setting.tsx
+msgid "Change reactions"
+msgstr "שינוי תגובות"
+
+#: src/app/settings/account.tsx
+#: src/app/sign-in/page.tsx
+#: src/components/media/no-catalogs.tsx
+msgid "Change server"
+msgstr "החלפת שרת"
+
+#: src/components/shell/input-setup.tsx
+msgid "Change shortcuts"
+msgstr "שינוי קיצורי מקשים"
+
+#: src/features/party/in-party.tsx
+msgid "Change speed to catch up"
+msgstr "שינוי המהירות כדי לצמצם את הפער"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Change these on a phone, a computer or in a browser."
+msgstr "אפשר לשנות זאת בטלפון, במחשב או בדפדפן."
+
+#: src/app/settings/apps.tsx
+msgid "Channel"
+msgstr "ערוץ"
+
+#: src/lib/input/keys.ts
+msgid "Channel down"
+msgstr "ערוץ למטה"
+
+#: src/lib/input/keys.ts
+msgid "Channel up"
+msgstr "ערוץ למעלה"
+
+#: src/app/favourites/page.tsx
+#: src/app/live-tv/page.tsx
+#: src/app/search/page.tsx
+#: src/app/settings/audio.tsx
+#: src/features/live-tv/channel-list.tsx
+#: src/features/player/live.tsx
+#: src/features/player/options.tsx
+msgid "Channels"
+msgstr "ערוצים"
+
+#: src/app/live-tv/page.tsx
+msgid "Channels show here once your setup has an addon with live TV."
+msgstr "ערוצים יוצגו כאן לאחר הוספת תוסף טלוויזיה בשידור חי לתצורה שלך."
+
+#: src/features/player/chapters.tsx
+#: src/features/player/keys.ts
+msgid "Chapter {number}"
+msgstr "פרק {number}"
+
+#: src/features/player/chapters.tsx
+#: src/features/player/options.tsx
+msgid "Chapters"
+msgstr "פרקים"
+
+#: src/features/party/in-party.tsx
+msgid "Chat"
+msgstr "צ׳אט"
+
+#: src/app/settings/apps.tsx
+msgid "Check now"
+msgstr "בדיקה כעת"
+
+#: src/app/settings/apps.tsx
+#: src/lib/hosts/shell/index.ts
+msgid "Checking…"
+msgstr "מתבצעת בדיקה…"
+
+#: src/app/settings/player.tsx
+msgid "Choose"
+msgstr "בחירה"
+
+#: src/app/servers/page.tsx
+msgid "Choose a server"
+msgstr "בחירת שרת"
+
+#: src/components/media/item-menu.tsx
+msgid "Choose a version"
+msgstr "בחירת גרסה"
+
+#: src/app/settings/cache.tsx
+msgid "Clear"
+msgstr "ניקוי"
+
+#: src/app/search/page.tsx
+msgid "Clear all"
+msgstr "ניקוי הכול"
+
+#: src/app/settings/cache.tsx
+msgid "Clear everything"
+msgstr "מחיקת הכול"
+
+#: src/app/item/_components/rating.tsx
+msgid "Clear rating"
+msgstr "ניקוי דירוג"
+
+#: src/app/history/page.tsx
+msgid "Clear selection"
+msgstr "ניקוי הבחירה"
+
+#: src/components/shell/crash-report.tsx
+#: src/components/shell/window-controls.tsx
+#: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
+msgid "Close"
+msgstr "סגירה"
+
+#: src/app/settings/account.tsx
+msgid "Code"
+msgstr "קוד"
+
+#: src/features/party/in-party.tsx
+msgid "Code copied"
+msgstr "הקוד הועתק"
+
+#: src/features/party/not-in-party.tsx
+msgid "Code or invite link"
+msgstr "קוד או קישור הזמנה"
+
+#: src/app/discover/page.tsx
+#: src/app/item/_components/collection.tsx
+#: src/app/search/page.tsx
+#: src/lib/format.ts
+msgid "Collections"
+msgstr "אוספים"
+
+#: src/app/settings/subtitles.tsx
+msgid "Colour"
+msgstr "צבע"
+
+#: src/app/settings/theme.tsx
+msgid "Colours"
+msgstr "צבעים"
+
+#: src/app/settings/page.tsx
+msgid "Colours, glass and custom CSS"
+msgstr "צבעים, אפקט זכוכית ו־CSS מותאם אישית"
+
+#: src/app/settings/browsing.tsx
+msgid "Combine movie and show results"
+msgstr "שילוב תוצאות של סרטים וסדרות"
+
+#: src/app/settings/audio.tsx
+#: src/lib/playback/controller.ts
+msgid "Commentary"
+msgstr "פרשנות"
+
+#: src/app/settings/player.tsx
+msgid "Compatibility"
+msgstr "תאימות"
+
+#: src/components/media/people.tsx
+msgid "Composer"
+msgstr "מלחין/ה"
+
+#: src/app/settings/account.tsx
+msgid "Configuration"
+msgstr "תצורה"
+
+#: src/components/send-report.tsx
+msgid "Configuration ids are left out of their copy too."
+msgstr "גם העותק שלהם אינו כולל מזהי תצורה."
+
+#: src/app/sign-in/page.tsx
+msgid "Configuration password"
+msgstr "סיסמת התצורה"
+
+#: src/app/item/_components/no-details.tsx
+#: src/components/media/no-catalogs.tsx
+msgid "Configure"
+msgstr "הגדרה"
+
+#: src/lib/i18n.ts
+msgid "Confirm"
+msgstr "אישור"
+
+#: src/app/servers/page.tsx
+msgid "Connect"
+msgstr "התחברות"
+
+#: src/app/settings/apps.tsx
+msgid "Connected to Discord."
+msgstr "החיבור ל־Discord הצליח."
+
+#: src/features/party/in-party.tsx
+msgid "Connection lost"
+msgstr "החיבור אבד"
+
+#: src/app.tsx
+#: src/app/sign-in/page.tsx
+msgid "Continue"
+msgstr "המשך"
+
+#: src/app/home/page.tsx
+#: src/app/settings/browsing.tsx
+#: src/features/player/next-episode.tsx
+msgid "Continue watching"
+msgstr "המשך צפייה"
+
+#: src/app/settings/player.tsx
+msgid "Controls"
+msgstr "פקדים"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Copied as JSON"
+msgstr "הועתק כ־JSON"
+
+#: src/app/settings/apps.tsx
+#: src/components/shell/crash-report.tsx
+msgid "Copy"
+msgstr "העתקה"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Copy as JSON"
+msgstr "העתקה כ־JSON"
+
+#: src/features/party/in-party.tsx
+msgid "Copy code"
+msgstr "העתקת קוד"
+
+#: src/app/player/page.tsx
+#: src/features/party/in-party.tsx
+msgid "Copy link"
+msgstr "העתקת קישור"
+
+#: src/features/versions/version-list.tsx
+msgid "Copy stream link"
+msgstr "העתקת קישור ההזרמה"
+
+#: src/app/settings/interface.tsx
+msgid "Corner button"
+msgstr "כפתור בפינה"
+
+#: src/app/player/page.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Could not add to {name}"
+msgstr "לא ניתן להוסיף אל {name}"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Could not check: {error}"
+msgstr "הבדיקה נכשלה: {error}"
+
+#: src/app/settings/apps.tsx
+msgid "Could not connect: {message}"
+msgstr "ההתחברות נכשלה: {message}"
+
+#: src/components/shell/crash-report.tsx
+msgid "Could not copy it"
+msgstr "ההעתקה נכשלה"
+
+#: src/features/party/in-party.tsx
+msgid "Could not copy the code"
+msgstr "לא ניתן להעתיק את הקוד"
+
+#: src/features/party/in-party.tsx
+msgid "Could not copy the invite link"
+msgstr "לא ניתן להעתיק את קישור ההזמנה"
+
+#: src/app/player/page.tsx
+#: src/features/versions/version-list.tsx
+msgid "Could not copy the link"
+msgstr "לא ניתן להעתיק את הקישור"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/apps.tsx
+msgid "Could not copy them"
+msgstr "לא ניתן להעתיק אותם"
+
+#: src/features/player/next-episode.tsx
+msgid "Could not find versions of that episode"
+msgstr "לא נמצאו גרסאות לפרק הזה"
+
+#: src/features/player/next-episode.tsx
+msgid "Could not find versions of that title"
+msgstr "לא נמצאו גרסאות לכותר הזה"
+
+#: src/lib/downloads/index.ts
+msgid "Could not find versions: {message}"
+msgstr "לא ניתן למצוא גרסאות: {message}"
+
+#: src/features/party/not-in-party.tsx
+msgid "Could not join"
+msgstr "ההצטרפות נכשלה"
+
+#: src/components/media/item-menu.tsx
+#: src/features/downloads/download-button.tsx
+msgid "Could not list the episodes"
+msgstr "לא ניתן להציג את רשימת הפרקים"
+
+#: src/app/live-tv/page.tsx
+msgid "Could not load Live TV"
+msgstr "לא ניתן לטעון טלוויזיה בשידור חי"
+
+#: src/app/calendar/page.tsx
+msgid "Could not load the calendar"
+msgstr "לא ניתן לטעון את לוח השנה"
+
+#: src/features/player/episodes.tsx
+msgid "Could not load the episodes."
+msgstr "לא ניתן לטעון את הפרקים."
+
+#: src/app/history/page.tsx
+msgid "Could not load the history"
+msgstr "לא ניתן לטעון את ההיסטוריה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Could not load the playlists."
+msgstr "לא ניתן לטעון את רשימות הצפייה."
+
+#: src/features/versions/version-list.tsx
+msgid "Could not load the versions: {loadError}"
+msgstr "לא ניתן לטעון את הגרסאות: {loadError}"
+
+#: src/app/person/page.tsx
+msgid "Could not load their work"
+msgstr "לא ניתן לטעון את היצירות"
+
+#: src/app/discover/page.tsx
+msgid "Could not load this catalog"
+msgstr "לא ניתן לטעון את הקטלוג הזה"
+
+#: src/app/person/page.tsx
+msgid "Could not load this person"
+msgstr "לא ניתן לטעון את פרטי האדם הזה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Could not load this playlist."
+msgstr "לא ניתן לטעון את רשימת הצפייה הזאת."
+
+#: src/app/item/page.tsx
+msgid "Could not load this title"
+msgstr "לא ניתן לטעון את הכותר הזה"
+
+#: src/app/discover/page.tsx
+msgid "Could not load your catalogs"
+msgstr "לא ניתן לטעון את הקטלוגים שלך"
+
+#: src/app/favourites/page.tsx
+msgid "Could not load your favourites"
+msgstr "לא ניתן לטעון את המועדפים שלך"
+
+#: src/components/media/random-pick.tsx
+msgid "Could not pick one."
+msgstr "לא ניתן לבחור גרסה."
+
+#: src/lib/subtitles/files.ts
+msgid "Could not read that file"
+msgstr "לא ניתן לקרוא את הקובץ הזה"
+
+#: src/lib/jellyfin/user-config.ts
+msgid "Could not save that setting"
+msgstr "לא ניתן לשמור את ההגדרה הזאת"
+
+#: src/features/party/not-in-party.tsx
+msgid "Could not start a party"
+msgstr "לא ניתן להתחיל מסיבת צפייה"
+
+#: src/lib/party/follow.ts
+msgid "Couldn't open {title}."
+msgstr "לא ניתן לפתוח את {title}."
+
+#: src/lib/party/party.ts
+msgid "Couldn't reach {relay}."
+msgstr "לא ניתן להתחבר אל {relay}."
+
+#: src/app/settings/playback.tsx
+msgid "Countdown"
+msgstr "ספירה לאחור"
+
+#: src/app/item/_components/details.tsx
+msgid "Country"
+msgstr "מדינה"
+
+#: src/app/settings/playback.tsx
+msgid "Counts down, then plays the next episode in the same kind of version. Off, the prompt waits for you."
+msgstr "ספירה לאחור ולאחריה הפעלת הפרק הבא באותו סוג גרסה. כשהאפשרות כבויה, הבקשה ממתינה לפעולה שלך."
+
+#: src/app/settings/playback.tsx
+msgid "Counts down, then plays the next episode. Off, the prompt waits for you."
+msgstr "ספירה לאחור ולאחריה הפעלת הפרק הבא. כשהאפשרות כבויה, הבקשה ממתינה לפעולה שלך."
+
+#: src/features/playlists/playlists.tsx
+msgid "Create"
+msgstr "יצירה"
+
+#: src/components/media/people.tsx
+msgid "Creator"
+msgstr "יוצר/ת"
+
+#: src/app/settings/playback.tsx
+msgid "Credits"
+msgstr "כתוביות סיום"
+
+#: src/app/settings/about.tsx
+msgctxt "Projects the app is built on"
+msgid "Credits"
+msgstr "קרדיטים"
+
+#: src/app/settings/playback.tsx
+msgid "Credits that end an episode are left to the next episode prompt when it shows."
+msgstr "כתוביות סיום בסוף פרק מטופלות דרך הבקשה למעבר לפרק הבא, כשהיא מופיעה."
+
+#: src/components/media/people.tsx
+msgid "Crew"
+msgstr "צוות הפקה"
+
+#: src/app/settings/theme.tsx
+msgid "Crimson"
+msgstr "ארגמן"
+
+#: src/features/player/options.tsx
+msgid "Crop"
+msgstr "חיתוך"
+
+#: src/lib/input/keys.ts
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: src/app/settings/subtitles.tsx
+msgid "Cursive"
+msgstr "כתב יד"
+
+#: src/app/settings/theme.tsx
+msgid "Custom CSS"
+msgstr "CSS מותאם אישית"
+
+#: src/app/settings/theme.tsx
+msgid "Custom CSS applied"
+msgstr "ה־CSS המותאם הוחל"
+
+#: src/app/settings/theme.tsx
+msgid "Custom CSS undone"
+msgstr "ה־CSS המותאם בוטל"
+
+#: src/lib/playback/player-choice.ts
+msgid "Custom link"
+msgstr "קישור מותאם אישית"
+
+#: src/lib/i18n.ts
+msgid "Cyan"
+msgstr "ציאן"
+
+#: src/components/media/sort-picker.tsx
+msgid "Date added"
+msgstr "תאריך הוספה"
+
+#: src/app/history/page.tsx
+msgid "Date not known"
+msgstr "התאריך אינו ידוע"
+
+#: src/app/live-tv/page.tsx
+msgid "Day"
+msgstr "יום"
+
+#: src/app/settings/player.tsx
+msgid "Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf, under mpv below."
+msgstr "מפענח כמעט כל וידאו, באמצעות תוכנה אם אין במכשיר מפענח מתאים. תומך בקובץ mpv.conf שלך, תחת mpv למטה."
+
+#: src/app/settings/player.tsx
+msgid "Decodes on the graphics card. Turn it off if video shows artefacts or stays black."
+msgstr "פענוח בכרטיס הגרפי. יש לכבות אם מופיעים פגמים בתמונה או אם התמונה נשארת שחורה."
+
+#: src/app/settings/about.tsx
+msgid "Decodes what mpv plays."
+msgstr "מפענח את התוכן ש־mpv מנגן."
+
+#: src/app/settings/theme.tsx
+msgid "Deep purple"
+msgstr "סגול כהה"
+
+#. No colour of its own
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/subtitles.tsx
+#: src/app/settings/theme.tsx
+#: src/lib/i18n.ts
+msgid "Default"
+msgstr "ברירת מחדל"
+
+#: src/features/player/options.tsx
+msgid "Delay"
+msgstr "השהיה"
+
+#: src/app/settings/audio.tsx
+msgid "Delay: {delayLabel}"
+msgstr "השהיה: {delayLabel}"
+
+#: src/app/downloads/page.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Delete"
+msgstr "מחיקה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Delete {name}"
+msgstr "מחיקת {name}"
+
+#: src/app/downloads/page.tsx
+msgid "Delete all"
+msgstr "מחיקת הכול"
+
+#: src/features/playlists/playlists.tsx
+msgid "Delete playlist"
+msgstr "מחיקת רשימת צפייה"
+
+#: src/components/media/sort-picker.tsx
+msgid "Descending"
+msgstr "סדר יורד"
+
+#: src/app/settings/theme.tsx
+msgid "Desert"
+msgstr "מדבר"
+
+#: src/app/settings/about.tsx
+#: src/app/settings/page.tsx
+msgid "Desktop app"
+msgstr "אפליקציית מחשב"
+
+#: src/app/item/_components/details.tsx
+#: src/components/media/item-menu.tsx
+#: src/features/versions/version-list.tsx
+msgid "Details"
+msgstr "פרטים"
+
+#: src/app/settings/cache.tsx
+msgid "Details, seasons and episodes of what you open."
+msgstr "פרטים, עונות ופרקים של הכותר שנפתח."
+
+#: src/app/settings/audio.tsx
+msgid "Device"
+msgstr "מכשיר"
+
+#: src/app/settings/apps.tsx
+msgid "Diagnostics copied"
+msgstr "נתוני האבחון הועתקו"
+
+#: src/lib/i18n.ts
+msgid "Dialog"
+msgstr "תיבת דו־שיח"
+
+#: src/features/player/options.tsx
+msgid "Dialogue"
+msgstr "דיאלוג"
+
+#: src/app/settings/audio.tsx
+msgid "Dialogue boost"
+msgstr "הגברת דיאלוג"
+
+#: src/app/person/page.tsx
+msgid "Died {date}"
+msgstr "תאריך פטירה: {date}"
+
+#: src/app/person/page.tsx
+msgid "Died {date} (aged {age})"
+msgstr "תאריך פטירה: {date} (בגיל {age})"
+
+#: src/components/media/people.tsx
+msgid "Director"
+msgstr "במאי/ת"
+
+#: src/app/settings/apps.tsx
+msgid "Discord"
+msgstr "Discord"
+
+#: src/app/settings/apps.tsx
+msgid "Discord is not running on this computer."
+msgstr "Discord אינו פועל במחשב הזה."
+
+#: src/app/settings/apps.tsx
+msgid "Discord refused the status: {message}"
+msgstr "Discord דחה את הסטטוס: {message}"
+
+#: src/app/discover/page.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+msgid "Discover"
+msgstr "גילוי"
+
+#: src/components/shell/unreachable.tsx
+#: src/features/live-tv/live-reminders.tsx
+msgid "Dismiss"
+msgstr "סגירה"
+
+#: src/app/settings/playback.tsx
+msgid "Do nothing"
+msgstr "ללא פעולה"
+
+#: src/app/settings/interface.tsx
+msgid "Docked"
+msgstr "מעוגן"
+
+#: src/app/settings/interface.tsx
+msgid "Docked keeps it in a column of its own. Floating hovers it over the page, a little in from the edge. Corner button shrinks it to the current page's button in the top corner, which opens into the whole menu."
+msgstr "במצב מעוגן התפריט מופיע בעמודה משלו. במצב צף הוא מרחף מעל הדף, במרחק קטן מהקצה. כפתור בפינה מצמצם אותו לכפתור הדף הנוכחי בפינה העליונה, שנפתח לתפריט המלא."
+
+#: src/app/settings/about.tsx
+msgid "Documentation"
+msgstr "תיעוד"
+
+#: src/features/player/options.tsx
+msgid "Doesn't match the video's own subtitles"
+msgstr "אינו תואם לכתוביות המקוריות של הווידאו"
+
+#: src/app/settings/player.tsx
+msgid "Dolby Vision"
+msgstr "Dolby Vision"
+
+#: src/app/settings/page.tsx
+msgid "Donate"
+msgstr "תרומה"
+
+#: src/lib/i18n.ts
+msgid "Donate to Me"
+msgstr "תרומה לפרויקט שלי"
+
+#: src/app/settings/_components/gesture-settings.tsx
+#: src/app/settings/_components/reaction-setting.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/components/send-report.tsx
+#: src/features/player/subtitle-sync.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Done"
+msgstr "סיום"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Double tap to skip"
+msgstr "הקשה כפולה לדילוג"
+
+#: src/lib/input/actions.ts
+msgid "Down"
+msgstr "למטה"
+
+#: src/app/item/_components/actions.tsx
+#: src/app/settings/about.tsx
+#: src/components/media/item-menu.tsx
+#: src/features/downloads/download-button.tsx
+#: src/features/versions/version-list.tsx
+msgid "Download"
+msgstr "הורדה"
+
+#: src/features/versions/unaired-question.tsx
+msgid "Download anyway"
+msgstr "הורדה בכל זאת"
+
+#: src/features/downloads/download-button.tsx
+msgid "Download needs attention"
+msgstr "ההורדה דורשת טיפול"
+
+#: src/features/downloads/download-button.tsx
+msgid "Download paused"
+msgstr "ההורדה מושהית"
+
+#: src/components/media/item-menu.tsx
+msgid "Download the show"
+msgstr "הורדת הסדרה"
+
+#: src/app/downloads/page.tsx
+#: src/features/downloads/download-button.tsx
+msgid "Downloaded"
+msgstr "הורד"
+
+#: src/app/downloads/page.tsx
+#: src/features/downloads/download-button.tsx
+msgid "Downloading"
+msgstr "בהורדה"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Downloading version {version}…"
+msgstr "הורדת גרסה {version}…"
+
+#: src/features/downloads/download-button.tsx
+msgid "Downloading, {percent}%"
+msgstr "בהורדה, {percent}%"
+
+#: src/app/downloads/page.tsx
+#: src/app/settings/interface.tsx
+#: src/app/settings/page.tsx
+#: src/components/shell/layout.tsx
+#: src/components/shell/unreachable.tsx
+msgid "Downloads"
+msgstr "הורדות"
+
+#: src/app/settings/downloads.tsx
+msgid "Downloads at once"
+msgstr "הורדות במקביל"
+
+#: src/app/settings/downloads.tsx
+msgid "Downloads wait for Wi-Fi or another unmetered network rather than use mobile data."
+msgstr "ההורדות ימתינו ל־Wi-Fi או לרשת אחרת ללא הגבלת נתונים, במקום להשתמש בנתונים סלולריים."
+
+#: src/app/settings/player.tsx
+msgid "Draw subtitles on the graphics card"
+msgstr "ציור כתוביות בכרטיס הגרפי"
+
+#: src/lib/i18n.ts
+msgid "Drawer"
+msgstr "מגירה"
+
+#: src/app/item/_components/actions.tsx
+msgid "Drop"
+msgstr "הסרה"
+
+#: src/app/item/_components/actions.tsx
+msgid "Drop show"
+msgstr "הסרת הסדרה"
+
+#: src/features/player/controls.tsx
+msgid "Drop to add subtitles"
+msgstr "יש לשחרר כאן כדי להוסיף כתוביות"
+
+#. An episode number, as in E04
+#: src/lib/format.ts
+msgid "E{e}"
+msgstr "פ{e}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Each filter shows as a pill above the version list. Its search is words that must all appear, or a regular expression between slashes, such as /2160p|4k/. Case never matters."
+msgstr "כל מסנן מוצג כתגית מעל רשימת הגרסאות. החיפוש שלו כולל מילים שכולן חייבות להופיע, או ביטוי רגולרי בין לוכסנים, כגון /2160p|4k/. אין הבחנה בין אותיות גדולות לקטנות."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Edit"
+msgstr "עריכה"
+
+#: src/features/player/controls.tsx
+msgid "Ends at {endsAt}"
+msgstr "מסתיים ב־{endsAt}"
+
+#: src/app/settings/player.tsx
+msgid "Engine"
+msgstr "מנוע"
+
+#: src/lib/input/keys.ts
+msgid "Enter"
+msgstr "Enter"
+
+#: src/app/settings/account.tsx
+msgid "Enter a code"
+msgstr "הזנת קוד"
+
+#: src/features/party/not-in-party.tsx
+msgid "Enter an invite link, or a code and its relay"
+msgstr "הזנת קישור הזמנה, או קוד ושרת התיווך שלו"
+
+#: src/features/party/not-in-party.tsx
+msgid "Enter the address of a relay"
+msgstr "הזנת כתובת של שרת תיווך"
+
+#: src/app/settings/account.tsx
+msgid "Enter the code the other device shows."
+msgstr "יש להזין את הקוד המוצג במכשיר האחר."
+
+#: src/app/sign-in/page.tsx
+msgid "Enter this code under Quick Connect in an app already signed in to this server."
+msgstr "יש להזין את הקוד הזה תחת חיבור מהיר באפליקציה שכבר מחוברת לשרת הזה."
+
+#: src/app/sign-in/page.tsx
+msgid "Enter this code under Quick Connect in an app already signed in, or approve it on the configuration page."
+msgstr "יש להזין את הקוד הזה תחת חיבור מהיר באפליקציה שכבר מחוברת, או לאשר אותו בדף התצורה."
+
+#: src/app/sign-in/page.tsx
+msgid "Enter your password."
+msgstr "יש להזין את הסיסמה שלך."
+
+#: src/components/media/episodes.tsx
+#: src/features/player/pause-screen.tsx
+msgid "Episode {number}"
+msgstr "פרק {number}"
+
+#: src/components/media/episodes.tsx
+msgid "Episode details"
+msgstr "פרטי הפרק"
+
+#: src/app/settings/browsing.tsx
+msgid "Episode layout"
+msgstr "פריסת פרקים"
+
+#: src/app/item/_components/seasons.tsx
+#: src/app/search/page.tsx
+#: src/app/settings/browsing.tsx
+#: src/features/player/episodes.tsx
+#: src/features/player/options.tsx
+msgid "Episodes"
+msgstr "פרקים"
+
+#: src/app/settings/playback.tsx
+msgid "Episodes end without offering the next one."
+msgstr "הפרקים מסתיימים ללא הצעה לעבור לפרק הבא."
+
+#: src/app/settings/browsing.tsx
+msgid "Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong."
+msgstr "פרקים שטרם שודרו מסומנים כך, דורשים אישור לפני הפעלה, ומדלגים עליהם בהמשך צפייה או בהורדת עונה. יש לכבות אם מועדי השידור שלהם שגויים לעיתים קרובות."
+
+#: src/lib/input/keys.ts
+msgid "Esc"
+msgstr "Esc"
+
+#: src/app/settings/audio.tsx
+msgid "Evens out loud and quiet scenes, for listening at a low volume. Not for sound passed through."
+msgstr "איזון בין סצנות רועשות לשקטות, להאזנה בעוצמה נמוכה. אינו חל על שמע שמועבר ישירות למקלט."
+
+#: src/app/item/_components/details.tsx
+msgid "Every {list}"
+msgstr "בכל {list}"
+
+#: src/app/item/_components/details.tsx
+msgid "Every {list} at {time}"
+msgstr "בכל {list} בשעה {time}"
+
+#: src/app/history/page.tsx
+#: src/app/settings/page.tsx
+msgid "Everyone"
+msgstr "כולם"
+
+#: src/app/history/page.tsx
+msgid "Everything"
+msgstr "הכול"
+
+#: src/features/downloads/download-button.tsx
+msgid "Everything unwatched"
+msgstr "כל מה שטרם נצפה"
+
+#: src/components/shell/window-controls.tsx
+#: src/features/player/options.tsx
+msgid "Exit full screen"
+msgstr "יציאה ממסך מלא"
+
+#: src/features/player/picture-in-picture.tsx
+msgid "Exit picture-in-picture"
+msgstr "יציאה מתמונה בתוך תמונה"
+
+#: src/app/settings/player.tsx
+msgid "ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for."
+msgstr "ExoPlayer, שצורך פחות סוללה, ו־mpv לווידאו שאין במכשיר מפענח עבורו."
+
+#: src/app/history/page.tsx
+msgid "Export"
+msgstr "ייצוא"
+
+#: src/app/settings/interface.tsx
+msgid "Fade"
+msgstr "עמעום"
+
+#: src/app/downloads/page.tsx
+msgid "Failed"
+msgstr "נכשל"
+
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/input/keys.ts
+msgid "Fast forward"
+msgstr "הרצה קדימה"
+
+#: src/lib/input/actions.ts
+msgid "Faster"
+msgstr "מהר יותר"
+
+#: src/app/item/_components/actions.tsx
+#: src/features/live-tv/channel-list.tsx
+msgid "Favourite"
+msgstr "הוספה למועדפים"
+
+#: src/app/discover/page.tsx
+#: src/app/favourites/page.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+#: src/features/live-tv/live-tv.ts
+msgid "Favourites"
+msgstr "מועדפים"
+
+#: src/app/settings/browsing.tsx
+msgid "Featured on home"
+msgstr "מומלצים בדף הבית"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Fields"
+msgstr "שדות"
+
+#: src/lib/format.ts
+msgid "Filler"
+msgstr "פרק מילוי"
+
+#: src/app/person/page.tsx
+msgid "Filmography"
+msgstr "פילמוגרפיה"
+
+#: src/app/discover/page.tsx
+msgid "Filter"
+msgstr "סינון"
+
+#: src/features/versions/version-list.tsx
+msgid "Filter versions"
+msgstr "סינון גרסאות"
+
+#: src/app/settings/playback.tsx
+msgid "Find versions when a title opens"
+msgstr "חיפוש גרסאות בפתיחת כותר"
+
+#: src/features/downloads/download-button.tsx
+msgid "Finding a version to download"
+msgstr "חיפוש גרסה להורדה"
+
+#: src/app/downloads/page.tsx
+#: src/app/player/page.tsx
+#: src/features/versions/version-picker.tsx
+msgid "Finding a version…"
+msgstr "מתבצע חיפוש גרסה…"
+
+#: src/features/versions/version-list.tsx
+msgid "Finding versions"
+msgstr "חיפוש גרסאות"
+
+#: src/features/player/next-episode.tsx
+msgid "Finding versions of {name}…"
+msgstr "מתבצע חיפוש גרסאות של {name}…"
+
+#: src/app/item/_components/details.tsx
+msgid "First aired"
+msgstr "שידור ראשון"
+
+#: src/features/player/options.tsx
+msgid "Fit"
+msgstr "התאמה"
+
+#: src/app/settings/interface.tsx
+msgid "Floating"
+msgstr "צף"
+
+#: src/app/settings/interface.tsx
+msgid "Floating pills"
+msgstr "תגיות צפות"
+
+#: src/app/settings/downloads.tsx
+msgid "Folder"
+msgstr "תיקייה"
+
+#: src/app/settings/browsing.tsx
+msgid "Following pins it above the rows and shows the card the pointer, keyboard or remote is on, starting with a featured title, behind the whole page or in its top corner. Touch screens and narrow windows keep it rotating."
+msgstr "מעקב מצמיד את אזור התצוגה מעל השורות ומציג את הכרטיס שמצביעים עליו בעכבר או שמתמקדים בו במקלדת או בשלט. בתחילה מוצג כותר מומלץ. התצוגה ממוקמת מאחורי הדף כולו או בפינה העליונה שלו. במסכי מגע ובחלונות צרים היא ממשיכה להתחלף."
+
+#: src/app/settings/browsing.tsx
+msgid "Follows the selected card"
+msgstr "מעקב אחר הכרטיס שנבחר"
+
+#: src/app/settings/browsing.tsx
+msgid "Follows the selected card, in the corner"
+msgstr "מעקב אחר הכרטיס שנבחר, בפינה"
+
+#: src/app/settings/subtitles.tsx
+msgid "Font"
+msgstr "גופן"
+
+#: src/app/settings/audio.tsx
+msgid "For a receiver on an optical or ARC link, which gets other surround formats as stereo otherwise."
+msgstr "למקלט בחיבור אופטי או ARC, שאחרת יקבל פורמטים אחרים של צליל היקפי כסטריאו."
+
+#: src/app/settings/interface.tsx
+msgid "For clocks and times of day, such as the player's clock and the TV guide."
+msgstr "לשעונים ולשעות ביום, כגון שעון הנגן ולוח השידורים."
+
+#: src/lib/playback/controller.ts
+msgid "Forced"
+msgstr "מאולצות"
+
+#: src/app/settings/subtitles.tsx
+msgid "Forced, for foreign parts only"
+msgstr "מאולצות, רק לקטעים בשפה זרה"
+
+#: src/app/settings/audio.tsx
+msgid "Formats"
+msgstr "פורמטים"
+
+#: src/components/shell/history-buttons.tsx
+msgid "Forward"
+msgstr "קדימה"
+
+#: src/lib/hosts/shell/player.ts
+msgid "Frame timings"
+msgstr "תזמוני פריימים"
+
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/features/player/live.tsx
+#: src/features/versions/version-list.tsx
+msgid "From the start"
+msgstr "מההתחלה"
+
+#: src/app/settings/theme.tsx
+msgid "Frosted glass"
+msgstr "זכוכית חלבית"
+
+#: src/app/settings/subtitles.tsx
+msgid "Full"
+msgstr "מלא"
+
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Full screen"
+msgstr "מסך מלא"
+
+#: src/lib/input/actions.ts
+msgid "General"
+msgstr "כללי"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Gestures"
+msgstr "מחוות"
+
+#: src/components/send-report.tsx
+msgid "Give this code to whoever looks into it."
+msgstr "יש למסור את הקוד הזה למי שבודק את הבעיה."
+
+#: src/app/settings/theme.tsx
+msgid "Glass"
+msgstr "זכוכית"
+
+#: src/app/settings/theme.tsx
+msgid "Glass panels"
+msgstr "לוחות זכוכית"
+
+#: src/app/settings/theme.tsx
+msgid "Glass surface"
+msgstr "משטח זכוכית"
+
+#: src/app/settings/player.tsx
+msgid "GLSL shader files for the built-in mpv, applied in name order to what plays. Heavy ones can make video stutter."
+msgstr "קובצי מצלל GLSL עבור mpv המובנה, המוחלים לפי סדר שמותיהם על התוכן המתנגן. מצללים כבדים עלולים לגרום לווידאו לקרטע."
+
+#: src/router.tsx
+msgid "Go home"
+msgstr "מעבר לדף הבית"
+
+#: src/features/player/live.tsx
+msgid "Go live"
+msgstr "מעבר לשידור החי"
+
+#: src/components/media/item-menu.tsx
+msgid "Go to show"
+msgstr "מעבר לסדרה"
+
+#: src/lib/i18n.ts
+msgid "Green"
+msgstr "ירוק"
+
+#: src/lib/i18n.ts
+msgid "Grey"
+msgstr "אפור"
+
+#: src/app/live-tv/page.tsx
+#: src/app/settings/_components/version-settings.tsx
+msgid "Group"
+msgstr "קבוצה"
+
+#: src/app/history/page.tsx
+msgid "Group by day"
+msgstr "קיבוץ לפי יום"
+
+#: src/app/live-tv/page.tsx
+msgid "Groups"
+msgstr "קבוצות"
+
+#: src/app/live-tv/_components/guide.tsx
+#: src/app/live-tv/page.tsx
+msgid "Guide"
+msgstr "מדריך"
+
+#: src/app/settings/player.tsx
+msgid "Hardware decoding"
+msgstr "פענוח חומרה"
+
+#: src/app/sign-in/page.tsx
+msgid "Has a PIN"
+msgstr "מוגן בקוד PIN"
+
+#: src/app/settings/player.tsx
+msgid "Has the graphics card sharpen video as it enlarges it to fill the screen. Some cards also turn SDR video into HDR on a screen in HDR mode, and some need these turned on in their own app first. HDR videos stay as they are, and Anime upscaling takes over for anime where it's on. Uses more power, and turns itself off for a video this device can't keep up with."
+msgstr "הכרטיס הגרפי יחדד את הווידאו בזמן הגדלתו למילוי המסך. חלק מהכרטיסים גם ממירים וידאו SDR ל־HDR במסך במצב HDR, ובחלקם יש להפעיל תחילה את האפשרויות באפליקציה שלהם. סרטוני HDR נשארים כפי שהם, ושיפור רזולוציה לאנימה מקבל עדיפות עבור אנימה כשהוא פעיל. צורך יותר חשמל ומשבית את עצמו עבור וידאו שהמכשיר אינו מצליח לעבד בזמן."
+
+#: src/app/settings/player.tsx
+msgid "HDR output"
+msgstr "פלט HDR"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Heard"
+msgstr "שמעתי"
+
+#: src/lib/input/actions.ts
+msgid "Heard the line"
+msgstr "שמעתי את השורה"
+
+#: src/features/player/options.tsx
+msgid "Height"
+msgstr "גובה"
+
+#: src/app/settings/subtitles.tsx
+msgid "Height: {position}%"
+msgstr "גובה: {position}%"
+
+#: src/app/settings/player.tsx
+msgid "Held speed"
+msgstr "מהירות בעת לחיצה ממושכת"
+
+#: src/app/history/page.tsx
+msgid "Here"
+msgstr "כאן"
+
+#: src/app/settings/browsing.tsx
+msgid "Hero"
+msgstr "אזור תצוגה ראשי"
+
+#: src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx
+msgid "Hidden"
+msgstr "מוסתר"
+
+#: src/app/settings/browsing.tsx
+msgid "Hidden, channels also leave search and favourites."
+msgstr "מוסתר; הערוצים יוסרו גם מהחיפוש ומהמועדפים."
+
+#: src/features/player/next-episode.tsx
+msgid "Hide"
+msgstr "הסתרה"
+
+#: src/app/history/page.tsx
+msgid "Hide episodes"
+msgstr "הסתרת פרקים"
+
+#: src/features/party/in-party.tsx
+msgid "Hide QR code"
+msgstr "הסתרת קוד QR"
+
+#. Holding the next key down, as in Hold + Enter
+#: src/lib/input/keys.ts
+msgid "Hold"
+msgstr "לחיצה ממושכת"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Hold to speed up"
+msgstr "לחיצה ממושכת להאצה"
+
+#: src/app/settings/apps.tsx
+#: src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+#: src/lib/input/actions.ts
+msgid "Home"
+msgstr "דף הבית"
+
+#: src/app/settings/cache.tsx
+msgid "Home and libraries"
+msgstr "דף הבית וספריות"
+
+#: src/app/settings/page.tsx
+msgid "Home, posters, trailers and episodes"
+msgstr "דף הבית, כרזות, קדימונים ופרקים"
+
+#: src/app/settings/theme.tsx
+msgid "Home, search and catalogs"
+msgstr "דף הבית, חיפוש וקטלוגים"
+
+#: src/features/party/in-party.tsx
+msgid "Host"
+msgstr "מארח/ת"
+
+#: src/app/settings/subtitles.tsx
+msgid "How far subtitles sit above their usual place near the bottom, or below it down to the edge."
+msgstr "המרחק של הכתוביות מעל מיקומן הרגיל בסמוך לתחתית, או מתחתיו עד לשולי המסך."
+
+#: src/app/settings/player.tsx
+msgid "How far the skip buttons, double taps and the arrow keys jump."
+msgstr "מרחק הדילוג של כפתורי הדילוג, ההקשה הכפולה ומקשי החצים."
+
+#: src/app/settings/player.tsx
+msgid "How fast playback runs while you press and hold the video, or hold Space or Select."
+msgstr "מהירות הניגון בזמן לחיצה ממושכת על הווידאו, על מקש הרווח או על Select."
+
+#: src/app/settings/browsing.tsx
+msgid "How large cards are in a grid."
+msgstr "גודל הכרטיסים ברשת."
+
+#: src/app/settings/browsing.tsx
+msgid "How long the hero stays on a featured title while it rotates."
+msgstr "משך ההצגה של כל כותר מומלץ באזור התצוגה הראשי לפני המעבר לבא."
+
+#: src/app/settings/player.tsx
+msgid "How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory."
+msgstr "כמות הווידאו שהנגן שומר בזיכרון: קדימה, כדי להתמודד עם חיבור איטי, ואחורה, כדי לאפשר דילוג מיידי לאחור. במצב אוטומטי הגודל נקבע לפי זיכרון המכשיר."
+
+#: src/app/settings/player.tsx
+msgid "How much the volume keys and the scroll wheel change the volume."
+msgstr "מידת השינוי בעוצמת השמע בלחיצה על מקשי העוצמה ובגלילה בגלגלת העכבר."
+
+#: src/app/settings/interface.tsx
+msgid "How the tabs sit over the page: as floating pills, on a bar across the top, or on nothing but a fade down from the top edge."
+msgstr "אופן הצגת הלשוניות מעל הדף: כתגיות צפות, בסרגל בראש הדף או על רקע עמעום בלבד מהקצה העליון."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "How these work"
+msgstr "איך זה עובד"
+
+#: src/app/settings/about.tsx
+msgid "How to use the app and what each setting does."
+msgstr "אופן השימוש באפליקציה והסבר על כל הגדרה."
+
+#: src/lib/subtitles/style.ts
+msgid "Huge"
+msgstr "ענק"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Image"
+msgstr "תמונה"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Import"
+msgstr "ייבוא"
+
+#: src/lib/discord.ts
+msgid "In Activity"
+msgstr "בפעילות"
+
+#: src/lib/discord.ts
+msgid "In Discover"
+msgstr "בגילוי"
+
+#: src/lib/discord.ts
+msgid "In Favourites"
+msgstr "במועדפים"
+
+#: src/app/discover/page.tsx
+msgid "In progress"
+msgstr "בתהליך"
+
+#: src/lib/playback/sound.ts
+#: src/lib/subtitles/delay.ts
+msgid "In sync"
+msgstr "מסונכרן"
+
+#: src/app/downloads/page.tsx
+#: src/features/downloads/download-button.tsx
+msgid "In the app's downloads"
+msgstr "בהורדות האפליקציה"
+
+#: src/app/settings/browsing.tsx
+msgid "In the navigation only"
+msgstr "בניווט בלבד"
+
+#: src/app/item/_components/collection.tsx
+msgid "In this collection"
+msgstr "באוסף הזה"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Install"
+msgstr "התקנה"
+
+#: src/app/item/_components/no-details.tsx
+msgid "Install a metadata addon from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+msgstr "יש להתקין תוסף מטא־נתונים דרך תוספים ← חנות. לתוסף שאינו מופיע ברשימה, יש להשתמש שם באפשרות תוסף מותאם אישית."
+
+#: src/components/media/no-catalogs.tsx
+msgid "Install catalog addons from Addons → Marketplace. For one that isn't listed, use the Custom addon there."
+msgstr "יש להתקין תוספי קטלוג דרך תוספים ← חנות. לתוסף שאינו מופיע ברשימה, יש להשתמש שם באפשרות תוסף מותאם אישית."
+
+#: src/app/settings/page.tsx
+msgid "Interface"
+msgstr "ממשק"
+
+#: src/app/settings/playback.tsx
+msgid "Intros"
+msgstr "פתיחים"
+
+#: src/features/party/in-party.tsx
+msgid "Invite"
+msgstr "הזמנה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Invite code or link"
+msgstr "קוד או קישור הזמנה"
+
+#: src/features/party/in-party.tsx
+msgid "Invite link copied"
+msgstr "קישור ההזמנה הועתק"
+
+#: src/app/settings/_components/licenses.tsx
+msgid "It came with no licence text."
+msgstr "לא צורף אליו טקסט רישיון."
+
+#: src/components/send-report.tsx
+msgid "It carries this device's details and the app's recent log. Passwords and tokens are left out."
+msgstr "כולל את פרטי המכשיר ואת היומן האחרון של האפליקציה. סיסמאות ואסימונים אינם נכללים."
+
+#: src/components/send-report.tsx
+msgid "It didn't reach the developer, only this server: {forwardError}"
+msgstr "הדוח הגיע רק לשרת הזה ולא למפתח: {forwardError}"
+
+#: src/app/settings/theme.tsx
+msgid "It will be undone unless you keep it."
+msgstr "השינוי יבוטל אם לא יישמר."
+
+#: src/app/settings/about.tsx
+msgid "Its Metal and AVFoundation video outputs."
+msgstr "פלטי הווידאו שלו מסוג Metal ו־AVFoundation."
+
+#: src/app/settings/about.tsx
+msgid "Jellyfin API"
+msgstr "Jellyfin API"
+
+#: src/features/party/not-in-party.tsx
+msgid "Join"
+msgstr "הצטרפות"
+
+#: src/features/party/not-in-party.tsx
+#: src/features/party/party-sheet.tsx
+msgid "Join a party"
+msgstr "הצטרפות למסיבת צפייה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Joining leaves the party you're in."
+msgstr "הצטרפות תוציא אותך ממסיבת הצפייה הנוכחית."
+
+#: src/features/party/in-party.tsx
+msgid "Joining the party…"
+msgstr "מתבצעת הצטרפות למסיבת הצפייה…"
+
+#: src/lib/input/actions.ts
+msgid "Jump through the video"
+msgstr "דילוג לאורך הווידאו"
+
+#: src/lib/format.ts
+msgid "just now"
+msgstr "הרגע"
+
+#: src/app/settings/theme.tsx
+msgid "Keep"
+msgstr "שמירה"
+
+#: src/app/settings/playback.tsx
+msgid "Keep in step by changing speed"
+msgstr "סנכרון באמצעות שינוי מהירות"
+
+#: src/features/party/in-party.tsx
+msgid "Keeping in step"
+msgstr "מתבצע סנכרון"
+
+#: src/app/settings/player.tsx
+msgid "Keeps the sound going with the screen off, or when you leave the app."
+msgstr "השמע ממשיך כשהמסך כבוי או ביציאה מהאפליקציה."
+
+#: src/app/settings/player.tsx
+msgid "Keeps the sound going with the screen off, or when you leave without picture-in-picture."
+msgstr "השמע ממשיך כשהמסך כבוי או ביציאה ללא תמונה בתוך תמונה."
+
+#: src/app/settings/player.tsx
+msgid "Keeps the video playing in a small window when you leave the app."
+msgstr "הווידאו ממשיך להתנגן בחלון קטן ביציאה מהאפליקציה."
+
+#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/settings-card.tsx
+msgid "Kept on this device."
+msgstr "נשמר במכשיר הזה."
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Kept on this device. Select + and press a key to add it; a remote, a gamepad or the scroll wheel works too."
+msgstr "נשמר במכשיר הזה. יש לבחור + וללחוץ על מקש כדי להוסיף אותו; אפשר להשתמש גם בשלט, בבקר משחק או בגלגלת העכבר."
+
+#: src/components/shell/input-setup.tsx
+#: src/lib/input/actions.ts
+msgid "Keyboard shortcuts"
+msgstr "קיצורי מקשים"
+
+#: src/app/settings/page.tsx
+msgid "Keys, remotes and gamepads"
+msgstr "מקשים, שלטים ובקרי משחק"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Label"
+msgstr "תווית"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/interface.tsx
+#: src/app/settings/page.tsx
+#: src/app/settings/subtitles.tsx
+msgid "Language"
+msgstr "שפה"
+
+#: src/app/settings/page.tsx
+msgid "Language and how subtitles look"
+msgstr "שפה ומראה הכתוביות"
+
+#: src/app/settings/page.tsx
+msgid "Language and navigation"
+msgstr "שפה וניווט"
+
+#: src/app/settings/page.tsx
+msgid "Language and output"
+msgstr "שפה ופלט"
+
+#: src/app/settings/browsing.tsx
+#: src/lib/subtitles/style.ts
+msgid "Large"
+msgstr "גדול"
+
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/components/shell/update-prompt.tsx
+msgid "Later"
+msgstr "מאוחר יותר"
+
+#: src/app.tsx
+msgid "Leave {from} to add {adding}?"
+msgstr "לצאת מ־{from} כדי להוסיף את {adding}?"
+
+#: src/app.tsx
+msgid "Leave {from} to open this on {target}?"
+msgstr "לצאת מ־{from} כדי לפתוח זאת ב־{target}?"
+
+#: src/app/servers/page.tsx
+msgid "Leave off the profile picker"
+msgstr "הסתרה בבורר הפרופילים"
+
+#: src/features/party/in-party.tsx
+msgid "Leave the party"
+msgstr "יציאה ממסיבת הצפייה"
+
+#: src/app.tsx
+msgid "Leave this server to add {adding}?"
+msgstr "לצאת מהשרת הזה כדי להוסיף את {adding}?"
+
+#: src/app/settings/player.tsx
+msgid "Leaving the app"
+msgstr "יציאה מהאפליקציה"
+
+#: src/lib/input/actions.ts
+msgid "Left"
+msgstr "שמאל"
+
+#: src/app/settings/browsing.tsx
+msgid "Left empty, posters stand alone. A poster without artwork still shows its title."
+msgstr "אם משאירים ריק, הכרזות מוצגות לבדן. כרזה ללא תמונה עדיין תציג את שם הכותר."
+
+#: src/features/player/options.tsx
+msgid "Less dialogue boost"
+msgstr "פחות הגברת דיאלוג"
+
+#: src/features/party/in-party.tsx
+msgid "Let new people join"
+msgstr "אפשרות להצטרפות אנשים חדשים"
+
+#: src/app/settings/player.tsx
+msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black."
+msgstr "מאפשר למפענח הטלוויזיה לסנכרן בעצמו את התמונה והשמע, לניגון חלק יותר של 4K ו־HDR בחלק מהטלוויזיות. חל רק על סרטונים ש־ExoPlayer מנגן. יש לכבות אם הווידאו מקרטע או נשאר שחור."
+
+#: src/app/settings/player.tsx
+msgid "Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black."
+msgstr "מאפשר למפענח הטלוויזיה לסנכרן בעצמו את התמונה והשמע, לניגון חלק יותר של 4K ו־HDR בחלק מהטלוויזיות. יש לכבות אם הווידאו מקרטע או נשאר שחור."
+
+#: src/app/settings/_components/licenses.tsx
+msgid "Licences"
+msgstr "רישיונות"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Link a pack someone shares, in this app's format or the one Fusion and Nuvio use. It stays up to date with its author's changes."
+msgstr "קישור למארז שמישהו משתף, בפורמט של האפליקציה הזאת או בפורמט של Fusion ו־Nuvio. המארז מתעדכן בשינויים של היוצר שלו."
+
+#: src/app/settings/theme.tsx
+msgid "Liquid glass"
+msgstr "זכוכית נוזלית"
+
+#: src/app/settings/browsing.tsx
+msgid "List"
+msgstr "רשימה"
+
+#: src/app/settings/subtitles.tsx
+msgid "List only my languages"
+msgstr "הצגת השפות שלי בלבד"
+
+#: src/app/search/page.tsx
+msgid "Listening…"
+msgstr "בהאזנה…"
+
+#: src/features/player/live.tsx
+msgid "Live"
+msgstr "שידור חי"
+
+#: src/app/home/page.tsx
+#: src/app/live-tv/page.tsx
+#: src/app/settings/browsing.tsx
+#: src/app/settings/interface.tsx
+#: src/components/shell/layout.tsx
+#: src/lib/input/actions.ts
+msgid "Live TV"
+msgstr "טלוויזיה בשידור חי"
+
+#: src/features/party/in-party.tsx
+msgid "Loading"
+msgstr "טעינה"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Loading…"
+msgstr "בטעינה…"
+
+#: src/features/player/controls.tsx
+msgid "Lock screen"
+msgstr "נעילת מסך"
+
+#: src/app/settings/apps.tsx
+msgid "Logs"
+msgstr "יומנים"
+
+#: src/app/settings/page.tsx
+msgid "Look and feel"
+msgstr "מראה ותחושה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Looking for the party…"
+msgstr "מתבצע חיפוש מסיבת הצפייה…"
+
+#: src/app/settings/playback.tsx
+msgid "Looks for versions as soon as a title's page opens, so Play and the version list don't wait. Each title you open is looked up, even if you don't play it."
+msgstr "חיפוש גרסאות מיד בפתיחת דף של כותר, כדי שכפתור ההפעלה ורשימת הגרסאות יהיו מוכנים. החיפוש מתבצע לכל כותר שנפתח, גם אם לא מפעילים אותו."
+
+#: src/features/party/in-party.tsx
+msgid "Lost the connection to {relay}. Reconnecting… Your player carries on, and gets back in step once it's back."
+msgstr "החיבור אל {relay} אבד. מתבצעת התחברות מחדש… הנגן ממשיך לפעול ויסתנכרן כשהחיבור יחזור."
+
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Lower subtitles"
+msgstr "הנמכת כתוביות"
+
+#: src/app/settings/player.tsx
+msgid "macOS draws the video, using less power, and shows Dolby Vision itself. Shaders and mpv's picture options do not apply."
+msgstr "macOS מציגה את הווידאו בצריכת חשמל נמוכה יותר ומציגה Dolby Vision בעצמה. מצללים ואפשרויות התמונה של mpv אינם חלים."
+
+#: src/lib/i18n.ts
+msgid "Magenta"
+msgstr "מג׳נטה"
+
+#: src/app/settings/audio.tsx
+msgid "Main"
+msgstr "ראשי"
+
+#: src/app.tsx
+msgid "Manage servers"
+msgstr "ניהול שרתים"
+
+#: src/features/versions/external-prompt.tsx
+msgid "Mark as watched"
+msgstr "סימון כנצפה"
+
+#: src/app/settings/browsing.tsx
+msgid "Mark unaired episodes"
+msgstr "סימון פרקים שטרם שודרו"
+
+#: src/app/history/page.tsx
+#: src/app/item/_components/actions.tsx
+#: src/components/media/item-menu.tsx
+msgid "Mark unwatched"
+msgstr "סימון כלא נצפה"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/media/item-menu.tsx
+msgid "Mark watched"
+msgstr "סימון כנצפה"
+
+#: src/components/media/item-menu.tsx
+msgid "Mark watched up to here"
+msgstr "סימון כל הפרקים עד כאן כנצפו"
+
+#: src/lib/playback/external-return.ts
+msgid "Marked as watched"
+msgstr "סומן כנצפה"
+
+#: src/app/history/page.tsx
+msgid "Marked unwatched"
+msgstr "סומן כלא נצפה"
+
+#: src/app/settings/player.tsx
+msgid "Match the video's frame rate"
+msgstr "התאמה לקצב הפריימים של הווידאו"
+
+#: src/components/shell/window-controls.tsx
+msgid "Maximise"
+msgstr "הגדלה"
+
+#: src/app/settings/browsing.tsx
+msgid "Medium"
+msgstr "בינוני"
+
+#: src/lib/input/keys.ts
+msgid "Menu key"
+msgstr "מקש תפריט"
+
+#: src/app/settings/theme.tsx
+msgid "Menus, lists, fields and cards over the artwork sit on the glass surface instead of its colour. Slower devices can feel the extra drawing."
+msgstr "תפריטים, רשימות, שדות וכרטיסים מעל תמונות הרקע מוצגים על משטח זכוכית במקום על הצבע שלהן. עומס הציור הנוסף עשוי להיות מורגש במכשירים איטיים."
+
+#: src/app/settings/browsing.tsx
+msgid "Merge continue watching and next up"
+msgstr "מיזוג המשך צפייה והבאים בתור"
+
+#: src/features/party/chat.tsx
+msgid "Message"
+msgstr "הודעה"
+
+#: src/features/party/in-party.tsx
+msgid "Messages"
+msgstr "הודעות"
+
+#: src/app/settings/theme.tsx
+msgid "Midnight"
+msgstr "חצות"
+
+#: src/features/player/controls.tsx
+msgid "Mini player"
+msgstr "נגן ממוזער"
+
+#: src/components/shell/window-controls.tsx
+msgid "Minimise"
+msgstr "מזעור"
+
+#: src/lib/format.ts
+msgid "Missing"
+msgstr "חסר"
+
+#: src/app/settings/subtitles.tsx
+msgid "Monospace"
+msgstr "רוחב אחיד"
+
+#: src/app/downloads/page.tsx
+#: src/app/item/_components/header.tsx
+#: src/components/media/episodes.tsx
+#: src/components/media/overview.tsx
+#: src/features/playlists/playlists.tsx
+#: src/features/versions/version-list.tsx
+msgid "More"
+msgstr "עוד"
+
+#: src/features/party/chat.tsx
+msgid "More can be sent once the party is back."
+msgstr "אפשר יהיה לשלוח עוד כשמסיבת הצפייה תחזור."
+
+#: src/features/player/options.tsx
+msgid "More dialogue boost"
+msgstr "יותר הגברת דיאלוג"
+
+#: src/components/media/hero.tsx
+msgid "More info"
+msgstr "מידע נוסף"
+
+#: src/features/player/options.tsx
+msgid "More languages ({hidden})"
+msgstr "שפות נוספות ({hidden})"
+
+#: src/app/item/_components/similar.tsx
+msgid "More like this"
+msgstr "תכנים דומים"
+
+#: src/app/settings/_components/common.tsx
+msgid "Move {name} down"
+msgstr "הזזת {name} למטה"
+
+#: src/app/settings/_components/common.tsx
+msgid "Move {name} up"
+msgstr "הזזת {name} למעלה"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Move down"
+msgstr "הזזה למטה"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Move up"
+msgstr "הזזה למעלה"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Moves between what's on screen, and to Search and Home. A gamepad's d-pad and left stick move too."
+msgstr "מעבר בין הפריטים על המסך, ולחיפוש ולדף הבית. אפשר לנווט גם באמצעות לחצני הכיוון והמוט השמאלי בבקר משחק."
+
+#: src/app/discover/page.tsx
+#: src/app/favourites/page.tsx
+#: src/app/search/page.tsx
+#: src/components/media/kind-tabs.tsx
+#: src/components/media/random-pick.tsx
+#: src/lib/format.ts
+msgid "Movies"
+msgstr "סרטים"
+
+#: src/app/search/page.tsx
+msgid "Movies, shows and people"
+msgstr "סרטים, סדרות ואנשים"
+
+#: src/lib/input/actions.ts
+msgid "Moving around"
+msgstr "ניווט"
+
+#: src/app/settings/player.tsx
+msgid "mpv configuration"
+msgstr "תצורת mpv"
+
+#: src/app/settings/player.tsx
+msgid "mpv draws the video, with your mpv.conf and shaders."
+msgstr "mpv מציג את הווידאו באמצעות קובץ mpv.conf והמצללים שלך."
+
+#: src/app/settings/player.tsx
+msgid "mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder, under mpv below."
+msgstr "mpv בתוך החלון הזה, עם הפקדים והגדרות הניגון של האפליקציה. גם קובץ mpv.conf, הסקריפטים והמצללים שלך נתמכים: יש לשים אותם בתיקיית mpv שלו, תחת mpv למטה."
+
+#: src/app/settings/player.tsx
+msgid "mpv.conf, input.conf, scripts and shaders in this folder apply to the built-in mpv."
+msgstr "הקבצים mpv.conf ו־input.conf, הסקריפטים והמצללים שבתיקייה הזאת חלים על mpv המובנה."
+
+#: src/features/player/picture-in-picture.tsx
+#: src/features/player/volume.tsx
+#: src/lib/input/actions.ts
+msgid "Mute"
+msgstr "השתקה"
+
+#: src/lib/input/keys.ts
+msgid "Mute key"
+msgstr "מקש השתקה"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/components/media/sort-picker.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Name"
+msgstr "שם"
+
+#: src/app/settings/interface.tsx
+msgid "Navigation"
+msgstr "ניווט"
+
+#: src/app/sign-in/page.tsx
+msgid "Needed to switch to this profile."
+msgstr "נדרש למעבר לפרופיל הזה."
+
+#: src/app/downloads/page.tsx
+msgid "Needs attention"
+msgstr "דורש טיפול"
+
+#: src/app/settings/playback.tsx
+msgid "Never"
+msgstr "אף פעם"
+
+#: src/app/sign-in/page.tsx
+msgid "New code"
+msgstr "קוד חדש"
+
+#: src/features/playlists/playlists.tsx
+msgid "New playlist"
+msgstr "רשימת צפייה חדשה"
+
+#: src/features/player/controls.tsx
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/i18n.ts
+msgid "Next"
+msgstr "הבא"
+
+#: src/lib/input/actions.ts
+msgid "Next audio track"
+msgstr "רצועת השמע הבאה"
+
+#: src/app/player/page.tsx
+#: src/features/player/controls.tsx
+#: src/lib/input/actions.ts
+msgid "Next channel"
+msgstr "הערוץ הבא"
+
+#: src/lib/input/actions.ts
+msgid "Next chapter"
+msgstr "הפרק הבא"
+
+#: src/app/settings/playback.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/next-episode.tsx
+#: src/lib/input/actions.ts
+msgid "Next episode"
+msgstr "הפרק הבא"
+
+#: src/features/player/next-episode.tsx
+msgid "Next in {playlistName}"
+msgstr "הבא ברשימת {playlistName}"
+
+#: src/app/calendar/page.tsx
+msgid "Next month"
+msgstr "החודש הבא"
+
+#: src/lib/input/actions.ts
+msgid "Next subtitles"
+msgstr "הכתוביות הבאות"
+
+#: src/lib/input/keys.ts
+msgid "Next track"
+msgstr "הרצועה הבאה"
+
+#: src/app/trailer/page.tsx
+#: src/features/player/controls.tsx
+msgid "Next trailer"
+msgstr "הקדימון הבא"
+
+#: src/app/home/page.tsx
+#: src/app/settings/browsing.tsx
+msgid "Next up"
+msgstr "הבאים בתור"
+
+#: src/app/settings/audio.tsx
+#: src/features/player/options.tsx
+msgid "Night mode"
+msgstr "מצב לילה"
+
+#: src/app/settings/apps.tsx
+msgid "Nightly"
+msgstr "גרסה לילית"
+
+#: src/app/settings/apps.tsx
+msgid "Nightly builds come from every change, ahead of releases, and can break."
+msgstr "גרסאות ליליות נוצרות מכל שינוי, לפני גרסאות ההפצה, ועלולות להיות לא תקינות."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "No badges match."
+msgstr "אין תגים תואמים."
+
+#: src/components/media/no-catalogs.tsx
+msgid "No catalogs yet"
+msgstr "עדיין אין קטלוגים"
+
+#: src/features/live-tv/channel-number.tsx
+msgid "No channel {typed}"
+msgstr "אין ערוץ {typed}"
+
+#: src/app/live-tv/page.tsx
+msgid "No channels in this group."
+msgstr "אין ערוצים בקבוצה הזאת."
+
+#: src/app/item/_components/no-details.tsx
+msgid "No details for this title"
+msgstr "אין פרטים לכותר הזה"
+
+#: src/app/settings/account.tsx
+msgid "No device is waiting with that code."
+msgstr "אין מכשיר שממתין עם הקוד הזה."
+
+#: src/features/downloads/download-button.tsx
+msgid "No episodes to download there"
+msgstr "אין שם פרקים להורדה"
+
+#: src/app/favourites/page.tsx
+msgid "No favourite channels yet."
+msgstr "עדיין אין ערוצים מועדפים."
+
+#: src/app/settings/cache.tsx
+msgid "No limit"
+msgstr "ללא הגבלה"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "No line matches."
+msgstr "אין שורה תואמת."
+
+#: src/app/live-tv/page.tsx
+msgid "No live TV here"
+msgstr "אין כאן טלוויזיה בשידור חי"
+
+#: src/features/party/chat.tsx
+msgid "No messages yet. Say hello."
+msgstr "עדיין אין הודעות. אפשר לומר שלום."
+
+#: src/features/remote/remote-sheet.tsx
+msgid "No other device is ready. Open the app on another device signed in here, and it shows up."
+msgstr "אין מכשיר אחר שמוכן לחיבור. יש לפתוח את האפליקציה במכשיר אחר שמחובר לכאן, והוא יופיע."
+
+#: src/lib/party/party.ts
+msgid "No party has that code on {relay}."
+msgstr "אין מסיבת צפייה עם הקוד הזה ב־{relay}."
+
+#: src/features/player/use-play.ts
+msgid "No playable version was found"
+msgstr "לא נמצאה גרסה שניתן לנגן"
+
+#: src/features/playlists/playlists.tsx
+msgid "No playlists yet. Make one here, or add a title to one from its menu."
+msgstr "עדיין אין רשימות צפייה. אפשר ליצור אחת כאן או להוסיף כותר לרשימה דרך התפריט שלו."
+
+#: src/lib/jellyfin/servers.ts
+msgid "No server answered at that address."
+msgstr "אף שרת לא ענה בכתובת הזאת."
+
+#: src/app/settings/page.tsx
+msgid "No setting matches."
+msgstr "אין הגדרה תואמת."
+
+#: src/lib/subtitles/files.ts
+msgid "No subtitles were found in that file"
+msgstr "לא נמצאו כתוביות בקובץ הזה"
+
+#: src/lib/party/follow.ts
+msgid "No version of {title} plays here."
+msgstr "אין גרסה של {title} שניתן לנגן כאן."
+
+#: src/app/downloads/page.tsx
+msgid "No version was found to match. Pick one."
+msgstr "לא נמצאה גרסה תואמת. יש לבחור גרסה."
+
+#: src/features/versions/version-list.tsx
+msgid "No versions match."
+msgstr "אין גרסאות תואמות."
+
+#: src/features/versions/version-list.tsx
+msgid "No versions were found."
+msgstr "לא נמצאו גרסאות."
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/subtitles.tsx
+msgid "None"
+msgstr "ללא"
+
+#: src/app/item/_components/no-details.tsx
+msgid "None of your addons has details for {id}. Add a metadata addon to your configuration, then refresh."
+msgstr "אף אחד מהתוספים שלך אינו מספק פרטים עבור {id}. יש להוסיף תוסף מטא־נתונים לתצורה ולרענן."
+
+#: src/app/settings/subtitles.tsx
+#: src/features/player/keys.ts
+#: src/lib/subtitles/style.ts
+msgid "Normal"
+msgstr "רגיל"
+
+#: src/features/player/keys.ts
+#: src/lib/input/actions.ts
+msgid "Normal speed"
+msgstr "מהירות רגילה"
+
+#: src/features/versions/unaired-question.tsx
+msgid "Not aired yet"
+msgstr "טרם שודר"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Not checked yet."
+msgstr "טרם נבדק."
+
+#: src/lib/hosts/shell/player.ts
+msgid "not found"
+msgstr "לא נמצא"
+
+#: src/app/settings/player.tsx
+msgid "Not found on this computer. Choose where {name} is installed."
+msgstr "לא נמצא במחשב הזה. יש לבחור היכן {name} מותקן."
+
+#: src/features/versions/external-prompt.tsx
+msgid "Not now"
+msgstr "לא עכשיו"
+
+#: src/features/party/chat.tsx
+msgid "Not sent. Try again"
+msgstr "לא נשלח. אפשר לנסות שוב"
+
+#: src/app/settings/browsing.tsx
+msgid "Nothing"
+msgstr "ללא"
+
+#: src/app/calendar/page.tsx
+msgid "Nothing airs this month from your shows or watchlist."
+msgstr "אין שידורים החודש מהסדרות או מרשימת המעקב שלך."
+
+#: src/app/downloads/page.tsx
+msgid "Nothing downloaded yet. Download a movie or episode from its page, or a whole season from the show's."
+msgstr "עדיין אין הורדות. אפשר להוריד סרט או פרק מהדף שלו, או עונה שלמה מדף הסדרה."
+
+#: src/app/search/page.tsx
+msgid "Nothing found for “{query}”."
+msgstr "לא נמצאו תוצאות עבור „{query}”."
+
+#: src/app/person/page.tsx
+msgid "Nothing found."
+msgstr "לא נמצאו תוצאות."
+
+#: src/features/playlists/playlists.tsx
+msgid "Nothing here yet. Add titles from their menu, or from the suggestions below."
+msgstr "עדיין אין כאן כלום. אפשר להוסיף כותרים מהתפריט שלהם או מההצעות למטה."
+
+#: src/app/discover/page.tsx
+#: src/app/item/_components/collection.tsx
+msgid "Nothing here."
+msgstr "אין כאן כלום."
+
+#: src/features/remote/remote-sheet.tsx
+msgid "Nothing is playing there."
+msgstr "שום דבר אינו מתנגן שם."
+
+#: src/app/favourites/page.tsx
+#: src/components/media/random-pick.tsx
+msgid "Nothing marked as a favourite yet."
+msgstr "עדיין לא סומן דבר כמועדף."
+
+#: src/app/discover/page.tsx
+#: src/app/live-tv/page.tsx
+#: src/app/settings/_components/licenses.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/audio.tsx
+#: src/app/settings/browsing.tsx
+#: src/app/settings/theme.tsx
+msgid "Nothing matches."
+msgstr "אין תוצאות תואמות."
+
+#: src/features/party/not-in-party.tsx
+msgid "Nothing playing yet."
+msgstr "עדיין לא מתנגן דבר."
+
+#: src/app/player/page.tsx
+msgid "Nothing plays on this channel right now."
+msgstr "כרגע אין תוכן מתנגן בערוץ הזה."
+
+#: src/lib/hosts/shell/android.ts
+msgid "Nothing was heard"
+msgstr "לא נקלט צליל"
+
+#: src/app/history/page.tsx
+msgid "Nothing watched yet."
+msgstr "עדיין לא נצפה דבר."
+
+#: src/features/party/in-party.tsx
+msgid "Nothing yet. Anything anyone plays now plays for everyone."
+msgstr "עדיין אין כלום. כל מה שמישהו יפעיל מעכשיו יופעל אצל כולם."
+
+#: src/app.tsx
+msgid "Notifications"
+msgstr "התראות"
+
+#: src/app/history/_components/sessions.tsx
+msgid "Now playing"
+msgstr "מתנגן כעת"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Now tap Heard when that line is spoken."
+msgstr "כעת יש להקיש על „שמעתי” כשהשורה נשמעת."
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Now tap Saw when that line shows."
+msgstr "כעת יש להקיש על „ראיתי” כשהשורה מופיעה."
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Now: {shown}"
+msgstr "כעת: {shown}"
+
+#: src/app/settings/browsing.tsx
+#: src/app/settings/theme.tsx
+msgid "Nowhere"
+msgstr "בשום מקום"
+
+#: src/app/settings/theme.tsx
+msgid "Ocean"
+msgstr "אוקיינוס"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/subtitles.tsx
+#: src/features/player/options.tsx
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/playback/sound.ts
+msgid "Off"
+msgstr "כבוי"
+
+#: src/app/settings/theme.tsx
+msgid "Off for this visit, since the address ends in <0>?safe</0>. Fix or clear it here, then open the app without it."
+msgstr "כבוי לביקור הזה, משום שהכתובת מסתיימת ב־<0>?safe</0>. יש לתקן או לנקות אותו כאן ואז לפתוח את האפליקציה בלעדיו."
+
+#: src/app/settings/browsing.tsx
+msgid "Off, a trailer still plays with sound once you open it whole."
+msgstr "גם כשהאפשרות כבויה, קדימון יופעל עם שמע בפתיחתו המלאה."
+
+#: src/features/party/in-party.tsx
+msgid "Off, the video jumps instead."
+msgstr "כשהאפשרות כבויה, הווידאו מדלג במקום זאת."
+
+#: src/components/shell/usage-stats.tsx
+msgid "OK"
+msgstr "אישור"
+
+#: src/app/settings/cache.tsx
+msgid "Older ones wait for the server instead. Without a connection, everything saved is shown."
+msgstr "פריטים ישנים יותר ימתינו לשרת. ללא חיבור יוצג כל מה שנשמר."
+
+#: src/features/party/in-party.tsx
+msgid "on {relay}"
+msgstr "ב־{relay}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "On either side of the video, by the skip length."
+msgstr "בכל צד של הווידאו, לפי משך הדילוג."
+
+#: src/app/settings/browsing.tsx
+msgid "On home and in the navigation"
+msgstr "בדף הבית ובניווט"
+
+#: src/app/settings/browsing.tsx
+msgid "On home while the hero rotates, in search and in grids. Under a mouse a card pops out; with a keyboard or remote it opens out to its details."
+msgstr "בדף הבית בזמן שתצוגת הכותרים הראשית מתחלפת, בחיפוש וברשתות. במעבר עכבר הכרטיס בולט החוצה; במקלדת או בשלט הוא מתרחב להצגת פרטיו."
+
+#: src/lib/discord.ts
+msgid "On the calendar"
+msgstr "בלוח השנה"
+
+#: src/lib/discord.ts
+msgid "On the home page"
+msgstr "בדף הבית"
+
+#: src/features/party/not-in-party.tsx
+msgid "On this server"
+msgstr "בשרת הזה"
+
+#: src/app/settings/interface.tsx
+msgid "On wide screens"
+msgstr "במסכים רחבים"
+
+#: src/components/shell/usage-stats.tsx
+msgid "Once a day, the app sends an anonymous count with your type of device, system, app version, language, and country and region. Nothing that identifies you or what you watch is kept."
+msgstr "פעם ביום האפליקציה שולחת ספירה אנונימית עם סוג המכשיר, המערכת, גרסת האפליקציה, השפה, המדינה והאזור שלך. לא נשמר דבר שמזהה אותך או את התוכן שצפית בו."
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Once one of the controls is selected, the arrow keys move between the controls instead."
+msgstr "לאחר בחירת אחד הפקדים, מקשי החצים יעברו בין הפקדים במקום זאת."
+
+#: src/app/settings/browsing.tsx
+msgid "Once you rest on a title for a moment. In the hero, only one you went to."
+msgstr "לאחר השהיה קצרה על כותר. באזור התצוגה הראשי, רק בכותר שבחרת לעבור אליו."
+
+#: src/lib/subtitles/files.ts
+msgid "Only {names} files can be added"
+msgstr "אפשר להוסיף רק קובצי {names}"
+
+#: src/app/settings/subtitles.tsx
+msgid "Only forced"
+msgstr "מאולצות בלבד"
+
+#: src/features/party/in-party.tsx
+msgid "Only I control playback"
+msgstr "רק אני שולט/ת בניגון"
+
+#: src/app/settings/downloads.tsx
+msgid "Only on Wi-Fi"
+msgstr "רק ב־Wi-Fi"
+
+#: src/features/party/not-in-party.tsx
+msgid "Only people signed in to this server can join."
+msgstr "רק אנשים שמחוברים לשרת הזה יכולים להצטרף."
+
+#: src/app/settings/subtitles.tsx
+msgid "Only subtitles for foreign-language parts."
+msgstr "כתוביות לקטעים בשפה זרה בלבד."
+
+#: src/lib/party/party.ts
+msgid "Only the host controls playback."
+msgstr "רק המארח/ת שולט/ת בניגון."
+
+#: src/app/settings/audio.tsx
+msgid "Only the ones your TV or receiver decodes; this app decodes the rest. DTS-HD needs DTS too."
+msgstr "רק הפורמטים שהטלוויזיה או המקלט שלך מפענחים; האפליקציה תפענח את היתר. DTS-HD דורש גם DTS."
+
+#: src/lib/i18n.ts
+msgid "Oops!"
+msgstr "אופס!"
+
+#: src/app/settings/subtitles.tsx
+msgid "Opacity: {backgroundOpacity}%"
+msgstr "אטימות: {backgroundOpacity}%"
+
+#: src/app/history/page.tsx
+#: src/app/settings/account.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/downloads.tsx
+#: src/components/media/item-menu.tsx
+#: src/components/media/random-pick.tsx
+msgid "Open"
+msgstr "פתיחה"
+
+#: src/app/downloads/page.tsx
+#: src/app/settings/apps.tsx
+#: src/app/settings/player.tsx
+msgid "Open folder"
+msgstr "פתיחת תיקייה"
+
+#: src/app/trailer/page.tsx
+msgid "Open its page"
+msgstr "פתיחת הדף שלו"
+
+#: src/features/versions/version-list.tsx
+msgid "Open link"
+msgstr "פתיחת קישור"
+
+#: src/lib/i18n.ts
+msgid "Open main menu"
+msgstr "פתיחת התפריט הראשי"
+
+#: src/features/playlists/playlists.tsx
+msgid "Open playlist"
+msgstr "פתיחת רשימת צפייה"
+
+#: src/app/downloads/page.tsx
+msgid "Open the app's downloads"
+msgstr "פתיחת הורדות האפליקציה"
+
+#: src/lib/input/actions.ts
+msgid "Opens the menu of what is selected, as a right click does."
+msgstr "פתיחת תפריט הפריט שנבחר, כמו לחיצה ימנית."
+
+#: src/app/settings/player.tsx
+msgid "Opens the mini player"
+msgstr "פתיחת הנגן הממוזער"
+
+#: src/app/settings/player.tsx
+msgid "Opens versions in {target}, which brings you back here with your place saved."
+msgstr "פתיחת גרסאות ב־{target}, שמחזיר אותך לכאן עם מיקום הצפייה שמור."
+
+#: src/app/settings/player.tsx
+msgid "Opens versions in {target}. It can't tell this app where you stopped, so you mark what you watched yourself."
+msgstr "פתיחת גרסאות ב־{target}. הוא אינו יכול לדווח לאפליקציה היכן עצרת, ולכן יש לסמן בעצמך במה צפית."
+
+#: src/components/send-report.tsx
+msgid "Optional."
+msgstr "לא חובה."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Optional. An image address, shown in place of the label."
+msgstr "לא חובה. כתובת תמונה שתוצג במקום התווית."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Optional. Match only these parts of a version, named as the formatter names them, such as seMatched for the stream expression it matched."
+msgstr "לא חובה. התאמה רק לחלקים האלה של גרסה, בשמות שבהם משתמש מעצב הפלט, כגון seMatched לביטוי ההזרמה שתאם."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Optional. Only the first badge of a group that matches shows."
+msgstr "לא חובה. יוצג רק התג התואם הראשון מכל קבוצה."
+
+#: src/lib/input/actions.ts
+msgid "Options"
+msgstr "אפשרויות"
+
+#: src/app/servers/page.tsx
+msgid "Options for {name}"
+msgstr "אפשרויות עבור {name}"
+
+#: src/app/settings/player.tsx
+msgid "Options for the built-in mpv, one per line, as mpv's manual lists them."
+msgstr "אפשרויות עבור mpv המובנה, אחת בכל שורה, כפי שהן רשומות במדריך של mpv."
+
+#: src/lib/hosts/native-shell.ts
+msgid "Options the app keeps for itself."
+msgstr "אפשרויות שהאפליקציה מנהלת בעצמה."
+
+#: src/app/settings/_components/reaction-setting.tsx
+msgid "Or type one"
+msgstr "או להזין ערך"
+
+#: src/lib/playback/quality.ts
+msgid "Original"
+msgstr "מקורי"
+
+#: src/app/settings/audio.tsx
+msgid "Original language"
+msgstr "שפת המקור"
+
+#: src/lib/playback/player-choice.ts
+msgid "Other app"
+msgstr "אפליקציה אחרת"
+
+#: src/features/remote/remote-sheet.tsx
+msgid "Other devices"
+msgstr "מכשירים אחרים"
+
+#: src/app/settings/theme.tsx
+msgid "Other pages, such as settings"
+msgstr "דפים אחרים, כגון הגדרות"
+
+#: src/app/sign-in/page.tsx
+msgid "Other profile"
+msgstr "פרופיל אחר"
+
+#: src/app/player/page.tsx
+msgid "Other versions"
+msgstr "גרסאות אחרות"
+
+#: src/app/settings/playback.tsx
+msgid "Otherwise the next episode's version list opens when it has more than one."
+msgstr "אחרת תיפתח רשימת הגרסאות של הפרק הבא כשיש יותר מגרסה אחת."
+
+#: src/app/settings/playback.tsx
+msgid "Otherwise the next episode's version list opens when none is like the one you watched."
+msgstr "אחרת תיפתח רשימת הגרסאות של הפרק הבא כשאין גרסה דומה לזו שצפית בה."
+
+#: src/app/settings/subtitles.tsx
+msgid "Outline and shadow"
+msgstr "קו מתאר וצל"
+
+#: src/app/settings/audio.tsx
+msgid "Output"
+msgstr "פלט"
+
+#: src/features/party/in-party.tsx
+msgid "Over the video"
+msgstr "מעל הווידאו"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Pack address"
+msgstr "כתובת מארז"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Packs"
+msgstr "מארזים"
+
+#. A button on a gamepad, as in Pad A
+#: src/lib/input/keys.ts
+msgid "Pad {button}"
+msgstr "כפתור בקר {button}"
+
+#: src/lib/input/keys.ts
+msgid "Page Down"
+msgstr "Page Down"
+
+#: src/app/settings/interface.tsx
+msgid "Page names"
+msgstr "שמות דפים"
+
+#: src/lib/input/keys.ts
+msgid "Page Up"
+msgstr "Page Up"
+
+#: src/app/settings/cache.tsx
+msgid "Pages and artwork open straight away from this device, then refresh. Without a connection, whatever was saved can still be browsed."
+msgstr "דפים ותמונות נפתחים מיד מהמכשיר הזה ואז מתרעננים. ללא חיבור עדיין אפשר לעיין במה שנשמר."
+
+#: src/app/settings/page.tsx
+msgid "Pages and artwork saved on this device"
+msgstr "דפים ותמונות שנשמרו במכשיר הזה"
+
+#: src/app/settings/theme.tsx
+msgid "Pages and panels take their shades from it. Dark colours read best."
+msgstr "גווני הדפים והלוחות נגזרים ממנו. צבעים כהים מספקים קריאות מיטבית."
+
+#: src/app/settings/cache.tsx
+msgid "Pages load from the server again until they are saved anew."
+msgstr "דפים ייטענו שוב מהשרת עד שיישמרו מחדש."
+
+#: src/app/settings/audio.tsx
+msgid "Pass surround audio through"
+msgstr "העברה ישירה של שמע היקפי"
+
+#: src/app/sign-in/page.tsx
+msgid "Password"
+msgstr "סיסמה"
+
+#: src/app/settings/cache.tsx
+msgid "Past this, what was used longest ago goes first."
+msgstr "מעבר לכך יימחקו תחילה הפריטים שלא היו בשימוש במשך הזמן הרב ביותר."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Paste badges as JSON to add them to yours, or paste a pack's address to link it."
+msgstr "אפשר להדביק תגים כ־JSON כדי להוסיף אותם לשלך, או להדביק כתובת של מארז כדי לקשר אותו."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Paste quick filters as JSON, or the address of a file with them, to add them to these."
+msgstr "אפשר להדביק מסננים מהירים כ־JSON, או כתובת של קובץ שמכיל אותם, כדי להוסיף אותם לרשימה הזאת."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Pattern"
+msgstr "תבנית"
+
+#: src/app/downloads/page.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/input/actions.ts
+#: src/lib/input/keys.ts
+msgid "Pause"
+msgstr "השהיה"
+
+#: src/app/downloads/page.tsx
+msgid "Pause all"
+msgstr "השהיית הכול"
+
+#: src/app/history/_components/sessions.tsx
+msgid "Paused"
+msgstr "מושהה"
+
+#: src/app/downloads/page.tsx
+msgid "Paused · {of}"
+msgstr "מושהה · {of}"
+
+#: src/features/party/not-in-party.tsx
+msgid "Paused on {name}"
+msgstr "מושהה ב־{name}"
+
+#: src/features/party/not-in-party.tsx
+msgid "Paused on {name}, {at} in"
+msgstr "מושהה ב־{name}, במיקום {at}"
+
+#: src/app/settings/playback.tsx
+msgid "Pauses and asks before the next episode once this many have played in a row without a key, click or button press."
+msgstr "השהיה ושאלה לפני הפרק הבא לאחר שמספר זה של פרקים הופעל ברצף ללא לחיצה על מקש, עכבר או כפתור."
+
+#: src/app/search/page.tsx
+msgid "People"
+msgstr "אנשים"
+
+#: src/features/party/in-party.tsx
+msgid "People and invite"
+msgstr "אנשים והזמנה"
+
+#: src/lib/i18n.ts
+msgid "Pick a colour"
+msgstr "בחירת צבע"
+
+#: src/app/settings/_components/reaction-setting.tsx
+msgid "Pick a slot, then what goes in it."
+msgstr "יש לבחור מקום ואז את התוכן שיופיע בו."
+
+#: src/app/downloads/page.tsx
+msgid "Pick a version"
+msgstr "בחירת גרסה"
+
+#: src/components/media/random-pick.tsx
+msgid "Pick again"
+msgstr "בחירה מחדש"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Pick fields to search only those parts of a version."
+msgstr "יש לבחור שדות כדי לחפש רק בחלקים האלה של גרסה."
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Pick the line you heard at {heardAt}."
+msgstr "יש לבחור את השורה שנשמעה ב־{heardAt}."
+
+#: src/features/versions/version-list.tsx
+msgid "Pick the version to download."
+msgstr "יש לבחור את הגרסה להורדה."
+
+#: src/app/settings/player.tsx
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Picture-in-picture"
+msgstr "תמונה בתוך תמונה"
+
+#: src/features/player/options.tsx
+msgid "Picture: {coming}"
+msgstr "תמונה: {coming}"
+
+#: src/features/player/options.tsx
+msgid "Picture: {current}"
+msgstr "תמונה: {current}"
+
+#: src/features/player/controls.tsx
+msgid "Picture: {label}"
+msgstr "תמונה: {label}"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Pills above the version list that each apply a search you save, such as one for 4K versions."
+msgstr "תגיות מעל רשימת הגרסאות, שכל אחת מהן מחילה חיפוש שמור, למשל לגרסאות 4K."
+
+#: src/app/sign-in/page.tsx
+msgid "PIN"
+msgstr "קוד PIN"
+
+#: src/app/sign-in/page.tsx
+msgid "PIN or password"
+msgstr "קוד PIN או סיסמה"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Pinch to fill the screen"
+msgstr "צביטה למילוי המסך"
+
+#: src/app/settings/theme.tsx
+msgid "Pink"
+msgstr "ורוד"
+
+#: src/app/item/_components/header.tsx
+#: src/app/item/_components/no-details.tsx
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/components/media/hero.tsx
+#: src/components/media/item-menu.tsx
+#: src/components/media/random-pick.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/mini-player.tsx
+#: src/features/player/picture-in-picture.tsx
+#: src/features/playlists/playlists.tsx
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/input/actions.ts
+#: src/lib/input/keys.ts
+msgid "Play"
+msgstr "הפעלה"
+
+#: src/app/item/_components/header.tsx
+msgid "Play {code}"
+msgstr "הפעלת {code}"
+
+#: src/features/versions/unaired-question.tsx
+msgid "Play anyway"
+msgstr "הפעלה בכל זאת"
+
+#: src/app/settings/browsing.tsx
+msgid "Play by themselves"
+msgstr "הפעלה אוטומטית"
+
+#: src/app/item/_components/header.tsx
+msgid "Play from the start"
+msgstr "הפעלה מההתחלה"
+
+#: src/features/player/next-episode.tsx
+msgid "Play in {seconds}s"
+msgstr "הפעלה בעוד {seconds} שנ׳"
+
+#: src/app/settings/player.tsx
+msgid "Play in the background"
+msgstr "ניגון ברקע"
+
+#: src/app/settings/playback.tsx
+msgid "Play it automatically"
+msgstr "הפעלה אוטומטית"
+
+#: src/app/settings/playback.tsx
+msgid "Play lists the versions to choose from, but resuming goes back to the version you were watching. Hold Play to do the other: start the first version, or list them when resuming."
+msgstr "כפתור ההפעלה מציג גרסאות לבחירה, אך המשך צפייה חוזר לגרסה שבה צפית. לחיצה ממושכת עושה את ההפך: מפעילה את הגרסה הראשונה, או מציגה רשימה בהמשך צפייה."
+
+#: src/features/player/next-episode.tsx
+msgid "Play now"
+msgstr "הפעלה עכשיו"
+
+#: src/app/item/_components/actions.tsx
+msgid "Play on"
+msgstr "המשך ניגון"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/media/item-menu.tsx
+#: src/features/remote/remote-sheet.tsx
+msgid "Play on another device"
+msgstr "ניגון במכשיר אחר"
+
+#: src/lib/input/actions.ts
+msgid "Play or pause"
+msgstr "הפעלה או השהיה"
+
+#: src/lib/input/actions.ts
+msgid "Play or pause, or go to the controls"
+msgstr "הפעלה או השהיה, או מעבר לפקדים"
+
+#: src/app/settings/playback.tsx
+msgid "Play starts the first version, and resuming goes back to the version you were watching. Hold Play to choose instead."
+msgstr "כפתור ההפעלה מפעיל את הגרסה הראשונה, והמשך צפייה חוזר לגרסה שבה צפית. לבחירת גרסה במקום זאת יש ללחוץ לחיצה ממושכת על הפעלה."
+
+#: src/components/media/item-menu.tsx
+msgid "Play straight away"
+msgstr "הפעלה מיידית"
+
+#: src/app/settings/playback.tsx
+msgid "Play the first version"
+msgstr "הפעלת הגרסה הראשונה"
+
+#: src/app/settings/playback.tsx
+msgid "Play the first version when none matches"
+msgstr "הפעלת הגרסה הראשונה כשאין התאמה"
+
+#: src/features/player/options.tsx
+msgid "Play the sound earlier"
+msgstr "הקדמת השמע"
+
+#: src/features/player/options.tsx
+msgid "Play the sound later"
+msgstr "איחור השמע"
+
+#: src/app/settings/audio.tsx
+msgid "Play the version's default track first"
+msgstr "ניגון רצועת ברירת המחדל של הגרסה תחילה"
+
+#: src/app/settings/player.tsx
+msgid "Play versions in"
+msgstr "ניגון גרסאות באמצעות"
+
+#: src/lib/hosts/shell/player.ts
+msgid "Play with ExoPlayer"
+msgstr "ניגון באמצעות ExoPlayer"
+
+#: src/lib/hosts/shell/player.ts
+msgid "Play with mpv"
+msgstr "ניגון באמצעות mpv"
+
+#: src/lib/input/keys.ts
+msgid "Play/Pause"
+msgstr "הפעלה/השהיה"
+
+#: src/app/settings/page.tsx
+#: src/lib/hosts/shell/exo-stats.ts
+#: src/lib/hosts/shell/player.ts
+#: src/lib/playback/webgpu.ts
+msgid "Playback"
+msgstr "ניגון"
+
+#: src/app/item/_components/trailer.tsx
+msgid "Playback controls"
+msgstr "פקדי ניגון"
+
+#: src/features/player/mini-player.tsx
+msgid "Playback failed"
+msgstr "הניגון נכשל"
+
+#: src/app/player/page.tsx
+msgid "Playback failed: {failure}"
+msgstr "הניגון נכשל: {failure}"
+
+#: src/app/history/page.tsx
+msgid "Played here"
+msgstr "נוגן כאן"
+
+#: src/app/settings/about.tsx
+#: src/app/settings/page.tsx
+#: src/app/settings/player.tsx
+#: src/lib/input/actions.ts
+msgid "Player"
+msgstr "נגן"
+
+#: src/app/settings/player.tsx
+msgid "Player link"
+msgstr "קישור נגן"
+
+#: src/app/settings/player.tsx
+msgid "Player window"
+msgstr "חלון נגן"
+
+#: src/app/history/_components/sessions.tsx
+#: src/app/item/_components/trailer.tsx
+#: src/features/party/in-party.tsx
+#: src/features/player/chapters.tsx
+#: src/features/player/episodes.tsx
+#: src/features/playlists/playlists.tsx
+#: src/features/versions/version-list.tsx
+msgid "Playing"
+msgstr "מתנגן"
+
+#: src/app/player/page.tsx
+msgid "Playing in {launchedName}"
+msgstr "מתנגן ב־{launchedName}"
+
+#: src/app/player/page.tsx
+msgid "Playing in picture-in-picture"
+msgstr "מתנגן בתמונה בתוך תמונה"
+
+#: src/features/versions/external-prompt.tsx
+msgid "Playing in your player"
+msgstr "מתנגן בנגן שלך"
+
+#: src/features/remote/remote-sheet.tsx
+msgid "Playing on {name}"
+msgstr "מתנגן ב־{name}"
+
+#: src/app/settings/playback.tsx
+msgid "Playing on and the next and previous buttons pass over episodes marked as filler. You can still play one yourself."
+msgstr "המשך ניגון וכפתורי הבא והקודם מדלגים על פרקים שמסומנים כפרקי מילוי. עדיין אפשר להפעיל אותם ידנית."
+
+#: src/app/item/_components/actions.tsx
+#: src/features/player/options.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Playlist"
+msgstr "רשימת צפייה"
+
+#: src/components/shell/layout.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Playlists"
+msgstr "רשימות צפייה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Plays <0>{title}</0> for everyone who joins."
+msgstr "מפעיל את <0>{title}</0> אצל כל מי שמצטרף."
+
+#: src/app/settings/playback.tsx
+msgid "Plays a little faster or slower to catch up with the party. Off, the video jumps instead."
+msgstr "ניגון מעט מהיר או איטי יותר כדי להסתנכרן עם מסיבת הצפייה. כשהאפשרות כבויה, הווידאו מדלג במקום זאת."
+
+#: src/app/settings/player.tsx
+msgid "Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision."
+msgstr "ניגון Dolby Vision במסך שתומך בו. יש לכבות כדי לנגן את תמונת ה־HDR10 שכלולה גם ברוב הסרטונים האלה, אם Dolby Vision נראה עמום או מהבהב. סרטונים ללא תמונת HDR10 עדיין יתנגנו ב־Dolby Vision."
+
+#: src/lib/input/actions.ts
+msgid "Plays faster for as long as the key is held, at the speed set in Playback settings."
+msgstr "ניגון מהיר יותר כל עוד המקש לחוץ, במהירות שנקבעה בהגדרות הניגון."
+
+#: src/app/settings/about.tsx
+msgid "Plays the video."
+msgstr "ניגון הווידאו."
+
+#: src/features/remote/remote-sheet.tsx
+msgid "Position"
+msgstr "מיקום"
+
+#: src/app/settings/browsing.tsx
+msgid "Poster size"
+msgstr "גודל כרזות"
+
+#: src/app/settings/browsing.tsx
+msgid "Posters and grids"
+msgstr "כרזות ורשתות"
+
+#: src/app/settings/cache.tsx
+msgid "Posters, backdrops, logos and photos."
+msgstr "כרזות, תמונות רקע, סמלים ותצלומים."
+
+#: src/app/settings/theme.tsx
+msgid "Presets"
+msgstr "הגדרות מוכנות"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Press a key"
+msgstr "יש ללחוץ על מקש"
+
+#: src/lib/hosts/shell/android.ts
+msgid "Press Back again to leave"
+msgstr "יש ללחוץ שוב על חזרה כדי לצאת"
+
+#: src/app/item/_components/trailer.tsx
+msgid "Press Up for playback controls"
+msgstr "יש ללחוץ למעלה להצגת פקדי הניגון"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/subtitles.tsx
+msgid "Preview"
+msgstr "תצוגה מקדימה"
+
+#: src/app/settings/browsing.tsx
+msgid "Preview the card you rest on"
+msgstr "תצוגה מקדימה לכרטיס שמתמקדים בו"
+
+#: src/app/settings/playback.tsx
+msgctxt "Episode segments showing the next episode"
+msgid "Previews"
+msgstr "תצוגות מקדימות"
+
+#: src/features/player/controls.tsx
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/i18n.ts
+msgid "Previous"
+msgstr "הקודם"
+
+#: src/app/player/page.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/live.tsx
+#: src/lib/input/actions.ts
+msgid "Previous channel"
+msgstr "הערוץ הקודם"
+
+#: src/lib/input/actions.ts
+msgid "Previous chapter"
+msgstr "הפרק הקודם"
+
+#: src/features/player/controls.tsx
+#: src/lib/input/actions.ts
+msgid "Previous episode"
+msgstr "הפרק הקודם"
+
+#: src/app/calendar/page.tsx
+msgid "Previous month"
+msgstr "החודש הקודם"
+
+#: src/lib/input/keys.ts
+msgid "Previous track"
+msgstr "הרצועה הקודמת"
+
+#: src/app/trailer/page.tsx
+#: src/features/player/controls.tsx
+msgid "Previous trailer"
+msgstr "הקדימון הקודם"
+
+#: src/components/media/people.tsx
+msgid "Producer"
+msgstr "מפיק/ה"
+
+#: src/app/history/page.tsx
+msgid "Profile"
+msgstr "פרופיל"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Puts every key back the way it came."
+msgstr "איפוס כל המקשים לברירות המחדל שלהם."
+
+#: src/features/party/in-party.tsx
+msgid "QR code"
+msgstr "קוד QR"
+
+#: src/app/settings/player.tsx
+#: src/features/player/options.tsx
+msgid "Quality"
+msgstr "איכות"
+
+#: src/app/settings/account.tsx
+#: src/app/sign-in/page.tsx
+msgid "Quick Connect"
+msgstr "חיבור מהיר"
+
+#: src/app/sign-in/page.tsx
+msgid "Quick Connect is unavailable: {message}"
+msgstr "חיבור מהיר אינו זמין: {message}"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/features/versions/version-list.tsx
+msgid "Quick filters"
+msgstr "מסננים מהירים"
+
+#: src/app/settings/interface.tsx
+msgid "Rail"
+msgstr "מסילת ניווט"
+
+#: src/app/settings/theme.tsx
+msgid "Rainforest"
+msgstr "יער גשם"
+
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Raise subtitles"
+msgstr "הגבהת כתוביות"
+
+#: src/app/settings/audio.tsx
+msgid "Raises the centre channel, where surround sound puts dialogue. Not for sound passed through."
+msgstr "הגברת הערוץ המרכזי, שבו נמצא הדיאלוג בשמע היקפי. אינו חל על שמע שמועבר ישירות למקלט."
+
+#: src/app/item/_components/actions.tsx
+msgid "Random"
+msgstr "אקראי"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/media/item-menu.tsx
+#: src/components/media/random-pick.tsx
+msgid "Random episode"
+msgstr "פרק אקראי"
+
+#: src/components/media/random-pick.tsx
+msgid "Random favourite"
+msgstr "מועדף אקראי"
+
+#: src/app/favourites/page.tsx
+msgid "Random pick"
+msgstr "בחירה אקראית"
+
+#: src/app/item/_components/actions.tsx
+#: src/app/item/_components/rating.tsx
+msgid "Rate"
+msgstr "דירוג"
+
+#: src/app/item/_components/seasons.tsx
+msgid "Rate season"
+msgstr "דירוג עונה"
+
+#: src/components/media/scores.tsx
+#: src/components/media/sort-picker.tsx
+msgid "Rating"
+msgstr "דירוג"
+
+#: src/features/party/chat.tsx
+msgid "React with {emoji}"
+msgstr "תגובה עם {emoji}"
+
+#: src/app/settings/_components/reaction-setting.tsx
+#: src/features/party/in-party.tsx
+msgid "Reactions"
+msgstr "תגובות"
+
+#: src/app/settings/player.tsx
+msgid "Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player."
+msgstr "קריאה ופענוח ישירים של הקובץ וציורו בכרטיס הגרפי מאפשרים לנגן גם פורמטים שהדפדפן אינו תומך בהם, כגון HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD ו־DTS. גרסה שלא ניתן לנגן כך תועבר לנגן המובנה בדפדפן."
+
+#: src/lib/format.ts
+msgid "Recap"
+msgstr "תקציר הפרקים הקודמים"
+
+#: src/app/settings/playback.tsx
+msgid "Recaps"
+msgstr "תקצירי הפרקים הקודמים"
+
+#: src/features/live-tv/live-tv.ts
+msgid "Recent"
+msgstr "אחרונים"
+
+#: src/app/search/page.tsx
+msgid "Recent searches"
+msgstr "חיפושים אחרונים"
+
+#: src/features/party/party-layer.tsx
+msgid "Reconnecting to the party…"
+msgstr "מתבצעת התחברות מחדש למסיבת הצפייה…"
+
+#: src/components/shell/unreachable.tsx
+#: src/features/player/controls.tsx
+#: src/features/player/picture-in-picture.tsx
+msgid "Reconnecting…"
+msgstr "מתבצעת התחברות מחדש…"
+
+#: src/lib/i18n.ts
+msgid "Red"
+msgstr "אדום"
+
+#: src/app/item/_components/no-details.tsx
+#: src/components/media/no-catalogs.tsx
+msgid "Refresh"
+msgstr "רענון"
+
+#: src/lib/hosts/shell/player.ts
+msgid "refused"
+msgstr "נדחה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Relay"
+msgstr "שרת תיווך"
+
+#: src/features/party/not-in-party.tsx
+msgid "Relay address"
+msgstr "כתובת שרת תיווך"
+
+#: src/components/media/sort-picker.tsx
+msgid "Release date"
+msgstr "תאריך יציאה"
+
+#: src/app/item/_components/details.tsx
+msgid "Released"
+msgstr "יצא לאור"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/subtitles.tsx
+msgid "Remember picks per show"
+msgstr "זכירת בחירות לכל סדרה"
+
+#: src/app/live-tv/_components/channel-details.tsx
+msgid "Remind me"
+msgstr "תזכורת"
+
+#: src/app/live-tv/_components/guide.tsx
+msgid "Reminder"
+msgstr "תזכורת"
+
+#: src/app/live-tv/page.tsx
+msgid "Reminder removed"
+msgstr "התזכורת הוסרה"
+
+#: src/app/live-tv/_components/channel-details.tsx
+msgid "Reminder set"
+msgstr "התזכורת נקבעה"
+
+#: src/app/search/page.tsx
+#: src/app/servers/page.tsx
+#: src/app/settings/_components/common.tsx
+#: src/app/settings/_components/version-settings.tsx
+msgid "Remove"
+msgstr "הסרה"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Remove {key}"
+msgstr "הסרת {key}"
+
+#: src/app/settings/_components/common.tsx
+#: src/features/party/in-party.tsx
+msgid "Remove {name}"
+msgstr "הסרת {name}"
+
+#: src/app/servers/page.tsx
+msgid "Remove {targetName} from this device? You will need to add it and sign in again."
+msgstr "להסיר את {targetName} מהמכשיר הזה? יהיה צורך להוסיף אותו ולהתחבר שוב."
+
+#: src/app/search/page.tsx
+msgid "Remove {term}"
+msgstr "הסרת {term}"
+
+#: src/app/item/_components/actions.tsx
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/components/media/item-menu.tsx
+msgid "Remove favourite"
+msgstr "הסרה מהמועדפים"
+
+#: src/components/media/item-menu.tsx
+msgid "Remove from continue watching"
+msgstr "הסרה מהמשך צפייה"
+
+#: src/app/history/page.tsx
+msgid "Remove from history"
+msgstr "הסרה מההיסטוריה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Remove from playlist"
+msgstr "הסרה מרשימת צפייה"
+
+#: src/app/downloads/page.tsx
+msgid "Remove from the list, keep the file"
+msgstr "הסרה מהרשימה ושמירת הקובץ"
+
+#: src/app/servers/page.tsx
+msgid "Remove server"
+msgstr "הסרת שרת"
+
+#: src/app/history/page.tsx
+msgid "Removed from history"
+msgstr "הוסר מההיסטוריה"
+
+#: src/features/playlists/playlists.tsx
+msgid "Rename"
+msgstr "שינוי שם"
+
+#: src/features/playlists/playlists.tsx
+msgid "Repeat"
+msgstr "חזרה"
+
+#: src/app/settings/apps.tsx
+msgid "Report a problem"
+msgstr "דיווח על בעיה"
+
+#: src/components/shell/crash-report.tsx
+msgid "Report copied"
+msgstr "הדוח הועתק"
+
+#: src/lib/jellyfin/client.ts
+msgid "Request failed ({status})"
+msgstr "הבקשה נכשלה ({status})"
+
+#: src/app/history/page.tsx
+#: src/app/settings/_components/reaction-setting.tsx
+#: src/features/player/options.tsx
+msgid "Reset"
+msgstr "איפוס"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Reset {label}"
+msgstr "איפוס {label}"
+
+#: src/app/history/page.tsx
+msgid "Reset {name}'s history"
+msgstr "איפוס ההיסטוריה של {name}"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Reset all"
+msgstr "איפוס הכול"
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "Reset all shortcuts"
+msgstr "איפוס כל קיצורי המקשים"
+
+#: src/features/player/options.tsx
+msgid "Reset delay"
+msgstr "איפוס השהיה"
+
+#: src/app/history/page.tsx
+msgid "Reset history"
+msgstr "איפוס היסטוריה"
+
+#: src/app/settings/theme.tsx
+msgid "Reset theme"
+msgstr "איפוס ערכת נושא"
+
+#: src/app/settings/player.tsx
+msgid "Restart"
+msgstr "הפעלה מחדש"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Restart now"
+msgstr "הפעלה מחדש כעת"
+
+#: src/app/settings/player.tsx
+msgid "Restart to switch"
+msgstr "הפעלה מחדש להחלפה"
+
+#: src/components/shell/window-controls.tsx
+msgid "Restore"
+msgstr "שחזור"
+
+#: src/app/settings/cache.tsx
+msgid "Results of what you searched for."
+msgstr "תוצאות החיפוש שלך."
+
+#: src/app/downloads/page.tsx
+#: src/components/media/item-menu.tsx
+#: src/components/media/random-pick.tsx
+msgid "Resume"
+msgstr "המשך"
+
+#: src/app/item/_components/header.tsx
+msgid "Resume {code}"
+msgstr "המשך {code}"
+
+#: src/app/downloads/page.tsx
+msgid "Resume all"
+msgstr "המשך הכול"
+
+#: src/app/item/_components/header.tsx
+#: src/features/versions/version-list.tsx
+#: src/lib/playback/use-player.ts
+msgid "Resume from {resumeAt}"
+msgstr "המשך מ־{resumeAt}"
+
+#: src/features/player/options.tsx
+msgid "Retimed and synced automatically"
+msgstr "התזמון הותאם וסונכרן אוטומטית"
+
+#: src/lib/i18n.ts
+msgid "Retry"
+msgstr "ניסיון חוזר"
+
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/input/keys.ts
+msgid "Rewind"
+msgstr "הרצה לאחור"
+
+#: src/lib/input/actions.ts
+msgid "Right"
+msgstr "ימין"
+
+#: src/app/settings/browsing.tsx
+msgid "Rotates through featured titles"
+msgstr "מעבר מחזורי בין כותרים מומלצים"
+
+#: src/components/media/scores.tsx
+msgid "Rotten Tomatoes audience"
+msgstr "קהל Rotten Tomatoes"
+
+#: src/app/settings/browsing.tsx
+msgid "Row"
+msgstr "שורה"
+
+#: src/app/settings/cache.tsx
+msgid "Rows, catalogs and the calendar."
+msgstr "שורות, קטלוגים ולוח השנה."
+
+#: src/features/player/options.tsx
+msgid "Runs at a different speed to the video"
+msgstr "פועל במהירות שונה מהווידאו"
+
+#: src/components/media/sort-picker.tsx
+msgid "Runtime"
+msgstr "משך"
+
+#. A season and episode number, as in S01E04
+#: src/lib/format.ts
+msgid "S{s}E{e}"
+msgstr "ע{s}פ{e}"
+
+#: src/app/settings/subtitles.tsx
+msgid "Sans serif"
+msgstr "ללא תגים (Sans Serif)"
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/player.tsx
+#: src/features/playlists/playlists.tsx
+msgid "Save"
+msgstr "שמירה"
+
+#: src/app/settings/cache.tsx
+msgid "Save account and server"
+msgstr "שמירת חשבון ושרת"
+
+#: src/app/settings/cache.tsx
+msgid "Save activity"
+msgstr "שמירת פעילות"
+
+#: src/app/settings/cache.tsx
+msgid "Save artwork"
+msgstr "שמירת תמונות"
+
+#: src/app/settings/cache.tsx
+msgid "Save home and libraries"
+msgstr "שמירת דף הבית וספריות"
+
+#: src/components/shell/crash-report.tsx
+msgid "Save report"
+msgstr "שמירת דוח"
+
+#: src/app/settings/cache.tsx
+msgid "Save searches"
+msgstr "שמירת חיפושים"
+
+#: src/app/settings/downloads.tsx
+msgid "Save subtitles"
+msgstr "שמירת כתוביות"
+
+#: src/app/settings/cache.tsx
+msgid "Save title pages"
+msgstr "שמירת דפי כותרים"
+
+#: src/app/settings/cache.tsx
+msgid "Save what you browse"
+msgstr "שמירת התוכן שגולשים בו"
+
+#: src/app/settings/player.tsx
+msgid "Saved"
+msgstr "נשמר"
+
+#: src/app/downloads/page.tsx
+msgid "Saved to {folder}"
+msgstr "נשמר ב־{folder}"
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to this profile, on every device it signs in on."
+msgstr "נשמר בפרופיל הזה, בכל מכשיר שבו הוא מחובר."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to your account, so it follows you to every device."
+msgstr "נשמר בחשבון שלך ולכן זמין בכל מכשיר."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "Saved to your account, so your other devices and Jellyfin apps use it too."
+msgstr "נשמר בחשבון שלך ולכן משמש גם במכשירים האחרים ובאפליקציות Jellyfin שלך."
+
+#: src/lib/playback/external-return.ts
+msgid "Saved your place at {at}"
+msgstr "מיקום הצפייה נשמר: {at}"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Saw"
+msgstr "ראיתי"
+
+#: src/lib/input/actions.ts
+msgid "Saw its subtitle"
+msgstr "ראיתי את הכתובית"
+
+#: src/app/item/_components/trailer.tsx
+msgid "Scroll up for playback controls"
+msgstr "יש לגלול למעלה להצגת פקדי הניגון"
+
+#: src/lib/playback/controller.ts
+msgid "SDH"
+msgstr "SDH"
+
+#: src/app/settings/subtitles.tsx
+msgid "SDH, with sounds described"
+msgstr "SDH, עם תיאור צלילים"
+
+#: src/app/discover/page.tsx
+#: src/app/search/page.tsx
+#: src/app/settings/_components/licenses.tsx
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/apps.tsx
+#: src/components/shell/layout.tsx
+#: src/lib/input/actions.ts
+msgid "Search"
+msgstr "חיפוש"
+
+#: src/features/versions/version-list.tsx
+msgid "Search again"
+msgstr "חיפוש מחדש"
+
+#: src/app/search/page.tsx
+msgid "Search by voice"
+msgstr "חיפוש קולי"
+
+#: src/app/settings/page.tsx
+msgid "Search settings"
+msgstr "חיפוש בהגדרות"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Search the lines"
+msgstr "חיפוש בשורות"
+
+#: src/app/settings/cache.tsx
+msgid "Searches"
+msgstr "חיפושים"
+
+#: src/lib/discord.ts
+msgid "Searching"
+msgstr "מתבצע חיפוש"
+
+#: src/features/player/pause-screen.tsx
+msgid "Season {season}"
+msgstr "עונה {season}"
+
+#: src/components/media/item-menu.tsx
+msgid "See the download"
+msgstr "הצגת ההורדה"
+
+#: src/features/player/seek-bar.tsx
+msgid "Seek"
+msgstr "דילוג"
+
+#: src/app/settings/player.tsx
+msgid "Seek bar previews"
+msgstr "תצוגות מקדימות בסרגל הדילוג"
+
+#: src/app/history/page.tsx
+#: src/lib/i18n.ts
+#: src/lib/input/actions.ts
+msgid "Select"
+msgstr "בחירה"
+
+#: src/app/history/page.tsx
+msgid "Select all"
+msgstr "בחירת הכול"
+
+#: src/components/send-report.tsx
+#: src/features/party/chat.tsx
+msgid "Send"
+msgstr "שליחה"
+
+#: src/components/send-report.tsx
+msgid "Send a report"
+msgstr "שליחת דוח"
+
+#: src/app/settings/apps.tsx
+#: src/components/shell/crash-report.tsx
+msgid "Send report"
+msgstr "שליחת דוח"
+
+#: src/app/settings/about.tsx
+msgid "Send usage statistics"
+msgstr "שליחת נתוני שימוש"
+
+#: src/features/party/chat.tsx
+msgid "Sending…"
+msgstr "בשליחה…"
+
+#: src/app/settings/audio.tsx
+msgid "Sends Dolby and DTS audio as it is even when your TV or receiver does not say it decodes them, as some do without saying so."
+msgstr "שליחת שמע Dolby ו־DTS ללא שינוי, גם כשהטלוויזיה או המקלט אינם מדווחים שהם מפענחים אותם, משום שחלקם תומכים בכך בלי לדווח."
+
+#: src/app/settings/audio.tsx
+msgid "Sends Dolby and DTS audio as it is when your TV or receiver says it decodes them, which keeps Atmos. Otherwise this app decodes it."
+msgstr "שליחת שמע Dolby ו־DTS ללא שינוי כשהטלוויזיה או המקלט מדווחים שהם מפענחים אותם, וכך נשמר Atmos. אחרת האפליקציה מפענחת את השמע."
+
+#: src/app/settings/audio.tsx
+msgid "Sends Dolby and DTS audio to your receiver as it is. Only turn this on if your receiver decodes them."
+msgstr "שליחת שמע Dolby ו־DTS למקלט ללא שינוי. יש להפעיל רק אם המקלט שלך מפענח אותם."
+
+#: src/features/party/chat.tsx
+msgid "Sends once the party is back"
+msgstr "יישלח כשמסיבת הצפייה תחזור"
+
+#: src/app/settings/apps.tsx
+msgid "Sends this device's details and the app's recent log to the server, with a code to give whoever looks into it."
+msgstr "שליחת פרטי המכשיר והיומן האחרון של האפליקציה לשרת, עם קוד שאפשר למסור למי שבודק את הבעיה."
+
+#: src/app/settings/subtitles.tsx
+msgid "Serif"
+msgstr "בעל תגים (Serif)"
+
+#: src/app/settings/about.tsx
+#: src/app/settings/account.tsx
+msgid "Server"
+msgstr "שרת"
+
+#: src/app/servers/page.tsx
+msgid "Server address"
+msgstr "כתובת שרת"
+
+#: src/lib/hosts/shell/player.ts
+msgid "server error"
+msgstr "שגיאת שרת"
+
+#: src/features/player/options.tsx
+msgid "Set by hand"
+msgstr "הגדרה ידנית"
+
+#: src/app/settings/page.tsx
+#: src/components/shell/layout.tsx
+msgid "Settings"
+msgstr "הגדרות"
+
+#: src/app/settings/page.tsx
+msgid "Settings for"
+msgstr "הגדרות עבור"
+
+#: src/app/settings/player.tsx
+msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
+msgstr "קובצי מצלל (.wgsl) למנוע WebGPU, המוחלים לפי סדר שמותיהם על התוכן המתנגן. הם נשמרים בדפדפן הזה. מצללים כבדים עלולים לגרום לווידאו לקרטע."
+
+#: src/app/settings/_components/common.tsx
+msgid "Shaders"
+msgstr "מצללים"
+
+#: src/app/settings/subtitles.tsx
+msgid "Shadow"
+msgstr "צל"
+
+#: src/features/party/in-party.tsx
+msgid "Share the invite"
+msgstr "שיתוף ההזמנה"
+
+#: src/app/settings/player.tsx
+msgid "Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are."
+msgstr "חידוד קווים וניקוי פגמי דחיסה באנימה בזמן הניגון, בעיקר בסדרות ישנות ובעלות רזולוציה נמוכה. חל על כותרים המסומנים כאנימה. במקלדת, U בנגן מחליף את המצב עבור התוכן המתנגן. צורך יותר חשמל ומשבית את עצמו בווידאו שהמכשיר אינו מצליח לעבד בזמן. סרטוני HDR וסרטונים בגודל הקרוב לגודל המסך נשארים כפי שהם."
+
+#: src/lib/input/keys.ts
+msgid "Shift"
+msgstr "Shift"
+
+#: src/app/settings/page.tsx
+msgid "Shortcuts"
+msgstr "קיצורי מקשים"
+
+#. A dot under the banner that brings this title up
+#: src/components/media/hero.tsx
+msgid "Show {name}"
+msgstr "הצגת {name}"
+
+#: src/app/settings/playback.tsx
+msgid "Show a skip button"
+msgstr "הצגת כפתור דילוג"
+
+#: src/app/history/page.tsx
+msgid "Show episodes"
+msgstr "הצגת פרקים"
+
+#: src/app/downloads/page.tsx
+msgid "Show in folder"
+msgstr "הצגה בתיקייה"
+
+#: src/app/settings/playback.tsx
+msgid "Show messages over the video"
+msgstr "הצגת הודעות מעל הווידאו"
+
+#: src/app/servers/page.tsx
+msgid "Show on the profile picker"
+msgstr "הצגה בבורר הפרופילים"
+
+#: src/app/settings/playback.tsx
+msgid "Show reactions over the video"
+msgstr "הצגת תגובות מעל הווידאו"
+
+#: src/app/settings/cache.tsx
+msgid "Show saved pages for up to"
+msgstr "הצגת דפים שמורים למשך עד"
+
+#: src/features/player/options.tsx
+msgid "Show subtitles earlier"
+msgstr "הקדמת הכתוביות"
+
+#: src/features/player/options.tsx
+msgid "Show subtitles later"
+msgstr "איחור הכתוביות"
+
+#: src/app/settings/playback.tsx
+msgid "Show the prompt"
+msgstr "הצגת הבקשה"
+
+#: src/app/settings/player.tsx
+msgid "Show the time"
+msgstr "הצגת השעה"
+
+#: src/features/player/controls.tsx
+msgid "Show time left"
+msgstr "הצגת הזמן שנותר"
+
+#: src/features/player/controls.tsx
+msgid "Show time played"
+msgstr "הצגת הזמן שנוגן"
+
+#: src/components/shell/unreachable.tsx
+msgid "Showing saved pages"
+msgstr "מוצגים דפים שמורים"
+
+#: src/app/settings/interface.tsx
+msgid "Shown"
+msgstr "מוצג"
+
+#: src/app/discover/page.tsx
+#: src/app/favourites/page.tsx
+#: src/app/search/page.tsx
+#: src/components/media/kind-tabs.tsx
+#: src/components/media/random-pick.tsx
+#: src/lib/format.ts
+msgid "Shows"
+msgstr "סדרות"
+
+#: src/app/settings/player.tsx
+msgid "Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it."
+msgstr "הצגת תמונה מהווידאו במיקום שמצביעים עליו, גוררים אליו או מדלגים אליו בסרגל הדילוג. כל תמונה צורכת מעט נתונים, ולכן אפשר לכבות כדי לחסוך."
+
+#: src/app/settings/player.tsx
+msgid "Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR."
+msgstr "הצגת וידאו HDR ב־HDR במסך שתומך בכך, במקום להמירו ל־SDR. יש להשאיר כבוי במסך ללא HDR."
+
+#: src/app/settings/browsing.tsx
+msgid "Shows next episodes in the continue watching row, after what you are partway through."
+msgstr "הצגת הפרקים הבאים בשורת המשך צפייה, לאחר התכנים שטרם סיימת לצפות בהם."
+
+#: src/app/settings/browsing.tsx
+msgid "Shows search results in one grid instead of a row each for movies and shows."
+msgstr "הצגת תוצאות חיפוש ברשת אחת במקום בשורות נפרדות לסרטים ולסדרות."
+
+#: src/app/settings/subtitles.tsx
+msgid "Shows subtitles in your language unless the audio already is."
+msgstr "הצגת כתוביות בשפה שלך, אלא אם השמע כבר בשפה הזאת."
+
+#: src/app/settings/player.tsx
+msgid "Shows the time of day at the top of the player with the controls."
+msgstr "הצגת השעה בראש הנגן לצד הפקדים."
+
+#: src/features/playlists/playlists.tsx
+msgid "Shuffle"
+msgstr "ערבוב"
+
+#: src/app/settings/interface.tsx
+msgid "Side rail"
+msgstr "מסילת צד"
+
+#: src/app/settings/interface.tsx
+msgid "Side rail runs down the side of the screen; Top tabs sit along the top of each page."
+msgstr "מסילת צד מוצגת לאורך צד המסך; לשוניות עליונות מופיעות בראש כל דף."
+
+#: src/app/settings/interface.tsx
+msgid "Sidebar"
+msgstr "סרגל צד"
+
+#: src/app/settings/account.tsx
+msgid "Sign another device in as you, with the code it shows."
+msgstr "חיבור מכשיר אחר לחשבון שלך באמצעות הקוד שמופיע בו."
+
+#: src/app/sign-in/page.tsx
+msgid "Sign in"
+msgstr "כניסה"
+
+#: src/app/sign-in/page.tsx
+msgid "Sign in failed"
+msgstr "הכניסה נכשלה"
+
+#: src/app/servers/page.tsx
+#: src/app/settings/account.tsx
+msgid "Sign out"
+msgstr "יציאה מהחשבון"
+
+#: src/app/servers/page.tsx
+msgid "Sign out of {targetName}?"
+msgstr "לצאת מהחשבון ב־{targetName}?"
+
+#: src/app/settings/account.tsx
+msgid "Sign out of this browser?"
+msgstr "לצאת מהחשבון בדפדפן הזה?"
+
+#: src/app/settings/account.tsx
+msgid "Sign out of this server?"
+msgstr "לצאת מהחשבון בשרת הזה?"
+
+#: src/app/servers/page.tsx
+msgid "Signed out"
+msgstr "יצאת מהחשבון"
+
+#: src/app/settings/subtitles.tsx
+#: src/lib/playback/controller.ts
+msgid "Signs and songs"
+msgstr "שלטים ושירים"
+
+#: src/app/settings/subtitles.tsx
+#: src/features/player/options.tsx
+msgid "Size"
+msgstr "גודל"
+
+#: src/features/player/segments.ts
+msgid "Skip"
+msgstr "דילוג"
+
+#: src/features/player/segments.ts
+msgid "Skip ad"
+msgstr "דילוג על פרסומת"
+
+#: src/app/settings/playback.tsx
+msgid "Skip automatically"
+msgstr "דילוג אוטומטי"
+
+#: src/lib/input/actions.ts
+msgid "Skip back"
+msgstr "דילוג אחורה"
+
+#: src/app/settings/playback.tsx
+msgid "Skip by the file's chapters"
+msgstr "דילוג לפי פרקי הקובץ"
+
+#: src/features/player/segments.ts
+msgid "Skip credits"
+msgstr "דילוג על כתוביות סיום"
+
+#: src/app/settings/playback.tsx
+msgid "Skip filler episodes"
+msgstr "דילוג על פרקי מילוי"
+
+#: src/lib/input/actions.ts
+msgid "Skip forward"
+msgstr "דילוג קדימה"
+
+#: src/features/player/segments.ts
+msgid "Skip intro"
+msgstr "דילוג על הפתיח"
+
+#: src/app/settings/player.tsx
+msgid "Skip length"
+msgstr "משך דילוג"
+
+#: src/features/player/segments.ts
+msgid "Skip preview"
+msgstr "דילוג על ההצצה"
+
+#: src/features/player/segments.ts
+msgid "Skip recap"
+msgstr "דילוג על תקציר הפרקים הקודמים"
+
+#: src/app/settings/playback.tsx
+msgid "Skip recap episodes"
+msgstr "דילוג על פרקי תקציר"
+
+#: src/lib/input/actions.ts
+msgid "Skip the intro or credits"
+msgstr "דילוג על הפתיח או כתוביות הסיום"
+
+#: src/features/player/segments.ts
+msgid "Skipped ad"
+msgstr "בוצע דילוג על פרסומת"
+
+#: src/features/player/segments.ts
+msgid "Skipped credits"
+msgstr "בוצע דילוג על כתוביות סיום"
+
+#: src/features/player/segments.ts
+msgid "Skipped intro"
+msgstr "בוצע דילוג על הפתיח"
+
+#: src/features/player/segments.ts
+msgid "Skipped preview"
+msgstr "בוצע דילוג על ההצצה"
+
+#: src/features/player/segments.ts
+msgid "Skipped recap"
+msgstr "בוצע דילוג על תקציר הפרקים הקודמים"
+
+#: src/features/player/segments.ts
+msgid "Skipped segment"
+msgstr "בוצע דילוג על קטע"
+
+#: src/app/settings/playback.tsx
+msgid "Skipping"
+msgstr "דילוג"
+
+#: src/app/settings/_components/reaction-setting.tsx
+msgid "Slot {n}: {emoji}"
+msgstr "מקום {n}: {emoji}"
+
+#: src/lib/input/actions.ts
+msgid "Slower"
+msgstr "לאט יותר"
+
+#: src/app/settings/browsing.tsx
+#: src/lib/subtitles/style.ts
+msgid "Small"
+msgstr "קטן"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Small labels on each version for what it has, from packs you link or badges you make."
+msgstr "תוויות קטנות בכל גרסה המתארות את תוכנה, ממארזים מקושרים או מתגים שיצרת."
+
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Smaller subtitles"
+msgstr "הקטנת כתוביות"
+
+#: src/app/settings/theme.tsx
+msgid "Solid"
+msgstr "אחיד"
+
+#: src/lib/party/actions.ts
+#: src/lib/party/party.ts
+msgid "Someone"
+msgstr "מישהו"
+
+#: src/lib/party/party.ts
+msgid "something this device cannot read"
+msgstr "תוכן שהמכשיר הזה אינו יכול לקרוא"
+
+#: src/features/party/in-party.tsx
+msgid "Something this device cannot read"
+msgstr "תוכן שהמכשיר הזה אינו יכול לקרוא"
+
+#: src/components/media/sort-picker.tsx
+msgid "Sort by"
+msgstr "מיון לפי"
+
+#: src/app/settings/audio.tsx
+#: src/app/settings/browsing.tsx
+#: src/features/player/options.tsx
+msgid "Sound"
+msgstr "צליל"
+
+#: src/app/history/page.tsx
+msgid "Source"
+msgstr "מקור"
+
+#: src/app/settings/about.tsx
+msgid "Source code"
+msgstr "קוד מקור"
+
+#: src/lib/input/keys.ts
+msgid "Space"
+msgstr "רווח"
+
+#: src/app/settings/cache.tsx
+msgid "Space to use"
+msgstr "שטח לשימוש"
+
+#: src/features/player/pause-screen.tsx
+msgid "Specials"
+msgstr "פרקים מיוחדים"
+
+#: src/features/player/options.tsx
+msgid "Speed"
+msgstr "מהירות"
+
+#: src/features/player/keys.ts
+msgid "Speed {shown}×"
+msgstr "מהירות {shown}×"
+
+#: src/lib/input/actions.ts
+msgid "Speed up while held"
+msgstr "האצה בעת לחיצה ממושכת"
+
+#: src/app/settings/apps.tsx
+msgid "Stable"
+msgstr "יציבה"
+
+#: src/features/party/not-in-party.tsx
+msgid "Start a party"
+msgstr "התחלת מסיבת צפייה"
+
+#: src/app/settings/interface.tsx
+msgid "Start on"
+msgstr "דף פתיחה"
+
+#: src/features/remote/remote-sheet.tsx
+msgid "Starting…"
+msgstr "מתחיל…"
+
+#: src/app/settings/subtitles.tsx
+msgid "Starts without subtitles."
+msgstr "מתחיל ללא כתוביות."
+
+#: src/features/player/options.tsx
+#: src/lib/input/actions.ts
+msgid "Statistics"
+msgstr "סטטיסטיקה"
+
+#: src/app/history/page.tsx
+#: src/app/settings/apps.tsx
+msgid "Status"
+msgstr "מצב"
+
+#: src/app/settings/audio.tsx
+msgid "Stereo"
+msgstr "סטריאו"
+
+#: src/features/remote/remote-sheet.tsx
+#: src/lib/input/actions.ts
+#: src/lib/input/keys.ts
+msgid "Stop"
+msgstr "עצירה"
+
+#: src/app/search/page.tsx
+msgid "Stop listening"
+msgstr "הפסקת האזנה"
+
+#: src/app/settings/player.tsx
+msgid "Stops playing"
+msgstr "עצירת הניגון"
+
+#: src/app/player/page.tsx
+#: src/features/versions/version-list.tsx
+msgid "Stream link copied"
+msgstr "קישור ההזרמה הועתק"
+
+#: src/features/player/options.tsx
+msgid "Stretch"
+msgstr "מתיחה"
+
+#: src/app/item/_components/details.tsx
+msgid "Studios"
+msgstr "אולפנים"
+
+#: src/app/settings/interface.tsx
+#: src/features/player/options.tsx
+msgid "Style"
+msgstr "סגנון"
+
+#: src/app/settings/subtitles.tsx
+msgid "Styled subtitles, common in anime, keep their own fonts and colours unless this is on. Blu-ray and DVD subtitles always keep their look and size. Only in the desktop app."
+msgstr "כתוביות מעוצבות, הנפוצות באנימה, שומרות על הגופנים והצבעים שלהן אלא אם האפשרות פעילה. כתוביות Blu-ray ו־DVD שומרות תמיד על המראה והגודל שלהן. באפליקציית המחשב בלבד."
+
+#: src/app/settings/downloads.tsx
+msgid "Subtitle files go next to the video, named so players find them."
+msgstr "קובצי הכתוביות נשמרים לצד הווידאו, בשמות שמאפשרים לנגנים למצוא אותם."
+
+#: src/features/player/keys.ts
+msgid "Subtitle height {height}%"
+msgstr "גובה כתוביות {height}%"
+
+#: src/app/settings/subtitles.tsx
+msgid "Subtitle languages"
+msgstr "שפות כתוביות"
+
+#: src/features/player/keys.ts
+msgid "Subtitle size: {label}"
+msgstr "גודל כתוביות: {label}"
+
+#: src/app/settings/subtitles.tsx
+msgid "Subtitle types"
+msgstr "סוגי כתוביות"
+
+#: src/app/settings/page.tsx
+#: src/app/settings/subtitles.tsx
+#: src/features/player/options.tsx
+#: src/features/remote/remote-sheet.tsx
+msgid "Subtitles"
+msgstr "כתוביות"
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles {amount}"
+msgstr "כתוביות {amount}"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Subtitles back in sync. Another line refines it."
+msgstr "הכתוביות שוב מסונכרנות. שורה נוספת תדייק את הסנכרון."
+
+#: src/lib/input/actions.ts
+msgid "Subtitles earlier"
+msgstr "הקדמת כתוביות"
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles in sync"
+msgstr "כתוביות מסונכרנות"
+
+#: src/lib/input/actions.ts
+msgid "Subtitles later"
+msgstr "איחור כתוביות"
+
+#: src/features/player/keys.ts
+msgid "Subtitles off"
+msgstr "כתוביות כבויות"
+
+#: src/lib/input/actions.ts
+msgid "Subtitles on or off"
+msgstr "הפעלת כתוביות או כיבוין"
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles retimed and synced: {amount}"
+msgstr "תזמון הכתוביות הותאם וסונכרן: {amount}"
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles retimed to the video's speed"
+msgstr "תזמון הכתוביות הותאם למהירות הווידאו"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Subtitles set to {amount}. Another line refines it."
+msgstr "הכתוביות הוגדרו ל־{amount}. שורה נוספת תדייק את הסנכרון."
+
+#: src/lib/subtitles/delay.ts
+msgid "Subtitles synced: {amount}"
+msgstr "הכתוביות סונכרנו: {amount}"
+
+#: src/app/settings/subtitles.tsx
+msgid "Subtitles the version marks as default or forced, in your language when it has them."
+msgstr "כתוביות שהגרסה מסמנת כברירת מחדל או כמאולצות, בשפה שלך אם היא זמינה."
+
+#: src/app/settings/subtitles.tsx
+msgid "Subtitles you pick or turn off while watching a show stay that way for its other episodes. Picking what the settings above would show forgets it."
+msgstr "בחירת כתוביות או כיבוין במהלך צפייה בסדרה נשמרים גם לפרקים האחרים שלה. בחירת הכתוביות שההגדרות שלמעלה היו מציגות תבטל את הבחירה השמורה."
+
+#: src/features/player/keys.ts
+msgid "Subtitles: {label}"
+msgstr "כתוביות: {label}"
+
+#: src/app/settings/theme.tsx
+msgid "Sun"
+msgstr "שמש"
+
+#: src/app/settings/player.tsx
+msgid "Super resolution"
+msgstr "רזולוציית־על"
+
+#: src/lib/i18n.ts
+msgid "Support AIOStreams"
+msgstr "תמיכה ב־AIOStreams"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe across to seek"
+msgstr "החלקה לצדדים לדילוג"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the left for brightness"
+msgstr "החלקה למעלה או למטה בצד שמאל לשינוי הבהירות"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "Swipe up or down on the right for volume"
+msgstr "החלקה למעלה או למטה בצד ימין לשינוי עוצמת השמע"
+
+#: src/app/settings/account.tsx
+msgid "Switch"
+msgstr "החלפה"
+
+#: src/app/settings/account.tsx
+#: src/components/media/no-catalogs.tsx
+#: src/components/shell/layout.tsx
+msgid "Switch profile"
+msgstr "החלפת פרופיל"
+
+#: src/app.tsx
+msgid "Switch server"
+msgstr "החלפת שרת"
+
+#: src/app/settings/player.tsx
+msgid "Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches."
+msgstr "העברת הטלוויזיה לקצב רענון המתאים לכל וידאו, לתנועה חלקה, והחזרתו בסיום. המסך מחשיך לרגע במהלך המעבר."
+
+#: src/features/player/options.tsx
+msgid "Sync automatically"
+msgstr "סנכרון אוטומטי"
+
+#: src/features/player/subtitle-sync.tsx
+#: src/lib/input/actions.ts
+msgid "Sync by ear"
+msgstr "סנכרון לפי שמיעה"
+
+#: src/features/player/options.tsx
+msgid "Sync by ear…"
+msgstr "סנכרון לפי שמיעה…"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Sync to a line"
+msgstr "סנכרון לשורה"
+
+#: src/features/player/options.tsx
+msgid "Sync to a line…"
+msgstr "סנכרון לשורה…"
+
+#: src/features/player/options.tsx
+msgid "Synced automatically"
+msgstr "סונכרן אוטומטית"
+
+#: src/features/player/controls.tsx
+msgid "Syncing subtitles…"
+msgstr "מתבצע סנכרון כתוביות…"
+
+#: src/app/settings/player.tsx
+msgid "System"
+msgstr "מערכת"
+
+#: src/app/settings/interface.tsx
+msgid "System ({system})"
+msgstr "מערכת ({system})"
+
+#: src/app/settings/audio.tsx
+msgid "System default"
+msgstr "ברירת המחדל של המערכת"
+
+#: src/lib/input/keys.ts
+msgid "Tab"
+msgstr "Tab"
+
+#: src/app/settings/interface.tsx
+msgid "Tab names"
+msgstr "שמות לשוניות"
+
+#: src/app/history/page.tsx
+msgid "Table"
+msgstr "טבלה"
+
+#: src/features/player/lock.tsx
+msgid "Tap to unlock"
+msgstr "הקשה לביטול הנעילה"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Tap when you hear a line and when its subtitle shows, in either order."
+msgstr "יש להקיש כשהשורה נשמעת וכשהכתובית שלה מופיעה, בכל סדר."
+
+#: src/app/settings/_components/version-settings.tsx
+#: src/app/settings/subtitles.tsx
+msgid "Text"
+msgstr "טקסט"
+
+#: src/features/versions/version-badges.tsx
+msgid "That address answered {status}."
+msgstr "הכתובת החזירה {status}."
+
+#: src/app/sign-in/page.tsx
+msgid "That did not match. Try again."
+msgstr "לא נמצאה התאמה. יש לנסות שוב."
+
+#: src/lib/subtitles/files.ts
+msgid "That file is too big"
+msgstr "הקובץ גדול מדי"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "That has no badges this app can read."
+msgstr "אין כאן תגים שהאפליקציה יכולה לקרוא."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "That has no quick filters this app can read."
+msgstr "אין כאן מסננים מהירים שהאפליקציה יכולה לקרוא."
+
+#: src/lib/jellyfin/servers.ts
+msgid "That is not a valid address."
+msgstr "הכתובת אינה תקינה."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "That is not a valid regular expression."
+msgstr "הביטוי הרגולרי אינו תקין."
+
+#: src/lib/party/party.ts
+msgid "That party has ended."
+msgstr "מסיבת הצפייה הסתיימה."
+
+#: src/lib/party/party.ts
+msgid "That party is full."
+msgstr "מסיבת הצפייה מלאה."
+
+#: src/lib/party/party.ts
+msgid "That party is not letting anyone new in."
+msgstr "מסיבת הצפייה אינה מאפשרת כרגע הצטרפות משתתפים חדשים."
+
+#: src/features/versions/version-list.tsx
+msgid "That pattern is not a valid regular expression."
+msgstr "התבנית אינה ביטוי רגולרי תקין."
+
+#: src/lib/party/party.ts
+msgid "That relay doesn't let you in."
+msgstr "שרת התיווך אינו מאפשר לך להיכנס."
+
+#: src/lib/party/party.ts
+msgid "That relay is too busy for another party."
+msgstr "שרת התיווך עמוס מדי למסיבת צפייה נוספת."
+
+#: src/lib/party/party.ts
+msgid "That relay runs a different version of watch parties."
+msgstr "שרת התיווך מפעיל גרסה אחרת של מסיבות צפייה."
+
+#: src/features/remote/remote-target.tsx
+msgid "That title could not be opened"
+msgstr "לא ניתן לפתוח את הכותר הזה"
+
+#: src/app/settings/apps.tsx
+msgid "That you are searching, not what for."
+msgstr "עצם ביצוע החיפוש, ללא תוכן החיפוש."
+
+#: src/app/settings/player.tsx
+msgid "The {name} installed on this computer, in a window of its own with its own controls and configuration. This app still saves your place, marks what you watched and plays the next episode. Compared with the built-in player, you lose:<0><1>The controls, skip buttons and next episode card over the video. They stay in this window, which works as a remote.</1><2>This app's subtitle style, video fit, hardware decoding and audio output settings.</2></0>"
+msgstr "{name} המותקן במחשב הזה, בחלון נפרד עם פקדים ותצורה משלו. האפליקציה עדיין שומרת את מיקום הצפייה, מסמנת במה צפית ומפעילה את הפרק הבא. בהשוואה לנגן המובנה, לא יהיו זמינים:<0><1>הפקדים, כפתורי הדילוג וכרטיס הפרק הבא מעל הווידאו. הם נשארים בחלון הזה, שמשמש כשלט רחוק.</1><2>הגדרות סגנון הכתוביות, התאמת הווידאו, פענוח החומרה ופלט השמע של האפליקציה.</2></0>"
+
+#: src/lib/jellyfin/servers.ts
+msgid "The address must start with http:// or https://."
+msgstr "הכתובת חייבת להתחיל ב־http:// או ב־https://."
+
+#: src/app/servers/page.tsx
+msgid "The address of the AIOStreams instance where you set up your addon. Other Jellyfin servers work too."
+msgstr "כתובת מופע AIOStreams שבו הגדרת את התוסף שלך. גם שרתי Jellyfin אחרים נתמכים."
+
+#: src/app/settings/about.tsx
+msgid "The API this app speaks."
+msgstr "ה־API שבו האפליקציה משתמשת."
+
+#: src/app.tsx
+msgid "The app cannot open that link"
+msgstr "האפליקציה אינה יכולה לפתוח את הקישור הזה"
+
+#: src/components/shell/crash-report.tsx
+msgid "The app closed unexpectedly"
+msgstr "האפליקציה נסגרה באופן בלתי צפוי"
+
+#: src/lib/hosts/shell/bridge.ts
+msgid "The app did not answer"
+msgstr "האפליקציה לא הגיבה"
+
+#: src/app/settings/downloads.tsx
+msgid "The app saves what you download and plays it without a connection."
+msgstr "האפליקציה שומרת את ההורדות שלך ומנגנת אותן ללא חיבור."
+
+#: src/app/settings/downloads.tsx
+msgid "The app's downloads"
+msgstr "הורדות האפליקציה"
+
+#: src/lib/hosts/native-shell.ts
+msgid "The app's own settings"
+msgstr "ההגדרות של האפליקציה"
+
+#: src/lib/hosts/jellyfin-android.ts
+msgid "The app's player"
+msgstr "נגן האפליקציה"
+
+#: src/lib/hosts/jellyfin-android.ts
+msgid "The app's player and its options, such as starting videos in landscape."
+msgstr "נגן האפליקציה והאפשרויות שלו, כגון הפעלת סרטונים במצב רוחבי."
+
+#: src/app/settings/theme.tsx
+msgid "The artwork of the title you're on, blurred and darkened, behind these pages. The version list shows it with title pages."
+msgstr "תמונות הכותר הנבחר, מטושטשות ומוחשכות, מאחורי הדפים האלה. רשימת הגרסאות מציגה אותן יחד עם דפי כותרים."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every device. A device that changes it keeps its own."
+msgstr "ברירת המחדל לכל המכשירים. מכשיר שישנה אותה ישמור ערך משלו."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "The default for every profile. A profile that changes it keeps its own."
+msgstr "ברירת המחדל לכל הפרופילים. פרופיל שישנה אותה ישמור ערך משלו."
+
+#: src/app/settings/account.tsx
+msgid "The device is signed in"
+msgstr "המכשיר מחובר לחשבון"
+
+#: src/lib/party/party.ts
+msgid "The host removed you from the party."
+msgstr "המארח/ת הסיר/ה אותך ממסיבת הצפייה."
+
+#: src/app/settings/about.tsx
+msgid "The interface is built on its components."
+msgstr "הממשק בנוי מהרכיבים שלו."
+
+#: src/app/settings/_components/licenses.tsx
+msgid "The licences couldn't be loaded."
+msgstr "לא ניתן לטעון את הרישיונות."
+
+#: src/lib/hosts/shell/player.ts
+msgid "the link answered HTTP {status}"
+msgstr "הקישור החזיר HTTP {status}"
+
+#: src/lib/hosts/shell/player.ts
+msgid "the link answered HTTP {status} ({meaning})"
+msgstr "הקישור החזיר HTTP {status} ({meaning})"
+
+#: src/router.tsx
+msgid "The link may be old, or the page moved."
+msgstr "ייתכן שהקישור ישן או שהדף הועבר."
+
+#: src/lib/hosts/shell/player.ts
+msgid "the link returned something other than a video"
+msgstr "הקישור החזיר תוכן שאינו וידאו"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/use-player.ts
+msgid "the live stream stopped"
+msgstr "השידור החי נעצר"
+
+#: src/app/settings/player.tsx
+msgid "The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross."
+msgstr "הנגן הממוזער ממשיך לנגן את הווידאו מעל הדפים בזמן הגלישה. יש להקיש עליו לפתיחה מחדש של הנגן, או לסגור אותו באמצעות ה־X."
+
+#: src/app/settings/player.tsx
+msgid "The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too."
+msgstr "קצב ההזרמה המרבי לגרסה. מעבר לו, השרת ממיר לאיכות נמוכה יותר, כדי לסייע בחיבור איטי. האפשרות מקורי מנגנת כל גרסה כפי שהיא. גם תפריט האיכות בנגן משנה הגדרה זו."
+
+#: src/app/settings/apps.tsx
+msgid "The movie or show whose page is open."
+msgstr "הסרט או הסדרה שהדף שלהם פתוח."
+
+#: src/app/settings/player.tsx
+msgid "The older way mpv draws, for Macs where the others fail. Some Dolby Vision videos show the wrong colours."
+msgstr "שיטת הציור הישנה של mpv, עבור מחשבי Mac שבהם השיטות האחרות נכשלות. בחלק מסרטוני Dolby Vision מוצגים צבעים שגויים."
+
+#: src/app/settings/_components/licenses.tsx
+msgid "The open-source software in this app, and the licence of each."
+msgstr "תוכנות הקוד הפתוח באפליקציה והרישיון של כל אחת."
+
+#: src/features/remote/remote-sheet.tsx
+msgid "The other device could not be reached"
+msgstr "לא ניתן להתחבר למכשיר האחר"
+
+#: src/components/shell/crash-report.tsx
+msgid "The page restarted unexpectedly"
+msgstr "הדף הופעל מחדש באופן בלתי צפוי"
+
+#: src/app/settings/interface.tsx
+msgid "The page the app opens on. A link still opens what it points to."
+msgstr "הדף שנפתח עם האפליקציה. קישור עדיין יפתח את היעד שלו."
+
+#: src/lib/party/party.ts
+msgid "The party ended after a long time with nothing playing."
+msgstr "מסיבת הצפייה הסתיימה לאחר זמן רב ללא ניגון."
+
+#: src/lib/party/party.ts
+msgid "The party ended."
+msgstr "מסיבת הצפייה הסתיימה."
+
+#: src/features/party/not-in-party.tsx
+msgid "The party is full"
+msgstr "מסיבת הצפייה מלאה"
+
+#: src/features/party/in-party.tsx
+msgid "The party is watching <0>{title}</0>"
+msgstr "במסיבת הצפייה צופים ב־<0>{title}</0>"
+
+#: src/app/settings/page.tsx
+msgid "The player and its controls"
+msgstr "הנגן והפקדים שלו"
+
+#: src/lib/hosts/shell/player.ts
+msgid "the player could not play this version"
+msgstr "הנגן לא הצליח לנגן את הגרסה הזאת"
+
+#: src/app/settings/page.tsx
+msgid "The player, its controls and video"
+msgstr "הנגן, הפקדים והווידאו"
+
+#: src/app/settings/subtitles.tsx
+msgid "The player's subtitle menu lists subtitles in your languages, ones without a language and the one on. The rest wait under More languages."
+msgstr "תפריט הכתוביות בנגן מציג כתוביות בשפות שלך, כתוביות ללא שפה ואת הכתוביות הפעילות. היתר מופיעות תחת שפות נוספות."
+
+#: src/features/playlists/playlists.tsx
+msgid "The playlist goes; the titles in it stay."
+msgstr "רשימת הצפייה תימחק; הכותרים שבתוכה יישארו."
+
+#: src/lib/party/party.ts
+msgid "The relay could not read that."
+msgstr "שרת התיווך לא הצליח לקרוא זאת."
+
+#: src/app/settings/downloads.tsx
+msgid "The rest wait their turn."
+msgstr "השאר ממתינים לתורם."
+
+#: src/app/settings/playback.tsx
+msgid "The same for episodes marked as a recap."
+msgstr "כך גם עבור פרקים המסומנים כתקציר."
+
+#. Follows "Playback failed:"
+#: src/lib/playback/transcoding.ts
+msgid "the server could not convert this version"
+msgstr "השרת לא הצליח להמיר את הגרסה הזאת"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/use-player.ts
+msgid "the stream ended early"
+msgstr "ההזרמה הסתיימה מוקדם"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+msgid "the stream stopped loading"
+msgstr "טעינת ההזרמה נעצרה"
+
+#: src/app/settings/apps.tsx
+msgid "The title, the episode and the time left."
+msgstr "הכותר, הפרק והזמן שנותר."
+
+#: src/lib/hosts/tizen/player.ts
+msgid "the TV cannot play this format"
+msgstr "הטלוויזיה אינה יכולה לנגן את הפורמט הזה"
+
+#: src/lib/hosts/tizen/player.ts
+msgid "the TV could not load the stream"
+msgstr "הטלוויזיה לא הצליחה לטעון את ההזרמה"
+
+#: src/lib/hosts/tizen/player.ts
+msgid "the TV's player failed ({code})"
+msgstr "נגן הטלוויזיה נכשל ({code})"
+
+#: src/lib/playback/player-choice.ts
+msgid "the video app Android picks"
+msgstr "אפליקציית הווידאו שנבחרה ב־Android"
+
+#: src/app/settings/player.tsx
+msgid "The video output changes when the app opens again."
+msgstr "פלט הווידאו ישתנה בפתיחה הבאה של האפליקציה."
+
+#: src/features/downloads/download-button.tsx
+msgid "The whole show"
+msgstr "כל הסדרה"
+
+#: src/app/settings/page.tsx
+msgid "Theme"
+msgstr "ערכת נושא"
+
+#: src/features/versions/version-badges.tsx
+msgid "There are no badges this app can read at that address."
+msgstr "אין בכתובת הזאת תגים שהאפליקציה יכולה לקרוא."
+
+#: src/router.tsx
+msgid "There is nothing here"
+msgstr "אין כאן כלום"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "These come before the packs' badges. Badges that share a group are alternatives: only the first that matches shows."
+msgstr "אלה קודמים לתגים מהמארזים. תגים שמשתייכים לאותה קבוצה הם חלופות: יוצג רק הראשון שתואם."
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles don't match the video's own"
+msgstr "הכתוביות האלה אינן תואמות לכתוביות המקוריות של הווידאו"
+
+#: src/lib/subtitles/delay.ts
+msgid "These subtitles run at a different speed to the video"
+msgstr "הכתוביות האלה פועלות במהירות שונה מהווידאו"
+
+#: src/features/player/subtitle-sync.tsx
+msgid "These subtitles' lines could not be read."
+msgstr "לא ניתן לקרוא את שורות הכתוביות האלה."
+
+#: src/app/settings/subtitles.tsx
+msgid "Thick"
+msgstr "עבה"
+
+#: src/app/settings/subtitles.tsx
+msgid "Thin"
+msgstr "דק"
+
+#: src/app/settings/audio.tsx
+msgid "This app decodes Dolby and DTS audio itself, which loses Atmos."
+msgstr "האפליקציה מפענחת בעצמה שמע Dolby ו־DTS, ולכן Atmos אינו נשמר."
+
+#: src/app/settings/player.tsx
+msgid "This browser"
+msgstr "הדפדפן הזה"
+
+#. Follows "Playback failed:"
+#: src/lib/playback/video.ts
+msgid "this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app."
+msgstr "הדפדפן הזה אינו יכול לנגן את הגרסה הזאת. לא מתבצעת המרה בשרת, ולכן כדאי לנסות גרסה אחרת, נגן חיצוני או את אפליקציית המחשב."
+
+#: src/lib/playback/shaders.ts
+msgid "This browser keeps no files for this site."
+msgstr "הדפדפן הזה אינו שומר קבצים לאתר הזה."
+
+#: src/app/settings/player.tsx
+msgid "This browser's own player, which plays the formats this browser supports."
+msgstr "הנגן המובנה בדפדפן, שמנגן את הפורמטים שהדפדפן תומך בהם."
+
+#: src/app/settings/player.tsx
+msgid "This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause."
+msgstr "חלון הדפדפן המובנה של הווידאו בלבד, ללא הסרגל הזה, אך ללא כתוביות ועם פקדי ההפעלה וההשהיה של הדפדפן בלבד."
+
+#: src/app/sign-in/page.tsx
+msgid "This code has expired."
+msgstr "תוקף הקוד פג."
+
+#: src/lib/hosts/shell/index.ts
+msgid "This copy does not update itself."
+msgstr "העותק הזה אינו מתעדכן אוטומטית."
+
+#: src/lib/party/follow.ts
+msgid "This device couldn't read what the party is playing."
+msgstr "המכשיר הזה לא הצליח לקרוא את התוכן שמופעל במסיבת הצפייה."
+
+#: src/lib/playback/shaders.ts
+msgid "This is a GLSL shader. Convert it to a .wgsl pass file first."
+msgstr "זהו מצלל GLSL. יש להמיר אותו תחילה לקובץ pass מסוג .wgsl."
+
+#: src/app/settings/subtitles.tsx
+msgid "This is how subtitles will look."
+msgstr "כך ייראו הכתוביות."
+
+#: src/components/shell/crash-report.tsx
+msgid "This is what the device recorded about it. Sending or saving the report helps get it fixed."
+msgstr "זה מה שהמכשיר תיעד על הבעיה. שליחת הדוח או שמירתו יעזרו לתקן אותה."
+
+#: src/lib/playback/shaders.ts
+msgid "This isn't a .wgsl pass file."
+msgstr "זה אינו קובץ pass מסוג .wgsl."
+
+#: src/lib/jellyfin/queries.ts
+msgid "This item was not found"
+msgstr "הפריט לא נמצא"
+
+#: src/app/sign-in/page.tsx
+msgid "This profile has a PIN."
+msgstr "הפרופיל הזה מוגן בקוד PIN."
+
+#: src/features/downloads/download-button.tsx
+msgid "This season"
+msgstr "העונה הזאת"
+
+#: src/features/party/not-in-party.tsx
+msgid "This server"
+msgstr "השרת הזה"
+
+#: src/app/history/page.tsx
+msgid "This server can't list what you've watched."
+msgstr "השרת הזה אינו יכול להציג את היסטוריית הצפייה שלך."
+
+#: src/app/settings/_components/settings-card.tsx
+msgid "This server doesn't let your account change these."
+msgstr "השרת הזה אינו מאפשר לחשבון שלך לשנות את ההגדרות האלה."
+
+#: src/app/item/_components/no-details.tsx
+msgid "This server has no details for {id}."
+msgstr "אין בשרת הזה פרטים עבור {id}."
+
+#: src/components/media/no-catalogs.tsx
+msgid "This server shares no movie or show catalogs with this account."
+msgstr "השרת הזה אינו משתף קטלוגים של סרטים או סדרות עם החשבון הזה."
+
+#: src/app/settings/theme.tsx
+msgid "This server styles the app for everyone. Your own CSS applies on top of it."
+msgstr "השרת הזה מעצב את האפליקציה עבור כולם. ה־CSS שלך מוחל מעליו."
+
+#: src/components/media/random-pick.tsx
+msgid "This show has no episodes to pick from yet."
+msgstr "עדיין אין בסדרה הזאת פרקים לבחירה."
+
+#: src/app/trailer/page.tsx
+msgid "This trailer can't play in the app."
+msgstr "לא ניתן לנגן את הקדימון הזה באפליקציה."
+
+#: src/app/trailer/page.tsx
+msgid "This trailer didn't load."
+msgstr "הקדימון הזה לא נטען."
+
+#: src/app/trailer/page.tsx
+msgid "This trailer didn't play: {failure}"
+msgstr "הקדימון הזה לא נוגן: {failure}"
+
+#: src/app/trailer/page.tsx
+msgid "This trailer is gone."
+msgstr "הקדימון הזה אינו זמין עוד."
+
+#: src/app/player/page.tsx
+msgid "This version is no longer available."
+msgstr "הגרסה הזאת אינה זמינה עוד."
+
+#: src/app/player/page.tsx
+msgid "This video didn't load."
+msgstr "הווידאו הזה לא נטען."
+
+#: src/app/settings/about.tsx
+msgid "This web app with a player of its own, which plays what a browser can't, on Windows, Mac and Linux."
+msgstr "אפליקציית האינטרנט הזאת עם נגן משלה, שמנגן תוכן שדפדפן אינו יכול לנגן, ב־Windows, ב־Mac וב־Linux."
+
+#: src/features/player/subtitle-sync.tsx
+msgid "Those were too far apart to be one line. Try another line."
+msgstr "המרווח ביניהם גדול מדי מכדי שזו תהיה אותה שורה. יש לנסות שורה אחרת."
+
+#: src/app/settings/cache.tsx
+msgid "Three days"
+msgstr "שלושה ימים"
+
+#: src/app/settings/interface.tsx
+msgid "Time format"
+msgstr "תבנית שעה"
+
+#: src/app/settings/browsing.tsx
+msgid "Time on each title"
+msgstr "זמן לכל כותר"
+
+#: src/features/player/options.tsx
+msgid "Timing"
+msgstr "תזמון"
+
+#: src/app/history/page.tsx
+#: src/app/settings/browsing.tsx
+msgid "Title"
+msgstr "כותר"
+
+#: src/app/settings/apps.tsx
+#: src/app/settings/browsing.tsx
+#: src/app/settings/cache.tsx
+#: src/app/settings/theme.tsx
+msgid "Title pages"
+msgstr "דפי כותרים"
+
+#: src/app/settings/interface.tsx
+msgid "Titles, synopses and version names stay in the language the server sends."
+msgstr "שמות כותרים, תקצירים ושמות גרסאות נשארים בשפה שהשרת שולח."
+
+#: src/app/calendar/page.tsx
+#: src/app/live-tv/page.tsx
+msgid "Today"
+msgstr "היום"
+
+#: src/app/live-tv/page.tsx
+msgid "Tomorrow"
+msgstr "מחר"
+
+#: src/lib/hosts/shell/player.ts
+msgid "too many requests"
+msgstr "יותר מדי בקשות"
+
+#: src/lib/party/party.ts
+msgid "Too many tries. Wait a moment and try again."
+msgstr "יותר מדי ניסיונות. יש להמתין רגע ולנסות שוב."
+
+#: src/app/sign-in/page.tsx
+msgid "Too many tries. Wait a moment, then try again."
+msgstr "יותר מדי ניסיונות. יש להמתין רגע ואז לנסות שוב."
+
+#: src/app/settings/interface.tsx
+msgid "Top bar"
+msgstr "סרגל עליון"
+
+#: src/app/settings/interface.tsx
+msgid "Top tabs"
+msgstr "לשוניות עליונות"
+
+#: src/lib/playback/controller.ts
+msgid "Track {n}"
+msgstr "רצועה {n}"
+
+#: src/lib/hosts/shell/player.ts
+msgid "Tracks"
+msgstr "רצועות"
+
+#: src/app/item/_components/actions.tsx
+#: src/features/trailers/preview.tsx
+#: src/lib/playback/trailers.ts
+msgid "Trailer"
+msgstr "קדימון"
+
+#: src/app/item/_components/trailers.tsx
+#: src/app/settings/browsing.tsx
+msgid "Trailers"
+msgstr "קדימונים"
+
+#: src/app/settings/subtitles.tsx
+msgid "Tried in order for the subtitles the setting below shows."
+msgstr "ניסיון לפי הסדר עבור הכתוביות שההגדרה למטה מציגה."
+
+#: src/app/settings/apps.tsx
+msgid "Troubleshooting"
+msgstr "פתרון בעיות"
+
+#: src/app/downloads/page.tsx
+#: src/app/sign-in/page.tsx
+#: src/components/media/random-pick.tsx
+#: src/features/party/not-in-party.tsx
+#: src/features/versions/version-list.tsx
+#: src/lib/playback/transcoding.ts
+#: src/lib/playback/use-player.ts
+msgid "Try again"
+msgstr "ניסיון חוזר"
+
+#: src/lib/party/party.ts
+msgid "Try starting the party again."
+msgstr "יש לנסות להתחיל שוב את מסיבת הצפייה."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Try them"
+msgstr "ניסיון"
+
+#: src/app/settings/player.tsx
+msgid "Tunneled playback"
+msgstr "ניגון במנהרה (Tunneled playback)"
+
+#: src/components/shell/usage-stats.tsx
+msgid "Turn off"
+msgstr "כיבוי"
+
+#: src/app/settings/audio.tsx
+msgid "Turn other surround sound into Dolby Digital"
+msgstr "המרת שמע היקפי אחר ל־Dolby Digital"
+
+#: src/app/settings/cache.tsx
+msgid "Turning one off also clears it."
+msgstr "כיבוי אפשרות גם מנקה את הנתונים שלה."
+
+#: src/lib/input/actions.ts
+msgid "Turns it on or off for what is playing."
+msgstr "הפעלה או כיבוי עבור התוכן המתנגן."
+
+#: src/app/settings/cache.tsx
+msgid "Two weeks"
+msgstr "שבועיים"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Type a release name to see the badges it gets."
+msgstr "יש להקליד שם הפצה כדי לראות אילו תגים היא מקבלת."
+
+#: src/app/settings/subtitles.tsx
+msgid "Typewriter"
+msgstr "מכונת כתיבה"
+
+#: src/components/media/episodes.tsx
+#: src/lib/format.ts
+msgid "Unaired"
+msgstr "טרם שודר"
+
+#: src/app/settings/browsing.tsx
+msgid "Under posters"
+msgstr "מתחת לכרזות"
+
+#: src/app/item/_components/actions.tsx
+msgid "Undrop show"
+msgstr "ביטול הסרת הסדרה"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Unfinished"
+msgstr "טרם הסתיים"
+
+#: src/lib/playback/controller.ts
+msgid "Unknown language"
+msgstr "שפה לא ידועה"
+
+#: src/features/player/picture-in-picture.tsx
+#: src/features/player/volume.tsx
+msgid "Unmute"
+msgstr "ביטול השתקה"
+
+#: src/lib/i18n.ts
+msgid "Unnamed"
+msgstr "ללא שם"
+
+#: src/app/discover/page.tsx
+msgid "Unwatched"
+msgstr "לא נצפה"
+
+#: src/features/downloads/download-button.tsx
+msgid "Unwatched in {seasonName}"
+msgstr "פרקים שלא נצפו ב־{seasonName}"
+
+#: src/features/downloads/download-button.tsx
+msgid "Unwatched in this season"
+msgstr "פרקים שלא נצפו בעונה הזאת"
+
+#: src/lib/input/actions.ts
+msgid "Up"
+msgstr "למעלה"
+
+#: src/features/player/next-episode.tsx
+msgid "Up next"
+msgstr "הבא בתור"
+
+#: src/features/player/next-episode.tsx
+msgid "Up next: {upNext}"
+msgstr "הבא בתור: {upNext}"
+
+#: src/app/settings/browsing.tsx
+msgid "Up to {MAX_FEATURED}, mixed together. Left empty, your first movie and show libraries are featured."
+msgstr "עד {MAX_FEATURED}, מעורבבים יחד. אם משאירים ריק, יוצגו הספריות הראשונות שלך לסרטים ולסדרות."
+
+#: src/lib/hosts/shell/index.ts
+msgid "Up to date."
+msgstr "מעודכן."
+
+#: src/app/home/page.tsx
+msgid "Upcoming"
+msgstr "בקרוב"
+
+#: src/components/shell/update-prompt.tsx
+msgid "Update ready"
+msgstr "העדכון מוכן"
+
+#: src/app/settings/apps.tsx
+msgid "Updates"
+msgstr "עדכונים"
+
+#: src/app/settings/page.tsx
+msgid "Updates and troubleshooting"
+msgstr "עדכונים ופתרון בעיות"
+
+#: src/app/settings/page.tsx
+msgid "Updates, Discord and troubleshooting"
+msgstr "עדכונים, Discord ופתרון בעיות"
+
+#: src/app/settings/about.tsx
+#: src/components/shell/usage-stats.tsx
+msgid "Usage statistics"
+msgstr "נתוני שימוש"
+
+#: src/app/sign-in/page.tsx
+msgid "Use Quick Connect, or the configuration’s password."
+msgstr "יש להשתמש בחיבור מהיר או בסיסמת התצורה."
+
+#: src/app/sign-in/page.tsx
+msgid "Use the configuration’s password."
+msgstr "יש להשתמש בסיסמת התצורה."
+
+#: src/app/settings/theme.tsx
+msgid "Use this server's CSS"
+msgstr "שימוש ב־CSS של השרת הזה"
+
+#: src/app/sign-in/page.tsx
+msgid "Use your configuration’s UUID or alias and its password."
+msgstr "יש להשתמש במזהה ה־UUID או בכינוי של התצורה ובסיסמה שלה."
+
+#: src/app/sign-in/page.tsx
+msgid "Use your PIN, or the configuration’s password."
+msgstr "יש להשתמש בקוד ה־PIN שלך או בסיסמת התצורה."
+
+#: src/app/sign-in/page.tsx
+msgid "Use your PIN."
+msgstr "יש להשתמש בקוד ה־PIN שלך."
+
+#: src/app/sign-in/page.tsx
+msgid "Use your user name and password."
+msgstr "יש להשתמש בשם המשתמש ובסיסמה שלך."
+
+#: src/app/sign-in/page.tsx
+msgid "Use your user name and PIN, or the configuration’s UUID and its password."
+msgstr "יש להשתמש בשם המשתמש ובקוד ה־PIN שלך, או במזהה ה־UUID של התצורה ובסיסמה שלה."
+
+#: src/app/settings/playback.tsx
+msgid "Used when an episode has no credits marked."
+msgstr "משמש כשלא סומנו כתוביות סיום לפרק."
+
+#: src/app/sign-in/page.tsx
+msgid "User name"
+msgstr "שם משתמש"
+
+#: src/app/sign-in/page.tsx
+msgid "User or UUID"
+msgstr "משתמש או UUID"
+
+#: src/app/sign-in/page.tsx
+msgid "UUID or alias"
+msgstr "UUID או כינוי"
+
+#: src/lib/downloads/index.ts
+msgid "Version"
+msgstr "גרסה"
+
+#: src/lib/hosts/shell/index.ts
+msgid "Version {version} installs on the next start."
+msgstr "גרסה {version} תותקן בהפעלה הבאה."
+
+#: src/lib/hosts/shell/index.ts
+msgid "Version {version} is ready to install."
+msgstr "גרסה {version} מוכנה להתקנה."
+
+#: src/app/settings/downloads.tsx
+msgid "Version searches at once"
+msgstr "חיפושי גרסאות במקביל"
+
+#: src/app/settings/playback.tsx
+#: src/features/player/options.tsx
+#: src/features/versions/version-picker.tsx
+msgid "Versions"
+msgstr "גרסאות"
+
+#: src/app/settings/page.tsx
+msgid "Versions and links"
+msgstr "גרסאות וקישורים"
+
+#: src/app/settings/apps.tsx
+msgid "Versions and the recent log, to paste into a bug report."
+msgstr "גרסאות והיומן האחרון, להדבקה בדיווח על תקלה."
+
+#: src/app/settings/downloads.tsx
+msgid "Versions are found for this many episodes at a time when a season or show is added."
+msgstr "בחיפוש לאחר הוספת עונה או סדרה, זה מספר הפרקים שנבדקים בכל פעם."
+
+#: src/app/settings/player.tsx
+msgid "Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead."
+msgstr "גרסאות מתנגנות באפליקציה, עם הפקדים והגדרות הניגון שלה. אפשר לבחור נגן אחר כדי לפתוח אותן בו."
+
+#: src/app/settings/player.tsx
+msgid "Versions play in this browser. Choose another player to open them in it instead."
+msgstr "גרסאות מתנגנות בדפדפן הזה. אפשר לבחור נגן אחר כדי לפתוח אותן בו."
+
+#: src/app/settings/page.tsx
+msgid "Versions, next episode and skipping"
+msgstr "גרסאות, הפרק הבא ודילוג"
+
+#: src/app/settings/player.tsx
+msgid "Video"
+msgstr "וידאו"
+
+#: src/app/settings/player.tsx
+msgid "Video only"
+msgstr "וידאו בלבד"
+
+#: src/app/settings/player.tsx
+msgid "Video output"
+msgstr "פלט וידאו"
+
+#: src/app/settings/_components/licenses.tsx
+msgid "View"
+msgstr "תצוגה"
+
+#: src/app/settings/_components/licenses.tsx
+#: src/app/settings/about.tsx
+msgid "Visit"
+msgstr "ביקור"
+
+#: src/lib/hosts/shell/android.ts
+msgid "Voice search failed"
+msgstr "החיפוש הקולי נכשל"
+
+#: src/features/player/volume.tsx
+msgid "Volume"
+msgstr "עוצמת שמע"
+
+#: src/features/player/gestures.ts
+#: src/features/player/keys.ts
+msgid "Volume {percent}%"
+msgstr "עוצמת שמע {percent}%"
+
+#: src/lib/input/actions.ts
+msgid "Volume down"
+msgstr "הנמכת עוצמת שמע"
+
+#: src/lib/input/keys.ts
+msgid "Volume down key"
+msgstr "מקש הנמכת עוצמת שמע"
+
+#: src/app/settings/player.tsx
+msgid "Volume step"
+msgstr "מרווח שינוי עוצמת שמע"
+
+#: src/lib/input/actions.ts
+msgid "Volume up"
+msgstr "הגברת עוצמת שמע"
+
+#: src/lib/input/keys.ts
+msgid "Volume up key"
+msgstr "מקש הגברת עוצמת שמע"
+
+#: src/app/downloads/page.tsx
+msgid "Waiting"
+msgstr "בהמתנה"
+
+#: src/app/downloads/page.tsx
+msgid "Waiting · {of}"
+msgstr "בהמתנה · {of}"
+
+#: src/features/party/party-layer.tsx
+msgid "Waiting for {names}"
+msgstr "בהמתנה ל־{names}"
+
+#: src/app/sign-in/page.tsx
+msgid "Waiting for approval…"
+msgstr "בהמתנה לאישור…"
+
+#: src/app/live-tv/_components/channel-details.tsx
+#: src/features/live-tv/live-reminders.tsx
+msgid "Watch"
+msgstr "צפייה"
+
+#: src/features/party/in-party.tsx
+msgid "Watch along"
+msgstr "צפייה משותפת"
+
+#: src/app/settings/account.tsx
+msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
+msgstr "צפייה בתור מישהו אחר בתצורה הזאת. פרופיל עם קוד PIN ידרוש אותו שוב לאחר מעבר לפרופיל אחר."
+
+#: src/app/settings/playback.tsx
+msgid "Watch parties"
+msgstr "מסיבות צפייה"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/shell/layout.tsx
+#: src/features/party/party-sheet.tsx
+#: src/features/player/options.tsx
+msgid "Watch party"
+msgstr "מסיבת צפייה"
+
+#: src/app/item/_components/actions.tsx
+#: src/components/shell/layout.tsx
+#: src/features/party/in-party.tsx
+#: src/features/party/party-sheet.tsx
+#: src/features/player/options.tsx
+msgid "Watch together"
+msgstr "צפייה יחד"
+
+#: src/app/discover/page.tsx
+#: src/app/history/page.tsx
+#: src/app/item/_components/actions.tsx
+msgid "Watched"
+msgstr "נצפה"
+
+#: src/app/history/page.tsx
+msgid "Watched ×{playCount}"
+msgstr "נצפה ×{playCount}"
+
+#: src/app/history/page.tsx
+msgid "Watched marks and resume points are removed from this server. Favourites stay. Titles a tracker still lists come back when it next syncs."
+msgstr "סימוני צפייה ומיקומי המשך צפייה יימחקו מהשרת הזה. המועדפים יישארו. כותרים שעדיין מופיעים בשירות מעקב יחזרו בסנכרון הבא שלו."
+
+#: src/app/settings/page.tsx
+#: src/features/party/in-party.tsx
+msgid "Watching"
+msgstr "בצפייה"
+
+#: src/features/party/in-party.tsx
+msgid "Watching ({watching})"
+msgstr "בצפייה ({watching})"
+
+#: src/features/party/not-in-party.tsx
+msgid "Watching {name}"
+msgstr "בצפייה ב־{name}"
+
+#: src/features/party/not-in-party.tsx
+msgid "Watching {name}, {at} in"
+msgstr "בצפייה ב־{name}, במיקום {at}"
+
+#: src/app/settings/about.tsx
+msgid "Web app"
+msgstr "אפליקציית אינטרנט"
+
+#: src/components/send-report.tsx
+msgid "What happened"
+msgstr "מה קרה"
+
+#: src/features/party/in-party.tsx
+msgid "What others send shows over the video for a few seconds. It always stays in the chat."
+msgstr "הודעות של אחרים מוצגות מעל הווידאו למשך כמה שניות. הן תמיד נשמרות בצ׳אט."
+
+#: src/app/settings/apps.tsx
+msgid "What the app did each day, kept for a week."
+msgstr "פעילות האפליקציה בכל יום, נשמרת למשך שבוע."
+
+#: src/app/settings/theme.tsx
+msgid "What the navigation, and glass panels over the artwork, sit on: the app's own colour, or glass that shows the page through it. Liquid glass also bends what's behind the navigation's edges, which costs more on a slow device."
+msgstr "הרקע שמתחת לניווט וללוחות הזכוכית שמעל התמונות: צבע האפליקציה, או זכוכית שהדף נראה דרכה. זכוכית נוזלית גם מעוותת את הרקע מאחורי שולי הניווט, פעולה שמכבידה יותר על מכשירים איטיים."
+
+#: src/features/party/chat.tsx
+msgid "What the others say shows here."
+msgstr "ההודעות של האחרים מופיעות כאן."
+
+#: src/app/settings/playback.tsx
+msgid "What the people you watch with say shows for a few seconds. It always stays in the party's chat."
+msgstr "ההודעות של האנשים שצופים איתך מוצגות למשך כמה שניות. הן תמיד נשמרות בצ׳אט של מסיבת הצפייה."
+
+#: src/app/settings/cache.tsx
+msgid "What to save"
+msgstr "מה לשמור"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "What touching or holding the video does."
+msgstr "פעולת נגיעה או לחיצה ממושכת על הווידאו."
+
+#: src/app/settings/_components/reaction-setting.tsx
+msgid "What you can send from a party's chat."
+msgstr "התוכן שאפשר לשלוח מהצ׳אט של מסיבת צפייה."
+
+#: src/app/settings/apps.tsx
+msgid "What your Discord profile shows."
+msgstr "מה שמוצג בפרופיל Discord שלך."
+
+#: src/app/settings/audio.tsx
+msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."
+msgstr "מספר הערוצים שהרמקולים או המקלט שלך תומכים בו. שמע היקפי עם ערוצים נוספים ממוזג למספר הזה, תוך שמירה על הדיאלוג."
+
+#: src/app/settings/apps.tsx
+msgid "What's playing"
+msgstr "מה מתנגן"
+
+#: src/lib/input/keys.ts
+msgid "Wheel down"
+msgstr "גלגלת למטה"
+
+#: src/lib/input/keys.ts
+msgid "Wheel up"
+msgstr "גלגלת למעלה"
+
+#: src/app/history/page.tsx
+msgid "When"
+msgstr "מתי"
+
+#: src/app/settings/audio.tsx
+msgid "When a version has more than one kind of audio track, the first of these it has plays."
+msgstr "כשיש בגרסה יותר מסוג אחד של רצועת שמע, מופעל הסוג הראשון ברשימה שזמין בה."
+
+#: src/app/settings/subtitles.tsx
+msgid "When a version has more than one subtitle in your language, the first of these it has shows. Commentary comes last."
+msgstr "כשיש בגרסה יותר מכתובית אחת בשפה שלך, מוצגת הראשונה ברשימה שזמינה בה. פרשנות מקבלת עדיפות אחרונה."
+
+#: src/app/settings/subtitles.tsx
+msgid "When the audio is not in my language"
+msgstr "כשהשמע אינו בשפה שלי"
+
+#: src/app/settings/playback.tsx
+msgid "When the credits start"
+msgstr "בתחילת כתוביות הסיום"
+
+#: src/app/settings/playback.tsx
+msgid "When the credits start, if they run to the end; otherwise a set time before the end."
+msgstr "בתחילת כתוביות הסיום, אם הן נמשכות עד הסוף; אחרת בזמן קבוע לפני הסיום."
+
+#: src/app/settings/audio.tsx
+msgid "When the TV or receiver decodes it"
+msgstr "כשהטלוויזיה או המקלט מפענחים אותו"
+
+#: src/app/settings/playback.tsx
+msgid "Where a file names its intro, credits, recap or preview chapters, skipping uses them instead of the server's times, since they fit that exact file. The rest still come from the server."
+msgstr "כשבקובץ מוגדרים פרקים של פתיח, כתוביות סיום, תקציר או הצצה, הדילוג משתמש בהם במקום בזמני השרת, כי הם תואמים לקובץ המדויק. יתר הזמנים עדיין מגיעים מהשרת."
+
+#: src/app/settings/about.tsx
+msgid "Where the app is made, and where to report a problem."
+msgstr "המקום שבו האפליקציה מפותחת ושבו אפשר לדווח על בעיה."
+
+#: src/app/settings/interface.tsx
+msgid "Where the navigation goes when the screen is wide enough for a sidebar, such as a tablet held sideways."
+msgstr "מיקום הניווט כשהמסך רחב מספיק לסרגל צד, למשל בטאבלט במצב רוחבי."
+
+#: src/app/settings/interface.tsx
+msgid "Where the navigation goes when the window is wide enough for a sidebar."
+msgstr "מיקום הניווט כשהחלון רחב מספיק לסרגל צד."
+
+#: src/app/settings/page.tsx
+msgid "Where they go and how many run at once"
+msgstr "מיקום השמירה ומספר ההורדות במקביל"
+
+#: src/app/settings/interface.tsx
+msgid "Whether the bar at the bottom, and tabs along the top, name each page."
+msgstr "האם הסרגל התחתון והלשוניות העליונות מציגים את שמות הדפים."
+
+#: src/app/settings/interface.tsx
+msgid "Whether the rail names each page only while you're in it, or all the time."
+msgstr "האם מסילת הניווט מציגה את שם הדף רק כשהוא פתוח, או תמיד."
+
+#: src/app/settings/interface.tsx
+msgid "Whether the rail names each page under its icon."
+msgstr "האם מסילת הניווט מציגה את שם כל דף מתחת לסמל שלו."
+
+#: src/app/settings/interface.tsx
+msgid "Whether the tabs name each page beside its icon."
+msgstr "האם הלשוניות מציגות את שם כל דף לצד הסמל שלו."
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "While a channel plays. On a TV, up and down change channel too, and the number keys pick one by its number."
+msgstr "בזמן ניגון ערוץ. בטלוויזיה, למעלה ולמטה מחליפים גם ערוץ, ומקשי הספרות בוחרים ערוץ לפי מספרו."
+
+#: src/app/settings/_components/shortcut-settings.tsx
+msgid "While syncing subtitles by ear."
+msgstr "בזמן סנכרון כתוביות לפי שמיעה."
+
+#: src/app/settings/interface.tsx
+msgid "While you're in it"
+msgstr "כשהדף פתוח"
+
+#: src/lib/i18n.ts
+msgid "White"
+msgstr "לבן"
+
+#: src/app/settings/page.tsx
+msgid "Who you are signed in as"
+msgstr "החשבון המחובר שלך"
+
+#: src/app/settings/cache.tsx
+msgid "Who you are signed in as and the server’s details, which opening without a connection needs."
+msgstr "החשבון המחובר שלך ופרטי השרת, הנדרשים לפתיחה ללא חיבור."
+
+#: src/app/settings/account.tsx
+msgid "Who's watching"
+msgstr "מי צופה"
+
+#: src/app/sign-in/page.tsx
+msgid "Who's watching?"
+msgstr "מי צופה?"
+
+#: src/app/settings/subtitles.tsx
+msgid "Width"
+msgstr "רוחב"
+
+#: src/lib/input/keys.ts
+msgid "Win"
+msgstr "Win"
+
+#: src/features/party/not-in-party.tsx
+msgid "With {names}"
+msgstr "עם {names}"
+
+#: src/app/settings/_components/gesture-settings.tsx
+msgid "With a finger or the mouse button, at the held speed."
+msgstr "באצבע או בכפתור העכבר, במהירות הלחיצה הממושכת."
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Words or /pattern/"
+msgstr "מילים או /pattern/"
+
+#: src/components/media/people.tsx
+msgid "Writer"
+msgstr "תסריטאי/ת"
+
+#: src/app/settings/browsing.tsx
+msgid "Year"
+msgstr "שנה"
+
+#: src/lib/i18n.ts
+msgid "Yellow"
+msgstr "צהוב"
+
+#: src/app/live-tv/page.tsx
+msgid "Yesterday"
+msgstr "אתמול"
+
+#: src/app/settings/page.tsx
+#: src/components/shell/nav/account.tsx
+#: src/components/shell/nav/corner-menu.tsx
+#: src/components/shell/nav/mobile-nav.tsx
+#: src/components/shell/nav/touch-rail.tsx
+#: src/components/shell/nav/tv-rail.tsx
+msgid "You"
+msgstr "את/ה"
+
+#: src/components/shell/usage-stats.tsx
+msgid "You can change this later in Settings, under About."
+msgstr "אפשר לשנות זאת מאוחר יותר בהגדרות, תחת אודות."
+
+#: src/lib/party/party.ts
+msgid "You left the party."
+msgstr "יצאת ממסיבת הצפייה."
+
+#: src/app/live-tv/page.tsx
+msgid "You'll be reminded at {time}"
+msgstr "תתקבל תזכורת בשעה {time}"
+
+#: src/app/settings/player.tsx
+msgid "Your {name}"
+msgstr "{name} שלך"
+
+#: src/app/settings/_components/version-settings.tsx
+msgid "Your badges"
+msgstr "התגים שלך"
+
+#: src/lib/playback/player-choice.ts
+msgid "Your own {name}"
+msgstr "{name} משלך"
+
+#: src/lib/playback/player-choice.ts
+msgid "your player"
+msgstr "הנגן שלך"
+
+#: src/lib/party/follow.ts
+msgid "Your player can't follow a watch party. Pick the app's player in settings to watch along."
+msgstr "הנגן שלך אינו יכול להסתנכרן עם מסיבת צפייה. לצפייה משותפת יש לבחור בהגדרות את נגן האפליקציה."
+
+#: src/features/versions/external-prompt.tsx
+msgid "Your player does not report back, so mark it as watched once you finish."
+msgstr "הנגן שלך אינו מדווח בחזרה, ולכן יש לסמן כנצפה בסיום הצפייה."
+
+#: src/features/party/not-in-party.tsx
+msgid "Your player plays in another app, which can't follow a party. Choose the app's own player in settings to watch along."
+msgstr "הנגן שלך פועל באפליקציה אחרת, שאינה יכולה להסתנכרן עם מסיבת צפייה. לצפייה משותפת יש לבחור בהגדרות את הנגן של האפליקציה."
+
+#: src/app/item/_components/rating.tsx
+msgid "Your rating"
+msgstr "הדירוג שלך"
+
+#: src/app/settings/cache.tsx
+msgid "Your watch history and totals."
+msgstr "היסטוריית הצפייה והסיכומים שלך."

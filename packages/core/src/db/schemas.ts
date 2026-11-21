@@ -1614,9 +1614,14 @@ const CollectionSchema = z.object({
         type: z.string(),
         catalogId: z.string(),
         genre: z.string().nullish(),
+        name: z.string().nullish(),
       })
     )
     .nullish(),
+  layout: z.string().nullish(),
+  showAll: z.boolean().nullish(),
+  merge: z.string().nullish(),
+  shuffle: z.boolean().nullish(),
 });
 
 /** Documented in `reference/addon-protocol/metadata`. */
@@ -1626,6 +1631,7 @@ const metaExtensionFields = {
   tagline: z.string().nullish(),
   landscapePoster: z.string().nullish(),
   animatedPoster: z.string().nullish(),
+  backgroundVideo: z.string().nullish(),
   people: z.array(MetaPersonSchema).nullish(),
   certification: z.string().nullish(),
   certificationLocal: z.string().nullish(),

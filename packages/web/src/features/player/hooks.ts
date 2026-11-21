@@ -10,48 +10,67 @@ const TARGET_HOLD_MS = 2000;
 /** Within this of the target, the player has got there. */
 const ARRIVED_MS = 1500;
 
-/** `idle` once left alone, `hidden` once put away. */
+/** `idle` once input stops, whatever the controls do. */
 export interface Rest {
+  shown: Live<boolean>;
   idle: Live<boolean>;
-  hidden: Live<boolean>;
   wake(): void;
-  /** Keeps the controls hidden until the next input, even while paused. */
+  /** Input that puts them away until the next. */
   hide(): void;
-  /** Brings forward the controls going idle, without showing them. */
+  /** Input that leaves them as they are. */
+  stir(): void;
+  /** Puts them away after `after`, sooner than their own wait. */
   soon(after: number): void;
-  /** Set while they show only until `soon` hides them. */
+  /** Set while they show only until `soon` puts them away. */
   brief: { current: boolean };
 }
 
-export function useIdle(ms: number): Rest {
+/** `pinned` keeps the controls up past their wait, until it no longer holds. */
+export function useIdle(ms: number, pinned: () => boolean): Rest {
+  const keep = useLatest(pinned);
   const [rest] = React.useState(() => {
+    const shown = createLive(true);
     const idle = createLive(false);
-    const hidden = createLive(false);
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let away: ReturnType<typeof setTimeout> | undefined;
+    let quiet: ReturnType<typeof setTimeout> | undefined;
     const brief = { current: false };
+    const putAwayIn = (after: number) => {
+      clearTimeout(away);
+      away = setTimeout(() => {
+        if (keep.current()) putAwayIn(ms);
+        else shown.set(false);
+      }, after);
+    };
+    const stir = () => {
+      idle.set(false);
+      clearTimeout(quiet);
+      quiet = setTimeout(() => idle.set(true), ms);
+    };
     return {
+      shown,
       idle,
-      hidden,
       brief,
+      stir,
       wake() {
-        idle.set(false);
-        hidden.set(false);
-        clearTimeout(timer);
+        shown.set(true);
         brief.current = false;
-        timer = setTimeout(() => idle.set(true), ms);
+        putAwayIn(ms);
+        stir();
       },
       hide() {
-        clearTimeout(timer);
+        clearTimeout(away);
         brief.current = false;
-        idle.set(true);
-        hidden.set(true);
+        shown.set(false);
+        stir();
       },
       soon(after: number) {
-        clearTimeout(timer);
         brief.current = true;
-        timer = setTimeout(() => idle.set(true), after);
+        putAwayIn(after);
       },
-      stop: () => clearTimeout(timer),
+      stop: () => {
+        clearTimeout(away);
+        clearTimeout(quiet);
+      },
     };
   });
   React.useEffect(() => {

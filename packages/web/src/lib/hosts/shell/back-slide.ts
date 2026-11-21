@@ -5,55 +5,33 @@ import {
   runAction,
 } from '@/lib/input';
 import { UNDER_OPACITY, UNDER_SHIFT } from '@/lib/page-open';
-import { washCopy, washShownOn } from '@/lib/artwork/background';
+import {
+  holdArt,
+  keepHeldArt,
+  washCopy,
+  washShownOn,
+} from '@/lib/artwork/background';
 import { pageRtl } from '@/lib/direction';
 
 const GLIDE = { duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
 /** Longer than `history.back` takes to land. */
 const BACK_MS = 500;
-/** The hero's `scroll-fade` range, in window heights. */
-const FADE_FROM = 0.1;
-const FADE_TO = 0.5;
-
-interface NavigationEntries {
-  currentEntry: { index: number } | null;
-  entries(): { url: string | null }[];
-}
-
-/** What Back leads to, still mounted beneath the page to show. */
-interface Under {
-  el: HTMLElement;
-  path: string;
-  /** How far down it was scrolled when left. */
-  y: number;
-  home: boolean;
-  landed(): boolean;
-}
 
 interface Slide {
   page: HTMLElement;
   side: 1 | -1;
-  under: Under | null;
+  /** The page Back leads to, which the page stack keeps beneath. */
+  under: HTMLElement | null;
 }
 
+/** The one following a swipe. */
 let slide: Slide | null = null;
-/** Unknown where no host notes it, so Home can't be shown where it was left. */
-let homeY: number | null = null;
+/** One let go, from its glide away until Back lands. */
+let leaving: Slide | null = null;
+/** The newest begun: an older one's clean-up leaves the pages it has taken alone. */
+let latest: Slide | null = null;
 
 const backSide = (): 1 | -1 => (pageRtl() ? -1 : 1);
-
-const pathOf = (hash: string) => hash.slice(1).split('?')[0] || '/';
-const pagePath = () => pathOf(location.hash);
-
-/** The document's scroll follows other pages once Home is left. */
-export function noteHomeScroll(): () => void {
-  homeY = 0;
-  const note = () => {
-    if (pagePath() === '/') homeY = window.scrollY;
-  };
-  addEventListener('scroll', note, { passive: true });
-  return () => removeEventListener('scroll', note);
-}
 
 /** Home isn't one: Back asks there before leaving the app. */
 function pageBackLeaves(): HTMLElement | null {
@@ -61,48 +39,8 @@ function pageBackLeaves(): HTMLElement | null {
   if (navigationBack()) return null;
   if (!((window.history.state?.__TSR_index ?? 0) > 0)) return null;
   return document.querySelector<HTMLElement>(
-    "main [data-page]:not([data-page='home'])"
+    "main [data-page]:not([inert]):not([data-page='home'])"
   );
-}
-
-/**
- * Home, or the page's own layer marked `data-back-under` with the address it
- * shows and `data-back-y`, when Back leads to it.
- */
-function behind(page: HTMLElement): Under | null {
-  const nav = (window as { navigation?: NavigationEntries }).navigation;
-  const url = nav?.entries()[(nav.currentEntry?.index ?? 0) - 1]?.url;
-  if (!url) return null;
-  const { hash } = new URL(url);
-  const layer = page.querySelector<HTMLElement>('[data-back-under][inert]');
-  const address = layer?.dataset.backUnder;
-  if (layer && address === hash.slice(1))
-    return {
-      el: layer,
-      path: pathOf(hash),
-      y: Number(layer.dataset.backY) || 0,
-      home: false,
-      landed: () => location.hash.slice(1) === address,
-    };
-  const home = document.querySelector<HTMLElement>("[data-page='home']");
-  if (!home || homeY === null || pathOf(hash) !== '/') return null;
-  return {
-    el: home,
-    path: '/',
-    y: homeY,
-    home: true,
-    landed: () => pagePath() === '/',
-  };
-}
-
-function show({ el, y, home }: Under) {
-  el.style.setProperty('--peek-top', `${window.scrollY - y}px`);
-  if (home) {
-    const left = (FADE_TO - y / innerHeight) / (FADE_TO - FADE_FROM);
-    el.style.setProperty('--home-y', `${y}px`);
-    el.style.setProperty('--home-fade', String(Math.min(1, Math.max(0, left))));
-  }
-  el.toggleAttribute('data-peek', true);
 }
 
 /** Directly on it, as a custom property would restyle all of it every frame. */
@@ -110,6 +48,27 @@ function move(el: HTMLElement, side: number, progress: number) {
   const shift = -side * UNDER_SHIFT * (1 - progress) * 100;
   el.style.transform = `translateX(${shift}%)`;
   el.style.opacity = String(UNDER_OPACITY + (1 - UNDER_OPACITY) * progress);
+}
+
+/** At the scroll it was left at, over the art it showed; `--peek-at` is in window heights. */
+function peek(el: HTMLElement, side: number) {
+  const y = Number(el.dataset.backY) || 0;
+  el.style.setProperty('--peek-top', `${window.scrollY - y}px`);
+  el.style.setProperty('--peek-at', String(y / innerHeight));
+  move(el, side, 0);
+  el.toggleAttribute('data-peek', true);
+  holdWash(washShownOn(el.dataset.backTo ?? '/'));
+  if (el.dataset.backArt) holdArt(el.dataset.backArt);
+}
+
+/** `opened` once Back has made it the open page, whose art then stays. */
+function unpeek(el: HTMLElement, opened = false) {
+  el.removeAttribute('data-peek');
+  el.style.transform = '';
+  el.style.opacity = '';
+  holdWash(null);
+  if (opened) keepHeldArt();
+  else holdArt(null);
 }
 
 function settle(el: HTMLElement) {
@@ -122,19 +81,13 @@ function settle(el: HTMLElement) {
   );
 }
 
-function hide(el: HTMLElement) {
-  el.removeAttribute('data-peek');
-  el.style.transform = '';
-  el.style.opacity = '';
-  holdWash(false);
-}
-
-function holdWash(off: boolean) {
+/** The pages' wash follows the route, which stays the open page's until Back lands. */
+function holdWash(shown: boolean | null) {
   const wash = document.querySelector<HTMLElement>(
     "[data-ui='page-background'] > [data-ui='art-wash']"
   );
   // Not visibility, which its canvases set for themselves.
-  if (wash) wash.style.display = off ? 'none' : '';
+  if (wash) wash.style.display = shown === null ? '' : shown ? 'block' : 'none';
 }
 
 /** The artwork behind the pages, which the page's own background hides while it slides. */
@@ -166,45 +119,41 @@ function release(page: HTMLElement) {
   page.querySelector(':scope > [data-ui=art-wash]')?.remove();
 }
 
-function leave({ page, under }: Slide) {
-  const from = pagePath();
-  const landed = () => {
-    const onUnder = !!under?.landed();
-    // An entry of the same path keeps this element, which has to come back,
-    // unless it lay over the page's own layer, which it leaves with.
-    if (pagePath() === from && (!onUnder || under?.home)) release(page);
-    if (under && !onUnder) hide(under.el);
-  };
-  addEventListener('popstate', landed, { once: true });
-  setTimeout(landed, BACK_MS);
-  if (under) {
-    const { el } = under;
-    const returned = new MutationObserver(() => {
-      if (el.inert) return;
-      returned.disconnect();
-      // The hero's scroll-driven effects see the restored scroll from the next frame.
-      requestAnimationFrame(() => hide(el));
+function leave(gone: Slide) {
+  const { page, under } = gone;
+  // Its scroll-driven effects see the restored scroll only from the next frame.
+  const opened =
+    under &&
+    new MutationObserver(() => {
+      if (under.inert) return;
+      opened?.disconnect();
+      if (leaving === gone) leaving = null;
+      requestAnimationFrame(() => {
+        if (latest === gone) unpeek(under, true);
+      });
     });
-    returned.observe(el, { attributeFilter: ['inert'] });
-  }
+  if (under) opened?.observe(under, { attributeFilter: ['inert'] });
+  setTimeout(() => {
+    opened?.disconnect();
+    if (leaving === gone) leaving = null;
+    if (latest !== gone) return;
+    // Back stayed on the page, or went elsewhere.
+    if (page.isConnected && !page.inert) release(page);
+    if (under?.inert) unpeek(under);
+  }, BACK_MS);
   runAction('back');
 }
 
 function begin(side: 1 | -1): boolean {
-  const whole = pageBackLeaves();
-  if (!whole) return false;
-  // A page's `data-back-slide` layer leaves alone, over the rest of the page.
-  const page = whole.querySelector<HTMLElement>('[data-back-slide]') ?? whole;
-  const under = behind(whole);
-  if (under) {
-    move(under.el, side, 0);
-    show(under);
-    // The pages' wash follows the route, which stays this page's until Back lands.
-    holdWash(!washShownOn(under.path));
-  }
+  if (leaving) return false;
+  const page = pageBackLeaves();
+  if (!page) return false;
   page.toggleAttribute('data-sliding', true);
+  // Before the pages' wash turns to the art of the page beneath.
   carryWash(page);
-  slide = { page, side, under };
+  const under = document.querySelector<HTMLElement>('main [data-back-to]');
+  if (under) peek(under, side);
+  latest = slide = { page, side, under };
   return true;
 }
 
@@ -222,13 +171,15 @@ export function backGesture(
   const { page, side, under } = slide;
   if (m.event === 'move') {
     page.style.transform = `translateX(${side * m.progress * 100}%)`;
-    if (under) move(under.el, side, m.progress);
+    if (under) move(under, side, m.progress);
     return;
   }
+  const back = slide;
   slide = null;
   glide(page, 'none', () => {
+    if (latest !== back) return;
     release(page);
-    if (under) hide(under.el);
+    if (under) unpeek(under);
   });
 }
 
@@ -239,7 +190,8 @@ export function backPressed(): void {
   }
   const current = slide;
   slide = null;
-  if (current.under) settle(current.under.el);
+  leaving = current;
+  if (current.under) settle(current.under);
   glide(current.page, `translateX(${current.side * 100}%)`, () =>
     leave(current)
   );

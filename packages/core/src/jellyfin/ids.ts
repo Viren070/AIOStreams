@@ -304,6 +304,8 @@ export function canonicalDescriptor(d: JellyfinDescriptor): string {
     case 'series':
     case 'boxset':
       return `${d.k}|${d.t}|${d.i}`;
+    case 'part':
+      return `part|${d.t}|${d.i}|${d.st ?? ''}|${d.c ?? ''}|${d.g ?? ''}`;
     case 'season':
       return `season|${d.t}|${d.i}|${d.s}`;
     case 'episode':
@@ -441,7 +443,7 @@ export function encodeItemId(d: JellyfinDescriptor): string {
     case 'program':
       return programId(d);
     default: {
-      const packed = tryPack(d);
+      const packed = d.k === 'part' ? null : tryPack(d);
       if (packed) return packed;
       const id = marked(MARK_HASHED, canonicalDescriptor(d));
       rememberHashed(id, d);
