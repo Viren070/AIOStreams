@@ -14,6 +14,7 @@ import {
 } from '../debrid.js';
 import {
   BaseNabApi,
+  NabApiError,
   Capabilities,
   SearchResponse,
   SearchResultItem,
@@ -50,9 +51,17 @@ export function parseNabLanguages(
 export function parseNabParsedFileInfo(args: {
   audioLanguages?: string | number | boolean;
   subtitleLanguages?: string | number | boolean;
+  explicitAudioLanguages?: string | number | boolean;
+  explicitSubtitleLanguages?: string | number | boolean;
 }): ParsedMediaInfo | undefined {
-  const languages = parseNabLanguages(args.audioLanguages);
-  const subtitles = parseNabLanguages(args.subtitleLanguages);
+  const audio = parseNabLanguages(args.explicitAudioLanguages);
+  const subs = parseNabLanguages(args.explicitSubtitleLanguages);
+  const languages = audio.length
+    ? audio
+    : parseNabLanguages(args.audioLanguages);
+  const subtitles = subs.length
+    ? subs
+    : parseNabLanguages(args.subtitleLanguages);
   return normaliseParsedMediaInfo({
     mediaInfoQuality: 'indexer',
     languages: languages.length ? languages : undefined,
@@ -184,31 +193,11 @@ export abstract class BaseNabAddon<
     )
       queryParams.year = metadata.year.toString();
 
-    // date-based shows: numeric season/ep params return nothing, the Sonarr
-    // daily convention (season=YYYY&ep=MM/DD) is what indexers understand
-    const isDailySearch =
-      parsedId.mediaType === 'series' &&
-      metadata.isDateBased &&
-      metadata.episodeAirDate &&
-      queryParams.season !== undefined &&
-      queryParams.ep !== undefined;
-    // preserve the numeric season/ep so we can fall back to them if the daily
-    // search misses
-    let numericFallbackParams: Record<string, string> | undefined;
-    if (isDailySearch) {
-      // queryParams still holds the numeric season/ep here
-      numericFallbackParams = { ...queryParams };
-      const [yyyy, mm, dd] = metadata.episodeAirDate!.split('-');
-      queryParams.season = yyyy;
-      queryParams.ep = `${mm}/${dd}`;
-    }
-
     queryParams.extended = '1';
 
     const canApplySeasonPackStrategy =
       parsedId.mediaType === 'series' &&
       !this.userData.forceQuerySearch &&
-      !isDailySearch &&
       searchCapabilities.supportedParams.includes('season') &&
       queryParams.season &&
       queryParams.ep;
@@ -250,55 +239,55 @@ export abstract class BaseNabAddon<
       });
       searchType = 'query';
     }
-    let results: SearchResultItem<A['namespace']>[] = [];
-    if (queries.length > 0) {
-      const runQueries = (params: Record<string, string>) => {
-        this.logger.debug('Performing queries', { queries });
-        return Promise.all(
-          queries.map((q) =>
-            queryLimit(() =>
-              this.fetchResults(searchFunction, { ...params, q })
-            )
+    const runSearch = (params: Record<string, string>, daily = false) => {
+      if (!queries.length)
+        return this.fetchResults(searchFunction, params, daily);
+      this.logger.debug('Performing queries', { queries });
+      return Promise.all(
+        queries.map((q) =>
+          queryLimit(() =>
+            this.fetchResults(searchFunction, { ...params, q }, daily)
           )
-        ).then((allResults) => allResults.flat());
-      };
+        )
+      ).then((allResults) => allResults.flat());
+    };
 
-      results = await runQueries(primaryParams);
-      if (results.length === 0 && fallbackParams) {
-        this.logger.debug(
-          'No results for initial queries, retrying with alternate season/episode params',
-          { season: queryParams.season, episode: queryParams.ep }
-        );
-        results = await runQueries(fallbackParams);
-      }
-    } else {
-      results = await this.fetchResults(searchFunction, primaryParams);
-      if (results.length === 0 && fallbackParams) {
-        this.logger.debug(
-          'No results for initial search, retrying with alternate season/episode params',
-          { season: queryParams.season, episode: queryParams.ep }
-        );
-        results = await this.fetchResults(searchFunction, fallbackParams);
-      }
+    let results: SearchResultItem<A['namespace']>[] = [];
+    if (
+      parsedId.mediaType === 'series' &&
+      metadata.isDateBased &&
+      metadata.episodeAirDate &&
+      queryParams.season !== undefined &&
+      queryParams.ep !== undefined
+    ) {
+      const [year, month, day] = metadata.episodeAirDate.split('-');
+      results = await runSearch(
+        { ...queryParams, season: year, ep: `${month}/${day}` },
+        true
+      );
       if (
-        isDailySearch &&
-        numericFallbackParams &&
         !results.some((r) =>
           titleContainsAirDate(r.title, metadata.airDates ?? [])
         )
       ) {
         this.logger.debug(
-          'No air-date match for daily search, retrying with numeric season/episode params',
+          'No air-date match, retrying with numeric season/episode params',
           {
             airDate: metadata.episodeAirDate,
-            season: numericFallbackParams.season,
-            episode: numericFallbackParams.ep,
+            season: queryParams.season,
+            episode: queryParams.ep,
           }
         );
-        results = await this.fetchResults(
-          searchFunction,
-          numericFallbackParams
+        results = [];
+      }
+    }
+    if (!results.length) {
+      results = await runSearch(primaryParams);
+      if (!results.length && fallbackParams) {
+        this.logger.debug(
+          'No episode results, retrying with season-only params'
         );
+        results = await runSearch(fallbackParams);
       }
     }
     this.logger.info(
@@ -350,13 +339,36 @@ export abstract class BaseNabAddon<
 
   private async fetchResults(
     searchFunction: string,
-    params: Record<string, string>
+    params: Record<string, string>,
+    daily = false
   ): Promise<SearchResultItem<A['namespace']>[]> {
     const queryLimit = createQueryLimit();
     const maxPages = appConfig.builtins.nab.maxPages;
 
-    const initialResponse: SearchResponse<A['namespace']> =
-      await this.api.search(searchFunction, params);
+    const fetchPage = async (
+      offset?: number
+    ): Promise<SearchResponse<A['namespace']> | undefined> => {
+      try {
+        return await this.api.search(
+          searchFunction,
+          offset === undefined ? params : { ...params, offset: String(offset) }
+        );
+      } catch (error) {
+        // 201 means incorrect parameter. Some indexers return the same
+        // description with code 200, which normally means missing parameter.
+        if (
+          daily &&
+          error instanceof NabApiError &&
+          (error.code === 201 ||
+            (error.code === 200 &&
+              /^incorrect parameter\b/i.test(error.description)))
+        )
+          return undefined;
+        throw error;
+      }
+    };
+    const initialResponse = await fetchPage();
+    if (!initialResponse) return [];
     let allResults = [...initialResponse.results];
 
     this.logger.debug('Initial search response', {
@@ -416,17 +428,12 @@ export abstract class BaseNabAddon<
           // Create requests for all remaining pages in parallel
           const pagePromises = Array.from({ length: pagesToFetch }, (_, i) => {
             const offset = initialOffset + limit * (i + 1);
-            return queryLimit(
-              () =>
-                this.api.search(searchFunction, {
-                  ...params,
-                  offset: offset.toString(),
-                }) as Promise<SearchResponse<A['namespace']>>
-            );
+            return queryLimit(() => fetchPage(offset));
           });
 
           const pageResponses = await Promise.all(pagePromises);
           for (const response of pageResponses) {
+            if (!response) continue;
             if (areResultsDuplicate(allResults, response.results)) {
               this.logger.warn(
                 'Detected duplicate results in paginated response. Indexer may not support offset parameter despite claiming support. Stopping pagination.'
@@ -453,15 +460,8 @@ export abstract class BaseNabAddon<
       });
 
       while (pageCount < maxPages) {
-        const response: SearchResponse<A['namespace']> = await this.api.search(
-          searchFunction,
-          {
-            ...params,
-            offset: currentOffset.toString(),
-          }
-        );
-
-        if (response.results.length === 0) {
+        const response = await fetchPage(currentOffset);
+        if (!response || response.results.length === 0) {
           this.logger.debug('Received empty page, stopping pagination');
           break;
         }

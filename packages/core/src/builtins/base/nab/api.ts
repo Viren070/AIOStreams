@@ -82,6 +82,8 @@ const NEWZNAB_PROFILE: NabScanProfile = {
   enclosureLength: true,
   attrs: new Map<string, NabAttrType>([
     ['usenetdate', 'string'],
+    ['language-audio', 'string'],
+    ['language-subs', 'string'],
     ['language', 'string'],
     ['subs', 'string'],
     ['sourceIndexerName', 'string'],

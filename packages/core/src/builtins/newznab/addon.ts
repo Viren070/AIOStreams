@@ -84,6 +84,8 @@ export class NewznabAddon extends BaseNabAddon<NewznabAddonConfig, NewznabApi> {
       const parsedMediaInfo = parseNabParsedFileInfo({
         audioLanguages: result.newznab?.language,
         subtitleLanguages: result.newznab?.subs,
+        explicitAudioLanguages: result.newznab?.['language-audio'],
+        explicitSubtitleLanguages: result.newznab?.['language-subs'],
       });
       const nzb: NZB = {
         confirmed: meta.searchType === 'id',
