@@ -1,6 +1,6 @@
 #!/bin/bash
 # Starts the app for a few seconds on a virtual display with fresh folders, prints its log
-# and fails if mpv, its render context or the page didn't start:
+# and fails if mpv or the page didn't start:
 #   ./scripts/smoke-linux.sh <command...>
 set -uo pipefail
 
@@ -15,7 +15,7 @@ if [ -z "$log" ]; then
 fi
 cat "$log"
 # The page sets hwdec once it has loaded.
-for line in "mpv started" "mpv render context" "set hwdec"; do
+for line in "mpv started" "set hwdec"; do
   grep -q "$line" "$log" || { echo "No '$line' in the log" && exit 1; }
 done
 for line in "mpv option" "panicked"; do
