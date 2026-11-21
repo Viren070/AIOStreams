@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.12.0...smart-tv-v0.13.0) (2026-11-21)
+
+
+### Features
+
+* add a hero band and backgroundVideo to collection pages ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* show a collection's sources as tabs or rows ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* **web:** add a picture-in-picture shortcut ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+
+
+### Bug Fixes
+
+* **web:** dock the mini player only in a shown page ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* **web:** give each page-drawn subtitle line its own direction ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* **web:** keep a touch's focus from waking the player's hidden controls ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* **web:** leave mixed libraries out of Discover's collection picker ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+* **web:** size the page background to the tallest viewport ([9cf0a89](https://github.com/Viren070/AIOStreams/commit/9cf0a89c4e776c585db076aa89370401c2aac383))
+
 ## [0.12.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.11.0...smart-tv-v0.12.0) (2026-11-19)
 
 
