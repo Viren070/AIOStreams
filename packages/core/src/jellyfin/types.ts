@@ -12,6 +12,8 @@ export type JellyfinDescriptor =
   | { k: 'movie'; t: string; i: string; p?: string }
   | { k: 'series'; t: string; i: string }
   | { k: 'boxset'; t: string; i: string }
+  /** One source of a collection, or without `c` its listed titles. */
+  | { k: 'part'; t: string; i: string; st?: string; c?: string; g?: string }
   | { k: 'season'; t: string; i: string; s: number }
   | { k: 'episode'; t: string; i: string; s: number; e: number; v: string }
   | { k: 'person'; n: string; i?: string }

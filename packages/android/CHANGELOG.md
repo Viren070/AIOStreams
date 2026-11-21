@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.17.0](https://github.com/Viren070/AIOStreams/compare/android-v0.16.1...android-v0.17.0) (2026-11-19)
+
+
+### Features
+
+* add settings for everyone and let the owner change other profiles' settings ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** give the saved servers one shared profile picker ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** keep the pages Back returns to mounted ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** list other saved servers' profiles on the profile picker ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** open settings sections with the slide-over ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+
+
+### Bug Fixes
+
+* **ui:** pass the Combobox's className to its trigger ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** add Path to the version list's fields ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** ask for addon subtitles once a version plays ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** keep a scrolled-away bar away while a page scrolls down from its top ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** leave the player's controls hidden on swipes, skips and pauses ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** line up page titles and controls across pages ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** paint the guide as an art wash panel ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** put AVPlay's object under the page's background on Samsung TVs ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** ring a TV list's whole filter row ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** send live streams a VLC user agent from the apps' players ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+* **web:** time the pause screen from the last input ([d961f1c](https://github.com/Viren070/AIOStreams/commit/d961f1c3a161618dc8d8f61734d8c4ca5d3e856c))
+
 ## [0.16.1](https://github.com/Viren070/AIOStreams/compare/android-v0.16.0...android-v0.16.1) (2026-11-17)
 
 

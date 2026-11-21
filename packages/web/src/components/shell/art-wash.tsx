@@ -1,6 +1,11 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
-import { currentWash, subscribeWash, washCut } from '@/lib/artwork/background';
+import {
+  currentWash,
+  subscribeWash,
+  takeCut,
+  washDropped,
+} from '@/lib/artwork/background';
 import { WASH_H, WASH_W } from '@/lib/artwork/wash';
 
 const FADE_MS = 600;
@@ -27,7 +32,7 @@ export function ArtWash({ className }: { className?: string }) {
         if (front.current) return;
         for (const layer of layers) layer.style.visibility = 'hidden';
       };
-      if (!shown || still() || washCut()) return hideAll();
+      if (!shown || still() || washDropped()) return hideAll();
       // Only the one in front fades; one it was still fading in over goes now.
       for (const layer of layers)
         if (layer !== shown) layer.style.visibility = 'hidden';
@@ -60,9 +65,10 @@ export function ArtWash({ className }: { className?: string }) {
     next.style.zIndex = '1';
     next.style.visibility = 'visible';
     front.current = next;
-    // From nothing, as after a cut to another title's, it fades in too.
+    // From nothing, as after another title's went at once, it fades in too,
+    // but for what a back swipe shows at once.
     if (!old) {
-      if (!still())
+      if (!still() && !takeCut(frame.src))
         next.animate([{ opacity: 0 }, { opacity: 1 }], {
           duration: FADE_MS,
           easing: 'ease-out',
@@ -73,7 +79,7 @@ export function ArtWash({ className }: { className?: string }) {
     const hide = () => {
       if (front.current === next) old.style.visibility = 'hidden';
     };
-    if (still()) return hide();
+    if (still() || takeCut(frame.src)) return hide();
     next
       .animate([{ opacity: 0 }, { opacity: 1 }], {
         duration: FADE_MS,

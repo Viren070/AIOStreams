@@ -2370,6 +2370,11 @@ msgstr "Magenta"
 msgid "Main"
 msgstr "Utama"
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Ganti server"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr "Tandai sebagai sudah ditonton"
@@ -3231,6 +3236,7 @@ msgid "Pick the version to download."
 msgstr "Pilih versi yang akan diunduh."
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr "Picture-in-picture"
 
