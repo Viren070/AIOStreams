@@ -225,10 +225,13 @@ export function LiveTvPage({
     }
     return index;
   };
+  // A page kept for Back can be another Live TV.
+  const root = React.useRef<HTMLDivElement>(null);
+  const find = (selector: string) =>
+    root.current?.querySelector<HTMLElement>(selector) ?? null;
+  const channelsBox = () => find('[data-ui=guide], [data-ui=channel-list]');
   const focusChannels = () => {
-    const grid = document.querySelector<HTMLElement>(
-      '[data-ui=guide], [data-ui=channel-list]'
-    );
+    const grid = channelsBox();
     if (grid) focusOn(grid);
   };
   // Back from the player, the page opens on the channel it was left on, loading
@@ -291,16 +294,13 @@ export function LiveTvPage({
   // focused on the way would pick instead.
   const leaveUp = () => {
     const target =
-      document.querySelector<HTMLElement>(
-        '[data-name=live-group] [aria-selected=true]'
-      ) ?? document.querySelector<HTMLElement>('[data-ui=live-group-picker]');
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-ui=live-group-picker]');
     if (target) focusOn(target);
   };
   // The guide has the programme's details above it, where the list has the groups.
   const leaveGuideUp = () => {
-    const target = document.querySelector<HTMLElement>(
-      '[data-ui=live-top] button'
-    );
+    const target = find('[data-ui=live-top] button');
     if (target) focusOn(target);
     else leaveUp();
   };
@@ -486,6 +486,7 @@ export function LiveTvPage({
     const programme = programmeAt(shownProgrammes, at);
     return (
       <div
+        ref={root}
         data-ui="live-tv"
         data-view="guide"
         className={PAGE}
@@ -573,6 +574,7 @@ export function LiveTvPage({
 
   return (
     <div
+      ref={root}
       data-ui="live-tv"
       data-view="list"
       className={PAGE}
