@@ -246,6 +246,30 @@ class ExoEngine(private val context: Context) : Engine {
      * Not twice at one place: a stream whose sound changes format there would be sent back before it for ever.
      * Nor in a file that can't seek, which Exo would start over.
      */
+    /**
+     * The restart's own seek rebuilds the sound once more, and now and then the
+     * tunnel stays still after it: the player waits with bytes queued and asks
+     * for none. A seek back starts it again, as one by hand does. A stall on the
+     * link goes on loading, so it never looks like this.
+     */
+    private val unstick = Runnable {
+        if (!stuck() || unsticks >= MAX_UNSTICKS) return@Runnable
+        unsticks++
+        AppLog.w(TAG, "the tunnel stood still with ${player.totalBufferedDuration} ms queued, so it starts again")
+        seekTo(player.currentPosition - RESYNC_BACK_MS, 0)
+    }
+    private var unsticks = 0
+
+    private fun stuck() =
+        player.isTunnelingEnabled && AMLOGIC && url != null && loaded && !seeking &&
+            player.playWhenReady && player.playbackState == Player.STATE_BUFFERING &&
+            !player.isLoading && player.totalBufferedDuration >= STUCK_QUEUED_MS
+
+    private fun watchStuck() {
+        main.removeCallbacks(unstick)
+        if (stuck()) main.postDelayed(unstick, STUCK_MS)
+    }
+
     private fun resync() {
         if (!player.isCurrentMediaItemSeekable) return
         val position = player.currentPosition
@@ -625,6 +649,7 @@ class ExoEngine(private val context: Context) : Engine {
                         listener?.onEvent("restart")
                     }
                     state(PlayerState(buffering = false))
+                    unsticks = 0
                 }
                 Player.STATE_BUFFERING -> if (loaded && !seeking) state(PlayerState(buffering = true))
                 Player.STATE_ENDED -> {
@@ -634,7 +659,10 @@ class ExoEngine(private val context: Context) : Engine {
                 }
             }
             reportPosition()
+            watchStuck()
         }
+
+        override fun onIsLoadingChanged(isLoading: Boolean) = watchStuck()
 
         // Before the first frame, so the start rule has the file's bitrate.
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -750,6 +778,9 @@ class ExoEngine(private val context: Context) : Engine {
         const val TAG = "exo"
         const val RESYNC_BACK_MS = 100L
         const val RESYNC_SPAN_MS = 3000L
+        const val STUCK_MS = 2000L
+        const val STUCK_QUEUED_MS = 1000L
+        const val MAX_UNSTICKS = 3
         val AMLOGIC = Build.VERSION.SDK_INT >= 31 && Build.SOC_MANUFACTURER.equals("Amlogic", ignoreCase = true)
         const val POLL_MS = 250L
         const val IDLE_POLL_MS = 1000L
