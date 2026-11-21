@@ -25,6 +25,7 @@ import {
   titleMatchWithLang,
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
+import { extractForeignNumberedEpisodeEnglishTitle } from './foreign-episode-title.js';
 import { partial_ratio } from 'fuzzball';
 import { formatBitrate, formatBytes } from '../formatters/utils.js';
 import { iso6391ToLanguage, languageToCode } from '../utils/languages.js';
@@ -857,7 +858,26 @@ class StreamFilterer {
     ): boolean | undefined => {
       const parsedEpisodeTitle = stream.parsedFile?.episodeTitle;
       const expected = requestedMetadata?.episodeTitles;
-      if (!parsedEpisodeTitle || !expected?.length) return undefined;
+      if (!expected?.length) return undefined;
+
+      if (!parsedEpisodeTitle) {
+        // Some numbered, non-English filenames include a separate English
+        // episode title in parentheses that the release parser does not expose.
+        // Compare only against English metadata; otherwise the match is unknown.
+        const embeddedEnglishTitle = extractForeignNumberedEpisodeEnglishTitle(
+          stream.filename
+        );
+        const englishTitles = expected.filter(
+          (title) => title.language?.toLowerCase() === 'en'
+        );
+        if (!embeddedEnglishTitle || !englishTitles.length) return undefined;
+
+        return titleMatchWithLang(
+          normaliseTitle(embeddedEnglishTitle),
+          englishTitles,
+          { threshold }
+        ).matched;
+      }
 
       const result = titleMatchWithLang(
         normaliseTitle(parsedEpisodeTitle),
