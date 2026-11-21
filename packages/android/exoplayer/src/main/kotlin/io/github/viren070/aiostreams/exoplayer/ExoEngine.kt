@@ -3,6 +3,7 @@ package io.github.viren070.aiostreams.exoplayer
 import android.content.Context
 import android.media.MediaFormat
 import android.net.Uri
+import android.os.Build
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
@@ -74,6 +75,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.json.JsonArray
@@ -139,6 +141,9 @@ class ExoEngine(private val context: Context) : Engine {
 
     /** A load or seek waits for its first frame, which mpv reports as `playback-restart`. */
     private var restarting = false
+
+    /** Where the tunnel's video was last restarted, until the page seeks or picks the sound again. */
+    private var resyncedAtMs: Long? = null
     private var volume = 100.0
     private var muted = false
     private var skips: List<Skip> = emptyList()
@@ -225,20 +230,74 @@ class ExoEngine(private val context: Context) : Engine {
             state(PlayerState(muted = it))
         }
         change.speed?.let { player.playbackParameters = PlaybackParameters(it.toFloat()) }
-        change.audio?.let { selectTrack("audio", it.id?.toIntOrNull()) }
+        change.audio?.let {
+            resyncedAtMs = null
+            selectTrack("audio", it.id?.toIntOrNull())
+        }
         change.subtitle?.let { selectSubtitle(it.id?.toIntOrNull()) }
         change.subtitleDelayMs?.let(subtitles::setDelayMs)
     }
 
     override fun seek(positionMs: Double, snapMs: Double) = post {
         if (url == null) return@post
-        val snapUs = (snapMs * 1000).toLong()
+        resyncedAtMs = null
+        seekTo(positionMs.toLong(), (snapMs * 1000).toLong())
+        recovering = false
+    }
+
+    private fun seekTo(positionMs: Long, snapUs: Long) {
         player.setSeekParameters(if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
-        player.seekTo(positionMs.toLong().coerceAtLeast(0))
+        player.seekTo(positionMs.coerceAtLeast(0))
         seeking = true
         restarting = true
         state(PlayerState(seeking = true))
         updatePolling()
+    }
+
+    /**
+     * Not twice at one place: a stream whose sound changes format there would be sent back before it for ever.
+     * Nor in a file that can't seek, which Exo would start over.
+     */
+    /**
+     * The restart's own seek rebuilds the sound once more, and now and then the
+     * tunnel stays still after it: the player waits with bytes queued and asks
+     * for none. A seek back starts it again, as one by hand does. A stall on the
+     * link goes on loading, so it never looks like this.
+     */
+    private val unstick = Runnable {
+        if (!stuck() || unsticks >= MAX_UNSTICKS) return@Runnable
+        unsticks++
+        AppLog.w(TAG, "the tunnel stood still with ${player.totalBufferedDuration} ms queued, so it starts again")
+        seekTo(player.currentPosition - RESYNC_BACK_MS, 0)
+        recovering = true
+        // A stall that outlasts the seek may change nothing that would look again.
+        watchStuck()
+    }
+    private var unsticks = 0
+
+    /** The seek under way is the player's own restart, which can stand still in turn. */
+    private var recovering = false
+
+    private fun stuck() =
+        player.isTunnelingEnabled && AMLOGIC && url != null && loaded && (!seeking || recovering) &&
+            player.playWhenReady && player.playbackState == Player.STATE_BUFFERING &&
+            !player.isLoading && player.totalBufferedDuration >= STUCK_QUEUED_MS &&
+            // A file that can't seek Exo would start over, as for a resync.
+            player.isCurrentMediaItemSeekable
+
+    private fun watchStuck() {
+        main.removeCallbacks(unstick)
+        if (stuck()) main.postDelayed(unstick, STUCK_MS)
+    }
+
+    private fun resync() {
+        if (!player.isCurrentMediaItemSeekable) return
+        val position = player.currentPosition
+        if (resyncedAtMs?.let { abs(position - it) < RESYNC_SPAN_MS } == true) return
+        resyncedAtMs = position
+        // Now, not queued: behind a seek or a load of the page's it would undo that one.
+        seekTo(position - RESYNC_BACK_MS, 0)
+        recovering = true
     }
 
     override fun addSubtitle(url: String, title: String?, language: String?, replace: Int?) = post {
@@ -466,6 +525,7 @@ class ExoEngine(private val context: Context) : Engine {
         dolbyVision = null
         audioTrack = null
         decoders.clear()
+        resyncedAtMs = null
         loaded = false
         chosen = false
         restarting = true
@@ -702,6 +762,8 @@ class ExoEngine(private val context: Context) : Engine {
                         listener?.onEvent("restart")
                     }
                     state(PlayerState(buffering = false))
+                    unsticks = 0
+                    recovering = false
                 }
                 Player.STATE_BUFFERING -> if (loaded && !seeking) state(PlayerState(buffering = true))
                 Player.STATE_ENDED -> {
@@ -711,7 +773,10 @@ class ExoEngine(private val context: Context) : Engine {
                 }
             }
             reportPosition()
+            watchStuck()
         }
+
+        override fun onIsLoadingChanged(isLoading: Boolean) = watchStuck()
 
         // Before the first frame, so the start rule has the file's bitrate.
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -815,6 +880,11 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
             audioTrack = audioTrackConfig
+            // An Amlogic tunnel's video waits for the sound to start again and
+            // never hears that a new audio output did: the picture stands
+            // still while the sound plays on. A seek restarts both; Exo skips
+            // one to where it already is, so it goes back a moment.
+            if (player.isTunnelingEnabled && AMLOGIC && loaded && !restarting && url != null) resync()
             val passthrough = !Util.isEncodingLinearPcm(audioTrackConfig.encoding)
             if (passthrough) decoders.remove("audio")
             state(PlayerState(passthrough = passthrough))
@@ -823,6 +893,12 @@ class ExoEngine(private val context: Context) : Engine {
 
     private companion object {
         const val TAG = "exo"
+        const val RESYNC_BACK_MS = 100L
+        const val RESYNC_SPAN_MS = 3000L
+        const val STUCK_MS = 2000L
+        const val STUCK_QUEUED_MS = 1000L
+        const val MAX_UNSTICKS = 3
+        val AMLOGIC = Build.VERSION.SDK_INT >= 31 && Build.SOC_MANUFACTURER.equals("Amlogic", ignoreCase = true)
         const val POLL_MS = 250L
         const val IDLE_POLL_MS = 1000L
         const val IDLE_POLLS = 10
