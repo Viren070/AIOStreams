@@ -28,6 +28,7 @@ import type {
   EngineFile,
   EngineState,
   EngineTrack,
+  ServerSubtitle,
 } from './engine';
 import {
   canFullscreen,
@@ -178,7 +179,7 @@ export function webGpuEngine(
 ): EngineFactory {
   return (emit) => {
     let player: GpuPlayer | null = null;
-    let file: EngineFile | null = null;
+    let subtitles: ServerSubtitle[] = [];
     // So a slow open that a newer load replaced does nothing.
     let opening = 0;
     let position = 0;
@@ -367,7 +368,7 @@ export function webGpuEngine(
       cues = [];
       const picked = drawSubtitle(
         id,
-        { own: ownTracks, embedded, server: file?.subtitles ?? [] },
+        { own: ownTracks, embedded, server: subtitles },
         surface,
         { delayMs, height },
         {
@@ -567,7 +568,7 @@ export function webGpuEngine(
       load(next) {
         stop();
         const load = opening;
-        file = next;
+        subtitles = next.subtitles;
         position = next.startMs;
         paused = !!next.paused;
         struggling = false;
@@ -617,10 +618,7 @@ export function webGpuEngine(
           if (load === opening) unplayable(String(error));
         });
       },
-      close() {
-        stop();
-        file = null;
-      },
+      close: stop,
       setPaused(next) {
         paused = next;
         if (next) player?.pause();
@@ -657,6 +655,9 @@ export function webGpuEngine(
         });
       },
       setSubtitle,
+      setSubtitles(next) {
+        subtitles = next;
+      },
       setSubtitleDelay(ms) {
         delayMs = ms;
         shownAt = null;

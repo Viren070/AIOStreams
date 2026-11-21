@@ -1,5 +1,5 @@
 import { config as appConfig } from '../../config/index.js';
-import { isUnsafeRemoteUrl } from '../url-safety.js';
+import { isUnsafeRemoteUrl } from '../http/url-safety.js';
 import type { UrlAllowlist } from './allowlist.js';
 import { isHttpUrl, type SyncKind, type UrlPartition } from './types.js';
 

@@ -9,6 +9,7 @@ import androidx.media3.decoder.DecoderException
 import androidx.media3.decoder.DecoderInputBuffer
 import androidx.media3.decoder.SimpleDecoder
 import androidx.media3.decoder.SimpleDecoderOutputBuffer
+import io.github.viren070.aiostreams.exoplayer.extractor.flacStreamInfo
 import `is`.xyz.mpv.AudioDecoder
 import java.nio.ByteBuffer
 
@@ -108,18 +109,4 @@ private fun extraDataOf(format: Format): ByteArray? {
     }
 }
 
-/** The STREAMINFO block in [data], bare or behind the stream marker or its block header. */
-private fun flacStreamInfo(data: ByteArray): ByteArray? {
-    val from = if (data.size >= 4 && data.copyOfRange(0, 4).contentEquals(FLAC_MARKER)) 4 else 0
-    if (data.size - from == STREAM_INFO_SIZE) return data.copyOfRange(from, from + STREAM_INFO_SIZE)
-    if (data.size < from + 4 + STREAM_INFO_SIZE) return null
-    val type = data[from].toInt() and 0x7F
-    val length = (data[from + 1].toInt() and 0xFF shl 16) or (data[from + 2].toInt() and 0xFF shl 8) or
-        (data[from + 3].toInt() and 0xFF)
-    if (type != 0 || length != STREAM_INFO_SIZE) return null
-    return data.copyOfRange(from + 4, from + 4 + STREAM_INFO_SIZE)
-}
-
 private const val ALAC = 0x616c6163
-private const val STREAM_INFO_SIZE = 34
-private val FLAC_MARKER = byteArrayOf('f'.code.toByte(), 'L'.code.toByte(), 'a'.code.toByte(), 'C'.code.toByte())

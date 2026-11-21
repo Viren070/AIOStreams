@@ -6,6 +6,7 @@ import { Cache } from '../utils/cache.js';
 import { createLogger } from '../logging/logger.js';
 import { userScopeKey } from '../utils/user-scope.js';
 import { firstGenre } from '../utils/extras.js';
+import { shuffled } from '../utils/shuffle.js';
 import { viewId } from './ids.js';
 import { hasProgrammeVideos, isLeafEntry } from './dto.js';
 import type { LeafEvidence } from './dto.js';
@@ -389,24 +390,84 @@ export async function getCatalogPage(
   return { items: out, total, hasMore: !done, keys: seenKeys };
 }
 
+type MemberOptions = Pick<
+  CatalogPageOptions,
+  'startIndex' | 'limit' | 'exactTotal' | 'select' | 'cursorKey' | 'signal'
+> & {
+  /** A source known to hold none of these is passed over unread. */
+  kinds?: ContentKind[];
+  /** Skips sources not seen holding collections, else read to the end for nothing. */
+  collectionsOnly?: boolean;
+};
+
+type CollectionBlock = NonNullable<Meta['collection']>;
+type CollectionSource = NonNullable<CollectionBlock['sources']>[number];
+type SourceRef = Pick<CollectionSource, 'type' | 'catalogId' | 'genre'>;
+
+export const sourceKey = (source: SourceRef) =>
+  `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
+
+/** A usual catalog page. */
+const ALTERNATE_RUN = 20;
+/** Long enough that a refetch keeps a shuffled page in place. */
+const SHUFFLE_HOLD_MS = 60 * 60_000;
+
+export interface CollectionPart {
+  /** Absent for the collection's own listed titles. */
+  source?: CollectionSource;
+  name?: string;
+  kind?: CollectionType;
+}
+
+/** Each named and typed as its source's library is. */
+export async function collectionParts(
+  engine: AIOStreams,
+  meta: Pick<Meta, 'collection'>
+): Promise<CollectionPart[]> {
+  const block = meta.collection;
+  const parts: CollectionPart[] = [];
+  if (block?.items?.some((entry) => !entry.collection)) parts.push({});
+  const seen = new Set<string>();
+  for (const source of block?.sources ?? []) {
+    const declared = engine.findAddonCatalog(source.type, source.catalogId);
+    const key = sourceKey(source);
+    if (!declared || seen.has(key)) continue;
+    seen.add(key);
+    const catalog =
+      findCatalog(engine, source.type, source.catalogId) ?? declared;
+    // A catalog that requires a genre offers "None" for all of it.
+    const genre = source.genre && source.genre !== 'None' ? source.genre : null;
+    const evidence = await cachedEvidence(engine.getUserData(), catalog);
+    parts.push({
+      source,
+      name:
+        source.name || (genre ? `${catalog.name} · ${genre}` : catalog.name),
+      kind: viewCollectionType(catalog, evidence?.types ?? []),
+    });
+  }
+  return parts;
+}
+
+/** Without a source, the collection's listed titles. */
+export function collectionPart(
+  block: CollectionBlock,
+  source?: SourceRef
+): CollectionBlock | null {
+  if (!source)
+    return { items: block.items?.filter((entry) => !entry.collection) };
+  const found = block.sources?.find((s) => sourceKey(s) === sourceKey(source));
+  return found ? { sources: [found] } : null;
+}
+
 /**
- * A page of a collection's members: listed items, then each source in turn, a
- * title kept where it first appears. A source is read once those before it end.
+ * A page of a collection's members: listed items, then its sources in the
+ * order it asks for, a title kept where it first appears.
  */
 export async function collectionMembers(
   engine: AIOStreams,
   meta: Pick<Meta, 'collection'>,
-  opts: Pick<
-    CatalogPageOptions,
-    'startIndex' | 'limit' | 'exactTotal' | 'select' | 'cursorKey' | 'signal'
-  > & {
-    /** A source known to hold none of these is passed over unread. */
-    kinds?: ContentKind[];
-    /** Skips sources not seen holding collections, else read to the end for nothing. */
-    collectionsOnly?: boolean;
-  }
+  opts: MemberOptions
 ): Promise<CatalogPage> {
-  const want = opts.startIndex + opts.limit;
   const seen = new Set<string>();
   const listed = ((meta.collection?.items ?? []) as MetaPreview[]).filter(
     (entry) => {
@@ -417,10 +478,71 @@ export async function collectionMembers(
     }
   );
   const kept = opts.select ? await opts.select(listed) : listed;
+  const sources = meta.collection?.sources ?? [];
+  const merge = meta.collection?.merge;
+  const page =
+    (merge === 'interleaved' || merge === 'alternating') &&
+    !opts.collectionsOnly
+      ? await mixedMembers(
+          engine,
+          sources,
+          kept,
+          seen,
+          merge === 'alternating' ? ALTERNATE_RUN : 1,
+          opts
+        )
+      : await membersInTurn(engine, sources, kept, seen, opts);
+  if (!meta.collection?.shuffle) return page;
+  const held = Math.floor(Date.now() / SHUFFLE_HOLD_MS);
+  return {
+    ...page,
+    items: shuffled(
+      page.items,
+      `${opts.cursorKey ?? ''}|${opts.startIndex}|${held}`
+    ),
+  };
+}
+
+async function sourceCatalog(
+  engine: AIOStreams,
+  source: CollectionSource,
+  walked: Set<string>,
+  opts: MemberOptions
+) {
+  const catalog = engine.findAddonCatalog(source.type, source.catalogId);
+  const key = sourceKey(source);
+  // A repeated source adds nothing and would share the first one's cursor.
+  if (!catalog || walked.has(key)) return null;
+  walked.add(key);
+  const narrowed =
+    !!opts.kinds &&
+    !(opts.kinds.includes('movie') && opts.kinds.includes('series'));
+  if (narrowed || opts.collectionsOnly) {
+    const held = await catalogKinds(engine, catalog);
+    if (narrowed && held && !held.some((k) => opts.kinds!.includes(k)))
+      return null;
+    if (
+      opts.collectionsOnly &&
+      !(await catalogHasCollections(engine.getUserData(), catalog))
+    )
+      return null;
+  }
+  return catalog;
+}
+
+/** Each source in turn, read once those before it end. */
+async function membersInTurn(
+  engine: AIOStreams,
+  sources: CollectionSource[],
+  kept: MetaPreview[],
+  seen: Set<string>,
+  opts: MemberOptions
+): Promise<CatalogPage> {
+  const want = opts.startIndex + opts.limit;
   const out = kept.slice(opts.startIndex, want);
   let offset = kept.length;
   const walked = new Set<string>();
-  for (const source of meta.collection?.sources ?? []) {
+  for (const source of sources) {
     if (opts.signal?.aborted) break;
     if (!opts.exactTotal && offset >= want)
       return {
@@ -429,24 +551,8 @@ export async function collectionMembers(
         hasMore: true,
         keys: [],
       };
-    const catalog = engine.findAddonCatalog(source.type, source.catalogId);
-    // A repeated source adds nothing and would share the first one's cursor.
-    const sourceKey = `${source.type}|${source.catalogId}|${source.genre ?? ''}`;
-    if (!catalog || walked.has(sourceKey)) continue;
-    walked.add(sourceKey);
-    const narrowed =
-      !!opts.kinds &&
-      !(opts.kinds.includes('movie') && opts.kinds.includes('series'));
-    if (narrowed || opts.collectionsOnly) {
-      const held = await catalogKinds(engine, catalog);
-      if (narrowed && held && !held.some((k) => opts.kinds!.includes(k)))
-        continue;
-      if (
-        opts.collectionsOnly &&
-        !(await catalogHasCollections(engine.getUserData(), catalog))
-      )
-        continue;
-    }
+    const catalog = await sourceCatalog(engine, source, walked, opts);
+    if (!catalog) continue;
     const start = Math.max(0, opts.startIndex - offset);
     const page = await getCatalogPage(engine, catalog, {
       startIndex: start,
@@ -471,6 +577,92 @@ export async function collectionMembers(
     for (const key of page.keys) seen.add(key);
   }
   return { items: out, total: offset, hasMore: false, keys: [...seen] };
+}
+
+interface Lane {
+  catalog: Catalog;
+  genre?: string;
+  items: MetaPreview[];
+  at: number;
+  more: boolean;
+}
+
+/** Each source is read from its start every time, which its cached pages keep cheap. */
+async function mixedMembers(
+  engine: AIOStreams,
+  sources: CollectionSource[],
+  kept: MetaPreview[],
+  seen: Set<string>,
+  run: number,
+  opts: MemberOptions
+): Promise<CatalogPage> {
+  const walked = new Set<string>();
+  const lanes: Lane[] = [];
+  for (const source of sources) {
+    const catalog = await sourceCatalog(engine, source, walked, opts);
+    if (catalog)
+      lanes.push({
+        catalog,
+        genre: source.genre ?? undefined,
+        items: [],
+        at: 0,
+        more: true,
+      });
+  }
+  if (lanes.length < 2) return membersInTurn(engine, sources, kept, seen, opts);
+
+  const end = opts.startIndex + opts.limit;
+  const target = opts.exactTotal ? Infinity : end;
+  const out = [...kept];
+  const share = () =>
+    Math.max(run, Math.ceil((target - out.length) / lanes.length));
+  const read = async (lane: Lane, count: number) => {
+    const page = await getCatalogPage(engine, lane.catalog, {
+      startIndex: lane.items.length,
+      limit: count,
+      genre: lane.genre,
+      exactTotal: opts.exactTotal,
+      select: opts.select,
+      cursorKey: opts.cursorKey && `${opts.cursorKey}|mixed`,
+      signal: opts.signal,
+    }).catch(() => null);
+    lane.items.push(...(page?.items ?? []));
+    lane.more = !!page?.hasMore && !!page.items.length;
+  };
+  const drained = (lane: Lane) => lane.at >= lane.items.length && !lane.more;
+
+  await Promise.all(lanes.map((lane) => read(lane, share())));
+  let turn = 0;
+  let taken = 0;
+  const pass = () => {
+    turn = (turn + 1) % lanes.length;
+    taken = 0;
+  };
+  while (
+    out.length < target &&
+    !opts.signal?.aborted &&
+    !lanes.every(drained)
+  ) {
+    const lane = lanes[turn];
+    if (lane.at >= lane.items.length) {
+      if (lane.more) await read(lane, share());
+      else pass();
+      continue;
+    }
+    const item = lane.items[lane.at++];
+    if (++taken === run) pass();
+    const key = `${item.type}|${item.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  const done = lanes.every(drained);
+  return {
+    items: out.slice(opts.startIndex, end),
+    total: done ? out.length : out.length + opts.limit,
+    hasMore: !done,
+    keys: done ? [...seen] : [],
+  };
 }
 
 /** What a sweep learned about a catalog. */

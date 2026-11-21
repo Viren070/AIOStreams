@@ -225,6 +225,12 @@ export const ACTIONS = {
     group: 'player',
     keys: ['F'],
   },
+  'player.pictureInPicture': {
+    label: msg`Picture-in-picture`,
+    group: 'player',
+    keys: ['P'],
+    needs: 'pictureInPicture',
+  },
   'player.stats': {
     label: msg`Statistics`,
     group: 'player',

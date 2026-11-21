@@ -1,15 +1,12 @@
 import React from 'react';
-import { useRouterState } from '@tanstack/react-router';
 import { navigate } from '@/lib/paths';
+import { usePageSearch } from '@/lib/page-shown';
 
 /** Kept in the address, so going back to the page brings the choice back. */
 export function useSearchParam(
   name: string
 ): [string | undefined, (next: string | undefined) => void] {
-  const value = useRouterState({
-    select: (s) =>
-      new URLSearchParams(s.location.searchStr).get(name) ?? undefined,
-  });
+  const value = new URLSearchParams(usePageSearch()).get(name) ?? undefined;
   const set = React.useCallback(
     (next: string | undefined) => {
       const [path, query = ''] = location.hash.slice(1).split('?');
