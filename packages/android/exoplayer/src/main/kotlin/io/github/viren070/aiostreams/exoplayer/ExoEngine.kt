@@ -259,6 +259,8 @@ class ExoEngine(private val context: Context) : Engine {
         AppLog.w(TAG, "the tunnel stood still with ${player.totalBufferedDuration} ms queued, so it starts again")
         seekTo(player.currentPosition - RESYNC_BACK_MS, 0)
         recovering = true
+        // A stall that outlasts the seek may change nothing that would look again.
+        watchStuck()
     }
     private var unsticks = 0
 
