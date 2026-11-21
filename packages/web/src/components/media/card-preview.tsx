@@ -63,6 +63,7 @@ interface Previews {
   /** Cancels only a waiting preview: an open one covers its card, so leaving the card enters it. */
   leave(): void;
   blur(): void;
+  close(): void;
 }
 
 const PreviewContext = React.createContext<Previews | null>(null);
@@ -73,11 +74,14 @@ export function useCardPreview(item: BaseItemDto) {
   return {
     // Not on enter, which rows scrolling under a still pointer also send.
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      // A leaving card isn't opened again by the pointer either.
+      if ((e.target as Element).closest('[data-leaving]')) return;
       if (e.pointerType === 'mouse')
         previews.rest({ item, card: e.currentTarget, byFocus: false });
     },
     onPointerLeave: previews.leave,
     onFocus: (e: React.FocusEvent<HTMLElement>) => {
+      if ((e.target as Element).closest('[data-leaving]')) return;
       if ((e.target as Element).matches(':focus-visible'))
         previews.rest({ item, card: e.currentTarget, byFocus: true });
     },
@@ -210,6 +214,17 @@ function closeSlide(card: HTMLElement) {
   if (!still()) slideFrom(after, lefts);
 }
 
+/**
+ * Closes the open preview at once, as when its card is about to go, and
+ * `card`'s place too, which a menu over it can leave open after its preview
+ * has let go of it.
+ */
+const hosts = new Set<() => void>();
+export function closeCardPreview(card?: HTMLElement | null): void {
+  for (const shut of hosts) shut();
+  if (card) closeSlide(card);
+}
+
 export function CardPreviewHost({ children }: { children: React.ReactNode }) {
   const [enabled] = useSetting(settings.interface.cardPreview);
   const pointer = useMediaQuery(
@@ -264,8 +279,15 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
       },
       leave: cancel,
       blur: shut,
+      close: shut,
     };
   }, []);
+  // Every host's, as home is kept mounted beneath the page over it.
+  React.useEffect(() => {
+    const shut = () => previews.close();
+    hosts.add(shut);
+    return () => void hosts.delete(shut);
+  }, [previews]);
   React.useEffect(
     () => () => {
       timers.current.forEach(clearTimeout);

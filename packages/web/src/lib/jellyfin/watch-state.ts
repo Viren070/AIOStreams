@@ -13,6 +13,22 @@ export function useRefreshAll() {
 
 const NOT_WATCH_STATE = new Set(['playback-info', 'segments']);
 
+/** Takes `itemId` out of the Continue watching lists held, at once, ahead of fetching them again. */
+export function useDropFromContinue() {
+  const queryClient = useQueryClient();
+  const key = useKey();
+  return (itemId: string) => {
+    const without = (old: unknown) => {
+      const list = old as { Items?: { Id?: string }[] } | undefined;
+      return list?.Items
+        ? { ...list, Items: list.Items.filter((i) => i.Id !== itemId) }
+        : old;
+    };
+    queryClient.setQueriesData({ queryKey: [...key, 'resume'] }, without);
+    queryClient.setQueriesData({ queryKey: [...key, 'next-up'] }, without);
+  };
+}
+
 /** {@link useRefreshAll} for the server's pushes, which come during playback, so versions stay. */
 export function useRefreshWatchState() {
   const queryClient = useQueryClient();
@@ -45,7 +61,8 @@ export function useSetPlayed() {
   });
 }
 
-export function useClearResume() {
+/** `refresh: false` leaves fetching the lists again to the caller, after its own drawing. */
+export function useClearResume({ refresh: then = true } = {}) {
   const { client, user } = useSession();
   const refresh = useRefreshAll();
   return useMutation({
@@ -55,7 +72,7 @@ export function useClearResume() {
         { PlaybackPositionTicks: 0 },
         { userId: user.Id }
       ),
-    onSettled: refresh,
+    onSettled: () => (then ? refresh() : undefined),
   });
 }
 
