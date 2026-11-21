@@ -15,6 +15,7 @@ export function Backdrop({
   video,
   band,
   onBare,
+  onShown,
 }: {
   images: string[];
   poster: string | null;
@@ -25,6 +26,8 @@ export function Backdrop({
   band?: boolean;
   /** Everything it was given has failed to load. */
   onBare?: () => void;
+  /** The picture it settled on, which it keeps as the title's details come. */
+  onShown?: (src: string) => void;
 }) {
   const playable = useTrailersOn('item');
   const [playing, setPlaying] = React.useState<string>();
@@ -60,18 +63,22 @@ export function Backdrop({
       src={src}
       alt=""
       // Decoded first, as a large image would otherwise appear a moment after it's shown.
-      onLoad={(e) =>
-        void e.currentTarget
+      onLoad={(e) => {
+        const el = e.currentTarget;
+        void el
           .decode()
           .catch(() => undefined)
-          .then(() =>
+          .then(() => {
+            // One replaced while it decoded is gone, and isn't what it shows.
+            if (!el.isConnected) return;
+            if (!wash) onShown?.(src);
             setArrived((was) =>
               was?.src === src
                 ? was
                 : { src, late: performance.now() - opened > UNSEEN_MS }
-            )
-          )
-      }
+            );
+          });
+      }}
       onError={() =>
         setFailed((f) => ({
           key,

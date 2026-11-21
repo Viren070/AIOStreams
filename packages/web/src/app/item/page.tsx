@@ -9,6 +9,9 @@ import {
   backdropUrls,
   backgroundVideoOf,
   posterUrl,
+  shownFirst,
+  settleBackdrop,
+  useBackdropsSettled,
 } from '@/lib/artwork/urls';
 import { useArtBackground } from '@/lib/artwork/background';
 import { lacksDetails } from '@/lib/format';
@@ -46,6 +49,12 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
   const data = item.data;
+  // Its own details settle its backdrop, not what the list it came from knew.
+  if (data && !item.isPlaceholderData) settleBackdrop(data, 'details');
+  useBackdropsSettled();
+  // The picture this visit settled on, kept as its details come; a later
+  // visit opens on what's settled by then.
+  const [kept, setKept] = React.useState<{ id: string; src: string }>();
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   useArtBackground(data);
   const [season, setSeason] = React.useState<BaseItemDto>();
@@ -55,13 +64,18 @@ export function ItemPage({
   );
   // A collection's cover is made for a tile, never the top of its page.
   const collection = data?.Type === 'BoxSet';
-  const art = !data
+  const backdrops = !data
     ? []
     : collection
       ? [backdropUrl(client, data, { maxWidth: 1920 })].filter(
           (url): url is string => !!url
         )
-      : backdropUrls(client, data, { maxWidth: 1920 });
+      : // Led by the picture it was just shown with, so it opens on the same.
+        shownFirst(itemId, backdropUrls(client, data, { maxWidth: 1920 }));
+  const lead = kept?.id === itemId ? kept.src : undefined;
+  const art = lead
+    ? [lead, ...backdrops.filter((url) => url !== lead)]
+    : backdrops;
   const videoAllowed = useTrailersAllowed('item');
   const video =
     collection && data && videoAllowed ? backgroundVideoOf(data) : undefined;
@@ -115,6 +129,11 @@ export function ItemPage({
         video={video}
         band={collection}
         onBare={collection ? onBare : undefined}
+        onShown={(src) =>
+          setKept((was) =>
+            was?.id === itemId && was.src === src ? was : { id: itemId, src }
+          )
+        }
       />
       {trailer.preview}
       {trailer.hint}

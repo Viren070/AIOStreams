@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
-import { backdropUrl, logoUrl } from '@/lib/artwork/urls';
+import { backdropUrl, logoUrl, useBackdropsSettled } from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle } from '@/lib/format';
 import { CachedImage } from '@/components/cached-image';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
@@ -29,6 +29,8 @@ export function Cover({
   React.useEffect(() => {
     if (!hidden) setGone(false);
   }, [hidden]);
+  // A finer backdrop settled for the title redraws the cover.
+  useBackdropsSettled();
   if (gone) return null;
 
   const backdrop = item ? backdropUrl(client, item, { maxWidth: 1920 }) : null;
