@@ -86,7 +86,7 @@ async function pingStream(
   const wrapper = new Wrapper(stream.addon);
   return wrapper.makeRequest(url, {
     timeout: timeoutMs,
-    rawOptions: { redirect: 'manual' },
+    redirect: 'manual',
   });
 }
 

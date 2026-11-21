@@ -1,14 +1,13 @@
 import { t } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
 import React from 'react';
-import { BiCalendar, BiChevronRight, BiHistory, BiTv } from 'react-icons/bi';
+import { BiCalendar, BiHistory, BiTv } from 'react-icons/bi';
 import { Button } from '@aiostreams/ui/button';
 import { Badge } from '@aiostreams/ui/badge';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import {
-  useItemPages,
   libraryTypes,
   needsGenre,
   mergeRows,
@@ -19,12 +18,7 @@ import {
   useUpcoming,
   useViews,
 } from '@/lib/jellyfin/queries';
-import {
-  cardImages,
-  cardShape,
-  landscapeUrls,
-  animatedPosterOf,
-} from '@/lib/artwork/urls';
+import { landscapeUrls } from '@/lib/artwork/urls';
 import {
   dayLabel,
   libraryLabel,
@@ -39,10 +33,10 @@ import {
 import { href, itemPath, navigate, to, versionsPath } from '@/lib/paths';
 import { settings, useSetting, type FeaturedSource } from '@/lib/settings';
 import { useFeature, useServerInfo } from '@/lib/jellyfin/server-info';
-import { useNear } from '@/hooks/use-in-view';
 import { FollowHero, Hero } from '@/components/media/hero';
 import { CardPreviewHost } from '@/components/media/card-preview';
 import { MediaRow } from '@/components/media/media-row';
+import { ItemsRow, ROW_PAGE } from '@/components/media/items-row';
 import { ChannelCard } from '@/features/live-tv/channel-card';
 import {
   FAVOURITES,
@@ -52,17 +46,16 @@ import {
   useNow,
   useSchedules,
 } from '@/features/live-tv/live-tv';
-import { PosterCard, WideCard } from '@/components/media/cards';
+import { WideCard } from '@/components/media/cards';
 import { ItemMenu } from '@/components/media/item-menu';
 import {
   useStraightPlay,
   useVersionPicker,
 } from '@/features/versions/version-picker';
 import { NoCatalogs } from '@/components/media/no-catalogs';
-import { FILL_WINDOW } from '@/components/shell/page';
+import { FILL_WINDOW, PAGE_TOP } from '@/components/shell/page';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { currentHost } from '@/lib/hosts';
-import { Anchor } from '@/components/anchor';
 
 const HERO_ITEMS = 8;
 const HERO_MAX = 10;
@@ -215,7 +208,7 @@ export function HomePage() {
         className={cn(
           heroItems.length || heroLoading
             ? 'relative z-[1] space-y-10 px-4 pt-2 lg:ps-0 lg:pe-10'
-            : 'relative z-[1] space-y-10 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2.5rem+env(safe-area-inset-top))]',
+            : ['relative z-[1] space-y-10 px-4 lg:ps-0 lg:pe-10', PAGE_TOP],
           noCatalogs && 'flex flex-1 flex-col'
         )}
       >
@@ -329,8 +322,6 @@ function UpcomingRow() {
   );
 }
 
-const ROW_PAGE = 20;
-
 /** Favourite channels, then those played here lately, with what is on. */
 function LiveRow() {
   const enabled = useLiveTvShown(true);
@@ -379,90 +370,22 @@ function LiveRow() {
   );
 }
 
-/**
- * A library's row, fetched and drawn once near the screen and paged as it
- * scrolls. Its cards wait too when already fetched, as most rows are out of
- * sight: only the first starts drawn, as a page opens at its top.
- */
 function LibraryRow({ view, first }: { view: BaseItemDto; first: boolean }) {
-  const { client } = useSession();
   const { stock } = useServerInfo();
-  const [ref, near] = useNear<HTMLElement>('400px', first);
-  const pages = useItemPages(view.Id!, {
-    types: libraryTypes(view),
-    recursive: true,
-    pageSize: ROW_PAGE,
-    enabled: near,
-    // A catalog's order is its own; a server's own files show newest first.
-    ...(stock && { sortBy: NEWEST, descending: true }),
-  });
-  const items = React.useMemo(
-    () => pages.data?.pages.flatMap((p) => p.Items ?? []) ?? [],
-    [pages.data]
-  );
-  const landscape =
-    items.length > 0 &&
-    items.filter((i) => cardShape(i) === 'landscape').length > items.length / 2;
-  // Made again only with the items, as the row renders for its paging too.
-  const cards = React.useMemo(
-    () =>
-      near &&
-      items.map((item) => (
-        <ItemMenu key={item.Id} item={item}>
-          <PosterCard
-            href={href(itemPath(item))}
-            shape={landscape ? 'landscape' : cardShape(item)}
-            image={(width) =>
-              cardImages(
-                client,
-                item,
-                landscape ? 'landscape' : cardShape(item),
-                { maxWidth: width }
-              )
-            }
-            animated={animatedPosterOf(item)}
-            title={item.Name ?? ''}
-            subtitle={itemSubtitle(item)}
-            itemType={item.Type}
-            watched={item.UserData?.Played}
-            favourite={item.UserData?.IsFavorite}
-            unwatched={item.UserData?.UnplayedItemCount ?? undefined}
-            progress={progressOf(item)}
-          />
-        </ItemMenu>
-      )),
-    [near, items, landscape, client]
-  );
-  const label = libraryLabel(view);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = pages;
-  const more = React.useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Shown loading until fetched: the row itself must mount to come into view.
   return (
-    <MediaRow
-      rowRef={ref}
+    <ItemsRow
       id={`view:${view.Id}`}
-      title={
-        <Anchor
-          href={href(to.discover(view.Id!))}
-          className="group/title inline-flex items-baseline gap-2"
-        >
-          {view.Name}
-          {label && (
-            <span className="text-sm font-normal text-[--muted]">{label}</span>
-          )}
-          <BiChevronRight className="self-center text-xl text-[--muted] transition-transform group-hover/title:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover/title:-translate-x-0.5" />
-        </Anchor>
-      }
-      shape={landscape ? 'wide' : 'poster'}
-      loading={!near || (!pages.data && !pages.isError)}
-      waiting={!near}
-      loadingMore={isFetchingNextPage}
-      onEndReached={more}
-    >
-      {cards}
-    </MediaRow>
+      parentId={view.Id!}
+      query={{
+        types: libraryTypes(view),
+        recursive: true,
+        // A catalog's order is its own; a server's own files show newest first.
+        ...(stock && { sortBy: NEWEST, descending: true }),
+      }}
+      title={view.Name ?? ''}
+      label={libraryLabel(view)}
+      link={to.discover(view.Id!)}
+      first={first}
+    />
   );
 }

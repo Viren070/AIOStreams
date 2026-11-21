@@ -1,6 +1,6 @@
 import { config as appConfig } from '../../config/index.js';
 import { createLogger } from '../../logging/logger.js';
-import { makeRequest } from '../../utils/http.js';
+import { makeRequest } from '../../utils/http/index.js';
 import {
   PlaybackHandoffRepository,
   type DeliveryRow,

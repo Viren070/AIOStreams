@@ -2359,6 +2359,11 @@ msgstr ""
 msgid "Main"
 msgstr ""
 
+#: src/app.tsx
+#, fuzzy
+msgid "Manage servers"
+msgstr "Byt server"
+
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
 msgstr ""
@@ -3214,6 +3219,7 @@ msgid "Pick the version to download."
 msgstr ""
 
 #: src/app/settings/player.tsx src/features/player/options.tsx
+#: src/lib/input/actions.ts
 msgid "Picture-in-picture"
 msgstr ""
 

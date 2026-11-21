@@ -7,7 +7,7 @@
  *   - the app version;
  *   - the `(alpine X.Y.Z)` suffix on the *arr presets, which is the OS the
  *     LinuxServer container reports.
- *   - Chrome's `Sec-Ch-Ua`, whose GREASE brand, version and ordering are all
+ *   - Chrome's `sec-ch-ua`, whose GREASE brand, version and ordering are all
  *     derived from the major version and change together.
  */
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -15,7 +15,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PRESETS_PATH = join(ROOT, 'packages/core/src/utils/header-presets.ts');
+const PRESETS_PATH = join(
+  ROOT,
+  'packages/core/src/utils/http/header-presets.ts'
+);
 const CHECK_ONLY = process.argv.includes('--check');
 const USER_AGENT = 'AIOStreams-header-preset-updater';
 
@@ -237,7 +240,7 @@ if (chromeMajor) {
     content,
     'chrome',
     'sec-ch-ua',
-    /'Sec-Ch-Ua':\s*'([^']*)'/,
+    /'sec-ch-ua':\s*'([^']*)'/,
     secChUa(chromeMajor)
   );
 }

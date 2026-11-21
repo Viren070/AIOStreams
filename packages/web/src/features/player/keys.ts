@@ -51,6 +51,7 @@ interface PlayerKeys {
   /** Whether the controls show, which Back hides first on a TV. */
   visible(): boolean;
   wake(): void;
+  stir?: () => void;
   glancing(): boolean;
   hide(): void;
   notice(text: string): void;
@@ -274,6 +275,8 @@ export function usePlayerKeys(keys: PlayerKeys): void {
       'player.faster': () => stepRate(1),
       'player.normalSpeed': () => changeRate(1),
       'player.fullscreen': () => call(player().toggleFullscreen),
+      'player.pictureInPicture': () =>
+        !currentHost().tv && call(player().togglePictureInPicture),
       'player.stats': () => {
         const { stats } = player();
         if (!stats) return false;
@@ -295,6 +298,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         const outcome = run(input, repeat);
         if (outcome === false) return false;
         if (outcome !== 'quiet') k().wake();
+        else k().stir?.();
       })
     );
     // A focused control keeps its key.

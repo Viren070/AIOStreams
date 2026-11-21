@@ -90,6 +90,8 @@ interface NavigateOptions {
   replace?: boolean;
   keepScroll?: boolean;
   fromHero?: boolean;
+  /** Slides in over this page, as a title does. */
+  over?: boolean;
 }
 
 type Push = (path: string, opts: NavigateOptions) => void;
@@ -116,9 +118,13 @@ export function navigate(path: string, opts: NavigateOptions = {}) {
     !samePage &&
     !opts.replace &&
     !opts.keepScroll;
-  if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
+  if (opensTitle || opts.over)
+    openPage(() => push(path, opts), {
+      fromHero: opts.fromHero,
+      title: opensTitle,
+    });
   // Another page leaves as a title's does, the player's too; the same page
-  // with another query stays, so it has nothing to leave.
+  // with another query opens as it is, so it has nothing to leave.
   else if (!opts.replace && !samePage)
     leaveThenOpen(() => push(path, opts), pathname.startsWith('/play/'));
   else push(path, opts);

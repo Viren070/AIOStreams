@@ -1,6 +1,5 @@
 import React from 'react';
 import { t } from '@lingui/core/macro';
-import { motion } from 'motion/react';
 import {
   Outlet,
   useChildMatches,
@@ -33,7 +32,6 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
 import { useLiveTvShown } from '@/features/live-tv/live-tv';
 import { useCanSwitch } from '@/lib/profiles';
-import { artWaiting, CONTENT, pageOpening } from '@/lib/page-open';
 import { navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
@@ -58,9 +56,7 @@ import { WatchNextSync } from './watch-next';
 import { ReminderHost } from '@/features/live-tv/live-reminders';
 import { RandomPick } from '@/components/media/random-pick';
 import { ItemMenuHost } from '@/components/media/item-menu';
-import { HomePage } from '@/app/home/page';
 import { PlayerPage } from '@/app/player/page';
-import { PageShown } from '@/lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
 import { UsageStats } from './usage-stats';
@@ -70,7 +66,7 @@ import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
 import { useTrailerCovers } from '@/features/trailers/preview';
-import { PageScroll } from './page-scroll';
+import { PageStack } from './page-stack';
 import { ArtWash } from './art-wash';
 import {
   artPageOf,
@@ -86,42 +82,6 @@ import { TouchRail } from './nav/touch-rail';
 import { TvRail } from './nav/tv-rail';
 import { CornerMenu } from './nav/corner-menu';
 import { TOP_BAR_HEIGHT, TopTabs } from './nav/top-tabs';
-
-// Kept mounted under every page, so it skips the layout's render on each route change.
-const KeptHome = React.memo(HomePage);
-
-/*
- * It rises by a whole transform and fades on an eased curve, which the browser
- * runs off the main thread, so the motion stays smooth while a TV still draws
- * the page; by `top` it was laid out again every frame. The transform goes
- * once it's done, as it would place a fixed child by the page.
- */
-const PAGE_FADE = {
-  initial: { opacity: 0, transform: 'translateY(6px)' },
-  animate: {
-    opacity: 1,
-    transform: 'translateY(0px)',
-    transitionEnd: { transform: 'none' },
-  },
-  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-} as const;
-
-/**
- * A TV page only fades: what rises there is the content its page sets moving,
- * over a still backdrop. A title's page shows its backdrop at once, as faded
- * in whole the artwork behind it shone through first.
- */
-const fadeFrom = (pathname = '') =>
-  !currentHost().tv
-    ? PAGE_FADE.initial
-    : pathname.startsWith('/item/')
-      ? false
-      : { opacity: 0 };
-/** On a TV, in step with the content's rise and the leaving page's fade. */
-const fadeTiming = () =>
-  currentHost().tv
-    ? { duration: 0.32, ease: [0, 0, 0.6, 1] as const }
-    : PAGE_FADE.transition;
 
 /**
  * The backdrop as one element that never fades with the screens, so a
@@ -148,73 +108,12 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     <div
       aria-hidden
       data-ui="page-background"
-      className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
+      // The tallest the viewport gets: a browser's bars slide away mid-scroll before it grows to match.
+      className="page-background pointer-events-none fixed inset-x-0 top-0 -z-10 h-screen bg-[--background]"
     >
       {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
     </div>
   );
-}
-
-/**
- * On a TV, home kept beneath rises into place as it shows again, as a page
- * opened does: its content, hidden as it's shown, rises once the frame that
- * draws it again is out, which takes a TV a while; the hero's picture is there
- * meanwhile.
- */
-function useHomeRise(onHome: boolean) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const shown = React.useRef(onHome);
-  React.useLayoutEffect(() => {
-    const back = onHome && !shown.current;
-    shown.current = onHome;
-    const el = ref.current;
-    // With reduced motion home shows at once, as the page that left it didn't move.
-    if (
-      !back ||
-      !el ||
-      !currentHost().tv ||
-      matchMedia('(prefers-reduced-motion: reduce)').matches
-    )
-      return;
-    const parts = [...el.querySelectorAll<HTMLElement>(CONTENT)];
-    // The hero's picture, filling the screen, comes up from dark with it.
-    const art = [
-      ...el.querySelectorAll<HTMLElement>(
-        "[data-ui='hero'] > [data-ui='hero-art']"
-      ),
-    ];
-    for (const part of [...parts, ...art]) part.style.opacity = '0';
-    const show = () => {
-      for (const part of [...parts, ...art]) part.style.opacity = '';
-    };
-    let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        show();
-        for (const part of parts)
-          part.animate(
-            [
-              { opacity: 0, transform: 'translateY(0.5rem)' },
-              { opacity: 1, transform: 'none' },
-            ],
-            { duration: 450, easing: 'cubic-bezier(0, 0, 0.6, 1)' }
-          );
-        for (const part of art)
-          part.animate([{ opacity: 0 }, { opacity: 1 }], {
-            duration: 450,
-            easing: 'cubic-bezier(0, 0, 0.6, 1)',
-          });
-      });
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-      show();
-    };
-  }, [onHome]);
-  return ref;
-}
-
-function pageName(pathname: string): string {
-  return pathname.split('/')[1] || 'home';
 }
 
 /** Phones and TVs leave it to their first video. */
@@ -241,11 +140,6 @@ export function WebLayout() {
   const { switchUser, user } = useSession();
   const several = useCanSwitch();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const entry = useRouterState({
-    select: (s) => s.location.state.__TSR_key ?? s.location.href,
-  });
-  const onHome = pathname === '/';
-  const home = useHomeRise(onHome);
   // From the match the outlet shows, which can trail the location for a render.
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
@@ -256,11 +150,6 @@ export function WebLayout() {
   usePlayerLeaving();
   // Another user, or signing out, takes what played with the pages.
   React.useEffect(() => closePlayback, [user.Id]);
-  // Home stays, hidden, while other pages and the player are open: going back
-  // to its entry shows it again rather than building it anew. Any other visit
-  // starts afresh.
-  const [kept, setKept] = React.useState<string>();
-  if (onHome && kept !== entry) setKept(entry);
   const activity: SidebarItem = {
     id: 'activity',
     name: t`Activity`,
@@ -519,45 +408,7 @@ export function WebLayout() {
                   {currentHost().watchNext && <WatchNextSync />}
                   <ItemMenuHost>
                     <GlideLayers name="page">
-                      {kept && (
-                        <motion.div
-                          key={kept}
-                          ref={home}
-                          data-page="home"
-                          {...PAGE_FADE}
-                          transition={fadeTiming()}
-                          initial={fadeFrom()}
-                          inert={!onHome}
-                          className={cn(
-                            page,
-                            !onHome &&
-                              'invisible absolute inset-x-0 top-0 [content-visibility:hidden]'
-                          )}
-                        >
-                          <PageShown.Provider value={onHome}>
-                            <KeptHome />
-                          </PageShown.Provider>
-                          {onHome && <PageScroll />}
-                        </motion.div>
-                      )}
-                      {!onHome && !playing && (
-                        <motion.div
-                          key={pathname}
-                          data-page={pageName(pathname)}
-                          {...PAGE_FADE}
-                          transition={fadeTiming()}
-                          // The player's cover shows at once when it takes a backdrop over.
-                          initial={
-                            pageOpening() || artWaiting()
-                              ? false
-                              : fadeFrom(pathname)
-                          }
-                          className={page}
-                        >
-                          <Outlet />
-                          <PageScroll />
-                        </motion.div>
-                      )}
+                      <PageStack className={page} covered={playing} />
                     </GlideLayers>
                   </ItemMenuHost>
                 </VersionPickerProvider>
