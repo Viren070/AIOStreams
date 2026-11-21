@@ -19,6 +19,7 @@ const PARAM_ADVANCED_CONTROL: c_int = 10;
 const PARAM_NEXT_FRAME_INFO: c_int = 11;
 const PARAM_BLOCK_FOR_TARGET_TIME: c_int = 12;
 const PARAM_SKIP_RENDERING: c_int = 13;
+const PARAM_DRM_DISPLAY_V2: c_int = 16;
 
 const UPDATE_FRAME: u64 = 1;
 const FRAME_INFO_PRESENT: u64 = 1;
@@ -43,6 +44,16 @@ pub enum NativeDisplay {
 struct OpenGlInitParams {
     get_proc_address: GetProcAddress,
     get_proc_address_ctx: *mut c_void,
+}
+
+/// Only `render_fd` is set: mpv's VA-API opens its display on that GPU.
+#[repr(C)]
+struct DrmParams {
+    fd: c_int,
+    crtc_id: c_int,
+    connector_id: c_int,
+    atomic_request_ptr: *mut c_void,
+    render_fd: c_int,
 }
 
 #[repr(C)]
@@ -105,6 +116,7 @@ impl RenderContext {
         get_proc_address: GetProcAddress,
         get_proc_address_ctx: *mut c_void,
         display: Option<NativeDisplay>,
+        render_node: Option<c_int>,
         advanced: bool,
         depth: c_int,
     ) -> Result<Self, String> {
@@ -152,6 +164,19 @@ impl RenderContext {
                 data: d,
             }),
             None => {}
+        }
+        let mut drm = render_node.map(|render_fd| DrmParams {
+            fd: -1,
+            crtc_id: -1,
+            connector_id: -1,
+            atomic_request_ptr: ptr::null_mut(),
+            render_fd,
+        });
+        if let Some(drm) = &mut drm {
+            params.push(Param {
+                kind: PARAM_DRM_DISPLAY_V2,
+                data: (drm as *mut DrmParams).cast(),
+            });
         }
         params.push(Param {
             kind: PARAM_INVALID,

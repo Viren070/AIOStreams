@@ -1,0 +1,5 @@
+# The libmpv the Linux AppImage and .deb ship, with FFmpeg's libraries: a
+# github.com/AIOStreams/libs release and the SHA-256 of each architecture's libs-linux zip.
+libs=20261121-e4c3b9a
+libs_x86_64=e66b2716f5d3a7a0dbb9e2f8d7ad56c55fd09c1497a6c08ee45fd24cd0f0efad
+libs_aarch64=eac031ab3a7013f46ed135c95e124f98ec345f2a52567345aa0776f72629cc54

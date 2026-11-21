@@ -77,6 +77,7 @@ type ProcFn = unsafe extern "C" fn(*const c_char) -> *mut c_void;
 struct Gl {
     egl_get_proc: Option<ProcFn>,
     egl_current: Option<unsafe extern "C" fn() -> *mut c_void>,
+    egl_display: Option<unsafe extern "C" fn() -> *mut c_void>,
     glx_get_proc: Option<ProcFn>,
     _libs: Vec<Library>,
 }
@@ -92,15 +93,17 @@ fn gl() -> &'static Gl {
             lib.as_ref()
                 .and_then(|l| l.get::<ProcFn>(name).ok().map(|s| *s))
         };
+        let current = |name: &[u8]| unsafe {
+            egl.as_ref().and_then(|l| {
+                l.get::<unsafe extern "C" fn() -> *mut c_void>(name)
+                    .ok()
+                    .map(|s| *s)
+            })
+        };
         Gl {
             egl_get_proc: sym(&egl, b"eglGetProcAddress\0"),
-            egl_current: unsafe {
-                egl.as_ref().and_then(|l| {
-                    l.get::<unsafe extern "C" fn() -> *mut c_void>(b"eglGetCurrentContext\0")
-                        .ok()
-                        .map(|s| *s)
-                })
-            },
+            egl_current: current(b"eglGetCurrentContext\0"),
+            egl_display: current(b"eglGetCurrentDisplay\0"),
             glx_get_proc: sym(&glx, b"glXGetProcAddressARB\0"),
             _libs: egl.into_iter().chain(glx).collect(),
         }
@@ -119,6 +122,49 @@ unsafe extern "C" fn get_proc_address(_ctx: *mut c_void, name: *const c_char) ->
         gl.glx_get_proc
             .map_or(std::ptr::null_mut(), |get| get(name))
     }
+}
+
+/// The render node of the GPU behind GTK's current EGL context, held open for the app's life.
+fn render_node() -> Option<c_int> {
+    static NODE: OnceLock<Option<std::fs::File>> = OnceLock::new();
+    const DEVICE_EXT: c_int = 0x322C;
+    const DRM_RENDER_NODE_FILE_EXT: c_int = 0x3377;
+    type QueryDisplay = unsafe extern "C" fn(*mut c_void, c_int, *mut isize) -> u32;
+    type QueryDevice = unsafe extern "C" fn(*mut c_void, c_int) -> *const c_char;
+    let node = NODE.get_or_init(|| {
+        let gl = gl();
+        let (get, display) = (gl.egl_get_proc?, gl.egl_display?);
+        // SAFETY: EGL's extension lookups with egl.h's types, on the current display.
+        let path = unsafe {
+            let query_display = get(c"eglQueryDisplayAttribEXT".as_ptr());
+            let query_device = get(c"eglQueryDeviceStringEXT".as_ptr());
+            let dpy = display();
+            if query_display.is_null() || query_device.is_null() || dpy.is_null() {
+                return None;
+            }
+            let query_display: QueryDisplay = std::mem::transmute(query_display);
+            let query_device: QueryDevice = std::mem::transmute(query_device);
+            let mut device = 0isize;
+            if query_display(dpy, DEVICE_EXT, &mut device) == 0 {
+                return None;
+            }
+            let name = query_device(device as *mut c_void, DRM_RENDER_NODE_FILE_EXT);
+            if name.is_null() {
+                return None;
+            }
+            std::ffi::CStr::from_ptr(name)
+                .to_string_lossy()
+                .into_owned()
+        };
+        log::info!("render node {path}");
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+            .inspect_err(|e| log::warn!("render node {path}: {e}"))
+            .ok()
+    });
+    node.as_ref().map(std::os::fd::AsRawFd::as_raw_fd)
 }
 
 /// The framebuffer GTK bound for this frame; a GLArea draws into its own.
@@ -423,6 +469,7 @@ impl VideoSurface {
                     get_proc_address,
                     std::ptr::null_mut(),
                     display,
+                    render_node(),
                     true, // advanced control
                     8,    // a GtkGLArea's default framebuffer is 8 bits a channel
                 ) {
@@ -477,8 +524,29 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     // find the system's certificates there. The Flatpak runtime's does.
     if std::path::Path::new("/.flatpak-info").exists() {
         options.push(("tls-verify", "yes".into()));
+    } else if let Some(file) = ca_file() {
+        // The libs' FFmpeg uses Mbed TLS, which has no certificates of its own.
+        options.push(("tls-ca-file", file));
     }
     options
+}
+
+fn ca_file() -> Option<String> {
+    std::env::var("SSL_CERT_FILE")
+        .ok()
+        .into_iter()
+        .chain(
+            [
+                "/etc/ssl/certs/ca-certificates.crt",
+                "/etc/pki/tls/certs/ca-bundle.crt",
+                "/etc/ssl/ca-bundle.pem",
+                "/etc/pki/tls/cacert.pem",
+                "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+                "/etc/ssl/cert.pem",
+            ]
+            .map(String::from),
+        )
+        .find(|path| Path::new(path).is_file())
 }
 
 thread_local! {
@@ -677,6 +745,14 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
         .and_then(|e| e.parent().map(PathBuf::from))
     {
         paths.push(dir.join("libmpv.so.2"));
+    }
+    if cfg!(debug_assertions) {
+        paths.push(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../vendor")
+                .join(format!("linux-{}", std::env::consts::ARCH))
+                .join("libmpv.so.2"),
+        );
     }
     for dir in [
         "/app/lib",

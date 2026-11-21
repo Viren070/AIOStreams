@@ -39,8 +39,9 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
   - Windows: mpv draws with Direct3D 11 straight into a child window under the web view.
   - Linux: Wayland does not let one app's window sit inside another's, so mpv draws each frame with
     OpenGL through libmpv's render API into a `GtkGLArea`, and GTK composites the web view over it.
-    mpv is given the Wayland or X11 display, which lets VA-API hand decoded frames to OpenGL without
-    copying them through the CPU.
+    mpv is given the Wayland or X11 display and the render node of GTK's GPU, which let VA-API hand
+    decoded frames to OpenGL without copying them through the CPU. The libs' mpv uses the render
+    node; the Flatpak's either.
   - macOS: the user picks what draws into a layer under the web view, from the next start. By
     default mpv's gpu-next draws with Vulkan through MoltenVK into a `CAMetalLayer`. The system
     output hands VideoToolbox's frames to an `AVSampleBufferDisplayLayer`, and macOS shows them,
@@ -49,9 +50,9 @@ works, and AIOStreams servers get the extras. Switching servers happens in the p
     mpv outputs tone map to the display's headroom.
 - **The bridge** carries the page's mpv commands and property changes to the app, and sends back the
   properties the page watches: position, tracks, pause and the rest. See [Bridge](#bridge).
-- **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps, Linux ships
-  as a [Flatpak](https://flatpak.org), and **[cargo-about](https://github.com/EmbarkStudios/cargo-about)**
-  lists the licences it ships under.
+- **[Velopack](https://velopack.io)** installs and updates the Windows and macOS apps and the Linux
+  AppImage, Linux also ships as a .deb and a [Flatpak](https://flatpak.org), and
+  **[cargo-about](https://github.com/EmbarkStudios/cargo-about)** lists the licences it ships under.
 
 The code is a Cargo workspace, outside the pnpm build:
 
@@ -67,8 +68,8 @@ The page comes first on every platform:
 pnpm -F @aiostreams/web build:standalone   # into web/dist-standalone
 ```
 
-A debug build finds the page in the repo, and on Windows libmpv too. A release build looks next to
-the executable: the page in a `web` folder, and libmpv beside it.
+A debug build finds the page in the repo, and libmpv in `vendor` once fetched. A release build looks
+next to the executable: the page in a `web` folder, and libmpv beside it.
 
 ### Windows
 
@@ -91,23 +92,43 @@ none, so a driver's own loader always wins.
 
 ### Linux
 
-Needs Rust, GTK 4.14 or later, WebKitGTK 6 and libmpv 0.38 or later: Ubuntu 25.04, Fedora 41 or
-newer.
+Needs Rust, GTK 4.14 or later and WebKitGTK 6: Ubuntu 24.04, Debian 13, Fedora 40 or newer.
 
 ```sh
-sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev libmpv-dev   # Fedora: gtk4-devel webkitgtk6.0-devel mpv-libs-devel
+sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev   # Fedora: gtk4-devel webkitgtk6.0-devel
+./scripts/fetch-libs-linux.sh   # libmpv and FFmpeg into vendor/linux-<arch>
 cargo run
 ```
 
-The app looks for `libmpv.so.2` next to the binary, then in the system library folders. Ubuntu
-24.04's libmpv is 0.37, which is too old; build a newer one and point `AIOSTREAMS_LIBMPV` at it.
+`libs-linux.pin` names the [AIOStreams/libs](https://github.com/AIOStreams/libs) release the app
+takes libmpv from and each architecture's checksum, and the script checks it. Its zip holds
+`libmpv.so.2` and FFmpeg's libraries, which find each other beside themselves and take libva,
+libdrm, EGL, PulseAudio, ALSA and fontconfig from the system, and each library's licence. The app
+looks for `libmpv.so.2` next to the binary, in `vendor` in a debug build, then in the system
+library folders. The libs' FFmpeg uses Mbed TLS, so the app points mpv's `tls-ca-file` at the
+system's certificates.
 
-The download is a Flatpak, which `scripts/make-flatpak.sh` builds from `linux/io.github.viren070.aiostreams.yml`
-after the page: the GNOME 51 runtime, with libmpv and the libraries it needs built in. It needs
-`flatpak` 1.15.6 or newer, `flatpak-builder`, `python3-aiohttp`, `python3-tomlkit` and the Flathub
-remote. Ubuntu 24.04's Flatpak is older; `ppa:flatpak/stable` has a newer one. Under
-WSL, point `FLATPAK_WORK` at a folder on the Linux filesystem, since the builder's state cannot live
-on a Windows drive. Install the bundle it prints with `flatpak install --user`.
+There are three downloads, each for x64 and arm64:
+
+- **AppImage:** `scripts/make-appdir.sh` builds the app in an Arch container
+  (`ghcr.io/pkgforge-dev/archlinux`) and bundles it, with GTK, WebKitGTK and every library they
+  load, into `AIOStreams.AppDir` with [quick-sharun](https://github.com/pkgforge-dev/Anylinux-AppImages),
+  so it runs on any distribution. The GPU drivers, VA-API's included, come from the system
+  (`USE_HOST_DRIVERS`). `vpk pack --packDir` makes the AppImage from it, which updates
+  itself; the app runs from `usr/bin`, where Velopack looks for itself.
+- **.deb:** `scripts/make-deb.sh` packs a release build made on Ubuntu 24.04 with the libs and the
+  page, and apt brings GTK, WebKitGTK and the rest. It installs an AppArmor profile that lets
+  WebKit's sandbox run on Ubuntu 24.04 and later, which restrict the user namespaces it needs.
+- **Flatpak:** `scripts/make-flatpak.sh` builds it from `linux/io.github.viren070.aiostreams.yml`
+  after the page: the GNOME 51 runtime, with libmpv and the libraries it needs built in. It needs
+  `flatpak` 1.15.6 or newer, `flatpak-builder`, `python3-aiohttp`, `python3-tomlkit` and the
+  Flathub remote. Ubuntu 24.04's Flatpak is older; `ppa:flatpak/stable` has a newer one. Under
+  WSL, point `FLATPAK_WORK` at a folder on the Linux filesystem, since the builder's state cannot
+  live on a Windows drive. Install the bundle it prints with `flatpak install --user`.
+
+`scripts/smoke-linux.sh <command>` starts a build on a virtual display and checks its log, as CI
+does for the AppImage and the .deb. Where WebKit's sandbox can't start, the app turns it off and
+logs why.
 
 ### macOS
 
@@ -149,8 +170,8 @@ macOS `AIOSTREAMS_VIDEO_OUTPUT` (`mpv`, `system` or `compatibility`) overrides t
 | `aiostreams://return/item/<id>?<…>` | An item's page, saving the position an external player sends back through the player link's `{returnUrl}` |
 
 Encode each value once, with `encodeURIComponent`. The Windows installer registers the scheme (a
-portable copy does not), the macOS bundle through its `Info.plist`, and the Flatpak through its
-desktop entry.
+portable copy does not), the macOS bundle through its `Info.plist`, and the .deb and the Flatpak
+through their desktop entry.
 
 ## mpv config
 
@@ -187,8 +208,9 @@ The Windows portable zip keeps everything beside itself, in a `data` folder: sig
 
 ## Releases and updates
 
-Velopack packs the Windows and macOS apps and updates them. Each OS and architecture has two
-channels, such as `win-x64` and `win-x64-nightly` (likewise `win-arm64`, `osx-arm64` and `osx-x64`),
+Velopack packs the Windows and macOS apps and the Linux AppImage, and updates them. Each OS and
+architecture has two channels, such as `win-x64` and `win-x64-nightly` (likewise `win-arm64`,
+`osx-arm64`, `osx-x64`, `linux-x64` and `linux-arm64`),
 and each channel's feed lives on one release that every build replaces, so the app always finds it
 at the same address:
 
@@ -199,7 +221,7 @@ at the same address:
 
 The installer is `aiostreams-desktop-win-<arch>.exe` and the portable copy
 `aiostreams-desktop-win-<arch>.zip`; on macOS, `aiostreams-desktop-osx-<arch>.pkg` and a zip of the
-app; on Linux, `aiostreams-desktop-linux-<arch>.flatpak`. `-nightly` is added for nightlies, and a stable release also gets them attached. release-please treats `packages/desktop` as its own component, so commits here bump
+app; on Linux, `aiostreams-desktop-linux-<arch>.AppImage`, `.deb` and `.flatpak`. `-nightly` is added for nightlies, and a stable release also gets them attached. release-please treats `packages/desktop` as its own component, so commits here bump
 the desktop version, not AIOStreams'. A nightly's version is the next patch with
 `-nightly.<UTC timestamp>`, so it updates past the last release, and moving back to stable is allowed
 to go down a version.
@@ -216,8 +238,8 @@ start and every six hours, downloads in the background, and applies on the next 
 A failed check only shows in Settings and never holds up the app. `AIOSTREAMS_UPDATE_FEED` points it
 at another feed, such as a local folder served over HTTP, for testing.
 
-The Flatpak is not Velopack's, so it does not update itself, and Settings says so; installing a newer
-bundle over it updates it and keeps its data. Its metainfo lists the desktop releases from
+The .deb and the Flatpak are not Velopack's, so they do not update themselves, and Settings says
+so; installing a newer one over either updates it and keeps its data. Its metainfo lists the desktop releases from
 `CHANGELOG.md` (`linux/metainfo-releases.py`), which software centres show.
 
 The macOS app is signed ad hoc, not with a Developer ID, so the first open is refused until it is

@@ -22,9 +22,11 @@ Not sure which? Apple menu → About This Mac shows "Chip" on Apple silicon and 
 
 | Your PC | Download |
 | --- | --- |
-| Most PCs (Intel or AMD) | [Flatpak](@BASE@/aiostreams-desktop-linux-x64@SUFFIX@.flatpak) |
-| Arm PCs, such as Apple silicon Macs running Asahi Linux | [Flatpak](@BASE@/aiostreams-desktop-linux-arm64@SUFFIX@.flatpak) |
+| Most PCs (Intel or AMD) | [AppImage](@BASE@/aiostreams-desktop-linux-x64@SUFFIX@.AppImage) · [.deb](@BASE@/aiostreams-desktop-linux-x64@SUFFIX@.deb) · [Flatpak](@BASE@/aiostreams-desktop-linux-x64@SUFFIX@.flatpak) |
+| Arm PCs, such as Apple silicon Macs running Asahi Linux | [AppImage](@BASE@/aiostreams-desktop-linux-arm64@SUFFIX@.AppImage) · [.deb](@BASE@/aiostreams-desktop-linux-arm64@SUFFIX@.deb) · [Flatpak](@BASE@/aiostreams-desktop-linux-arm64@SUFFIX@.flatpak) |
 
-Install it with `flatpak install --user` and the file's name, or open it in your software centre. It needs Flatpak, which most distributions include. This copy does not update itself yet: install the newer file over it to update.
+- **AppImage:** runs on any distribution and keeps itself up to date. Make the file executable (`chmod +x` and its name, or Properties → Permissions), then open it.
+- **.deb:** for Ubuntu 24.04, Linux Mint 22, Debian 13 and later. Install it with `sudo apt install ./` and the file's name; download the newer file and install it the same way to update.
+- **Flatpak:** install it with `flatpak install --user` and the file's name, or open it in your software centre. It does not update itself yet: install the newer file over it to update.
 
 The other files are what installed copies update from.
