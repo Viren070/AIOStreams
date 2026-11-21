@@ -57,7 +57,8 @@ export function Backdrop({
           .catch(() => undefined)
           .then(() => {
             // One replaced while it decoded is gone, and isn't what it shows.
-            if (!wash && el.isConnected) onShown?.(src);
+            if (!el.isConnected) return;
+            if (!wash) onShown?.(src);
             setArrived((was) =>
               was?.src === src
                 ? was
