@@ -193,6 +193,7 @@ export const FIELD_META: Omit<Record<keyof UserData, FieldMeta>, IgnoredKeys> = 
   requiredAgeRange: { label: 'Required Age Range', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'age' },
   ageRangeTypes: { label: 'Age Range Types', group: 'filters', type: 'list', menu: 'filters', subTab: 'age' },
 
+  deviceCapabilities: { label: 'Device Capabilities', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous' },
   digitalReleaseFilter: { label: 'Digital Release Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'miscellaneous' },
   size: { label: 'Size Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'size' },
   bitrate: { label: 'Bitrate Filter', group: 'filters', type: 'scalar', menu: 'filters', subTab: 'bitrate' },

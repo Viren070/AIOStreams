@@ -3711,6 +3711,36 @@ export function useFilterSections(): {
         </div>
         <div className="space-y-4">
           <SettingsCard
+            id="deviceCapabilities"
+            title="Respect Device Capabilities"
+            description="Media server (Jellyfin) clients send a DeviceProfile describing which containers and codecs the playing device can direct-play. Versions the device cannot play can be moved to the bottom or hidden, per device, while other devices on the same configuration keep their full list."
+          >
+            <Select
+              label="Unplayable Versions"
+              options={[
+                { label: 'Off', value: 'off' },
+                { label: 'Push to bottom', value: 'deprioritise' },
+                { label: 'Exclude', value: 'exclude' },
+              ]}
+              defaultValue="off"
+              value={userData.deviceCapabilities ?? 'off'}
+              help={
+                userData.deviceCapabilities === 'exclude'
+                  ? 'Versions the device reports it cannot direct-play are hidden before version limits apply.'
+                  : userData.deviceCapabilities === 'deprioritise'
+                    ? 'Versions the device reports it cannot direct-play are moved below the rest, keeping their order.'
+                    : 'Every device gets the same list.'
+              }
+              onValueChange={(value) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  deviceCapabilities: value as
+                    'off' | 'deprioritise' | 'exclude',
+                }));
+              }}
+            />
+          </SettingsCard>
+          <SettingsCard
             id="digitalReleaseFilter"
             title="Digital Release Filter"
             description="Filters out movies, series, and anime that haven't released yet, based on release dates (movies) or episode air dates (series/anime). Needs a TMDB Read Access Token or API key on the Services page, unless your instance provides one."

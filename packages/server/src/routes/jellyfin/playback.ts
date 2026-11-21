@@ -280,10 +280,20 @@ async function playbackInfo(req: Request, res: Response) {
     ? offeredSources(
         versions,
         support,
-        all ? Infinity : maxVersionsFor(loc.ctx)
+        all ? Infinity : maxVersionsFor(loc.ctx),
+        { profile, mode: loc.ctx.userData.deviceCapabilities }
       )
     : [];
-  if (!memo || !offered.length) {
+  // A named version past the limit or filtered out by the device profile still
+  // plays and joins the memo, which later routes read. One no longer listed
+  // lends its id to none.
+  const named =
+    memo && loc.requestedMsid
+      ? offeredSources(versions, support, Infinity).find(
+          (s) => s.msid === loc.requestedMsid
+        )
+      : undefined;
+  if (!memo || (!offered.length && !named)) {
     res.json({
       MediaSources: placeholderSources(req, loc.ctx, loc.itemId, true),
       PlaySessionId: memo?.psid ?? '',
@@ -291,13 +301,6 @@ async function playbackInfo(req: Request, res: Response) {
     });
     return;
   }
-  // A named version past the limit joins the memo, which later routes read.
-  // One no longer listed lends its id to none.
-  const named = loc.requestedMsid
-    ? offeredSources(versions, support, Infinity).find(
-        (s) => s.msid === loc.requestedMsid
-      )
-    : undefined;
   if (named && !memo.sources.includes(named)) {
     memo.sources.push(named);
     await writePlaybackMemo(
