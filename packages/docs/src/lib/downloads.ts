@@ -120,11 +120,28 @@ export const DOWNLOADS: DownloadOption[] = [
     name: 'Linux',
     category: 'computer',
     app: 'desktop',
-    requirement: 'Any distribution with Flatpak',
+    requirement: 'Any distribution',
     files: [
       {
-        label: 'Flatpak',
+        label: 'AppImage',
         detail: 'Most PCs',
+        href: desktop('aiostreams-desktop-linux-x64.AppImage'),
+      },
+      {
+        label: 'Arm AppImage',
+        href: desktop('aiostreams-desktop-linux-arm64.AppImage'),
+      },
+      {
+        label: '.deb',
+        detail: 'Ubuntu 24.04, Debian 13 and later',
+        href: desktop('aiostreams-desktop-linux-x64.deb'),
+      },
+      {
+        label: 'Arm .deb',
+        href: desktop('aiostreams-desktop-linux-arm64.deb'),
+      },
+      {
+        label: 'Flatpak',
         href: desktop('aiostreams-desktop-linux-x64.flatpak'),
       },
       {
@@ -133,7 +150,8 @@ export const DOWNLOADS: DownloadOption[] = [
       },
     ],
     notes: [
-      'Open it in your software centre, or run flatpak install --user with the file name.',
+      'The AppImage runs on any distribution and updates itself: make it executable, then open it.',
+      'Install the .deb with sudo apt install ./ and the file name, and the Flatpak from your software centre or with flatpak install --user.',
     ],
     guide: { label: 'Desktop app', href: '/apps/desktop' },
   },
