@@ -237,6 +237,7 @@ export class TorrentioPreset extends Preset {
       constants.PUTIO_SERVICE,
       constants.DEBRIDLINK_SERVICE,
       constants.OFFCLOUD_SERVICE,
+      constants.HIGHWAY_SERVICE,
     ];
     const supportedResources = [
       constants.STREAM_RESOURCE,

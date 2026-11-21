@@ -31,6 +31,7 @@ export const SERVICE_LOGO_MAP: Record<ServiceId, string> = {
     'https://raw.githubusercontent.com/javi11/altmount/refs/heads/main/docs/static/img/logo.png',
   aiostreams: '/logo.png',
   torrin: 'https://torrin.app/favicon.png',
+  highway: 'https://cloud.high-way.me/icon-192.png',
 };
 
 const USENET_SERVICE_IDS: string[] = [
