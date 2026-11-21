@@ -7,7 +7,11 @@ import { navigate, to } from '@/lib/paths';
 import { externalReturnUrl } from '@/lib/playback/external-return';
 import { chosenPlayer, playerLink } from '@/lib/playback/player-choice';
 import { directUrl } from '@/lib/playback/stream';
-import { subtitleUrl, textSubtitles } from '@/lib/subtitles/tracks';
+import {
+  preferredSubtitle,
+  subtitleUrl,
+  textSubtitles,
+} from '@/lib/subtitles/tracks';
 import { useSession } from '@/lib/jellyfin/session';
 import {
   subtitleLanguages,
@@ -44,16 +48,32 @@ function useOpenLink() {
     const languages = subtitleLanguages(prefs);
     const rank = (language: string | null | undefined) =>
       languages.findIndex((l) => sameLanguage(l, language));
-    const subtitles = textSubtitles(source)
+    const ranked = textSubtitles(source)
       .filter((s) => !languages.length || rank(s.Language) >= 0)
       .sort((a, b) => rank(a.Language) - rank(b.Language))
-      .slice(0, MAX_EXTERNAL_SUBTITLES)
+      .slice(0, MAX_EXTERNAL_SUBTITLES);
+    const subtitles = ranked
       .map((s) => subtitleUrl(client, s, { original: true }))
       .filter((u): u is string => !!u);
+    // A player that takes one subtitle gets the one the settings start with, as SRT.
+    const preferred = preferredSubtitle(
+      textSubtitles(source).filter((s) => s.DeliveryUrl),
+      prefs
+    );
+    const subtitle =
+      (preferred && subtitleUrl(client, preferred, { format: 'srt' })) ??
+      undefined;
     window.location.href = playerLink(
       template,
       directUrl(client, item.Id!, source),
-      { startMs, title: fullTitle(item), returnUrl, filename, subtitles }
+      {
+        startMs,
+        title: fullTitle(item),
+        returnUrl,
+        filename,
+        subtitles,
+        subtitle,
+      }
     );
     return !!returnUrl;
   };
