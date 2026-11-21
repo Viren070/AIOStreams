@@ -192,6 +192,20 @@ export function usePlaylistEdits() {
         void queryClient.invalidateQueries({ queryKey: all });
         return Id;
       },
+      /**
+       * A new playlist with the titles of a public MDBList list, read once;
+       * `Truncated` when the list had more than a playlist holds.
+       */
+      importMdbList: async (url: string) => {
+        const made = await client.post<{
+          Id: string;
+          Count: number;
+          Truncated?: boolean;
+        }>('/AIOStreams/Playlists/FromMdbList', { Url: url });
+        lastPlaylist.set(user.Id!, made.Id);
+        void queryClient.invalidateQueries({ queryKey: all });
+        return made;
+      },
       /** Adds what isn't there yet, after `after` or at the end; false when all of it was. */
       add: (playlist: string, ids: string[], after?: string) =>
         send(playlist, async () => {

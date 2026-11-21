@@ -18,3 +18,4 @@ export * from './season-ids.js';
 export * from './tmdb-titles.js';
 export * from './suggestions/index.js';
 export * from './livetv.js';
+export * from './mdblist.js';

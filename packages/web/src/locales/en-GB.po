@@ -2126,6 +2126,7 @@ msgid "Image"
 msgstr "Image"
 
 #: src/app/settings/_components/version-settings.tsx
+#: src/features/playlists/playlists.tsx
 msgid "Import"
 msgstr "Import"
 
@@ -2495,6 +2496,10 @@ msgstr "Match the video's frame rate"
 #: src/components/shell/window-controls.tsx
 msgid "Maximise"
 msgstr "Maximise"
+
+#: src/features/playlists/playlists.tsx
+msgid "MDBList list link"
+msgstr "MDBList list link"
 
 #: src/app/settings/browsing.tsx
 msgid "Medium"
@@ -5032,6 +5037,10 @@ msgstr "The link may be old, or the page moved."
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
 msgstr "the link returned something other than a video"
+
+#: src/features/playlists/playlists.tsx
+msgid "The list holds more than a playlist can, so it stops after {Count} titles."
+msgstr "The list holds more than a playlist can, so it stops after {Count} titles."
 
 #. Follows "Playback failed:"
 #: src/lib/playback/use-player.ts

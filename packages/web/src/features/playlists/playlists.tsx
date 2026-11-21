@@ -335,6 +335,21 @@ function PlaylistIndex({
           action={t`Create`}
           onSave={(name) => edits.create(name, []).then(onOpen)}
         />
+        <div className="mt-2">
+          <NameForm
+            placeholder={t`MDBList list link`}
+            action={t`Import`}
+            onSave={(url) =>
+              edits.importMdbList(url).then(({ Id, Count, Truncated }) => {
+                if (Truncated)
+                  toast.info(
+                    t`The list holds more than a playlist can, so it stops after ${Count} titles.`
+                  );
+                onOpen(Id);
+              })
+            }
+          />
+        </div>
       </div>
       {playlists.isLoading ? (
         <ListSkeleton />

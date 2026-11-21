@@ -2125,6 +2125,7 @@ msgid "Image"
 msgstr ""
 
 #: src/app/settings/_components/version-settings.tsx
+#: src/features/playlists/playlists.tsx
 msgid "Import"
 msgstr ""
 
@@ -2493,6 +2494,10 @@ msgstr ""
 
 #: src/components/shell/window-controls.tsx
 msgid "Maximise"
+msgstr ""
+
+#: src/features/playlists/playlists.tsx
+msgid "MDBList list link"
 msgstr ""
 
 #: src/app/settings/browsing.tsx
@@ -5030,6 +5035,10 @@ msgstr ""
 
 #: src/lib/hosts/shell/player.ts
 msgid "the link returned something other than a video"
+msgstr ""
+
+#: src/features/playlists/playlists.tsx
+msgid "The list holds more than a playlist can, so it stops after {Count} titles."
 msgstr ""
 
 #. Follows "Playback failed:"
