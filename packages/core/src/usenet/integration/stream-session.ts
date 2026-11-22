@@ -38,8 +38,9 @@ import {
 import { type UsenetStreamToken, decodeUsenetStreamToken } from './tokens.js';
 import { friendlyUsenetError } from './errors.js';
 import {
-  markReleaseDead,
-  markReleaseDeadForCode,
+  releaseContextOf,
+  reportReleaseDead,
+  reportReleaseFailure,
 } from '../../release-blocklist/feedback.js';
 import { nzbContentKey } from '../../release-blocklist/keys.js';
 import { appConfig } from '../../utils/index.js';
@@ -379,7 +380,10 @@ function holeHooksFor(
       code
     ).catch(() => {});
     // Pad caps only trip on damage confirmed against every provider.
-    markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
+    void reportReleaseDead(
+      [decoded.releaseKey, nzbContentKey(hash)],
+      releaseContextOf(decoded)
+    );
     condemnArrDownload(hash, 'failed');
     // Drop the warm session so a player retry re-opens fresh and sees the
     // failed entry.
@@ -625,12 +629,15 @@ async function getStreamSession(
         // archive is un-streamable for everyone (global); an all-provider
         // article miss is backbone-scoped evidence.
         if (err instanceof ArticleNotFoundError && err.allProviders) {
-          markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
+          void reportReleaseDead(
+            [decoded.releaseKey, nzbContentKey(hash)],
+            releaseContextOf(decoded)
+          );
         } else if (err instanceof NotStreamableError) {
-          markReleaseDeadForCode(
+          void reportReleaseFailure(
             err.code,
-            decoded.releaseKey,
-            nzbContentKey(hash)
+            [decoded.releaseKey, nzbContentKey(hash)],
+            releaseContextOf(decoded)
           );
         }
       } else if (definitiveLossKind(err) === 'undecodable') {
@@ -641,7 +648,10 @@ async function getStreamSession(
           'undecodable_on_providers'
         ).catch(() => {});
         condemnArrDownload(hash, 'failed');
-        markReleaseDead(decoded.releaseKey, nzbContentKey(hash));
+        void reportReleaseDead(
+          [decoded.releaseKey, nzbContentKey(hash)],
+          releaseContextOf(decoded)
+        );
       }
       throw err;
     }

@@ -36,8 +36,23 @@ export {
   markReleaseDeadForCode,
   blocklistScopeForCode,
   retractRelease,
+  reportReleaseFailure,
+  reportReleaseDead,
+  reportReleaseSuccess,
+  releaseContextOf,
+  releaseTitleOf,
+  isSoftFailureCode,
+  SOFT_FAILURE_CODES,
   type BlocklistScope,
+  type ReleaseContext,
 } from './feedback.js';
+export {
+  demoteFailingGroups,
+  releaseGroupOf,
+  releaseTitleOfContext,
+  titleKeysFor,
+  type ReleaseTitle,
+} from './group-demotion.js';
 export { ReleaseBlocklistRemoteService, decodeListBody } from './remote.js';
 export {
   publicExportEnvLocks,

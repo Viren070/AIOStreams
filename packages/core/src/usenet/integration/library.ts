@@ -35,9 +35,11 @@ import {
 } from '../index.js';
 import { isMediaCategory } from '../pool/file-type.js';
 import {
-  markReleaseDead,
-  markReleaseDeadForCode,
-  retractRelease,
+  reportReleaseDead,
+  reportReleaseFailure,
+  reportReleaseSuccess,
+  releaseTitleOf,
+  type ReleaseTitle,
 } from '../../release-blocklist/feedback.js';
 import { nzbContentKey } from '../../release-blocklist/keys.js';
 import { blocklistEvalOptions } from '../../release-blocklist/filter.js';
@@ -438,6 +440,8 @@ async function importNzb(
     grabMs?: number;
     /** Shareable release key for blocklist feedback, when the search knew one. */
     releaseKey?: string;
+    /** The requested title, so blocklist feedback can track release groups. */
+    title?: ReleaseTitle;
   },
   jobSignal: AbortSignal
 ): Promise<{
@@ -446,6 +450,8 @@ async function importNzb(
 }> {
   const { nzbHash, nzb, name, owner, source, origin, nzbUrl } = spec;
   const postedAt = nzbPostedAt(nzb);
+  const releaseKeys = [spec.releaseKey, nzbContentKey(nzbHash)];
+  const releaseCtx = { filename: name, title: spec.title };
   const grabLabel = indexerLabelFor(spec.indexer, nzbUrl);
   // Every terminal exit records exactly one grab outcome; verdict paths record
   // before throwing, the outer catch sweeps up anything unrecorded.
@@ -497,15 +503,11 @@ async function importNzb(
       ).catch(() => {});
       recordOnce('failed', { errorCode: friendly.code });
       if (err instanceof ArticleNotFoundError && err.allProviders) {
-        markReleaseDead(spec.releaseKey, nzbContentKey(nzbHash));
+        void reportReleaseDead(releaseKeys, releaseCtx);
       } else if (err instanceof NotStreamableError) {
-        // A compressed/solid/unsupported archive is dead for everyone; other
-        // NotStreamable codes route to a no-op.
-        markReleaseDeadForCode(
-          err.code,
-          spec.releaseKey,
-          nzbContentKey(nzbHash)
-        );
+        // A compressed/solid/unsupported archive is dead for everyone; a soft
+        // release defect counts towards a verdict; other codes are ignored.
+        void reportReleaseFailure(err.code, releaseKeys, releaseCtx);
       }
       throw toDebridError(err);
     }
@@ -535,7 +537,7 @@ async function importNzb(
         { nzbHash, ...content.availability },
         'nzb failed availability verification'
       );
-      markReleaseDead(spec.releaseKey, nzbContentKey(nzbHash));
+      void reportReleaseDead(releaseKeys, releaseCtx);
       recordOnce('failed', { errorCode: availFail.code });
       throw await failImport(nzbHash, name, availFail.reason, availFail.code, {
         reasonCode: availFail.code,
@@ -574,9 +576,10 @@ async function importNzb(
       );
       const { reason, code } = classifyNoStreamable(content);
       // A provider-verified article miss is backbone-scoped; a compressed/
-      // solid/unsupported archive is dead for everyone (global). Other codes
-      // never feed the blocklist.
-      markReleaseDeadForCode(code, spec.releaseKey, nzbContentKey(nzbHash));
+      // solid/unsupported archive is dead for everyone (global); a soft
+      // release defect counts towards a verdict. Other codes never feed the
+      // blocklist.
+      void reportReleaseFailure(code, releaseKeys, releaseCtx);
       recordOnce('failed', { errorCode: code });
       throw await failImport(nzbHash, name, reason, code, {
         byCategory,
@@ -627,8 +630,8 @@ async function importNzb(
       importMs: doneAt - inspectStart,
     });
     // The release demonstrably exists (degraded still plays), so any dead
-    // verdict for it is wrong.
-    retractRelease(spec.releaseKey, nzbContentKey(nzbHash));
+    // verdict for it is wrong, and its release group played for the title.
+    void reportReleaseSuccess(releaseKeys, releaseCtx);
     if (origin === 'sabnzbd') {
       const row = await UsenetLibraryRepository.get(nzbHash);
       if (row) onArrDownloadReady(row);
@@ -808,10 +811,13 @@ export async function resolveFileList(
       },
       'skipping nzb: same content previously failed via another source (delete the library entry to retry)'
     );
-    markReleaseDeadForCode(
+    void reportReleaseFailure(
       existing.errorCode,
-      playbackInfo.releaseKey,
-      nzbContentKey(contentHash)
+      [playbackInfo.releaseKey, nzbContentKey(contentHash)],
+      {
+        filename: existing.name ?? playbackInfo.filename,
+        title: releaseTitleOf(playbackInfo.metadata),
+      }
     );
     throw new DebridError('nzb previously failed on all providers', {
       statusCode: 404,
@@ -890,6 +896,7 @@ export async function resolveFileList(
             grabMs: grabbedAt - importStart,
             prepMs: parsedAt - importStart,
             releaseKey: playbackInfo.releaseKey,
+            title: releaseTitleOf(playbackInfo.metadata),
           },
           jobSignal
         ),
