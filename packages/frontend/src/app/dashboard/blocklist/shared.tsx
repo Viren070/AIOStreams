@@ -86,6 +86,9 @@ export interface Snapshot {
     backboneScope: string;
     backboneGrouping: string;
     trustedBackbones: string[];
+    repeatFailures: number;
+    groupDemotionThreshold: number;
+    groupDemotionWindowDays: number;
     publicExport: boolean;
     publicExportScope: PublishScope;
     publicExportPassword: string;

@@ -2,7 +2,7 @@ import { createLogger } from '../../logging/logger.js';
 import { UsenetLibraryRepository } from '../../db/index.js';
 import type { UsenetLibraryFile } from '../../db/index.js';
 import {
-  markReleaseDead,
+  reportReleaseDead,
   retractRelease,
 } from '../../release-blocklist/feedback.js';
 import { nzbContentKey } from '../../release-blocklist/keys.js';
@@ -274,7 +274,11 @@ export async function applyCensusVerdictToLibrary(args: {
       name,
       'missing_on_providers'
     );
-    markReleaseDead(releaseKey, nzbContentKey(nzbHash));
+    // Library entries carry no title ids, so this counts the release but
+    // not its group.
+    await reportReleaseDead([releaseKey, nzbContentKey(nzbHash)], {
+      filename: name,
+    });
     return 'failed';
   }
 

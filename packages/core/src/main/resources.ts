@@ -54,6 +54,10 @@ import {
   type AnalyticsServiceBreakdown,
 } from '../analytics/index.js';
 import type { AddonDispositionMap } from '../streams/fetcher.js';
+import {
+  demoteFailingGroups,
+  releaseTitleOfContext,
+} from '../release-blocklist/group-demotion.js';
 
 const logger = createLogger('core');
 
@@ -368,6 +372,11 @@ export async function processStreams(
 
   const sortStart = Date.now();
   let finalStreams = await ctx.sorter.sort(processedStreams, context);
+  // Release groups whose releases keep dying for this title go last.
+  finalStreams = await demoteFailingGroups(
+    finalStreams,
+    await releaseTitleOfContext(context).catch(() => null)
+  );
   sortMs = Date.now() - sortStart;
 
   if (failoverOpts?.position === 'beforeSEL') {

@@ -37,7 +37,10 @@ import {
   UsenetLibraryRepository,
   type UsenetLibraryEntry,
 } from '../db/index.js';
-import { markReleaseDeadForCode } from '../release-blocklist/feedback.js';
+import {
+  releaseTitleOf,
+  reportReleaseFailure,
+} from '../release-blocklist/feedback.js';
 import { nzbContentKey } from '../release-blocklist/keys.js';
 
 const logger = createLogger('usenet/service');
@@ -262,10 +265,13 @@ export class NativeUsenetService implements UsenetDebridService {
         'skipping nzb: cached failure (delete the library entry to retry)'
       );
       // ensure the release is marked dead in the blocklist if it was previously failed
-      markReleaseDeadForCode(
+      void reportReleaseFailure(
         existing.errorCode,
-        playbackInfo.releaseKey,
-        nzbContentKey(resolved?.contentHash)
+        [playbackInfo.releaseKey, nzbContentKey(resolved?.contentHash)],
+        {
+          filename: existing.name ?? playbackInfo.filename,
+          title: releaseTitleOf(playbackInfo.metadata),
+        }
       );
       throw new DebridError('nzb previously failed on all providers', {
         statusCode: 404,
