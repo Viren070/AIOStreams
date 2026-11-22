@@ -68,7 +68,6 @@ function makeTiebreakerCmp(tiebreakers: Tiebreaker[]): TiebreakerCmp {
 
 type Deduplicator = NonNullable<UserData['deduplicator']>;
 
-/** Keys that mark streams as duplicates of each other. */
 function dedupKeys(
   stream: ParsedStream,
   keys: NonNullable<Deduplicator['keys']>,
