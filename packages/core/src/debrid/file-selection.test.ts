@@ -465,6 +465,66 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     }
   });
 
+  it('takes no extra, disc folder or image for the one file of its season', async () => {
+    for (const lone of [
+      'Season 2/Extras/Featurette.mkv',
+      'Season 2/BDMV/STREAM/00001.m2ts',
+      'Season 2/Show S2.iso',
+    ]) {
+      const files: DebridFile[] = [
+        { index: 0, name: 'Pilot.mkv', path: '/Season 1/Pilot.mkv', size: 1e9 },
+        { index: 1, name: lone.split('/').pop()!, path: `/${lone}`, size: 2e9 },
+      ];
+      assert.equal(
+        await select('Show S01-S02', files, {
+          titles: ['Show'],
+          season: 2,
+          episode: 1,
+        }),
+        undefined,
+        lone
+      );
+    }
+  });
+
+  it('takes the one file of its season beside the extras of its folder', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Part One.mkv', path: '/S1/Part One.mkv', size: 1e9 },
+      { index: 1, name: 'Part Two.mkv', path: '/S2/Part Two.mkv', size: 1e9 },
+      {
+        index: 2,
+        name: 'Featurette.mkv',
+        path: '/S2/Extras/Featurette.mkv',
+        size: 2e9,
+      },
+    ];
+    assert.equal(
+      await select('Mini S01-S02', files, {
+        titles: ['Mini'],
+        season: 2,
+        episode: 1,
+      }),
+      1
+    );
+  });
+
+  it('takes no unnumbered file for an episode that TVDB numbers otherwise', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Part One.mkv', path: '/S1/Part One.mkv', size: 1e9 },
+      { index: 1, name: 'Part Two.mkv', path: '/S2/Part Two.mkv', size: 2e9 },
+    ];
+    assert.equal(
+      await select('Mini S01-S02', files, {
+        titles: ['Mini'],
+        season: 2,
+        episode: 1,
+        tvdbSeason: 1,
+        tvdbEpisode: 2,
+      }),
+      undefined
+    );
+  });
+
   it('does not check the season of a file in a release with no seasons named', async () => {
     const files: DebridFile[] = [
       { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },

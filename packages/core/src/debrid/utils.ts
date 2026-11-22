@@ -484,6 +484,17 @@ function withFolderSeason(
   return parsed;
 }
 
+/** A disc image, or a file of an extras or disc folder: no episode of its own. */
+function isExtraOrDisc(file: DebridFile): boolean {
+  return (
+    /\.iso$/i.test(file.name ?? '') ||
+    (file.path ?? '')
+      .split(/[\\/]/)
+      .slice(0, -1)
+      .some((folder) => /^(extras|featurettes|bonus|bdmv)$/i.test(folder))
+  );
+}
+
 /** An air date or an absolute number names the episode whatever the season. */
 function matchesWithoutSeason(
   parsed: ParsedResult,
@@ -926,11 +937,25 @@ export async function selectFileInTorrentOrNZB(
       ({ file, parsed }) =>
         !isClipName(file.name) && (!!parsed.episodes?.length || !!parsed.date)
     );
-  // Without numbers, a file is episode 1 only as the one file of its season.
+  // Without numbers, a file is episode 1 only as the one file of its season;
+  // extras and discs are left out, as they are no episode beside it. Not when
+  // TVDB numbers the episode otherwise: its episode 1 is another file.
   const soleOfSeason = new Map<number, DebridFile | undefined>();
-  if (isPack && !namesEpisodes) {
+  if (
+    isPack &&
+    !namesEpisodes &&
+    metadata?.episode === 1 &&
+    (metadata.tvdbSeason ?? metadata.season) === metadata.season &&
+    (metadata.tvdbEpisode ?? metadata.episode) === metadata.episode
+  ) {
     for (const { file, parsed } of fileScores) {
-      if (isClipName(file.name) || parsed.seasons?.length !== 1) continue;
+      if (
+        isClipName(file.name) ||
+        isExtraOrDisc(file) ||
+        parsed.seasons?.length !== 1
+      ) {
+        continue;
+      }
       const season = parsed.seasons[0];
       soleOfSeason.set(season, soleOfSeason.has(season) ? undefined : file);
     }
@@ -963,9 +988,7 @@ export async function selectFileInTorrentOrNZB(
       metadata.episode &&
       !parsed.episodes?.length &&
       !parsed.date &&
-      (namesEpisodes ||
-        metadata.episode !== 1 ||
-        metadata.season === undefined ||
+      (metadata.season === undefined ||
         soleOfSeason.get(metadata.season) !== file)
     ) {
       return [
