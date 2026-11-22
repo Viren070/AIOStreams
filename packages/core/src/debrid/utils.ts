@@ -507,6 +507,25 @@ function isPackSeasonWrong(
   );
 }
 
+function isBareEpisode(parsed: ParsedResult, episode: number): boolean {
+  return !parsed.seasons?.length && !!parsed.episodes?.includes(episode);
+}
+
+/** How many files, samples and creditless clips aside, are the episode with no season. */
+function countBareEpisodes(
+  scored: { file: DebridFile; parsed: ParsedResult }[],
+  metadata: TitleMetadata | undefined
+): number {
+  const episode = metadata?.episode;
+  if (!episode) return 0;
+  return scored.filter(
+    ({ file, parsed }) =>
+      isBareEpisode(parsed, episode) &&
+      !isSampleName(file.name) &&
+      !isCreditlessName(file.name)
+  ).length;
+}
+
 /**
  * In a pack of several seasons, an episode with no season in its name or
  * folders is any of the files with that number: the size would pick one.
@@ -514,7 +533,7 @@ function isPackSeasonWrong(
  */
 function isEpisodeAmbiguous(
   best: ParsedResult,
-  scored: { file: DebridFile; parsed: ParsedResult }[],
+  bareEpisodes: number,
   parsedTitle: ParsedResult,
   metadata: TitleMetadata
 ): boolean {
@@ -522,14 +541,10 @@ function isEpisodeAmbiguous(
   if ((parsedTitle.seasons?.length ?? 0) < 2 || !metadata.season || !episode) {
     return false;
   }
-  const bare = (parsed: ParsedResult) =>
-    !parsed.seasons?.length && !!parsed.episodes?.includes(episode);
-  if (!bare(best) || matchesWithoutSeason(best, metadata)) return false;
-  const alike = scored.filter(
-    ({ file, parsed }) =>
-      bare(parsed) && !isSampleName(file.name) && !isCreditlessName(file.name)
-  );
-  return alike.length > 1;
+  if (!isBareEpisode(best, episode) || matchesWithoutSeason(best, metadata)) {
+    return false;
+  }
+  return bareEpisodes > 1;
 }
 
 /** Below this share of the largest video, a file is a clip, not a feature. */
@@ -899,6 +914,8 @@ export async function selectFileInTorrentOrNZB(
 
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
   const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
+  // Counted once: refusal runs for each candidate, and a pack can have thousands.
+  const bareEpisodes = isPack ? countBareEpisodes(fileScores, metadata) : 0;
   /** Why a file is not the episode asked for: a debug line and a skip reason. */
   const refusal = (
     file: DebridFile,
@@ -933,7 +950,7 @@ export async function selectFileInTorrentOrNZB(
         `No episode - the file of a multi-season pack has no episode number or date`,
       ];
     }
-    if (isEpisodeAmbiguous(parsed, fileScores, parsedTitle, metadata)) {
+    if (isEpisodeAmbiguous(parsed, bareEpisodes, parsedTitle, metadata)) {
       return [
         `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`,
         `Ambiguous episode - several files of a multi-season pack are episode ${metadata.episode} with no season`,

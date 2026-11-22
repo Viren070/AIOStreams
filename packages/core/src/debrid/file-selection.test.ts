@@ -247,6 +247,33 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     assert.equal(await absolute28(others), 9);
   });
 
+  it('refuses a pack of thousands of episodes with no season in linear time', async () => {
+    const files: DebridFile[] = Array.from({ length: 8000 }, (_, index) => ({
+      index,
+      name: `Show - 03 v${index}.mkv`,
+      path: `/D${index}/Show - 03 v${index}.mkv`,
+      size: 1e9,
+    }));
+    const metadata = { titles: ['Show'], season: 2, episode: 3 };
+    const parsed = await parseFileNames(
+      selectableFileNames('Show S01-S03', files)
+    );
+    const start = performance.now();
+    const file = await selectFileInTorrentOrNZB(
+      {
+        title: 'Show S01-S03',
+        hash: 'e74d01de',
+        size: 0,
+        type: 'torrent',
+      } as any,
+      { id: -1, status: 'cached', files },
+      parsed,
+      metadata
+    );
+    assert.equal(file, undefined);
+    assert.ok(performance.now() - start < 2000);
+  });
+
   it('passes over an extra in the season folder to the episode', async () => {
     const name = '[Grp] Show - 28 [1080p].mkv';
     const files: DebridFile[] = [
