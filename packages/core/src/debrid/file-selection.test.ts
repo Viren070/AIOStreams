@@ -247,6 +247,23 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     assert.equal(await absolute28(others), 9);
   });
 
+  it('passes over ambiguous episodes that outscore it to the dated episode', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Show.E03.v1.mkv', size: 2e9 },
+      { index: 1, name: 'Show.E03.v2.mkv', size: 2e9 },
+      { index: 2, name: 'Show.2025.01.03.mkv', size: 1e9 },
+    ];
+    assert.equal(
+      await select('Show S01-S02 1080p', files, {
+        titles: ['Show'],
+        season: 2,
+        episode: 3,
+        airDates: ['2025-01-03'],
+      }),
+      2
+    );
+  });
+
   it('refuses a pack of thousands of episodes with no season in linear time', async () => {
     const files: DebridFile[] = Array.from({ length: 8000 }, (_, index) => ({
       index,
