@@ -1021,10 +1021,13 @@ export function isArchiveFile(file: DebridFile): boolean {
 export function isArchiveOnly(files?: DebridFile[]): boolean {
   return (
     !!files?.some(isArchiveFile) &&
-    files.every(
-      (file) =>
-        isArchiveFile(file) || (isNotVideoFile(file) && !isVideoFile(file))
-    )
+    files.every((file) => {
+      // The extension lists are lower-case, so `release.NFO` would not match.
+      const lower = { ...file, name: file.name?.toLowerCase() };
+      return (
+        isArchiveFile(lower) || (isNotVideoFile(lower) && !isVideoFile(lower))
+      );
+    })
   );
 }
 

@@ -100,6 +100,7 @@ describe('isArchiveOnly', () => {
       isArchiveOnly([file('a.rar'), file('a.r00'), file('a.nfo')]),
       true
     );
+    assert.equal(isArchiveOnly([file('a.RAR'), file('a.NFO')]), true);
   });
 
   it('is false when a video is present or nothing is archived', () => {
@@ -139,6 +140,18 @@ describe('StremThruService torrent resolve with archives', () => {
       await errorCode(resolve(t, [zip], { fileIndex: 0 })),
       'ARCHIVE_ONLY'
     );
+  });
+
+  it('reports ARCHIVE_ONLY for upper-case sidecars with a stale or missing file index', async (t) => {
+    const files = [
+      file(`${title}.rar`, { index: 0 }),
+      file(`${title}.NFO`, { index: 1 }),
+    ];
+    assert.equal(
+      await errorCode(resolve(t, files, { fileIndex: 5 })),
+      'ARCHIVE_ONLY'
+    );
+    assert.equal(await errorCode(resolve(t, files)), 'ARCHIVE_ONLY');
   });
 
   it('plays the video when a zip sits beside it', async (t) => {
