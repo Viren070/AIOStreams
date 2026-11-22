@@ -443,6 +443,11 @@ function isCreditlessName(name: string | undefined): boolean {
   return !!name && /nc(ed|op)/i.test(name);
 }
 
+/** A sample or creditless clip: its episode number is not an episode's. */
+function isClipName(name: string | undefined): boolean {
+  return isSampleName(name) || isCreditlessName(name);
+}
+
 /** An absolute number (of the show or of its split entry) names the episode. */
 function isAbsoluteMatch(
   parsed: ParsedResult,
@@ -520,9 +525,7 @@ function countBareEpisodes(
   if (!episode) return 0;
   return scored.filter(
     ({ file, parsed }) =>
-      isBareEpisode(parsed, episode) &&
-      !isSampleName(file.name) &&
-      !isCreditlessName(file.name)
+      isBareEpisode(parsed, episode) && !isClipName(file.name)
   ).length;
 }
 
@@ -917,10 +920,13 @@ export async function selectFileInTorrentOrNZB(
   // Counted once: refusal runs for each candidate, and a pack can have thousands.
   const bareEpisodes = isPack ? countBareEpisodes(fileScores, metadata) : 0;
   // A pack whose files name no episode (parts named by title) leaves the
-  // choice to the folders' seasons.
+  // choice to the folders' seasons; a sample's number names none.
   const namesEpisodes =
     isPack &&
-    fileScores.some(({ parsed }) => !!parsed.episodes?.length || !!parsed.date);
+    fileScores.some(
+      ({ file, parsed }) =>
+        !isClipName(file.name) && (!!parsed.episodes?.length || !!parsed.date)
+    );
   /** Why a file is not the episode asked for: a debug line and a skip reason. */
   const refusal = (
     file: DebridFile,

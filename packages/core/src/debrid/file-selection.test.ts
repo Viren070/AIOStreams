@@ -345,6 +345,32 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     }
   });
 
+  it('does not take the episode number of a sample for the files of a pack of seasons', async () => {
+    for (const [one, two] of [
+      [2e9, 1e9],
+      [1e9, 2e9],
+    ]) {
+      const files: DebridFile[] = [
+        { index: 0, name: 'Part One.mkv', path: '/S1/Part One.mkv', size: one },
+        { index: 1, name: 'Part Two.mkv', path: '/S2/Part Two.mkv', size: two },
+        {
+          index: 2,
+          name: 'Mini.S01E01.Sample.mkv',
+          path: '/S1/Mini.S01E01.Sample.mkv',
+          size: 5e7,
+        },
+      ];
+      assert.equal(
+        await select('Mini S01-S02', files, {
+          titles: ['Mini'],
+          season: 2,
+          episode: 1,
+        }),
+        1
+      );
+    }
+  });
+
   it('does not check the season of a file in a release with no seasons named', async () => {
     const files: DebridFile[] = [
       { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },
