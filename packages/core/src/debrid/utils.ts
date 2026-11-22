@@ -444,7 +444,7 @@ function isCreditlessName(name: string | undefined): boolean {
 }
 
 /** An absolute number (of the show or of its split entry) names the episode. */
-function matchesAbsolute(
+function isAbsoluteMatch(
   parsed: ParsedResult,
   metadata: TitleMetadata | undefined
 ): boolean {
@@ -468,7 +468,7 @@ function withFolderSeason(
   metadata: TitleMetadata | undefined
 ): ParsedResult | undefined {
   if (!parsed || parsed.seasons?.length || !file.path) return parsed;
-  if (matchesAbsolute(parsed, metadata)) return parsed;
+  if (isAbsoluteMatch(parsed, metadata)) return parsed;
   const folders = file.path.split(/[\\/]/).filter(Boolean).slice(0, -1);
   for (const folder of folders.reverse()) {
     const { seasons, episodes } = parseTorrentTitleCached(folder);
@@ -487,7 +487,7 @@ function matchesWithoutSeason(
 ): boolean {
   return (
     (!!parsed.date && !!metadata.airDates?.includes(parsed.date)) ||
-    matchesAbsolute(parsed, metadata)
+    isAbsoluteMatch(parsed, metadata)
   );
 }
 
@@ -966,11 +966,17 @@ export async function selectFileInTorrentOrNZB(
 
   // Select the best matching file. In a pack of several seasons, one refused
   // gives way to the next that is not; with none, it stays and is refused.
+  const topRefusal =
+    isPack && refusal(fileScores[0].file, fileScores[0].parsed);
   const bestMatch =
-    (isPack &&
-      refusal(fileScores[0].file, fileScores[0].parsed) &&
+    (topRefusal &&
       fileScores.find(({ file, parsed }) => !refusal(file, parsed))) ||
     fileScores[0];
+  if (topRefusal && bestMatch !== fileScores[0]) {
+    logger.debug(
+      `${fileScores[0].file.name} gives way to ${bestMatch.file.name}: ${topRefusal[0]}`
+    );
+  }
   const refused = refusal(bestMatch.file, bestMatch.parsed);
   if (refused) {
     logger.debug(refused[0]);
