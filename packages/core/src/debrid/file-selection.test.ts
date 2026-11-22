@@ -306,6 +306,28 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     assert.equal(await select(PACK, files, thrones(2, 13)), undefined);
   });
 
+  it('selects by folder season in a pack of seasons whose files name no episode', async () => {
+    for (const [one, two] of [
+      [2e9, 1e9],
+      [1e9, 2e9],
+    ]) {
+      const files: DebridFile[] = [
+        { index: 0, name: 'Part One.mkv', path: '/S1/Part One.mkv', size: one },
+        { index: 1, name: 'Part Two.mkv', path: '/S2/Part Two.mkv', size: two },
+      ];
+      for (const season of [1, 2]) {
+        assert.equal(
+          await select('Mini S01-S02', files, {
+            titles: ['Mini'],
+            season,
+            episode: 1,
+          }),
+          season - 1
+        );
+      }
+    }
+  });
+
   it('does not check the season of a file in a release with no seasons named', async () => {
     const files: DebridFile[] = [
       { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },

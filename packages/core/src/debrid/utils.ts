@@ -916,6 +916,11 @@ export async function selectFileInTorrentOrNZB(
   const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
   // Counted once: refusal runs for each candidate, and a pack can have thousands.
   const bareEpisodes = isPack ? countBareEpisodes(fileScores, metadata) : 0;
+  // A pack whose files name no episode (parts named by title) leaves the
+  // choice to the folders' seasons.
+  const namesEpisodes =
+    isPack &&
+    fileScores.some(({ parsed }) => !!parsed.episodes?.length || !!parsed.date);
   /** Why a file is not the episode asked for: a debug line and a skip reason. */
   const refusal = (
     file: DebridFile,
@@ -940,7 +945,7 @@ export async function selectFileInTorrentOrNZB(
       ];
     }
     if (
-      isPack &&
+      namesEpisodes &&
       metadata.episode &&
       !parsed.episodes?.length &&
       !parsed.date
