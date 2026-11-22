@@ -150,6 +150,15 @@ function bestDefaultScorerMatch(
   return { matched, matchedIndex: matched ? bestKey : undefined };
 }
 
+/** The score, 0 to 100, that titleMatch's default scorer gives two titles. */
+export function titleScore(a: string, b: string): number {
+  return ratio(
+    full_process(a, FULL_PROCESS_OPTIONS),
+    full_process(b, FULL_PROCESS_OPTIONS),
+    { full_process: false }
+  );
+}
+
 /**
  * Inner matching function shared by titleMatch and titleMatchWithLang.
  * Returns the match result and the index of the best matching title.

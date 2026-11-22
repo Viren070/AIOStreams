@@ -32,6 +32,13 @@ describe('isTitleWrong', () => {
     );
   });
 
+  it('leaves a title the scorer rates 0.9 and above to the ratio', () => {
+    // full_process drops the `+`, so the scorer sees `love` twice
+    assert.equal(wrong('Love+', ['Love']), false);
+    // 26/29 is below 0.9, but the scorer rounds it to 90
+    assert.equal(wrong('The Big Bang The', ['The Big Bang Theory']), false);
+  });
+
   it('still matches other titles of the list when one sits inside a word', () => {
     assert.equal(wrong('Mayday', ['Ayda', 'Mayday!']), false);
   });

@@ -27,6 +27,7 @@ import {
   normaliseTitle,
   preprocessTitle,
   titleMatch,
+  titleScore,
 } from '../parser/utils.js';
 import { normaliseCountryCode } from '../utils/countries.js';
 import { partial_ratio } from 'fuzzball';
@@ -405,7 +406,8 @@ function normalisedWordBounds(
  * letters coincide, but the titles don't. Words written together count as one
  * (`Spiderman` in `Spider Man`). For a contained title the ratio is exactly
  * 2s/(s+l), so this only decides pairs between the 0.8 threshold and 0.9; from
- * 0.9 up the overlap is a cut-off title, left to the ratio.
+ * 0.9 up the overlap is a cut-off title, left to the ratio. That 0.9 is the
+ * scorer's own score, rounded and after full_process, which drops the `+`.
  */
 function isInsideWord(
   aTitle: string,
@@ -418,8 +420,8 @@ function isInsideWord(
   // below 0.75 the ratio rejects the pair anyway (with room for what
   // full_process strips), so long titles cost nothing extra
   const containedRatio = (2 * short.length) / (short.length + long.length);
-  if (containedRatio < 0.75 || containedRatio >= 0.9) return false;
-  if (!long.includes(short)) return false;
+  if (containedRatio < 0.75 || !long.includes(short)) return false;
+  if (titleScore(aKey, bKey) >= 90) return false;
   const bounds = normalisedWordBounds(longTitle, long);
   if (!bounds) return false;
   for (let i = long.indexOf(short); i !== -1; i = long.indexOf(short, i + 1)) {
