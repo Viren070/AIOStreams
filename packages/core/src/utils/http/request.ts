@@ -110,10 +110,6 @@ export async function makeRequest(url: string, options: RequestOptions) {
   const signal = options.signal ?? AbortSignal.timeout(options.timeout);
   let body = await encodeBody(options.body, headers);
 
-  // Computed once per call: the internal secret is only ever attached to
-  // requests whose parsed origin matches this exactly, never by string prefix.
-  const internalUrlOrigin = new URL(appConfig.bootstrap.internalUrl).origin;
-
   // Redirects are followed manually so the proxy ruleset, override headers,
   // URL rewrites and internal-secret handling are re-evaluated on every hop.
   for (let redirects = 0; ; redirects++) {
@@ -136,13 +132,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
     }
 
     // Re-evaluated per hop so the secret never travels to a redirect target
-    // outside the internal origin. A string-prefix comparison here would
-    // treat e.g. https://aio.internal.attacker.tld or http://localhost:30001
-    // as matching an internalUrl of https://aio.internal / http://localhost:3000,
-    // since both are valid string prefixes without a path/port boundary check -
-    // compare parsed origins instead, which only match on identical
-    // scheme+hostname+port.
-    if (urlObj.origin === internalUrlOrigin) {
+    // outside the internal origin.
+    if (urlObj.origin === new URL(appConfig.bootstrap.internalUrl).origin) {
       headers.set(INTERNAL_SECRET_HEADER, appConfig.bootstrap.internalSecret);
     } else {
       headers.delete(INTERNAL_SECRET_HEADER);
