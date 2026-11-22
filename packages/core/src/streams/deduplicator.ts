@@ -663,6 +663,7 @@ class StreamDeduplicator {
       if (bestTier && bestTier !== winner.parsedFile.mediaInfoQuality) {
         winner.parsedFile.mediaInfoQuality = bestTier;
       }
+      winner.parsedFile.mediaInfoSource = probed?.mediaInfoSource;
     }
 
     // Merge actual subtitle tracks (with URLs) by unique (lang, url).
