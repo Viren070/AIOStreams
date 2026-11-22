@@ -13,6 +13,8 @@ export interface ParsedMediaTrack {
   /** Audio format first, then what the profile adds. */
   tags?: string[];
   channels?: string;
+  bitrate?: number;
+  sampleRate?: number;
   default?: boolean;
   forced?: boolean;
   commentary?: boolean;
@@ -57,6 +59,8 @@ type MediaInfoAudioTrack = {
   title?: unknown;
   ch_layout?: unknown;
   ch?: unknown;
+  br?: unknown;
+  sample_rate?: unknown;
   default?: unknown;
   commentary?: unknown;
   dub?: unknown;
@@ -164,6 +168,8 @@ function normaliseTrack(track: ParsedMediaTrack | undefined): ParsedMediaTrack {
     ...(track.tag ? { tag: track.tag } : {}),
     ...(tags ? { tags } : {}),
     ...(track.channels ? { channels: track.channels } : {}),
+    ...(track.bitrate ? { bitrate: track.bitrate } : {}),
+    ...(track.sampleRate ? { sampleRate: track.sampleRate } : {}),
     ...(track.default ? { default: true } : {}),
     ...(track.forced ? { forced: true } : {}),
     ...(track.commentary ? { commentary: true } : {}),
@@ -486,6 +492,9 @@ export function parseMediaInfo(
     tag: trackAudioTags[i][0],
     tags: trackAudioTags[i],
     channels: normaliseAudioChannels(track),
+    bitrate: typeof track.br === 'number' ? track.br : undefined,
+    sampleRate:
+      typeof track.sample_rate === 'number' ? track.sample_rate : undefined,
     default: track.default === true,
     commentary: track.commentary === true,
     dub: track.dub === true,

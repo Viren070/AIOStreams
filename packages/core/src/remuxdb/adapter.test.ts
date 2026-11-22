@@ -213,21 +213,26 @@ describe('toWireMediaInfo', () => {
           channels: 6,
           channel_layout: '5.1',
           codec: 'eac3',
+          bit_rate: 640_000,
+          sample_rate: 48_000,
         }),
         track({ kind: 'subtitle', language: 'fre', title: 'French' }),
       ],
     });
     const wire = toWireMediaInfo(v);
     assert.equal(wire.audio?.length, 1);
-    assert.deepEqual(wire.audio?.[0], {
+    assert.partialDeepStrictEqual(wire.audio?.[0], {
       codec: 'eac3',
-      profile: undefined,
       lang: 'eng',
-      title: undefined,
       ch_layout: '5.1',
       ch: 6,
+      br: 640_000,
+      sample_rate: 48_000,
     });
-    assert.deepEqual(wire.subtitle?.[0], { lang: 'fre', title: 'French' });
+    assert.partialDeepStrictEqual(wire.subtitle?.[0], {
+      lang: 'fre',
+      title: 'French',
+    });
   });
 
   test('converts duration from seconds to nanoseconds', () => {

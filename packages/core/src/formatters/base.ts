@@ -48,6 +48,8 @@ const TRACK_DEFAULTS: FormatterTrack = {
   tag: null,
   tags: null,
   channels: null,
+  bitrate: null,
+  sampleRate: null,
   title: null,
   default: false,
   forced: false,
