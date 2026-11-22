@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-20 14:23+0000\n"
+"PO-Revision-Date: 2026-11-22 17:51+0000\n"
 "Last-Translator: Prokyro <prokyro@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/aiostreams/web-app/pt_BR/>\n"
 "Language: pt-BR\n"
@@ -2610,7 +2610,7 @@ msgstr "Modo noturno"
 
 #: src/app/settings/apps.tsx
 msgid "Nightly"
-msgstr "Versão de desenvolvimento"
+msgstr "Nightly"
 
 #: src/app/settings/apps.tsx
 msgid "Nightly builds come from every change, ahead of releases, and can break."
