@@ -1,19 +1,42 @@
-import { Addon, Option, UserData, ParsedStream, Stream } from '../db/index.js';
+import {
+  Addon,
+  Option,
+  UserData,
+  ParsedStream,
+  Stream,
+  ParsedFile,
+  MEDIA_INFO_QUALITY_TIERS,
+} from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { StreamParser } from '../parser/index.js';
-import { appConfig, createLogger, makeRequest } from '../utils/index.js';
+import {
+  appConfig,
+  createLogger,
+  makeRequest,
+  normaliseParsedMediaInfo,
+} from '../utils/index.js';
 import { constants } from '../utils/index.js';
 
 const logger = createLogger('streamnzb');
 
 const FAILOVER_ORDER_PATH = '/failover_order';
 
+type StreamNZBStream = Stream & {
+  failoverId?: string;
+  behaviorHints?: { cached?: boolean };
+  parsedMediaInfo?: {
+    mediaInfoQuality?: unknown;
+    languages?: unknown;
+    subtitles?: unknown;
+  };
+};
+
 class StreamNZBStreamParser extends StreamParser {
   protected override getExtras(
     stream: Stream,
     _currentParsedStream: ParsedStream
   ): ParsedStream['extra'] {
-    const failoverId = (stream as Stream & { failoverId?: string }).failoverId;
+    const { failoverId } = stream as StreamNZBStream;
     if (failoverId == null) return undefined;
     return { failoverId };
   }
@@ -22,9 +45,36 @@ class StreamNZBStreamParser extends StreamParser {
     stream: Stream,
     _currentParsedStream: ParsedStream
   ): string | undefined {
-    const cached = (stream.behaviorHints as { cached?: boolean } | undefined)
-      ?.cached;
-    if (cached === true) return 'AvailNZB 💚';
+    const { behaviorHints } = stream as StreamNZBStream;
+    if (behaviorHints?.cached === true) return 'AvailNZB 💚';
+  }
+
+  protected override getParsedFileMergeOverrides(
+    stream: Stream,
+    _currentParsedStream: ParsedStream
+  ): Partial<ParsedFile> {
+    const info = (stream as StreamNZBStream).parsedMediaInfo;
+    const provided = normaliseParsedMediaInfo(
+      info && {
+        mediaInfoQuality: MEDIA_INFO_QUALITY_TIERS.find(
+          (tier) => tier === info.mediaInfoQuality
+        ),
+        languages: Array.isArray(info.languages) ? info.languages : undefined,
+        subtitles: Array.isArray(info.subtitles) ? info.subtitles : undefined,
+      }
+    );
+    if (!provided) return {};
+    const overrides: Partial<ParsedFile> = {};
+    if (provided.languages?.length) {
+      overrides.languages = [...provided.languages];
+    }
+    if (provided.subtitles?.length) {
+      overrides.subtitles = [...provided.subtitles];
+    }
+    if (provided.mediaInfoQuality) {
+      overrides.mediaInfoQuality = provided.mediaInfoQuality;
+    }
+    return overrides;
   }
 
   protected override getService(
