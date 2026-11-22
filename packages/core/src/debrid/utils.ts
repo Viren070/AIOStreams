@@ -884,6 +884,7 @@ export async function selectFileInTorrentOrNZB(
   fileScores.sort((a, b) => b.score - a.score);
 
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
+  const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
   /** Why a file is not the episode asked for: a debug line and a skip reason. */
   const refusal = (
     file: DebridFile,
@@ -907,6 +908,17 @@ export async function selectFileInTorrentOrNZB(
         `Invalid season number - Expected ${metadata.season}, not found in the file of a multi-season pack`,
       ];
     }
+    if (
+      isPack &&
+      metadata.episode &&
+      !parsed.episodes?.length &&
+      !parsed.date
+    ) {
+      return [
+        `${file.name} of ${torrentOrNZB.title} names no episode, skipping...`,
+        `No episode - the file of a multi-season pack has no episode number or date`,
+      ];
+    }
     if (isEpisodeAmbiguous(parsed, fileScores, parsedTitle, metadata)) {
       return [
         `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`,
@@ -917,16 +929,11 @@ export async function selectFileInTorrentOrNZB(
   };
 
   // Select the best matching file. In a pack of several seasons, one refused
-  // gives way to the next that names an episode and is not; with none, it
-  // stays and is refused.
-  const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
+  // gives way to the next that is not; with none, it stays and is refused.
   const bestMatch =
     (isPack &&
       refusal(fileScores[0].file, fileScores[0].parsed) &&
-      fileScores.find(
-        ({ file, parsed }) =>
-          (!!parsed.episodes?.length || !!parsed.date) && !refusal(file, parsed)
-      )) ||
+      fileScores.find(({ file, parsed }) => !refusal(file, parsed))) ||
     fileScores[0];
   const refused = refusal(bestMatch.file, bestMatch.parsed);
   if (refused) {

@@ -229,6 +229,23 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     assert.equal(await absolute28(others), 9);
   });
 
+  it('passes over an extra in the season folder to the episode', async () => {
+    const name = '[Grp] Show - 28 [1080p].mkv';
+    const files: DebridFile[] = [
+      { index: 0, name: 'Extras.mkv', path: '/Season 3/Extras.mkv', size: 1e9 },
+      { index: 1, name, path: `/Season 2/${name}`, size: 1e9 },
+    ];
+    assert.equal(
+      await select('[Grp] Show S01-S03 (BD 1080p)', files, {
+        titles: ['Show'],
+        season: 3,
+        episode: 3,
+        absoluteEpisode: 28,
+      }),
+      1
+    );
+  });
+
   it('gives no extra in place of a file of another season of a pack of seasons', async () => {
     const files = [
       ...thronesFiles((relative) => `/${relative}`).filter(
