@@ -7,7 +7,7 @@ import {
   requestLockType,
 } from '../../utils/index.js';
 
-const logger = createLogger('xtream');
+const logger = createLogger('livetv');
 const compress = promisify(zstdCompress);
 const decompress = promisify(zstdDecompress);
 
@@ -68,6 +68,7 @@ export class TieredStore<V, S> {
     return [decoded, left];
   }
 
+  /** Written through, as replicas waiting on {@link load} read it next. */
   async set(key: string, value: V, ttl: number): Promise<void> {
     await this.memory.set(key, value, ttl);
     try {
@@ -77,12 +78,13 @@ export class TieredStore<V, S> {
       await this.shared.set(
         key,
         { until: Date.now() + ttl * 1000, data: packed.toString('base64') },
-        ttl
+        ttl,
+        true
       );
     } catch (err) {
       logger.warn(
         { cache: this.name, err: err instanceof Error ? err.message : err },
-        'xtream shared store write failed'
+        'live TV shared store write failed'
       );
     }
   }
