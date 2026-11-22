@@ -104,13 +104,13 @@ export class InfiniDyskPreset extends Preset {
         description: 'What to call this addon',
         type: 'string',
         required: true,
-        default: 'InfiniDysk',
+        default: 'infinidysk',
       },
       {
         id: 'manifestUrl',
         name: 'Manifest URL',
         description:
-          'The manifest.json URL for your InfiniDysk search profile addon.',
+          'The manifest.json URL from your infinidysk v1 Search Profile.',
         type: 'url',
         required: true,
       },
@@ -158,9 +158,9 @@ export class InfiniDyskPreset extends Preset {
 
     return {
       ID: 'infinidysk',
-      NAME: 'InfiniDysk',
+      NAME: 'infinidysk Search Profile (v1)',
       DESCRIPTION:
-        'Direct Usenet streams from your self-hosted InfiniDysk search profile.',
+        'Search and play through an infinidysk v1 Search Profile. For infinidysk v2, configure the NzbDAV playback service instead.',
       LOGO: 'https://raw.githubusercontent.com/infinidysk/infinidysk/main/docs/assets/logo.png',
       URL: [],
       TIMEOUT: appConfig.presets.defaultTimeout,
