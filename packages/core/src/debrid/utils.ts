@@ -464,17 +464,20 @@ function withFolderSeason(
   return parsed;
 }
 
-/** An air date or an absolute number names the episode whatever the season. */
+/**
+ * An air date or an absolute number (of the show or of its split entry) names
+ * the episode whatever the season.
+ */
 function matchesWithoutSeason(
   parsed: ParsedResult,
   metadata: TitleMetadata
 ): boolean {
   if (parsed.date && metadata.airDates?.includes(parsed.date)) return true;
-  const absolute = metadata.absoluteEpisode;
-  return (
-    !!absolute &&
-    absolute !== metadata.episode &&
-    !!parsed.episodes?.includes(absolute)
+  return [metadata.absoluteEpisode, metadata.relativeAbsoluteEpisode].some(
+    (number) =>
+      !!number &&
+      number !== metadata.episode &&
+      !!parsed.episodes?.includes(number)
   );
 }
 
@@ -875,10 +878,22 @@ export async function selectFileInTorrentOrNZB(
   // Sort by score descending
   fileScores.sort((a, b) => b.score - a.score);
 
-  // Select the best matching file
-  const bestMatch = fileScores[0];
-  const parsedFile = bestMatch.parsed;
+  // Select the best matching file. In a pack of several seasons, a file of
+  // another season gives way to the next that names an episode; with none, it
+  // stays and is refused below.
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
+  const bestMatch =
+    (metadata &&
+      parsedTitle &&
+      !options?.skipSeasonEpisodeCheck &&
+      isPackSeasonWrong(fileScores[0].parsed, parsedTitle, metadata) &&
+      fileScores.find(
+        ({ parsed }) =>
+          (!!parsed.episodes?.length || !!parsed.date) &&
+          !isPackSeasonWrong(parsed, parsedTitle, metadata)
+      )) ||
+    fileScores[0];
+  const parsedFile = bestMatch.parsed;
 
   if (
     metadata &&

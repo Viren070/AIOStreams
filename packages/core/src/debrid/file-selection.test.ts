@@ -168,6 +168,54 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     );
   });
 
+  it('keeps a file numbered within its split entry in another season folder of a pack of seasons', async () => {
+    const name = '[Grp] Show - 15 [1080p].mkv';
+    const files: DebridFile[] = [
+      { index: 0, name, path: `/Season 2/${name}`, size: 1e9 },
+    ];
+    assert.equal(
+      await select('[Grp] Show S01-S03 (BD 1080p)', files, {
+        titles: ['Show'],
+        season: 3,
+        episode: 3,
+        relativeAbsoluteEpisode: 15,
+      }),
+      0
+    );
+  });
+
+  it('passes over a file of another season to the episode of a pack of seasons', async () => {
+    const name = '[Grp] Show - 28 [1080p].mkv';
+    const files: DebridFile[] = [
+      { index: 0, name: 'Show.S01E03.1080p.mkv', size: 1e9 },
+      { index: 1, name, path: `/Season 2/${name}`, size: 1e9 },
+    ];
+    assert.equal(
+      await select('[Grp] Show S01-S03 (BD 1080p)', files, {
+        titles: ['Show'],
+        season: 3,
+        episode: 3,
+        absoluteEpisode: 28,
+      }),
+      1
+    );
+  });
+
+  it('gives no extra in place of a file of another season of a pack of seasons', async () => {
+    const files = [
+      ...thronesFiles((relative) => `/${relative}`).filter(
+        (f) => f.index === 2 || f.index === 22
+      ),
+      {
+        index: 80,
+        name: 'Featurette.mkv',
+        path: '/Extras/Featurette.mkv',
+        size: 9e8,
+      },
+    ];
+    assert.equal(await select(PACK, files, thrones(2, 13)), undefined);
+  });
+
   it('does not check the season of a file in a release with no seasons named', async () => {
     const files: DebridFile[] = [
       { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },
