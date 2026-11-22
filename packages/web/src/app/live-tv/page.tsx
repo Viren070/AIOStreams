@@ -40,7 +40,15 @@ import {
   usePlayback,
 } from '@/lib/playback/session';
 import { navigate, to } from '@/lib/paths';
-import { focusOn, isTextField, pickOnFocus, useAction } from '@/lib/input';
+import {
+  focusOn,
+  isTextField,
+  moveTo,
+  navSide,
+  pickOnFocus,
+  useAction,
+  type Direction,
+} from '@/lib/input';
 import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PAGE_TOP, PageHeader, PageMessage } from '@/components/shell/page';
@@ -312,6 +320,28 @@ export function LiveTvPage({
     if (grid) focusOn(grid);
     else return pages.isLoading;
   });
+  // Toward the pills, the picker goes to the app's own groups.
+  const pillsFrom = (side: Direction) => () => {
+    const picker = find('[data-ui=live-group-picker]');
+    if (
+      !picker ||
+      side !== navSide('start') ||
+      document.activeElement !== picker
+    )
+      return false;
+    const target =
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-name=live-group] [data-ui=pill-tab]:last-child');
+    if (!target) return false;
+    // Narrow windows put the picker on its own line, at the start.
+    const at = target.getBoundingClientRect();
+    const from = picker.getBoundingClientRect();
+    if (side === 'left' ? at.right > from.left : at.left < from.right)
+      return false;
+    moveTo(target, side);
+  };
+  useAction('nav.left', pillsFrom('left'));
+  useAction('nav.right', pillsFrom('right'));
   // A remote's digits go to the channel with that number, loading on to it.
   // Numbers run through the whole lineup, so one outside the group opens All
   // channels on it.
