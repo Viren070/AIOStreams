@@ -168,6 +168,24 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     );
   });
 
+  it('does not give the folder season to a file matched by its absolute number', async () => {
+    const name = '[Grp] Show - 28 [1080p].mkv';
+    const files: DebridFile[] = [
+      { index: 0, name, path: `/Season 2/${name}`, size: 1e9 },
+    ];
+    assert.equal(
+      await select('[Grp] Show S01-S03 (BD 1080p)', files, {
+        titles: ['Show'],
+        season: 3,
+        episode: 3,
+        absoluteEpisode: 28,
+        tvdbSeason: 2,
+        tvdbEpisode: 15,
+      }),
+      0
+    );
+  });
+
   it('keeps a file numbered within its split entry in another season folder of a pack of seasons', async () => {
     const name = '[Grp] Show - 15 [1080p].mkv';
     const files: DebridFile[] = [

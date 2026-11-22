@@ -443,16 +443,32 @@ function isCreditlessName(name: string | undefined): boolean {
   return !!name && /nc(ed|op)/i.test(name);
 }
 
+/** An absolute number (of the show or of its split entry) names the episode. */
+function matchesAbsolute(
+  parsed: ParsedResult,
+  metadata: TitleMetadata | undefined
+): boolean {
+  return [metadata?.absoluteEpisode, metadata?.relativeAbsoluteEpisode].some(
+    (number) =>
+      !!number &&
+      number !== metadata?.episode &&
+      !!parsed.episodes?.includes(number)
+  );
+}
+
 /**
  * A file named by its episode alone ("S2/03 Title.mkv") takes the season of the
  * nearest folder that names one. A folder of several seasons answers nothing;
- * a range of episodes ("13-24", read as S13E24) is not a season.
+ * a range of episodes ("13-24", read as S13E24) is not a season. A file
+ * numbered absolutely keeps no season, as its name gives none.
  */
 function withFolderSeason(
   parsed: ParsedResult | undefined,
-  file: DebridFile
+  file: DebridFile,
+  metadata: TitleMetadata | undefined
 ): ParsedResult | undefined {
   if (!parsed || parsed.seasons?.length || !file.path) return parsed;
+  if (matchesAbsolute(parsed, metadata)) return parsed;
   const folders = file.path.split(/[\\/]/).filter(Boolean).slice(0, -1);
   for (const folder of folders.reverse()) {
     const { seasons, episodes } = parseTorrentTitleCached(folder);
@@ -464,20 +480,14 @@ function withFolderSeason(
   return parsed;
 }
 
-/**
- * An air date or an absolute number (of the show or of its split entry) names
- * the episode whatever the season.
- */
+/** An air date or an absolute number names the episode whatever the season. */
 function matchesWithoutSeason(
   parsed: ParsedResult,
   metadata: TitleMetadata
 ): boolean {
-  if (parsed.date && metadata.airDates?.includes(parsed.date)) return true;
-  return [metadata.absoluteEpisode, metadata.relativeAbsoluteEpisode].some(
-    (number) =>
-      !!number &&
-      number !== metadata.episode &&
-      !!parsed.episodes?.includes(number)
+  return (
+    (!!parsed.date && !!metadata.airDates?.includes(parsed.date)) ||
+    matchesAbsolute(parsed, metadata)
   );
 }
 
@@ -608,7 +618,11 @@ export async function selectFileInTorrentOrNZB(
   for (let index = 0; index < debridDownload.files.length; index++) {
     const file = debridDownload.files[index];
     let score = 0;
-    const parsed = withFolderSeason(parsedFiles.get(file.name ?? ''), file);
+    const parsed = withFolderSeason(
+      parsedFiles.get(file.name ?? ''),
+      file,
+      metadata
+    );
     const fileReport: SelectionReport['files'][number] = {
       index,
       name: file.name,
