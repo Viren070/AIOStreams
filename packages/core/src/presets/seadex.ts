@@ -1,9 +1,8 @@
-﻿import { Option, UserData } from '../db/index.js';
+﻿import { Addon, Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
 import {
-  mediaTypesOption,
   nameOption,
   servicesOption,
   timeoutOption,
@@ -17,7 +16,6 @@ export class SeaDexPreset extends TorznabPreset {
       nameOption('SeaDex'),
       timeoutOption(),
       servicesOption(StremThruPreset.supportedServices),
-      mediaTypesOption(['anime']),
       useMultipleInstancesOption(),
     ];
 
@@ -37,6 +35,17 @@ export class SeaDexPreset extends TorznabPreset {
       BUILTIN: true,
       CATEGORY: constants.PresetCategory.STREAMS,
     };
+  }
+
+  static override async generateAddons(
+    userData: UserData,
+    options: Record<string, any>
+  ): Promise<Addon[]> {
+    // SeaDex only has anime, so skip it for other media types
+    return super.generateAddons(userData, {
+      ...options,
+      mediaTypes: ['anime'],
+    });
   }
 
   protected static override generateManifestUrl(

@@ -1,9 +1,8 @@
-﻿import { Option, UserData } from '../db/index.js';
+﻿import { Addon, Option, UserData } from '../db/index.js';
 import { appConfig, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { TorznabPreset } from './torznab.js';
 import {
-  mediaTypesOption,
   nameOption,
   servicesOption,
   timeoutOption,
@@ -20,7 +19,6 @@ export class EztvPreset extends TorznabPreset {
           appConfig.presets.defaultTimeout
       ),
       servicesOption(StremThruPreset.supportedServices),
-      mediaTypesOption(['series']),
       useMultipleInstancesOption(),
     ];
 
@@ -41,6 +39,17 @@ export class EztvPreset extends TorznabPreset {
       SUPPORTED_RESOURCES: supportedResources,
       BUILTIN: true,
     };
+  }
+
+  static override async generateAddons(
+    userData: UserData,
+    options: Record<string, any>
+  ): Promise<Addon[]> {
+    // EZTV only has TV series, so skip it for other media types
+    return super.generateAddons(userData, {
+      ...options,
+      mediaTypes: ['series'],
+    });
   }
 
   protected static override generateManifestUrl(

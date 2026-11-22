@@ -3,14 +3,6 @@ import { appConfig, constants, ServiceId } from '../utils/index.js';
 
 // Options shared between presets; use these instead of copying the literals.
 
-type MediaType = 'movie' | 'series' | 'anime';
-
-const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
-  movie: 'Movie',
-  series: 'Series',
-  anime: 'Anime',
-};
-
 export const nameOption = (defaultName: string): Option => ({
   id: 'name',
   name: 'Name',
@@ -36,26 +28,21 @@ export const timeoutOption = (
   },
 });
 
-/** `only`: the media types an addon is limited to, e.g. `['anime']`. */
-export const mediaTypesOption = (only?: MediaType[]): Option => {
-  const types = only ?? (Object.keys(MEDIA_TYPE_LABELS) as MediaType[]);
-  const supported = types.map((type) => MEDIA_TYPE_LABELS[type]).join(', ');
-  return {
-    id: 'mediaTypes',
-    name: 'Media Types',
-    description: only
-      ? `Limits this addon to the selected media types for streams. This addon only supports ${supported}, so it is pre-configured to only allow ${supported}.`
-      : 'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-    type: 'multi-select',
-    required: false,
-    showInSimpleMode: false,
-    default: only ?? [],
-    options: types.map((type) => ({
-      label: MEDIA_TYPE_LABELS[type],
-      value: type,
-    })),
-  };
-};
+export const mediaTypesOption = (): Option => ({
+  id: 'mediaTypes',
+  name: 'Media Types',
+  description:
+    'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
+  type: 'multi-select',
+  required: false,
+  showInSimpleMode: false,
+  default: [],
+  options: [
+    { label: 'Movie', value: 'movie' },
+    { label: 'Series', value: 'series' },
+    { label: 'Anime', value: 'anime' },
+  ],
+});
 
 export const servicesOption = (
   supportedServices: readonly ServiceId[]
