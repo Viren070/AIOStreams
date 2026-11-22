@@ -17,6 +17,12 @@ import {
   getRegexForTextAfterEmojis,
 } from '../parser/index.js';
 import { arrayMerge } from '../parser/merge.js';
+import {
+  includeP2POption,
+  mediaTypesOption,
+  servicesOption,
+  useMultipleInstancesOption,
+} from './options.js';
 
 // Meteor-only tokens (`lat` is Latin in ISO 639-2, not Latino).
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -170,36 +176,8 @@ export class MeteorPreset extends Preset {
           appConfig.presets.defaultTimeout,
         appConfig.presets.meteor.url ?? undefined
       ),
-      {
-        id: 'services',
-        name: 'Services',
-        showInSimpleMode: false,
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        options: supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
+      servicesOption(supportedServices),
+      mediaTypesOption(),
       {
         id: 'yourMedia',
         type: 'subsection',
@@ -247,14 +225,7 @@ export class MeteorPreset extends Preset {
           },
         ],
       },
-      {
-        id: 'includeP2P',
-        name: 'Include P2P',
-        description: 'Include P2P results, even if a debrid service is enabled',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
+      includeP2POption(),
       {
         id: 'removeTrash',
         name: 'Remove Trash',
@@ -263,16 +234,7 @@ export class MeteorPreset extends Preset {
         default: false,
         showInSimpleMode: false,
       },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'When using multiple services, use a different Meteor addon for each service, rather than using one instance for all services',
-        type: 'boolean',
-        default: false,
-        required: false,
-        showInSimpleMode: false,
-      },
+      useMultipleInstancesOption(),
     ];
 
     return {

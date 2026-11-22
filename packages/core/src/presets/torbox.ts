@@ -12,6 +12,7 @@ import { StreamParser } from '../parser/index.js';
 import { Stream } from '../db/index.js';
 import { validateInfoHash } from '../builtins/utils/debrid.js';
 import { PresetMetadata } from '../db/schemas.js';
+import { mediaTypesOption, socialsOption } from './options.js';
 
 class TorboxStreamParser extends StreamParser {
   override getSeeders(
@@ -127,28 +128,8 @@ export class TorboxAddonPreset extends Preset {
         appConfig.presets.torbox.defaultTimeout ??
           appConfig.presets.defaultTimeout
       ),
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [{ id: 'website', url: 'https://torbox.app' }],
-      },
+      mediaTypesOption(),
+      socialsOption([{ id: 'website', url: 'https://torbox.app' }]),
     ];
 
     return {

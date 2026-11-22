@@ -16,6 +16,7 @@ import {
   normaliseParsedMediaInfo,
 } from '../utils/index.js';
 import { constants } from '../utils/index.js';
+import { socialsOption } from './options.js';
 
 const logger = createLogger('streamnzb');
 
@@ -116,18 +117,12 @@ export class StreamNZBPreset extends Preset {
         type: 'url',
         required: true,
       },
-      {
-        id: 'socials',
-        type: 'socials',
-        name: '',
-        description: '',
-        socials: [
-          {
-            id: 'donate',
-            url: 'https://buymeacoffee.com/gaisberg',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'donate',
+          url: 'https://buymeacoffee.com/gaisberg',
+        },
+      ]),
     ];
 
     return {

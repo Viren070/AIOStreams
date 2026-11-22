@@ -10,6 +10,7 @@ import {
 import { StreamParser } from '../parser/index.js';
 import { ServiceId, constants, toUrlSafeBase64 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { nameOption, timeoutOption } from './options.js';
 /**
  *
  * What modifications are needed for each preset:
@@ -62,27 +63,8 @@ export const baseOptions = (
     urlOption.showInSimpleMode = true;
   }
   return [
-    {
-      id: 'name',
-      name: 'Name',
-      description: 'What to call this addon',
-      type: 'string',
-      required: true,
-      default: name,
-    },
-    {
-      id: 'timeout',
-      name: 'Timeout (ms)',
-      description: 'The timeout for this addon',
-      type: 'number',
-      required: true,
-      default: timeout,
-      constraints: {
-        min: appConfig.userLimits.timeouts.minTimeout,
-        max: appConfig.userLimits.timeouts.maxTimeout,
-        forceInUi: false, // large ranges don't work well
-      },
-    },
+    nameOption(name),
+    timeoutOption(timeout),
     {
       id: 'resources',
       name: 'Resources',

@@ -3,6 +3,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 class ContentDeepDiveStreamParser extends StreamParser {
   protected getFilename(
@@ -43,18 +44,12 @@ export class ContentDeepDivePreset extends Preset {
         type: 'boolean',
         default: true,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'buymeacoffee',
-            url: 'https://buymeacoffee.com/contentdeepdive',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'buymeacoffee',
+          url: 'https://buymeacoffee.com/contentdeepdive',
+        },
+      ]),
     ];
 
     return {

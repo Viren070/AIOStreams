@@ -10,6 +10,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants, RESOURCES, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { nameOption, socialsOption, timeoutOption } from './options.js';
 
 class DMMCastStreamParser extends StreamParser {
   protected override getMessage(
@@ -61,14 +62,7 @@ export class DMMCastPreset extends Preset {
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'DMM Cast',
-      },
+      nameOption('DMM Cast'),
       {
         id: 'installationUrl',
         name: 'Installation URL',
@@ -78,18 +72,11 @@ export class DMMCastPreset extends Preset {
         required: true,
       },
       {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        default:
+        ...timeoutOption(
           appConfig.presets.dmmCast.defaultTimeout ??
-          appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false,
-        },
+            appConfig.presets.defaultTimeout
+        ),
+        required: false,
       },
       {
         id: 'resources',
@@ -105,13 +92,7 @@ export class DMMCastPreset extends Preset {
         })),
         showInSimpleMode: false,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [{ id: 'website', url: 'https://debridmediamanager.com' }],
-      },
+      socialsOption([{ id: 'website', url: 'https://debridmediamanager.com' }]),
     ];
 
     return {

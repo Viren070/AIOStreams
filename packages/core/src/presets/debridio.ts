@@ -1,12 +1,9 @@
 import { Option } from '../db/index.js';
+import { socialsOption } from './options.js';
 
-export const debridioSocialOption: Option = {
-  id: 'socials',
-  name: '',
-  description: '',
-  type: 'socials',
-  socials: [{ id: 'website', url: 'https://debridio.com' }],
-};
+export const debridioSocialOption: Option = socialsOption([
+  { id: 'website', url: 'https://debridio.com' },
+]);
 export const debridioApiKeyOption: Option = {
   id: 'debridioApiKey',
   name: 'Debridio API Key',

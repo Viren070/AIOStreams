@@ -3,6 +3,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 class DoctorWhoUniverseStreamParser extends StreamParser {
   protected override getMessage(
@@ -33,15 +34,9 @@ export class DoctorWhoUniversePreset extends Preset {
         appConfig.presets.doctorWhoUniverse.defaultTimeout ??
           appConfig.presets.defaultTimeout
       ),
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/nubblyn/whoniverse' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/nubblyn/whoniverse' },
+      ]),
     ];
 
     return {

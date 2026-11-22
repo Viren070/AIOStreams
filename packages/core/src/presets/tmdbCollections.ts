@@ -3,6 +3,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants, FULL_LANGUAGE_MAPPING } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 class TmdbCollectionsStreamParser extends StreamParser {
   protected override getFilename(
@@ -836,15 +837,9 @@ export class TmdbCollectionsPreset extends Preset {
         type: 'alert',
       },
       // https://github.com/youchi1/tmdb-collections/
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/youchi1/tmdb-collections' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/youchi1/tmdb-collections' },
+      ]),
     ];
 
     return {

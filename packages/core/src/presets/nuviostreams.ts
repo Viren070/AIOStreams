@@ -11,6 +11,7 @@ import { SERVICE_DETAILS } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
+import { mediaTypesOption, socialsOption } from './options.js';
 
 class NuvioStreamsStreamParser extends StreamParser {
   parse(stream: Stream): ParsedStream {
@@ -200,31 +201,11 @@ export class NuvioStreamsPreset extends Preset {
         options: providers,
         default: [],
       },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/tapframe/NuvioStreaming' },
-          { id: 'ko-fi', url: 'https://ko-fi.com/tapframe' },
-        ],
-      },
+      mediaTypesOption(),
+      socialsOption([
+        { id: 'github', url: 'https://github.com/tapframe/NuvioStreaming' },
+        { id: 'ko-fi', url: 'https://ko-fi.com/tapframe' },
+      ]),
     ];
 
     return {

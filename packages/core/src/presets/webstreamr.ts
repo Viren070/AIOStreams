@@ -18,6 +18,7 @@ import {
   StreamParser,
   getRegexForTextAfterEmojis,
 } from '../parser/index.js';
+import { mediaTypesOption, socialsOption } from './options.js';
 
 class WebStreamrStreamParser extends StreamParser {
   protected get indexerEmojis(): string[] {
@@ -162,21 +163,7 @@ export class WebStreamrPreset extends Preset {
         appConfig.presets.webstreamr.defaultTimeout ??
           appConfig.presets.defaultTimeout
       ),
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
+      mediaTypesOption(),
       {
         id: 'providers',
         name: 'Providers',
@@ -199,15 +186,9 @@ export class WebStreamrPreset extends Preset {
         type: 'boolean',
         default: false,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/webstreamr/webstreamr' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/webstreamr/webstreamr' },
+      ]),
     ];
 
     return {

@@ -3,6 +3,14 @@ import StreamParser from '../parser/streams.js';
 import { appConfig, constants, ServiceId } from '../utils/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
+import {
+  hideStreamsOption,
+  mediaTypesOption,
+  nameOption,
+  servicesOption,
+  timeoutOption,
+  useMultipleInstancesOption,
+} from './options.js';
 
 class LibraryStreamParser extends BuiltinStreamParser {
   protected isInfoStream(stream: Stream): string | undefined {
@@ -31,27 +39,8 @@ export class LibraryPreset extends BuiltinAddonPreset {
       constants.META_RESOURCE,
     ];
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'Library',
-      },
-      {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        required: true,
-        default: appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false,
-        },
-      },
+      nameOption('Library'),
+      timeoutOption(),
       {
         id: 'resources',
         name: 'Resources',
@@ -66,36 +55,8 @@ export class LibraryPreset extends BuiltinAddonPreset {
           value: resource,
         })),
       },
-      {
-        id: 'services',
-        name: 'Services',
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: LibraryPreset.supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
+      servicesOption(LibraryPreset.supportedServices),
+      mediaTypesOption(),
       {
         id: 'sources',
         name: 'Sources',
@@ -134,23 +95,8 @@ export class LibraryPreset extends BuiltinAddonPreset {
         default: false,
         showInSimpleMode: false,
       },
-      {
-        id: 'hideStreams',
-        name: 'Hide Streams',
-        description:
-          'Hide streams from this addon. This can be used to prevent the library addon from showing streams except in its catalogs.',
-        type: 'boolean',
-        default: false,
-      },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'When using multiple services, use a different Library addon for each service, rather than using one instance for all services',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
+      hideStreamsOption(),
+      useMultipleInstancesOption(),
     ];
 
     return {

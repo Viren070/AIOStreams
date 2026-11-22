@@ -16,6 +16,7 @@ import {
   debridioLogo,
 } from './debridio.js';
 import { FileParser, StreamParser } from '../parser/index.js';
+import { resultPassthroughOption } from './options.js';
 
 class DebridioIC4AStreamParser extends StreamParser {
   protected override getParsedFile(
@@ -121,15 +122,7 @@ export class DebridioIC4APreset extends Preset {
         options: countries,
         default: countries.map((countries) => countries.value),
       },
-      {
-        id: 'resultPassthrough',
-        name: 'Result Passthrough',
-        description:
-          'Ensure no Debridio IC4A results are filtered out by anything',
-        required: false,
-        type: 'boolean',
-        default: true,
-      },
+      resultPassthroughOption(true),
       debridioSocialOption,
     ];
 

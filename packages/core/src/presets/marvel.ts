@@ -2,6 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { socialsOption } from './options.js';
 
 export class MarvelPreset extends Preset {
   private static catalogs = [
@@ -53,16 +54,10 @@ export class MarvelPreset extends Preset {
         options: this.catalogs,
         default: this.catalogs.map((catalog) => catalog.value),
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/joaogonp/addon-marvel' },
-          { id: 'buymeacoffee', url: 'https://buymeacoffee.com/joaogonp' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/joaogonp/addon-marvel' },
+        { id: 'buymeacoffee', url: 'https://buymeacoffee.com/joaogonp' },
+      ]),
     ];
 
     return {

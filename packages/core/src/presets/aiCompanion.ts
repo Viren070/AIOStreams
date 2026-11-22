@@ -10,6 +10,7 @@ import {
 import { config as appConfig } from '../config/index.js';
 import { z } from 'zod';
 import { FormData } from 'undici';
+import { socialsOption } from './options.js';
 
 const manifestCache = Cache.getInstance<string, string>(
   'ai-companion-manifests'
@@ -147,22 +148,16 @@ export class AICompanionPreset extends Preset {
         options: AICompanionPreset.catalogs,
         default: AICompanionPreset.catalogs.map((c) => c.value),
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/willtho89/stremio-ai-companion',
-          },
-          {
-            id: 'buymeacoffee',
-            url: 'https://buymeacoffee.com/willtho89',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/willtho89/stremio-ai-companion',
+        },
+        {
+          id: 'buymeacoffee',
+          url: 'https://buymeacoffee.com/willtho89',
+        },
+      ]),
     ];
 
     return {

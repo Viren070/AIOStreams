@@ -2,6 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { socialsOption } from './options.js';
 
 export class AnimeKitsuPreset extends Preset {
   static override get METADATA() {
@@ -17,18 +18,12 @@ export class AnimeKitsuPreset extends Preset {
         appConfig.presets.animeKitsu.defaultTimeout ??
           appConfig.presets.defaultTimeout
       ),
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/TheBeastLT/stremio-kitsu-anime',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/TheBeastLT/stremio-kitsu-anime',
+        },
+      ]),
     ];
 
     return {

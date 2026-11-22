@@ -10,6 +10,7 @@ import { baseOptions, Preset } from './preset.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { mediaTypesOption } from './options.js';
 
 class HdHubStreamParser extends StreamParser {
   protected get indexerRegex(): RegExp | undefined {
@@ -57,30 +58,7 @@ export class HdHubPreset extends Preset {
           appConfig.presets.defaultTimeout,
         appConfig.presets.hdhub.url ?? undefined
       ),
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        default: [],
-        options: [
-          {
-            label: 'Movie',
-            value: 'movie',
-          },
-          {
-            label: 'Series',
-            value: 'series',
-          },
-          {
-            label: 'Anime',
-            value: 'anime',
-          },
-        ],
-      },
+      mediaTypesOption(),
       {
         id: 'tb_only',
         name: 'TorBox Only',

@@ -8,6 +8,7 @@ import {
   debridioApiKeyOption,
   debridioLogo,
 } from './debridio.js';
+import { mediaTypesOption } from './options.js';
 
 class DebridioWatchtowerStreamParser extends StreamParser {
   override parse(stream: Stream): ParsedStream | { skip: true } {
@@ -75,21 +76,7 @@ export class DebridioWatchtowerPreset extends Preset {
       ),
       debridioApiKeyOption,
       debridioSocialOption,
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-        showInSimpleMode: false,
-      },
+      mediaTypesOption(),
     ];
 
     return {

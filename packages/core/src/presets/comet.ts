@@ -11,6 +11,13 @@ import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import { StremThruPreset } from './stremthru.js';
+import {
+  includeP2POption,
+  mediaTypesOption,
+  servicesOption,
+  socialsOption,
+  useMultipleInstancesOption,
+} from './options.js';
 
 class CometStreamParser extends StreamParser {
   get errorRegexes(): { pattern: RegExp; message: string }[] | undefined {
@@ -88,14 +95,7 @@ export class CometPreset extends StremThruPreset {
           appConfig.presets.defaultTimeout,
         appConfig.presets.comet.url ?? undefined
       ),
-      {
-        id: 'includeP2P',
-        name: 'Include P2P',
-        description: 'Include P2P results, even if a debrid service is enabled',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
+      includeP2POption(),
       {
         id: 'removeTrash',
         name: 'Remove Trash',
@@ -114,63 +114,20 @@ export class CometPreset extends StremThruPreset {
         required: false,
         showInSimpleMode: false,
       },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'When using multiple services, use a different Comet addon for each service, rather than using one instance for all services',
-        type: 'boolean',
-        default: false,
-        required: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'services',
-        name: 'Services',
-        showInSimpleMode: false,
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        options: supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
+      useMultipleInstancesOption(),
+      servicesOption(supportedServices),
 
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/g0ldyy/comet',
-          },
-          {
-            id: 'ko-fi',
-            url: 'https://ko-fi.com/g0ldyy',
-          },
-        ],
-      },
+      mediaTypesOption(),
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/g0ldyy/comet',
+        },
+        {
+          id: 'ko-fi',
+          url: 'https://ko-fi.com/g0ldyy',
+        },
+      ]),
     ];
 
     return {

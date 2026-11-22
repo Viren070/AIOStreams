@@ -3,6 +3,7 @@ import { EasynewsPreset } from './easynews.js';
 import { constants } from '../utils/index.js';
 import { baseOptions } from './preset.js';
 import { config as appConfig } from '../config/index.js';
+import { mediaTypesOption, socialsOption } from './options.js';
 
 export class EasynewsPlusPreset extends EasynewsPreset {
   static override get METADATA(): PresetMetadata {
@@ -35,41 +36,21 @@ export class EasynewsPlusPreset extends EasynewsPreset {
           appConfig.presets.easynewsPlus.defaultTimeout ??
             appConfig.presets.defaultTimeout
         ),
-        {
-          id: 'socials',
-          name: '',
-          description: '',
-          type: 'socials',
-          socials: [
-            {
-              id: 'github',
-              url: 'https://github.com/sleeyax/stremio-easynews-addon',
-            },
-            {
-              id: 'patreon',
-              url: 'https://patreon.com/sleeyax',
-            },
-            {
-              id: 'buymeacoffee',
-              url: 'https://buymeacoffee.com/sleeyax',
-            },
-          ],
-        },
-        {
-          id: 'mediaTypes',
-          name: 'Media Types',
-          description:
-            'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-          type: 'multi-select',
-          required: false,
-          showInSimpleMode: false,
-          options: [
-            { label: 'Movie', value: 'movie' },
-            { label: 'Series', value: 'series' },
-            { label: 'Anime', value: 'anime' },
-          ],
-          default: [],
-        },
+        socialsOption([
+          {
+            id: 'github',
+            url: 'https://github.com/sleeyax/stremio-easynews-addon',
+          },
+          {
+            id: 'patreon',
+            url: 'https://patreon.com/sleeyax',
+          },
+          {
+            id: 'buymeacoffee',
+            url: 'https://buymeacoffee.com/sleeyax',
+          },
+        ]),
+        mediaTypesOption(),
       ],
     };
   }

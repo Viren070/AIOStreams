@@ -11,6 +11,7 @@ import { createLogger } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
+import { servicesOption } from './options.js';
 
 const logger = createLogger('core');
 
@@ -263,20 +264,7 @@ export class StreamAsiaPreset extends Preset {
         required: false,
         default: false,
       },
-      {
-        id: 'services',
-        name: 'Services',
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        options: supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
+      servicesOption(supportedServices),
       {
         id: 'alert',
         name: 'MediaFlow Proxy',

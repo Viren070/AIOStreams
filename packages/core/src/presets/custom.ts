@@ -2,18 +2,20 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { appConfig, RESOURCES } from '../utils/index.js';
 import { constants } from '../utils/index.js';
+import {
+  formatPassthroughOption,
+  libraryAddonOption,
+  mediaTypesOption,
+  nameOption,
+  pinPositionOption,
+  resultPassthroughOption,
+  timeoutOption,
+} from './options.js';
 
 export class CustomPreset extends Preset {
   static override get METADATA() {
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'Custom Addon',
-      },
+      nameOption('Custom Addon'),
       {
         id: 'manifestUrl',
         name: 'Manifest URL',
@@ -21,18 +23,7 @@ export class CustomPreset extends Preset {
         type: 'url',
         required: true,
       },
-      {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        default: appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false,
-        },
-      },
+      { ...timeoutOption(), required: false },
       {
         id: 'resources',
         name: 'Resources',
@@ -47,70 +38,11 @@ export class CustomPreset extends Preset {
           value: resource,
         })),
       },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        default: [],
-        options: [
-          {
-            label: 'Movie',
-            value: 'movie',
-          },
-          {
-            label: 'Series',
-            value: 'series',
-          },
-          {
-            label: 'Anime',
-            value: 'anime',
-          },
-        ],
-      },
-      {
-        id: 'pinPosition',
-        name: 'Pin Position',
-        description:
-          'Pin streams from this addon to the top or bottom of the stream list. This will override the default sorting and place all streams from this addon either at the top or bottom, depending on your selection.',
-        type: 'select',
-        required: false,
-        default: undefined,
-        options: [
-          { label: 'None', value: undefined },
-          { label: 'Top', value: 'top' },
-          { label: 'Bottom', value: 'bottom' },
-        ],
-        showInSimpleMode: false,
-      },
-      {
-        id: 'libraryAddon',
-        name: 'Library Addon',
-        description:
-          'Whether to mark this addon as a library addon. This will result in all streams from this addon being marked as library streams.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
-      {
-        id: 'formatPassthrough',
-        name: 'Format Passthrough',
-        description:
-          'Whether to pass through the stream formatting. This means your formatting will not be applied and original stream formatting is retained.',
-        type: 'boolean',
-      },
-      {
-        id: 'resultPassthrough',
-        name: 'Result Passthrough',
-        description:
-          'If enabled, all results from this addon will never be filtered out and always included in the final stream list.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
+      mediaTypesOption(),
+      pinPositionOption(),
+      libraryAddonOption(),
+      formatPassthroughOption(),
+      resultPassthroughOption(),
     ];
 
     return {

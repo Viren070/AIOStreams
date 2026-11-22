@@ -10,6 +10,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants, LIVE_STREAM_TYPE } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 class USATvNextStreamParser extends StreamParser {
   protected override getParsedFile(
@@ -68,15 +69,9 @@ export class USATVNextPreset extends Preset {
         appConfig.presets.usaTvNext.defaultTimeout ??
           appConfig.presets.defaultTimeout
       ),
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/yowmamasita/usa-tv-next' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/yowmamasita/usa-tv-next' },
+      ]),
     ];
 
     return {

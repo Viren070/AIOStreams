@@ -2,6 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { socialsOption } from './options.js';
 
 export class StreamingCatalogsPreset extends Preset {
   // amp,atp,hbm,sst,vil,cpd,nlz,blv,zee,hay,clv,gop,hst,cru,mgl,cts,hlu,pmp,pcp,dnp,nfk,nfx
@@ -140,19 +141,13 @@ export class StreamingCatalogsPreset extends Preset {
         options: this.catalogs,
         default: ['nfx', 'hbm', 'dnp', 'amp', 'atp'],
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/rleroi/Stremio-Streaming-Catalogs-Addon',
-          },
-          { id: 'ko-fi', url: 'https://ko-fi.com/rab1t' },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/rleroi/Stremio-Streaming-Catalogs-Addon',
+        },
+        { id: 'ko-fi', url: 'https://ko-fi.com/rab1t' },
+      ]),
     ];
 
     return {
