@@ -1,19 +1,23 @@
-import { randomBytes } from 'node:crypto';
-
 /**
  * Built-in client presets, referenced as `{name}` from the hostname/context
  * user-agent overrides (`hostnameUserAgentOverrides`).
  *
  * Each is the client's whole HTTP/1.1 header list in its order, Host and
- * Connection included. Its name is the aiostreams-impersonate profile.
+ * Connection included. A preset named like an impersonate profile is also
+ * sent with that client's TLS and HTTP/2 fingerprint.
  */
 type PresetValue = string | ((url: URL) => string);
 
 const host = (url: URL) => url.host;
 
+// Web Crypto, as the web app imports this file too.
+const hex = (bytes: number) =>
+  Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) =>
+    b.toString(16).padStart(2, '0')
+  ).join('');
+
 /** W3C trace context, which .NET adds to every request. */
-const traceparent = () =>
-  `00-${randomBytes(16).toString('hex')}-${randomBytes(8).toString('hex')}-00`;
+const traceparent = () => `00-${hex(16)}-${hex(8)}-00`;
 
 export const HEADER_PRESETS = {
   sabnzbd: {
@@ -59,6 +63,9 @@ export const HEADER_PRESETS = {
     'Accept-Encoding': 'gzip',
   },
   vlc: {
+    Host: host,
+    Accept: '*/*',
+    'Accept-Language': 'en_US',
     'User-Agent': 'VLC/3.0.21 LibVLC/3.0.21',
   },
   chrome: {

@@ -11,6 +11,21 @@ const logger = createLogger('impersonation');
 const START_TIMEOUT = 10_000;
 const RETRY_AFTER = 60_000;
 
+/** The presets impersonate has a profile for. */
+const PROFILES = new Set([
+  'prowlarr',
+  'radarr',
+  'sonarr',
+  'nzbhydra2',
+  'sabnzbd',
+  'nzbget',
+  'chrome',
+]);
+
+export function impersonates(preset: string): boolean {
+  return PROFILES.has(preset);
+}
+
 export class ImpersonationError extends Error {
   constructor(
     readonly code: string,
