@@ -87,7 +87,9 @@ function layout(record: MediaInfoRecord): string {
       t.forced,
       t.hearingImpaired,
       t.commentary,
-      t.type === 'audio' ? [t.channels, t.channelLayout] : undefined,
+      t.type === 'audio'
+        ? [t.channels, t.channelLayout, t.sampleRate]
+        : undefined,
       t.type === 'video'
         ? [t.width, t.height, t.dvProfile, t.hdr10Plus, t.colorTransfer, t.hdr]
         : undefined,
