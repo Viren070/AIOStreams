@@ -464,6 +464,36 @@ function withFolderSeason(
   return parsed;
 }
 
+/** An air date or an absolute number names the episode whatever the season. */
+function matchesWithoutSeason(
+  parsed: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  if (parsed.date && metadata.airDates?.includes(parsed.date)) return true;
+  const absolute = metadata.absoluteEpisode;
+  return (
+    !!absolute &&
+    absolute !== metadata.episode &&
+    !!parsed.episodes?.includes(absolute)
+  );
+}
+
+/**
+ * A pack of several seasons can lack the one asked for: its episode of another
+ * season is not the episode.
+ */
+function isPackSeasonWrong(
+  best: ParsedResult,
+  parsedTitle: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  return (
+    (parsedTitle.seasons?.length ?? 0) >= 2 &&
+    !matchesWithoutSeason(best, metadata) &&
+    isSeasonWrong(best, metadata)
+  );
+}
+
 /**
  * In a pack of several seasons, an episode with no season in its name or
  * folders is any of the files with that number: the size would pick one.
@@ -481,11 +511,7 @@ function isEpisodeAmbiguous(
   }
   const bare = (parsed: ParsedResult) =>
     !parsed.seasons?.length && !!parsed.episodes?.includes(episode);
-  if (!bare(best)) return false;
-  const absolute = metadata.absoluteEpisode;
-  if (absolute && absolute !== episode && best.episodes?.includes(absolute)) {
-    return false;
-  }
+  if (!bare(best) || matchesWithoutSeason(best, metadata)) return false;
   const alike = scored.filter(
     ({ file, parsed }) =>
       bare(parsed) && !isSampleName(file.name) && !isCreditlessName(file.name)
@@ -869,6 +895,15 @@ export async function selectFileInTorrentOrNZB(
       );
       report.skipped = true;
       report.skipReason = `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`;
+      await handleReport();
+      return undefined;
+    }
+    if (isPackSeasonWrong(parsedFile, parsedTitle, metadata)) {
+      logger.debug(
+        `Season ${metadata.season} not found in ${bestMatch.file.name} of ${torrentOrNZB.title}, skipping...`
+      );
+      report.skipped = true;
+      report.skipReason = `Invalid season number - Expected ${metadata.season}, not found in the file of a multi-season pack`;
       await handleReport();
       return undefined;
     }

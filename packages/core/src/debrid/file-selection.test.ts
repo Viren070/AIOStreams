@@ -112,6 +112,77 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     assert.equal(await select(PACK, files, thrones(2, 13)), undefined);
   });
 
+  it('gives no file when the pack of seasons lacks the season asked for', async () => {
+    const files = thronesFiles((relative) => `/${relative}`).filter(
+      (f) => f.index === 2 || f.index === 22
+    );
+    assert.equal(await select(PACK, files, thrones(2, 13)), undefined);
+  });
+
+  it('selects by air date among seasonless files of the same number', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Show.2024.01.03.E03.mkv', size: 2e9 },
+      { index: 1, name: 'Show.2025.01.03.E03.mkv', size: 1e9 },
+    ];
+    assert.equal(
+      await select('Show S01-S02 1080p', files, {
+        titles: ['Show'],
+        season: 2,
+        episode: 3,
+        airDates: ['2025-01-03'],
+      }),
+      1
+    );
+  });
+
+  it('keeps a file of a pack of seasons whose air date matches, whatever its season', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'The.Show.S2024E03.2024.01.03.1080p.mkv', size: 2e9 },
+      { index: 1, name: 'The.Show.S2024E04.2024.01.04.1080p.mkv', size: 2e9 },
+    ];
+    assert.equal(
+      await select('The Show S28-S29 1080p WEB', files, {
+        titles: ['The Show'],
+        season: 29,
+        episode: 3,
+        airDates: ['2024-01-03'],
+        isDateBased: true,
+      }),
+      0
+    );
+  });
+
+  it('keeps an absolutely numbered file in another season folder of a pack of seasons', async () => {
+    const name = '[Grp] Show - 28 [1080p].mkv';
+    const files: DebridFile[] = [
+      { index: 0, name, path: `/Season 2/${name}`, size: 1e9 },
+    ];
+    assert.equal(
+      await select('[Grp] Show S01-S03 (BD 1080p)', files, {
+        titles: ['Show'],
+        season: 3,
+        episode: 3,
+        absoluteEpisode: 28,
+      }),
+      0
+    );
+  });
+
+  it('does not check the season of a file in a release with no seasons named', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },
+      { index: 1, name: 'Show.S01E06.1080p.mkv', size: 2e9 },
+    ];
+    assert.equal(
+      await select('Show Complete 1080p', files, {
+        titles: ['Show'],
+        season: 14,
+        episode: 5,
+      }),
+      0
+    );
+  });
+
   it('still selects the episode of a one-season pack without paths', async () => {
     const files = thronesFiles(() => undefined).filter((f) => f.index === 12);
     assert.equal(
