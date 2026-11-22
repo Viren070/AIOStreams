@@ -431,12 +431,12 @@ export function selectableFileNames(
   return names;
 }
 
+/** The word, not a part of one: "_" and "." part words too. */
+const SAMPLE_WORD =
+  /(?<![\p{L}\p{N}])(?:sample|trailer|preview)s?(?![\p{L}\p{N}])/iu;
+
 function isSampleName(name: string | undefined): boolean {
-  const lower = name?.toLowerCase();
-  return (
-    !!lower &&
-    ['sample', 'trailer', 'preview'].some((keyword) => lower.includes(keyword))
-  );
+  return !!name && SAMPLE_WORD.test(name);
 }
 
 function isCreditlessName(name: string | undefined): boolean {
@@ -927,6 +927,15 @@ export async function selectFileInTorrentOrNZB(
       ({ file, parsed }) =>
         !isClipName(file.name) && (!!parsed.episodes?.length || !!parsed.date)
     );
+  // Without numbers, a file is episode 1 only as the one file of its season.
+  const soleOfSeason = new Map<number, DebridFile | undefined>();
+  if (isPack && !namesEpisodes) {
+    for (const { file, parsed } of fileScores) {
+      if (isClipName(file.name) || parsed.seasons?.length !== 1) continue;
+      const season = parsed.seasons[0];
+      soleOfSeason.set(season, soleOfSeason.has(season) ? undefined : file);
+    }
+  }
   /** Why a file is not the episode asked for: a debug line and a skip reason. */
   const refusal = (
     file: DebridFile,
@@ -951,10 +960,14 @@ export async function selectFileInTorrentOrNZB(
       ];
     }
     if (
-      namesEpisodes &&
+      isPack &&
       metadata.episode &&
       !parsed.episodes?.length &&
-      !parsed.date
+      !parsed.date &&
+      (namesEpisodes ||
+        metadata.episode !== 1 ||
+        metadata.season === undefined ||
+        soleOfSeason.get(metadata.season) !== file)
     ) {
       return [
         `${file.name} of ${torrentOrNZB.title} names no episode, skipping...`,

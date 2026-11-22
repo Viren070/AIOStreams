@@ -371,6 +371,99 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     }
   });
 
+  it('gives no unnumbered file of a pack of seasons but the one file of the season for episode 1', async () => {
+    /** Files of the given paths, the first the largest. */
+    const files = (...paths: string[]): DebridFile[] =>
+      paths.map((path, index) => ({
+        index,
+        name: path.split('/').pop()!,
+        path: `/${path}`,
+        size: 3e9 - index * 1e8,
+      }));
+    const cases: [string, DebridFile[], number, number][] = [
+      [
+        'Sherlock S01-S04 1080p BluRay',
+        files(
+          'Sherlock - A Study in Pink.mkv',
+          'Sherlock - The Blind Banker.mkv',
+          'Sherlock - A Scandal in Belgravia.mkv',
+          'Sherlock - The Hounds of Baskerville.mkv'
+        ),
+        2,
+        1,
+      ],
+      [
+        'Шерлок / Sherlock (сезон 1-4) BDRip 1080p',
+        files(
+          'Шерлок - Этюд в розовых тонах.mkv',
+          'Шерлок - Слепой банкир.mkv',
+          'Шерлок - Скандал в Белгравии.mkv',
+          'Шерлок - Собаки Баскервиля.mkv'
+        ),
+        2,
+        1,
+      ],
+      [
+        'Show S01-S02 DVD9',
+        files('DISC1/VIDEO_TS/VTS_01_1.VOB', 'DISC2/VIDEO_TS/VTS_01_1.VOB'),
+        2,
+        1,
+      ],
+      [
+        'Show S01-S02 BluRay',
+        files('Disc1/BDMV/STREAM/00001.m2ts', 'Disc2/BDMV/STREAM/00001.m2ts'),
+        2,
+        1,
+      ],
+      [
+        'Show S01-S02 DVD9',
+        files(
+          'Show S1 D1/VIDEO_TS/VTS_01_1.VOB',
+          'Show S2 D1/VIDEO_TS/VTS_01_1.VOB',
+          'Show S2 D2/VIDEO_TS/VTS_01_1.VOB'
+        ),
+        2,
+        1,
+      ],
+      ['Show S01-S02', files('Disc 1/Title A.mkv', 'Disc 2/Title B.mkv'), 3, 1],
+      [
+        'Planet S01-S02',
+        files(
+          'Season 1/From Pole to Pole.mkv',
+          'Season 1/Mountains.mkv',
+          'Season 2/Coasts.mkv'
+        ),
+        1,
+        2,
+      ],
+      [
+        'Show S01-S02',
+        files('Season 1/Pilot.mkv', 'Season 2/Extras/Featurette.mkv'),
+        2,
+        3,
+      ],
+      ['Mini S01-S02', files('S1/Part One.mkv', 'S2/Part Two.mkv'), 2, 2],
+      ['Show S01-S02', files('Show (2019).mkv', 'Show (2020).mkv'), 1, 1],
+      [
+        'Trailer Park Boys S01-S02',
+        files(
+          'Season 2/Trailer Park Boys - Christmas Special.mkv',
+          'Season 2/Trailer.Park.Boys.S02E01.mkv',
+          'Season 2/Trailer.Park.Boys.S02E02.mkv'
+        ),
+        2,
+        4,
+      ],
+    ];
+    for (const [title, pack, season, episode] of cases) {
+      assert.equal(
+        await select(title, pack, { titles: ['Show'], season, episode }),
+        undefined,
+        `${title} S${season}E${episode}`
+      );
+    }
+  });
+
   it('does not check the season of a file in a release with no seasons named', async () => {
     const files: DebridFile[] = [
       { index: 0, name: 'Show.S01E05.1080p.mkv', size: 2e9 },
