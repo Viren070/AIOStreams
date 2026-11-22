@@ -139,11 +139,7 @@ export function decryptString(data: string, secretKey?: Buffer): Response {
     };
   } catch (error: any) {
     logger.error(`Failed to decrypt data: ${error.message}`);
-    // Return a single generic message for every failure. The real reason is
-    // logged above but must not reach the caller: distinct messages for
-    // "bad padding" vs "decrypted but did not inflate" are a padding oracle,
-    // since any caller that surfaces this string (e.g. the auth header parser)
-    // lets an unauthenticated client decrypt blobs one byte at a time.
+    // Callers show this; distinct messages per failure make a padding oracle.
     return {
       success: false,
       error: 'Failed to decrypt data',
