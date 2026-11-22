@@ -681,6 +681,23 @@ export function buildResources(ctx: AIOStreamsContext): void {
             searchExtra.isRequired = true;
           }
         }
+
+        // Clients that read `showInHome` do not look at the extras, so a
+        // Home/Discover choice made here has to reach the hint too. A
+        // configuration with no such choice serves the addon's hint unchanged.
+        if (canApplyOnlyOnSearch && modification?.onlyOnSearch) {
+          catalog.showInHome = false;
+        } else if (
+          canApplyOnlyOnDiscover &&
+          modification?.onlyOnDiscover !== undefined
+        ) {
+          catalog.showInHome = !modification.onlyOnDiscover;
+        } else if (
+          canApplyShowOnHome &&
+          modification?.showOnHome !== undefined
+        ) {
+          catalog.showInHome = modification.showOnHome;
+        }
         if (modification?.overrideType !== undefined) {
           catalog.type = modification.overrideType;
         }

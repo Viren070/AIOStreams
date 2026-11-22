@@ -1207,6 +1207,10 @@ const ManifestCatalogSchema = z.object({
   poster: z.string().nullish(),
   background: z.string().nullish(),
   idPrefixes: z.array(z.string()).nullish(),
+  // Client extension (Nuvio and others) for a catalog a genre extra would
+  // otherwise put on the home board. Carried through so an aggregated manifest
+  // keeps the hint its addon declared.
+  showInHome: z.boolean().optional(),
 });
 
 const AddonCatalogDefinitionSchema = z.object({
