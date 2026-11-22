@@ -58,11 +58,12 @@ const PRESET_OWNED_HEADERS = [
 ];
 const NO_USER_AGENT = ['none', 'false', '', 'undefined'];
 
+/** A preset's Host line stays, marking where its client writes it. */
 export function headersFor(
   base: RequestHeaders,
   url: URL,
   context?: FetchContext
-): RequestHeaders {
+): { headers: RequestHeaders; preset?: string } {
   const override = resolveHeaderOverride(url, context);
   let headers: RequestHeaders;
   if (override?.preset) {
@@ -97,6 +98,6 @@ export function headersFor(
   ) {
     headers.delete('user-agent');
   }
-  headers.delete('host');
-  return headers;
+  if (!override?.preset) headers.delete('host');
+  return { headers, preset: override?.preset };
 }

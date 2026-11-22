@@ -1,4 +1,4 @@
-﻿// Through the utils barrel, which has to load before cache.ts does.
+// Through the utils barrel, which has to load before cache.ts does.
 import {
   Cache,
   HEADERS_FOR_IP_FORWARDING,
@@ -11,8 +11,9 @@ import { encodeBody, releaseBody, toResponse } from './body.js';
 import { checkCooldown, recordCooldown } from './cooldown.js';
 import { resolveDispatcher } from './dispatcher.js';
 import { headersFor, RequestHeaders } from './headers.js';
+import { impersonationHost } from './impersonation.js';
 import type { FetchContext } from './overrides.js';
-import { PrivateAddressError } from './private-addresses.js';
+import { PrivateAddressError, vettedAddresses } from './private-addresses.js';
 import {
   CROSS_ORIGIN_SENSITIVE_HEADERS,
   getRedirectHop,
@@ -136,24 +137,29 @@ export async function makeRequest(url: string, options: RequestOptions) {
       headers.delete(INTERNAL_SECRET_HEADER);
     }
 
-    const sent = headersFor(headers, urlObj, options.context).toObject();
+    const { headers: sent, preset } = headersFor(
+      headers,
+      urlObj,
+      options.context
+    );
+    const proxy =
+      options.forceProxy ??
+      (useProxy ? appConfig.http.addonProxy[proxyIndex] : undefined);
+    const impersonation = preset ? await impersonationHost() : undefined;
+    if (!impersonation) sent.delete('host');
 
     logger.debug(
       {
         url: makeUrlLogSafe(urlObj.toString()),
         method,
         ...(redirects > 0 ? { redirects } : {}),
+        ...(impersonation ? { client: preset } : {}),
         tunneled: !!dispatcher
           ? 'true' +
             (options.forceProxy ? ' (forced)' : ` (proxy index ${proxyIndex})`)
           : 'false',
         ...(appConfig.logging.logSensitiveInfo
-          ? {
-              headers: sent,
-              dispatcher:
-                options.forceProxy ??
-                (useProxy ? appConfig.http.addonProxy[proxyIndex] : undefined),
-            }
+          ? { headers: sent.toObject(), dispatcher: proxy }
           : {}),
       },
       'http request'
@@ -162,13 +168,24 @@ export async function makeRequest(url: string, options: RequestOptions) {
     let data: Dispatcher.ResponseData;
     const sentAt = Date.now();
     try {
-      data = await request(urlObj, {
-        method: method as Dispatcher.HttpMethod,
-        headers: sent,
-        body,
-        dispatcher,
-        signal,
-      });
+      data = impersonation
+        ? await impersonation.request({
+            preset: preset!,
+            method,
+            url: urlObj,
+            headers: sent,
+            body,
+            proxy,
+            addresses: proxy ? undefined : await vettedAddresses(urlObj),
+            signal,
+          })
+        : await request(urlObj, {
+            method: method as Dispatcher.HttpMethod,
+            headers: sent.toObject(),
+            body,
+            dispatcher,
+            signal,
+          });
     } catch (err) {
       if (
         err instanceof Error &&

@@ -50,9 +50,20 @@ export const httpSchema = {
       'match a request the most specific one wins - exact host, then wildcard ' +
       'host (`*.host`), then `[context]`, then global `*` - and the chosen value ' +
       'overrides the default user agent. Example: ' +
-      '`[nzb_grabs]:{sabnzbd},indexer.com:{prowlarr}`',
+      '`[nzb_grabs]:{sabnzbd},indexer.com:{prowlarr}`. A preset also sends the ' +
+      'request the way that client does, with its TLS and HTTP/2 fingerprint, when the **Impersonation program** is available.',
     env: ['REQUEST_HEADER_OVERRIDES', 'HOSTNAME_USER_AGENT_OVERRIDES'],
     requiresRestart: false,
+    secret: false,
+  },
+  impersonationPath: {
+    schema: z.string().min(1),
+    default: 'impersonate',
+    label: 'Impersonation program',
+    description:
+      'The program that sends requests for `{preset}` overrides exactly as that client would. Leave it as **impersonate** to use the one on the PATH, which the Docker image includes. Without it, presets only change the headers.',
+    env: 'IMPERSONATION_PATH',
+    requiresRestart: true,
     secret: false,
   },
   addonProxy: {

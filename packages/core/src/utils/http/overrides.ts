@@ -53,13 +53,13 @@ export function matchOverride<T>(
 export function resolveHeaderOverride(
   url: URL,
   context?: string
-): { headers: Record<string, string>; preset: boolean } | undefined {
+): { headers: Record<string, string>; preset?: string } | undefined {
   const map = appConfig.http.hostnameUserAgentOverrides;
   if (!map || Object.keys(map).length === 0) return undefined;
   const value = matchOverride(map, url.hostname, context);
   if (value === undefined || value === '') return undefined;
-  const preset = resolveHeaderPreset(value);
+  const preset = resolveHeaderPreset(value, url);
   return preset
-    ? { headers: preset, preset: true }
-    : { headers: { 'User-Agent': value }, preset: false };
+    ? { headers: preset.headers, preset: preset.name }
+    : { headers: { 'User-Agent': value } };
 }

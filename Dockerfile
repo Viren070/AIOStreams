@@ -92,6 +92,15 @@ COPY --from=builder /build/packages/core/node_modules ./packages/core/node_modul
 COPY --from=builder /build/packages/server/node_modules ./packages/server/node_modules
 
 
+# Static, so it runs in the distroless image; cross-compiled, not emulated.
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS impersonate
+ARG TARGETOS
+ARG TARGETARCH
+ARG IMPERSONATE_VERSION=v0.1.0
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+  go install -trimpath -ldflags="-s -w" github.com/AIOStreams/impersonate/cmd/impersonate@${IMPERSONATE_VERSION} \
+  && cp "$(find /go/bin -name impersonate -type f | head -n 1)" /impersonate
+
 FROM debian:12-slim AS mimalloc
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libmimalloc2.0 \
@@ -136,6 +145,7 @@ COPY --from=busybox:1.36.0-uclibc /bin/sh /bin/sh
 COPY --from=mimalloc /usr/local/lib/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 ENV LD_PRELOAD=/usr/local/lib/libmimalloc.so.2
 COPY --from=ffprobe /src/ffprobe /usr/local/bin/ffprobe
+COPY --from=impersonate /impersonate /usr/local/bin/impersonate
 ENV NODE_OPTIONS="--max-semi-space-size=8 --expose-gc"
 COPY --from=runtime /runtime /app
 

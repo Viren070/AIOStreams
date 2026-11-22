@@ -118,7 +118,33 @@ const connect: buildConnector.connector = (options, callback) => {
   return checkedConnect(options, callback);
 };
 
+let guarded = false;
+
 /** Not applied behind an outbound proxy, which reaches the target itself. */
 export function installPrivateAddressGuard(): void {
+  guarded = true;
   setGlobalDispatcher(new Agent({ connect }));
+}
+
+/**
+ * For connections outside undici: the only addresses one to `url` may use, or
+ * undefined when it may resolve the name itself.
+ */
+export async function vettedAddresses(url: URL): Promise<string[] | undefined> {
+  const port = url.port || DEFAULT_PORTS[url.protocol];
+  if (!guarded || !refusedHost(url.hostname, port)) return undefined;
+  const host = bare(url.hostname);
+  if (isIP(host)) {
+    if (isBlockedAddress(host)) throw new PrivateAddressError(host);
+    return undefined;
+  }
+  const addresses = await new Promise<LookupAddress[]>((resolve, reject) =>
+    dnsLookup(host, { all: true }, (err, found) =>
+      err ? reject(err) : resolve(found)
+    )
+  );
+  if (addresses.some((a) => isBlockedAddress(a.address))) {
+    throw new PrivateAddressError(host);
+  }
+  return addresses.map((a) => a.address);
 }
