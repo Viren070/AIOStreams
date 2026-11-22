@@ -11,7 +11,7 @@ import { encodeBody, releaseBody, toResponse } from './body.js';
 import { checkCooldown, recordCooldown } from './cooldown.js';
 import { resolveDispatcher } from './dispatcher.js';
 import { headersFor, RequestHeaders } from './headers.js';
-import { impersonationHost } from './impersonation.js';
+import { impersonates, impersonationHost } from './impersonation.js';
 import type { FetchContext } from './overrides.js';
 import { PrivateAddressError, vettedAddresses } from './private-addresses.js';
 import {
@@ -148,7 +148,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
     const proxy =
       options.forceProxy ??
       (useProxy ? appConfig.http.addonProxy[proxyIndex] : undefined);
-    const impersonation = preset ? await impersonationHost() : undefined;
+    const impersonation =
+      preset && impersonates(preset) ? await impersonationHost() : undefined;
     if (!impersonation) sent.delete('host');
 
     logger.debug(

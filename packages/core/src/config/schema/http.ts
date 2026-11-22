@@ -46,7 +46,7 @@ export const httpSchema = {
       'User-Agent (which may use the `{version}` / `{random}` placeholders, like ' +
       '`DEFAULT_USER_AGENT`) or a `{preset}` reference to a built-in header set ' +
       '(`{sabnzbd}`, `{nzbget}`, `{sonarr}`, `{radarr}`, `{prowlarr}`, ' +
-      '`{nzbhydra2}`, `{chrome}`). Env shape: `key1:value1,key2:value2,...`. When several keys ' +
+      '`{nzbhydra2}`, `{vlc}`, `{chrome}`). Env shape: `key1:value1,key2:value2,...`. When several keys ' +
       'match a request the most specific one wins - exact host, then wildcard ' +
       'host (`*.host`), then `[context]`, then global `*` - and the chosen value ' +
       'overrides the default user agent. Example: ' +
