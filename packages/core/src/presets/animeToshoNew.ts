@@ -6,6 +6,7 @@ import { TorznabPreset } from './torznab.js';
 import {
   mediaTypesOption,
   searchModeOption,
+  seasonEpisodeStrategyOption,
   servicesOption,
   useMultipleInstancesOption,
 } from './options.js';
@@ -23,6 +24,7 @@ export class AnimeToshoNewPreset extends TorznabPreset {
       servicesOption(StremThruPreset.supportedServices),
       mediaTypesOption(),
       searchModeOption(),
+      seasonEpisodeStrategyOption(),
       useMultipleInstancesOption(),
     ];
 
@@ -58,6 +60,7 @@ export class AnimeToshoNewPreset extends TorznabPreset {
       apiPath: '/api',
       paginate: false,
       forceQuerySearch: options.forceQuerySearch ?? false,
+      seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

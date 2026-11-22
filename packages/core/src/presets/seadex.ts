@@ -7,6 +7,7 @@ import {
   nameOption,
   servicesOption,
   timeoutOption,
+  useMultipleInstancesOption,
 } from './options.js';
 
 export class SeaDexPreset extends TorznabPreset {
@@ -17,6 +18,7 @@ export class SeaDexPreset extends TorznabPreset {
       timeoutOption(),
       servicesOption(StremThruPreset.supportedServices),
       mediaTypesOption(['anime']),
+      useMultipleInstancesOption(),
     ];
 
     return {

@@ -7,6 +7,7 @@ import {
   nameOption,
   servicesOption,
   timeoutOption,
+  useMultipleInstancesOption,
 } from './options.js';
 
 export class EztvPreset extends TorznabPreset {
@@ -20,6 +21,7 @@ export class EztvPreset extends TorznabPreset {
       ),
       servicesOption(StremThruPreset.supportedServices),
       mediaTypesOption(['series']),
+      useMultipleInstancesOption(),
     ];
 
     return {
