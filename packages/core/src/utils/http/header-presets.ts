@@ -82,17 +82,10 @@ export const HEADER_PRESETS = {
 /** Names of the built-in header presets (for docs / UI hints). */
 export const HEADER_PRESET_NAMES = Object.keys(HEADER_PRESETS);
 
-/**
- * If `value` is exactly a preset reference (`{name}` for a known preset),
- * return its name and its headers for a request to `url`.
- */
-export function resolveHeaderPreset(
-  value: string,
+export function presetFor(
+  name: string,
   url: URL
 ): { name: string; headers: Record<string, string> } | undefined {
-  const match = value.trim().match(/^\{([a-zA-Z0-9_-]+)\}$/);
-  if (!match) return undefined;
-  const name = match[1].toLowerCase();
   const preset = (
     HEADER_PRESETS as Record<string, Record<string, PresetValue>>
   )[name];
@@ -102,4 +95,13 @@ export function resolveHeaderPreset(
     headers[header] = typeof item === 'function' ? item(url) : item;
   }
   return { name, headers };
+}
+
+/** If `value` is exactly a preset reference (`{name}` for a known preset). */
+export function resolveHeaderPreset(
+  value: string,
+  url: URL
+): { name: string; headers: Record<string, string> } | undefined {
+  const match = value.trim().match(/^\{([a-zA-Z0-9_-]+)\}$/);
+  return match ? presetFor(match[1].toLowerCase(), url) : undefined;
 }

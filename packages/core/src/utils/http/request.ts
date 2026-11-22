@@ -51,6 +51,8 @@ export interface RequestOptions {
   body?: BodyInit;
   forceProxy?: string;
   context?: FetchContext;
+  /** The client preset to send as when no override applies. */
+  preset?: string;
   redirect?: 'follow' | 'manual';
   /** Still arms 429 cooldowns, but is never refused by one. */
   ignoreCooldown?: boolean;
@@ -140,7 +142,8 @@ export async function makeRequest(url: string, options: RequestOptions) {
     const { headers: sent, preset } = headersFor(
       headers,
       urlObj,
-      options.context
+      options.context,
+      options.preset
     );
     const proxy =
       options.forceProxy ??

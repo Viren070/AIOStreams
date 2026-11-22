@@ -4,7 +4,6 @@ import {
   formatZodError,
   makeRequest,
   DistributedLock,
-  HEADER_PRESETS,
   createLogger,
 } from '../../utils/index.js';
 import type { Logger } from '../../logging/logger.js';
@@ -70,7 +69,6 @@ export interface TrbSite {
 }
 
 export class TrbAPI {
-  private headers: Record<string, string>;
   private readonly logger: Logger;
   private readonly searchCache: Cache<string, TrbSearchResponse>;
 
@@ -79,11 +77,6 @@ export class TrbAPI {
     this.searchCache = Cache.getInstance<string, TrbSearchResponse>(
       `${site.id}:search`
     );
-    this.headers = {
-      'Content-Type': 'application/json',
-      'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
-      Accept: 'application/json',
-    };
   }
 
   async search(options: {
@@ -127,7 +120,7 @@ export class TrbAPI {
         try {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
-            headers: this.headers,
+            preset: 'chrome',
             timeout,
           });
 

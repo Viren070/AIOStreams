@@ -1,4 +1,5 @@
 import type { HeadersInit } from 'undici';
+import { presetFor } from './header-presets.js';
 import { resolveHeaderOverride, type FetchContext } from './overrides.js';
 
 export interface HeaderReader {
@@ -62,9 +63,13 @@ const NO_USER_AGENT = ['none', 'false', '', 'undefined'];
 export function headersFor(
   base: RequestHeaders,
   url: URL,
-  context?: FetchContext
+  context?: FetchContext,
+  fallbackPreset?: string
 ): { headers: RequestHeaders; preset?: string } {
-  const override = resolveHeaderOverride(url, context);
+  let override = resolveHeaderOverride(url, context);
+  const fallback =
+    !override && fallbackPreset && presetFor(fallbackPreset, url);
+  if (fallback) override = { headers: fallback.headers, preset: fallback.name };
   let headers: RequestHeaders;
   if (override?.preset) {
     headers = new RequestHeaders(override.headers);

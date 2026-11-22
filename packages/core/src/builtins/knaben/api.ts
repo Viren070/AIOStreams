@@ -4,7 +4,6 @@ import {
   formatZodError,
   makeRequest,
   DistributedLock,
-  HEADER_PRESETS,
 } from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
@@ -80,19 +79,10 @@ const API_BASE_URL = 'https://api.knaben.org';
 const API_VERSION = '2';
 
 class KnabenAPI {
-  private headers: Record<string, string>;
-
   private readonly searchCache = Cache.getInstance<
     string,
     KnabenSearchResponse
   >('knaben:search');
-
-  constructor() {
-    this.headers = {
-      'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
-      Accept: 'application/json',
-    };
-  }
 
   async search(options: KnabenSearchOptions): Promise<KnabenSearchResponse> {
     const queryParams = new URLSearchParams({
@@ -176,7 +166,7 @@ class KnabenAPI {
     try {
       const response = await makeRequest(url.toString(), {
         method: 'GET',
-        headers: this.headers,
+        preset: 'chrome',
         timeout: options.timeout ?? appConfig.userLimits.timeouts.maxTimeout,
       });
 
