@@ -201,6 +201,34 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
     );
   });
 
+  /** S03E03, absolute 28: the episode is in the folder of season 2. */
+  const absolute28 = async (others: DebridFile[]) => {
+    const name = '[Grp] Show - 28 [1080p].mkv';
+    return select(
+      '[Grp] Show S01-S03 (BD 1080p)',
+      [
+        { index: 0, name: 'Show.S01E03.1080p.mkv', size: 1e9 },
+        ...others,
+        { index: 9, name, path: `/Season 2/${name}`, size: 1e9 },
+      ],
+      { titles: ['Show'], season: 3, episode: 3, absoluteEpisode: 28 }
+    );
+  };
+
+  it('passes over another episode with no season to the episode', async () => {
+    const other = { index: 1, name: '[Grp] Show - 04 [1080p].mkv', size: 1e9 };
+    assert.equal(await absolute28([other]), 9);
+  });
+
+  it('passes over ambiguous episodes with no season to the episode', async () => {
+    const others = [1, 2].map((index) => ({
+      index,
+      name: `[Grp] Show - 03 v${index} [1080p].mkv`,
+      size: 1e9,
+    }));
+    assert.equal(await absolute28(others), 9);
+  });
+
   it('gives no extra in place of a file of another season of a pack of seasons', async () => {
     const files = [
       ...thronesFiles((relative) => `/${relative}`).filter(

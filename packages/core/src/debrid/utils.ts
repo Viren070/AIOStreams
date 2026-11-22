@@ -599,7 +599,12 @@ export async function selectFileInTorrentOrNZB(
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
 
   // Score each file
-  const fileScores = [];
+  const fileScores: {
+    file: DebridFile;
+    parsed: ParsedResult;
+    score: number;
+    index: number;
+  }[] = [];
   for (let index = 0; index < debridDownload.files.length; index++) {
     const file = debridDownload.files[index];
     let score = 0;
@@ -878,59 +883,58 @@ export async function selectFileInTorrentOrNZB(
   // Sort by score descending
   fileScores.sort((a, b) => b.score - a.score);
 
-  // Select the best matching file. In a pack of several seasons, a file of
-  // another season gives way to the next that names an episode; with none, it
-  // stays and is refused below.
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
-  const bestMatch =
-    (metadata &&
-      parsedTitle &&
-      !options?.skipSeasonEpisodeCheck &&
-      isPackSeasonWrong(fileScores[0].parsed, parsedTitle, metadata) &&
-      fileScores.find(
-        ({ parsed }) =>
-          (!!parsed.episodes?.length || !!parsed.date) &&
-          !isPackSeasonWrong(parsed, parsedTitle, metadata)
-      )) ||
-    fileScores[0];
-  const parsedFile = bestMatch.parsed;
-
-  if (
-    metadata &&
-    parsedFile &&
-    parsedTitle &&
-    !options?.skipSeasonEpisodeCheck
-  ) {
+  /** Why a file is not the episode asked for: a debug line and a skip reason. */
+  const refusal = (
+    file: DebridFile,
+    parsed: ParsedResult
+  ): [string, string] | undefined => {
+    if (!metadata || !parsedTitle || options?.skipSeasonEpisodeCheck) {
+      return undefined;
+    }
     if (
-      isEpisodeWrong(parsedFile, metadata) ||
+      isEpisodeWrong(parsed, metadata) ||
       isEpisodeWrong(parsedTitle, metadata)
     ) {
-      logger.debug(
-        `Episode ${metadata.episode} or ${metadata.absoluteEpisode} not found in ${torrentOrNZB.title} and ${bestMatch.file.name}, skipping...`
-      );
-      report.skipped = true;
-      report.skipReason = `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`;
-      await handleReport();
-      return undefined;
+      return [
+        `Episode ${metadata.episode} or ${metadata.absoluteEpisode} not found in ${torrentOrNZB.title} and ${file.name}, skipping...`,
+        `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`,
+      ];
     }
-    if (isPackSeasonWrong(parsedFile, parsedTitle, metadata)) {
-      logger.debug(
-        `Season ${metadata.season} not found in ${bestMatch.file.name} of ${torrentOrNZB.title}, skipping...`
-      );
-      report.skipped = true;
-      report.skipReason = `Invalid season number - Expected ${metadata.season}, not found in the file of a multi-season pack`;
-      await handleReport();
-      return undefined;
+    if (isPackSeasonWrong(parsed, parsedTitle, metadata)) {
+      return [
+        `Season ${metadata.season} not found in ${file.name} of ${torrentOrNZB.title}, skipping...`,
+        `Invalid season number - Expected ${metadata.season}, not found in the file of a multi-season pack`,
+      ];
     }
-    if (isEpisodeAmbiguous(parsedFile, fileScores, parsedTitle, metadata)) {
-      logger.debug(
-        `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`
-      );
-      report.skipped = true;
-      report.skipReason = `Ambiguous episode - several files of a multi-season pack are episode ${metadata.episode} with no season`;
-      await handleReport();
-      return undefined;
+    if (isEpisodeAmbiguous(parsed, fileScores, parsedTitle, metadata)) {
+      return [
+        `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`,
+        `Ambiguous episode - several files of a multi-season pack are episode ${metadata.episode} with no season`,
+      ];
     }
+    return undefined;
+  };
+
+  // Select the best matching file. In a pack of several seasons, one refused
+  // gives way to the next that names an episode and is not; with none, it
+  // stays and is refused.
+  const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
+  const bestMatch =
+    (isPack &&
+      refusal(fileScores[0].file, fileScores[0].parsed) &&
+      fileScores.find(
+        ({ file, parsed }) =>
+          (!!parsed.episodes?.length || !!parsed.date) && !refusal(file, parsed)
+      )) ||
+    fileScores[0];
+  const refused = refusal(bestMatch.file, bestMatch.parsed);
+  if (refused) {
+    logger.debug(refused[0]);
+    report.skipped = true;
+    report.skipReason = refused[1];
+    await handleReport();
+    return undefined;
   }
   report.selectedFile = {
     name: bestMatch.file.name,
