@@ -16,7 +16,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   } catch (error: any) {
     logger.error(`Health check failed: ${error.message}`);
     next(
-      new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR, error.message)
+      new APIError(
+        constants.ErrorCode.INTERNAL_SERVER_ERROR,
+        undefined,
+        error.message
+      )
     );
   }
 });
