@@ -54,6 +54,21 @@ export class AnimeToshoNewPreset extends TorznabPreset {
         ],
       },
       {
+        id: 'searchMode',
+        name: 'Search Mode',
+        description:
+          '`Auto` searches by ID (TVDB/IMDb/TMDB + season/episode) when the indexer supports it; `Forced Query` always searches by title text instead. **Note**: `Both` creates two separate addons, one per mode.',
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'auto',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Forced Query', value: 'query' },
+          { label: 'Both', value: 'both' },
+        ],
+      },
+      {
         id: 'useMultipleInstances',
         name: 'Use Multiple Instances',
         description:
@@ -95,6 +110,7 @@ export class AnimeToshoNewPreset extends TorznabPreset {
       url: animeToshoNewUrl,
       apiPath: '/api',
       paginate: false,
+      forceQuerySearch: options.forceQuerySearch ?? false,
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');
