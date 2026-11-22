@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 // Load the core entry point first; the debrid services import each other.
 import '../index.js';
 import {
+  featureFiles,
   parseFileNames,
   selectFileInTorrentOrNZB,
   selectableFileNames,
@@ -497,6 +498,59 @@ describe('selectFileInTorrentOrNZB, season in the folder only', () => {
         absoluteEpisode: 13,
       }),
       13
+    );
+  });
+});
+
+describe('selectFileInTorrentOrNZB, samples', () => {
+  it('tells a sample by the word, a number beside it or not', () => {
+    const isSample = (name: string) =>
+      featureFiles([{ index: 0, name, size: 1e9 }]).length === 0;
+    for (const name of [
+      'sample1.mkv',
+      'Movie.2020.Sample01.mkv',
+      'Movie.2020.Trailer2.mkv',
+      'E01sample.mkv',
+      'show_sample.mkv',
+      'Samples.mkv',
+    ]) {
+      assert.equal(isSample(name), true, name);
+    }
+    for (const name of [
+      'The.Sampler.mkv',
+      'Previewing.mkv',
+      'ShowSample.mkv',
+    ]) {
+      assert.equal(isSample(name), false, name);
+    }
+  });
+
+  it('gives the feature, not a numbered sample of a matching year', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 'Movie.mkv', size: 8e9 },
+      { index: 1, name: 'Movie.2020.Sample1.mkv', size: 5e7 },
+    ];
+    assert.equal(
+      await select('Movie 2020 1080p', files, {
+        titles: ['Movie'],
+        year: 2020,
+      }),
+      0
+    );
+  });
+
+  it('gives the episode, not a numbered sample of it', async () => {
+    const files: DebridFile[] = [
+      { index: 0, name: 's01e01.mkv', size: 2e9 },
+      { index: 1, name: 'Show.S01E01.sample1.mkv', size: 5e7 },
+    ];
+    assert.equal(
+      await select('Show S01', files, {
+        titles: ['Show'],
+        season: 1,
+        episode: 1,
+      }),
+      0
     );
   });
 });

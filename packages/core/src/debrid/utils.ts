@@ -431,9 +431,8 @@ export function selectableFileNames(
   return names;
 }
 
-/** The word, not a part of one: "_" and "." part words too. */
-const SAMPLE_WORD =
-  /(?<![\p{L}\p{N}])(?:sample|trailer|preview)s?(?![\p{L}\p{N}])/iu;
+/** The word, which only letters join: "Sample1" is a sample, "Sampler" not. */
+const SAMPLE_WORD = /(?<!\p{L})(?:sample|trailer|preview)s?(?!\p{L})/iu;
 
 function isSampleName(name: string | undefined): boolean {
   return !!name && SAMPLE_WORD.test(name);
