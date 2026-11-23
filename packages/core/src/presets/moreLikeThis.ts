@@ -10,6 +10,7 @@ import {
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
 import z, { ZodError } from 'zod';
+import { socialsOption } from './options.js';
 
 const moreLikeThisManifests = Cache.getInstance<string, string>(
   'moreLikeThisManifests'
@@ -350,18 +351,12 @@ export class MoreLikeThisPreset extends Preset {
         default: true,
         required: false,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/rama1997/More-Like-This',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/rama1997/More-Like-This',
+        },
+      ]),
     ];
 
     return {

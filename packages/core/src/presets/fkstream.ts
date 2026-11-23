@@ -5,6 +5,7 @@ import { Preset, baseOptions } from './preset.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { StremThruPreset } from './stremthru.js';
+import { includeP2POption, servicesOption, socialsOption } from './options.js';
 
 export class FKStreamPreset extends StremThruPreset {
   static override get METADATA() {
@@ -44,37 +45,9 @@ export class FKStreamPreset extends StremThruPreset {
         ],
         default: 'last_update',
       },
-      {
-        id: 'includeP2P',
-        name: 'Include P2P',
-        description:
-          'Include P2P streams in the addon even when using a debrid service',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
-      {
-        id: 'services',
-        name: 'Services',
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [{ id: 'website', url: 'https://linktr.ee/FanKai' }],
-      },
+      includeP2POption(),
+      servicesOption(supportedServices),
+      socialsOption([{ id: 'website', url: 'https://linktr.ee/FanKai' }]),
     ];
 
     return {

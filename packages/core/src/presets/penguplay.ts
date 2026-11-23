@@ -15,6 +15,12 @@ import {
 } from '../parser/index.js';
 import { arrayMerge } from '../parser/merge.js';
 import { appConfig, constants, normaliseLanguage } from '../utils/index.js';
+import {
+  mediaTypesOption,
+  nameOption,
+  socialsOption,
+  timeoutOption,
+} from './options.js';
 
 const TITLE_LINE = getRegexForTextAfterEmojis(['🍿', '📡']);
 const SOURCE_LINE = getRegexForTextAfterEmojis(['🛰️']);
@@ -224,14 +230,7 @@ export class PenguPlayPreset extends Preset {
     ];
 
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'PenguPlay',
-      },
+      nameOption('PenguPlay'),
       {
         id: 'manifestUrl',
         name: 'Manifest URL',
@@ -248,19 +247,7 @@ export class PenguPlayPreset extends Preset {
         type: 'alert',
         intent: 'warning-basic',
       },
-      {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        required: true,
-        default: appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false,
-        },
-      },
+      timeoutOption(),
       {
         id: 'resources',
         name: 'Resources',
@@ -274,31 +261,11 @@ export class PenguPlayPreset extends Preset {
           value: resource,
         })),
       },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-        showInSimpleMode: false,
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'website', url: 'https://pengu.uk' },
-          { id: 'donate', url: 'https://pengu.uk/donate' },
-        ],
-      },
+      mediaTypesOption(),
+      socialsOption([
+        { id: 'website', url: 'https://pengu.uk' },
+        { id: 'donate', url: 'https://pengu.uk/donate' },
+      ]),
     ];
 
     return {

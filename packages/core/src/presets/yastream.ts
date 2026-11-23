@@ -3,6 +3,7 @@ import { constants, createLogger, ServiceId } from '../utils/index.js';
 import { baseOptions, Preset } from './preset.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 const logger = createLogger('core');
 
@@ -215,18 +216,12 @@ export class YastreamPreset extends Preset {
           { label: 'Extended ratings XRDB', value: 'xrdb' },
         ],
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'website', url: 'https://yastream.tamthai.de' },
-          { id: 'discord', url: 'https://discord.gg/fnXwYn7wBf' },
-          { id: 'github', url: 'https://github.com/hoangtamthai/yastream' },
-          { id: 'ko-fi', url: 'https://ko-fi.com/hoangtamthai' },
-        ],
-      },
+      socialsOption([
+        { id: 'website', url: 'https://yastream.tamthai.de' },
+        { id: 'discord', url: 'https://discord.gg/fnXwYn7wBf' },
+        { id: 'github', url: 'https://github.com/hoangtamthai/yastream' },
+        { id: 'ko-fi', url: 'https://ko-fi.com/hoangtamthai' },
+      ]),
     ];
 
     return {

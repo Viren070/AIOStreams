@@ -2,6 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { Preset, baseOptions } from './preset.js';
 import { constants, SUBTITLES_RESOURCE } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { socialsOption } from './options.js';
 
 export class SubDLPreset extends Preset {
   static override get METADATA() {
@@ -114,18 +115,12 @@ export class SubDLPreset extends Preset {
         required: true,
         default: 'hiInclude',
       },
-      {
-        id: 'socials',
-        type: 'socials',
-        name: '',
-        description: '',
-        socials: [
-          {
-            id: 'donate',
-            url: 'https://sociabuzz.com/apisapis/donate',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'donate',
+          url: 'https://sociabuzz.com/apisapis/donate',
+        },
+      ]),
     ];
 
     return {

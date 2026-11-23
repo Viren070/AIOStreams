@@ -7,6 +7,7 @@ import {
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import StreamParser from '../parser/streams.js';
+import { socialsOption } from './options.js';
 
 const wyzieLanguageOptions = [
   { value: 'aa', label: 'Afar' },
@@ -633,17 +634,11 @@ export class FlixStreamsPreset extends Preset {
       providerSubsection,
       liveTvSubsection,
       wyzieSubsection,
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'website', url: 'https://flixnest.app/flix-streams/' },
-          { id: 'ko-fi', url: 'https://ko-fi.com/sandortoth' },
-          { id: 'donate', url: 'https://flixnest.tip4serv.com/' },
-        ],
-      },
+      socialsOption([
+        { id: 'website', url: 'https://flixnest.app/flix-streams/' },
+        { id: 'ko-fi', url: 'https://ko-fi.com/sandortoth' },
+        { id: 'donate', url: 'https://flixnest.tip4serv.com/' },
+      ]),
     ];
 
     return {

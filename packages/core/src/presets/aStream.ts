@@ -14,6 +14,7 @@ import {
 } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { FileParser, StreamParser } from '../parser/index.js';
+import { socialsOption } from './options.js';
 
 class AStreamStreamParser extends StreamParser {
   protected override getParsedFile(
@@ -112,18 +113,12 @@ export class AStreamPreset extends Preset {
         type: 'boolean',
         default: true,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/Dydhzo/astream',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/Dydhzo/astream',
+        },
+      ]),
     ];
 
     return {

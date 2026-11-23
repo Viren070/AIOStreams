@@ -8,11 +8,16 @@
   PresetMetadata,
 } from '../db/index.js';
 import { baseOptions } from './preset.js';
-import { appConfig, SERVICE_DETAILS } from '../utils/index.js';
+import { appConfig } from '../utils/index.js';
 import { constants, ServiceId } from '../utils/index.js';
 import { StreamParser } from '../parser/index.js';
 import { BuiltinAddonPreset, BuiltinStreamParser } from './builtin.js';
 import { StremThruPreset } from './stremthru.js';
+import {
+  mediaTypesOption,
+  servicesOption,
+  useMultipleInstancesOption,
+} from './options.js';
 
 export class TorBoxSearchPreset extends BuiltinAddonPreset {
   public static readonly supportedServices: ServiceId[] =
@@ -59,45 +64,8 @@ export class TorBoxSearchPreset extends BuiltinAddonPreset {
           min: 1,
         },
       },
-      {
-        id: 'services',
-        name: 'Services',
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: TorBoxSearchPreset.supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        default: [],
-        options: [
-          {
-            label: 'Movie',
-            value: 'movie',
-          },
-          {
-            label: 'Series',
-            value: 'series',
-          },
-          {
-            label: 'Anime',
-            value: 'anime',
-          },
-        ],
-      },
+      servicesOption(TorBoxSearchPreset.supportedServices),
+      mediaTypesOption(),
       {
         id: 'userSearchEngines',
         name: 'Use User Search Engines',
@@ -116,15 +84,7 @@ export class TorBoxSearchPreset extends BuiltinAddonPreset {
         required: false,
         default: false,
       },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'Use a different TorBox Search addon for each service when using multiple services, rather than using one instance for all services.',
-        type: 'boolean',
-        required: false,
-        default: false,
-      },
+      useMultipleInstancesOption(),
     ];
 
     return {

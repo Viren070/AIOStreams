@@ -34,8 +34,7 @@ export class BuiltinStreamParser extends StreamParser {
   ): string[] {
     const languages = super.getLanguages(stream, currentParsedStream);
     const builtinLanguages = (stream as Record<string, unknown>).languages as
-      | string[]
-      | undefined;
+      string[] | undefined;
     if (builtinLanguages) {
       for (const lang of builtinLanguages) {
         if (!languages.includes(lang)) {

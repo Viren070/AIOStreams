@@ -10,6 +10,7 @@ import { baseOptions } from './preset.js';
 import { config as appConfig } from '../config/index.js';
 import { StreamParser, getRegexForTextAfterEmojis } from '../parser/index.js';
 import { arrayMerge } from '../parser/merge.js';
+import { mediaTypesOption, socialsOption } from './options.js';
 
 class EasynewsPlusPlusParser extends EasynewsParser {
   protected override get ageRegex(): RegExp {
@@ -87,21 +88,7 @@ export class EasynewsPlusPlusPreset extends EasynewsPreset {
           appConfig.presets.easynewsPlusPlus.defaultTimeout ??
             appConfig.presets.defaultTimeout
         ),
-        {
-          id: 'mediaTypes',
-          name: 'Media Types',
-          description:
-            'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-          type: 'multi-select',
-          required: false,
-          options: [
-            { label: 'Movie', value: 'movie' },
-            { label: 'Series', value: 'series' },
-            { label: 'Anime', value: 'anime' },
-          ],
-          default: [],
-          showInSimpleMode: false,
-        },
+        mediaTypesOption(),
         {
           id: 'strictTitleMatching',
           name: 'Strict Title Matching',
@@ -111,22 +98,16 @@ export class EasynewsPlusPlusPreset extends EasynewsPreset {
           required: true,
           default: false,
         },
-        {
-          id: 'socials',
-          name: '',
-          description: '',
-          type: 'socials',
-          socials: [
-            {
-              id: 'github',
-              url: 'https://github.com/panteLx/easynews-plus-plus',
-            },
-            {
-              id: 'buymeacoffee',
-              url: 'https://buymeacoffee.com/pantel',
-            },
-          ],
-        },
+        socialsOption([
+          {
+            id: 'github',
+            url: 'https://github.com/panteLx/easynews-plus-plus',
+          },
+          {
+            id: 'buymeacoffee',
+            url: 'https://buymeacoffee.com/pantel',
+          },
+        ]),
       ],
     };
   }

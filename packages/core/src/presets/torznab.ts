@@ -3,19 +3,24 @@ import { Preset, baseOptions } from './preset.js';
 import { appConfig, RESOURCES, ServiceId, constants } from '../utils/index.js';
 import { StremThruPreset } from './stremthru.js';
 import { BuiltinAddonPreset } from './builtin.js';
+import {
+  initialLimitOption,
+  mediaTypesOption,
+  nameOption,
+  paginateOption,
+  resolveForceQuerySearch,
+  searchModeOption,
+  seasonEpisodeStrategyOption,
+  servicesOption,
+  timeoutOption,
+  useMultipleInstancesOption,
+} from './options.js';
 
 export class TorznabPreset extends BuiltinAddonPreset {
   static override get METADATA() {
     const supportedResources = [constants.STREAM_RESOURCE];
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'Torznab',
-      },
+      nameOption('Torznab'),
       {
         id: 'api',
         name: 'Torznab Endpoint',
@@ -42,132 +47,14 @@ export class TorznabPreset extends BuiltinAddonPreset {
           },
         ],
       },
-      {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        default: appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false,
-        },
-      },
-      {
-        id: 'services',
-        name: 'Services',
-        description:
-          'Optionally override the services that are used. If not specified, then the services that are enabled and supported will be used.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        options: StremThruPreset.supportedServices.map((service) => ({
-          value: service,
-          label: constants.SERVICE_DETAILS[service].name,
-        })),
-        default: undefined,
-        emptyIsUndefined: true,
-      },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        showInSimpleMode: false,
-        default: [],
-        options: [
-          {
-            label: 'Movie',
-            value: 'movie',
-          },
-          {
-            label: 'Series',
-            value: 'series',
-          },
-          {
-            label: 'Anime',
-            value: 'anime',
-          },
-        ],
-      },
-      // {
-      //   id: 'forceQuerySearch',
-      //   name: 'Force Query Search',
-      //   description: 'Force the addon to use the query search parameter',
-      //   type: 'boolean',
-      //   required: false,
-      //   default: false,
-      // },
-      {
-        id: 'searchMode',
-        name: 'Search Mode',
-        description:
-          '`Auto` searches by ID (TVDB/IMDb/TMDB + season/episode) when the indexer supports it; `Forced Query` always searches by title text instead. **Note**: `Both` creates two separate addons, one per mode.',
-        type: 'select',
-        required: false,
-        showInSimpleMode: false,
-        default: 'auto',
-        options: [
-          { label: 'Auto', value: 'auto' },
-          { label: 'Forced Query', value: 'query' },
-          { label: 'Both', value: 'both' },
-        ],
-      },
-      {
-        id: 'seasonEpisodeStrategy',
-        name: 'Season/Episode Search Strategy',
-        description:
-          "Controls whether series searches in `Auto` mode query at the episode level, the season level, or both - useful for private trackers where season packs replace individual episodes. A season-level search may return season packs, individual episodes, or both, depending on the indexer. `Dynamic` decides based on whether the season is still airing. Pair with `Season/Episode Matching` in Filters to filter out results that don't match.",
-        type: 'select',
-        required: false,
-        showInSimpleMode: false,
-        default: 'episode',
-        options: [
-          { label: 'Episode', value: 'episode' },
-          { label: 'Season', value: 'season' },
-          { label: 'Dynamic (Season Preferred)', value: 'dynamic' },
-          {
-            label: 'Episode First, Season Fallback',
-            value: 'episodeFirst',
-          },
-        ],
-      },
-      {
-        id: 'initialLimit',
-        name: 'Initial Result Limit',
-        description:
-          'Sets the maximum results to return. Leave blank to use the optimal default limit. Only use this if you need to restrict results.',
-        type: 'number',
-        required: false,
-        showInSimpleMode: false,
-        default: undefined,
-        constraints: {
-          min: 1,
-          max: 10000,
-          forceInUi: false,
-        },
-      },
-      {
-        id: 'paginate',
-        name: 'Paginate Results',
-        description:
-          'Whether to paginate through all available results when searching. Enabling this can provide more results at the cost of increased search time and more requests.',
-        type: 'boolean',
-        default: false,
-        required: false,
-      },
-      {
-        id: 'useMultipleInstances',
-        name: 'Use Multiple Instances',
-        description:
-          'Torznab supports multiple services in one instance of the addon - which is used by default. If this is enabled, then the addon will be created for each service.',
-        type: 'boolean',
-        default: false,
-        showInSimpleMode: false,
-      },
+      { ...timeoutOption(), required: false },
+      servicesOption(StremThruPreset.supportedServices),
+      mediaTypesOption(),
+      searchModeOption(),
+      seasonEpisodeStrategyOption(),
+      initialLimitOption(),
+      paginateOption(),
+      useMultipleInstancesOption(),
     ];
 
     return {
@@ -204,18 +91,10 @@ export class TorznabPreset extends BuiltinAddonPreset {
         )}`
       );
     }
-    // prettier-ignore
-    const getQuerySearchValues = (searchMode: string, forceQuerySearch?: boolean): boolean[] => {
-      switch (searchMode) {
-        case 'both': return [true, false];
-        case 'query': return [true];
-        case 'auto': return [false];
-        default: return [forceQuerySearch ?? false];
-      }
-    };
-
-    // prettier-ignore
-    const querySearchValues = getQuerySearchValues(options.searchMode, options.forceQuerySearch);
+    const querySearchValues = resolveForceQuerySearch(
+      options.searchMode,
+      options.forceQuerySearch
+    );
 
     // prettier-ignore
     return querySearchValues.flatMap(forceQuerySearch => {

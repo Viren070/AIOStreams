@@ -14,6 +14,12 @@ import {
   Stream,
 } from '../db/index.js';
 import { StreamParser } from '../parser/index.js';
+import {
+  mediaTypesOption,
+  nameOption,
+  socialsOption,
+  timeoutOption,
+} from './options.js';
 
 const logger = createLogger('davex');
 
@@ -68,14 +74,7 @@ export class DavexPreset extends Preset {
     const supportedResources = [constants.STREAM_RESOURCE];
 
     const options: Option[] = [
-      {
-        id: 'name',
-        name: 'Name',
-        description: 'What to call this addon',
-        type: 'string',
-        required: true,
-        default: 'davex',
-      },
+      nameOption('davex'),
       {
         id: 'manifestUrl',
         name: 'Manifest URL',
@@ -84,46 +83,14 @@ export class DavexPreset extends Preset {
         type: 'string',
         required: true,
       },
-      {
-        id: 'timeout',
-        name: 'Timeout (ms)',
-        description: 'The timeout for this addon',
-        type: 'number',
-        required: true,
-        default: appConfig.presets.defaultTimeout,
-        constraints: {
-          min: appConfig.userLimits.timeouts.minTimeout,
-          max: appConfig.userLimits.timeouts.maxTimeout,
-          forceInUi: false, // large ranges don't work well
+      timeoutOption(),
+      mediaTypesOption(),
+      socialsOption([
+        {
+          id: 'github',
+          url: 'https://github.com/qooode/nzbdavex',
         },
-      },
-      {
-        id: 'mediaTypes',
-        name: 'Media Types',
-        description:
-          'Limits this addon to the selected media types for streams. For example, selecting "Movie" means this addon will only be used for movie streams (if the addon supports them). Leave empty to allow all.',
-        type: 'multi-select',
-        required: false,
-        options: [
-          { label: 'Movie', value: 'movie' },
-          { label: 'Series', value: 'series' },
-          { label: 'Anime', value: 'anime' },
-        ],
-        default: [],
-        showInSimpleMode: false,
-      },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'github',
-            url: 'https://github.com/qooode/nzbdavex',
-          },
-        ],
-      },
+      ]),
     ];
 
     return {

@@ -15,6 +15,7 @@ import {
   debridioLogo,
 } from './debridio.js';
 import { FileParser, StreamParser } from '../parser/index.js';
+import { resultPassthroughOption } from './options.js';
 
 class DebridioTvStreamParser extends StreamParser {
   protected override getParsedFile(
@@ -101,15 +102,7 @@ export class DebridioTvPreset extends Preset {
         options: channels,
         default: channels.map((channel) => channel.value),
       },
-      {
-        id: 'resultPassthrough',
-        name: 'Result Passthrough',
-        description:
-          'Ensure no Debridio TV results are filtered out by anything',
-        required: false,
-        type: 'boolean',
-        default: true,
-      },
+      resultPassthroughOption(true),
       debridioSocialOption,
     ];
 

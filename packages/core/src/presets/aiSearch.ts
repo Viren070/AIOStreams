@@ -3,6 +3,7 @@ import { Preset, baseOptions } from './preset.js';
 import { Cache, constants, makeRequest } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
 import { z } from 'zod';
+import { socialsOption } from './options.js';
 
 const configCache = Cache.getInstance<string, string>('ai-search-config');
 
@@ -177,18 +178,12 @@ export class AISearchPreset extends Preset {
         },
         showInSimpleMode: false,
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          {
-            id: 'buymeacoffee',
-            url: 'https://buymeacoffee.com/itcon',
-          },
-        ],
-      },
+      socialsOption([
+        {
+          id: 'buymeacoffee',
+          url: 'https://buymeacoffee.com/itcon',
+        },
+      ]),
     ];
 
     return {

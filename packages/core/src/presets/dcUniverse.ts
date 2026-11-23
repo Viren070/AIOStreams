@@ -2,6 +2,7 @@ import { Addon, Option, UserData } from '../db/index.js';
 import { CacheKeyRequestOptions, Preset, baseOptions } from './preset.js';
 import { constants } from '../utils/index.js';
 import { config as appConfig } from '../config/index.js';
+import { socialsOption } from './options.js';
 
 export class DcUniversePreset extends Preset {
   // dc-batman-animations%2C
@@ -77,16 +78,10 @@ export class DcUniversePreset extends Preset {
         options: this.catalogs,
         default: this.catalogs.map((catalog) => catalog.value),
       },
-      {
-        id: 'socials',
-        name: '',
-        description: '',
-        type: 'socials',
-        socials: [
-          { id: 'github', url: 'https://github.com/tapframe/addon-dc' },
-          { id: 'ko-fi', url: 'https://ko-fi.com/tapframe' },
-        ],
-      },
+      socialsOption([
+        { id: 'github', url: 'https://github.com/tapframe/addon-dc' },
+        { id: 'ko-fi', url: 'https://ko-fi.com/tapframe' },
+      ]),
     ];
 
     return {

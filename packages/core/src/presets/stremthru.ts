@@ -156,7 +156,7 @@ export class StremThruPreset extends Preset {
     constants.TORRIN_SERVICE,
   ] as const;
 
-  protected static readonly socialLinks: Option['socials'] = [
+  protected static readonly socialLinks: NonNullable<Option['socials']> = [
     {
       id: 'github',
       url: 'https://github.com/MunifTanjim/stremthru',
