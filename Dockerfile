@@ -96,7 +96,7 @@ COPY --from=builder /build/packages/server/node_modules ./packages/server/node_m
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS impersonate
 ARG TARGETOS
 ARG TARGETARCH
-ARG IMPERSONATE_VERSION=v0.1.0
+ARG IMPERSONATE_VERSION=v0.1.1
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
   go install -trimpath -ldflags="-s -w" github.com/AIOStreams/impersonate/cmd/impersonate@${IMPERSONATE_VERSION} \
   && cp "$(find /go/bin -name impersonate -type f | head -n 1)" /impersonate
