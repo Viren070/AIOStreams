@@ -126,6 +126,22 @@ describe('deduplicate usenet library results', () => {
     assert.equal(results.length, 1);
     assert.equal(results[0].library, true);
   });
+
+  it('does not merge non-library results that only share a folder name', async () => {
+    const a = usenet('Movie.A.2020.mkv', 'Downloads', false, 'https://x/a');
+    const b = usenet('Movie.B.2021.mkv', 'Downloads', false, 'https://x/b');
+    const deduplicator = new StreamDeduplicator({
+      deduplicator: {
+        enabled: true,
+        keys: ['filename', 'infoHash'],
+        cached: 'single_result',
+      },
+      presets: [],
+      services: [],
+    } as unknown as UserData);
+    const results = await deduplicator.deduplicate([a, b]);
+    assert.equal(results.length, 2);
+  });
 });
 
 describe('mergeLanguagesAndSubtitles', () => {

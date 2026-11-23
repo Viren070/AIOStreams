@@ -96,10 +96,17 @@ function dedupKeys(
 
   const isUsenet = stream.type === 'usenet' || stream.type === 'stremio-usenet';
 
-  // A usenet result's filename is the file inside the NZB once that is known
-  // (e.g. it is in the library) and the NZB name before. The folder is always
-  // the NZB name, so keying on it lets the two states group together.
-  if (keys.includes('filename') && isUsenet && stream.folderName) {
+  // A library entry's filename is the file inside the NZB, while a result the
+  // library has not seen keeps the NZB name as its filename. The library's
+  // folder is the NZB name, so keying on it lets the two states group
+  // together. Limited to library streams: elsewhere `folderName` may be a
+  // containing folder shared by unrelated NZBs.
+  if (
+    keys.includes('filename') &&
+    isUsenet &&
+    stream.library &&
+    stream.folderName
+  ) {
     streamKeys.push(`filename:${normaliseName(stream.folderName)}`);
   }
 
