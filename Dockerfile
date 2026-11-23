@@ -140,8 +140,8 @@ LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
 WORKDIR /app
 
-COPY --from=busybox:1.36.0-uclibc /bin/wget /bin/wget
-COPY --from=busybox:1.36.0-uclibc /bin/sh /bin/sh
+COPY --from=busybox:1.37.0-uclibc /bin/wget /bin/wget
+COPY --from=busybox:1.37.0-uclibc /bin/sh /bin/sh
 COPY --from=mimalloc /usr/local/lib/libmimalloc.so.2 /usr/local/lib/libmimalloc.so.2
 ENV LD_PRELOAD=/usr/local/lib/libmimalloc.so.2
 COPY --from=ffprobe /src/ffprobe /usr/local/bin/ffprobe
