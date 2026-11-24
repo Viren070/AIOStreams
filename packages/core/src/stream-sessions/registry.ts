@@ -97,7 +97,7 @@ interface Session {
   startedAt: number;
   lastSeenAt: number;
   reads: Map<number, LiveRead>;
-  /** Read the progress bar tracks; players hold one at a time. */
+  /** Most recently opened read that is still active. */
   newestReadId: number;
   emaBytesPerSec: number;
   /** Bytes seen since the rate last advanced. */
@@ -294,6 +294,13 @@ export class StreamRegistry {
         if (closed) return;
         closed = true;
         session.reads.delete(read.id);
+        if (session.newestReadId === read.id) {
+          session.newestReadId = 0;
+          // Map keys retain insertion order.
+          for (const id of session.reads.keys()) {
+            session.newestReadId = id;
+          }
+        }
         session.lastSeenAt = Date.now();
         session.dirty = true;
       },
