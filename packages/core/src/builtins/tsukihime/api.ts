@@ -16,7 +16,7 @@ const TsukihimeTorrentSchema = z
   .looseObject({
     id: z.number(),
     name: z.string(),
-    btih: z.string().transform((h) => h.toLowerCase()),
+    btih: z.string().toLowerCase().nullable(),
     totalsize: z.number(),
     source_date: z.number(), // unix timestamp
     group: z.object({ name: z.string() }).nullable().optional(),
@@ -47,14 +47,16 @@ const TsukihimeTorrentsResponseSchema = z
   .transform((data) => ({
     total: data.total,
     limit: data.limit,
-    results: data.results,
+    results: data.results.filter(
+      (r): r is typeof r & { hash: string } => r.hash !== null
+    ),
   }));
-
-type TsukihimeTorrent = z.infer<typeof TsukihimeTorrentSchema>;
 
 type TsukihimeTorrentsResponse = z.infer<
   typeof TsukihimeTorrentsResponseSchema
 >;
+
+type TsukihimeTorrent = TsukihimeTorrentsResponse['results'][number];
 
 const TsukihimeAnimeSchema = z.looseObject({ id: z.number() });
 
