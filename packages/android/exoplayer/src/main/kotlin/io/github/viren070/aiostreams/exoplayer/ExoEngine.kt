@@ -122,6 +122,8 @@ class ExoEngine(private val context: Context) : Engine {
         .setLoadControl(BufferControl(cache))
         .build()
 
+    // Cleared by release() on any thread, read by Media3's callbacks on the main one.
+    @Volatile
     private var listener: Engine.Listener? = null
 
     @Volatile
@@ -444,6 +446,8 @@ class ExoEngine(private val context: Context) : Engine {
     }
 
     override fun release() {
+        // As mpv's engine does: a replaced engine reports nothing more, not even an error already on its way.
+        listener = null
         main.post {
             main.removeCallbacks(poll)
             upscaling = false
@@ -750,6 +754,8 @@ class ExoEngine(private val context: Context) : Engine {
                 chosen = true
                 Failures.undecodable(tracks)?.let { error ->
                     url = null
+                    // Stopped with no period playing: Media3 can't re-pick tracks for a changed output now.
+                    selector.tracksKnown = false
                     player.stop()
                     listener?.onUnplayable(error)
                     return
@@ -767,6 +773,12 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onRenderedFirstFrame() = subtitles.firstFrameShown()
 
         override fun onPlayerError(error: PlaybackException) {
+            // The file already failed or stopped. Media3 can still raise a second error for it, such as the
+            // NullPointerException a capabilities change queued before the first error throws on the emptied queue.
+            if (url == null) {
+                AppLog.i(TAG, "a later error for a file that already ended (${error.errorCodeName}): ${error.cause?.message}")
+                return
+            }
             if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
                 player.seekToDefaultPosition()
                 player.prepare()
