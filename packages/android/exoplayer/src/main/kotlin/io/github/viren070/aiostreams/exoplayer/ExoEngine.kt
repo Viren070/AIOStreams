@@ -129,6 +129,9 @@ class ExoEngine(private val context: Context) : Engine {
     private var stage: Stage? = null
     private val decoders = ConcurrentHashMap<String, String>()
 
+    // The decoder told the picture's size; until then it comes from the track.
+    private var sizedByDecoder = false
+
     // The file playing and what the page asked of it.
     private var url: String? = null
     private var options = TrackOptions(null)
@@ -195,6 +198,25 @@ class ExoEngine(private val context: Context) : Engine {
         player.setVideoSurfaceView(stage.video)
         upscaled = false
         routeVideo()
+    }
+
+    /**
+     * The selected video track's size, which the file's header tells before the decoder does; none for sound alone,
+     * and null for a track whose header tells none, which leaves the layout to the decoder.
+     */
+    private fun trackSize(tracks: Tracks): VideoSize? {
+        for (group in tracks.groups) {
+            if (group.type != C.TRACK_TYPE_VIDEO) continue
+            for (i in 0 until group.length) {
+                if (!group.isTrackSelected(i)) continue
+                val format = group.getTrackFormat(i)
+                if (format.width <= 0 || format.height <= 0) return null
+                val ratio = if (format.pixelWidthHeightRatio > 0f) format.pixelWidthHeightRatio else 1f
+                val turned = format.rotationDegrees == 90 || format.rotationDegrees == 270
+                return if (turned) VideoSize(format.height, format.width, 1 / ratio) else VideoSize(format.width, format.height, ratio)
+            }
+        }
+        return VideoSize.UNKNOWN
     }
 
     // Exo has no queue of its own, so a file to play next waits for the page to load it.
@@ -458,6 +480,7 @@ class ExoEngine(private val context: Context) : Engine {
 
     private fun open(request: LoadRequest) {
         selector.tracksKnown = false
+        sizedByDecoder = false
         if (url != null) listener?.onEnded("stop", null, null)
         http.setDefaultRequestProperties(request.headers)
         link.setDefaultRequestProperties(request.headers)
@@ -736,8 +759,16 @@ class ExoEngine(private val context: Context) : Engine {
             state(PlayerState(speed = parameters.speed.toDouble()))
 
         override fun onVideoSizeChanged(size: VideoSize) {
+            if (size.width == 0 || size.height == 0) {
+                // Media3 reports no size whenever it turns the video renderer off: a track re-pick mid-file, a stop,
+                // the next file opening. The layout keeps the last size, as none would fill the screen and stretch the
+                // picture, and the track's size applies again until the decoder tells one; that also undoes a size of
+                // the file before that came after open().
+                sizedByDecoder = false
+                return
+            }
+            sizedByDecoder = true
             stage?.videoSize = size
-            if (size.width == 0 || size.height == 0) return
             if (upscaled) upscaler?.setVideoSize(size.width, size.height)
             subtitles.videoSized(size.width, size.height)
             listener?.onVideo(width = (size.width * size.pixelWidthHeightRatio).toInt(), height = size.height)
@@ -745,6 +776,8 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onTracksChanged(tracks: Tracks) {
             this@ExoEngine.tracks.update(tracks)
+            // Laid out before the first frame, which the screen's own shape would stretch.
+            if (!sizedByDecoder && !tracks.isEmpty) trackSize(tracks)?.let { stage?.videoSize = it }
             if (!tracks.isEmpty) selector.tracksKnown = true
             if (!chosen && !this@ExoEngine.tracks.isEmpty()) {
                 chosen = true
