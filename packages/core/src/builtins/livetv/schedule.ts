@@ -1,12 +1,21 @@
 import type { Meta } from '../../db/index.js';
 import { deltas, sums } from './store.js';
 
-/** One guide id's programmes by start, times in seconds. */
+/**
+ * One guide id's programmes by start, times in seconds. The optional columns
+ * are left out when no programme has them; '', 0 or [] marks one without.
+ */
 export interface Schedule {
   starts: Uint32Array;
   ends: Uint32Array;
   titles: string[];
   overviews: string[];
+  thumbnails?: string[];
+  genres?: string[][];
+  seasons?: Uint16Array;
+  episodes?: Uint16Array;
+  /** The guide's UTC offset per programme, in minutes. */
+  zones?: Int16Array;
 }
 
 export interface StoredSchedule {
@@ -14,6 +23,11 @@ export interface StoredSchedule {
   lengths: number[];
   titles: string[];
   overviews: string[];
+  thumbnails?: string[];
+  genres?: string[][];
+  seasons?: number[];
+  episodes?: number[];
+  zones?: number[];
 }
 
 export const EMPTY: Schedule = {
@@ -23,20 +37,30 @@ export const EMPTY: Schedule = {
   overviews: [],
 };
 
-const stringBytes = (list: string[]) =>
+const stringBytes = (list: string[] = []) =>
   list.reduce((n, t) => n + 2 * t.length + 16, 0);
 
 export const scheduleBytes = (s: Schedule) =>
   s.starts.byteLength +
   s.ends.byteLength +
+  (s.seasons?.byteLength ?? 0) +
+  (s.episodes?.byteLength ?? 0) +
+  (s.zones?.byteLength ?? 0) +
   stringBytes(s.titles) +
-  stringBytes(s.overviews);
+  stringBytes(s.overviews) +
+  stringBytes(s.thumbnails) +
+  (s.genres?.reduce((n, g) => n + 16 + stringBytes(g), 0) ?? 0);
 
 export const encodeSchedule = (s: Schedule): StoredSchedule => ({
   starts: deltas(s.starts),
   lengths: Array.from(s.ends, (end, i) => end - s.starts[i]),
   titles: s.titles,
   overviews: s.overviews,
+  thumbnails: s.thumbnails,
+  genres: s.genres,
+  seasons: s.seasons && Array.from(s.seasons),
+  episodes: s.episodes && Array.from(s.episodes),
+  zones: s.zones && Array.from(s.zones),
 });
 
 export function decodeSchedule(s: StoredSchedule): Schedule {
@@ -46,6 +70,11 @@ export function decodeSchedule(s: StoredSchedule): Schedule {
     ends: Uint32Array.from(s.lengths, (length, i) => starts[i] + length),
     titles: s.titles,
     overviews: s.overviews,
+    thumbnails: s.thumbnails,
+    genres: s.genres,
+    seasons: s.seasons && Uint16Array.from(s.seasons),
+    episodes: s.episodes && Uint16Array.from(s.episodes),
+    zones: s.zones && Int16Array.from(s.zones),
   };
 }
 
@@ -54,8 +83,8 @@ export function onAt(schedule: Schedule, at: number): boolean {
   return i < schedule.starts.length && schedule.starts[i] <= at;
 }
 
-/** The index of the first programme still on at `at`. */
-export function firstOnAt(schedule: Schedule, at: number): number {
+/** The index of the first programme starting at or after `at`. */
+export function startsFrom(schedule: Schedule, at: number): number {
   let low = 0;
   let high = schedule.starts.length;
   while (low < high) {
@@ -63,6 +92,12 @@ export function firstOnAt(schedule: Schedule, at: number): number {
     if (schedule.starts[mid] < at) low = mid + 1;
     else high = mid;
   }
+  return low;
+}
+
+/** The index of the first programme still on at `at`. */
+export function firstOnAt(schedule: Schedule, at: number): number {
+  let low = startsFrom(schedule, at);
   while (low > 0 && schedule.ends[low - 1] > at) low--;
   return low;
 }
@@ -82,28 +117,36 @@ function isoTime(seconds: number): string {
   return iso;
 }
 
-/** A channel's programmes on in a window, each `<channel id>:<start>:<end>`. */
+/**
+ * A channel's programmes on in a window, each `<channel id>:<start>:<end>`;
+ * `shift` seconds move the guide's times, as an M3U `tvg-shift` does.
+ */
 export function programmesOf(
   schedule: Schedule | undefined,
   channel: string,
   from: number,
-  to: number
+  to: number,
+  shift = 0
 ): Video[] {
   if (!schedule) return [];
   const videos: Video[] = [];
   for (
-    let at = firstOnAt(schedule, from);
-    at < schedule.starts.length && schedule.starts[at] < to;
+    let at = firstOnAt(schedule, from - shift);
+    at < schedule.starts.length && schedule.starts[at] < to - shift;
     at++
   ) {
-    const start = schedule.starts[at];
-    const end = schedule.ends[at];
+    const start = schedule.starts[at] + shift;
+    const end = schedule.ends[at] + shift;
     videos.push({
       id: `${channel}:${start}:${end}`,
       title: schedule.titles[at],
       startTime: isoTime(start),
       endTime: isoTime(end),
       overview: schedule.overviews[at] || undefined,
+      thumbnail: schedule.thumbnails?.[at] || undefined,
+      genres: schedule.genres?.[at]?.length ? schedule.genres[at] : undefined,
+      season: schedule.seasons?.[at] || undefined,
+      episode: schedule.episodes?.[at] || undefined,
     });
   }
   return videos;

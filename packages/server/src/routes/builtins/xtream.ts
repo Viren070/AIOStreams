@@ -1,34 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import {
-  APIError,
-  constants,
-  fromUrlSafeBase64,
-  testXtreamLogin,
-  XtreamAddon,
-  XtreamError,
-} from '@aiostreams/core';
+import { Request, Response, NextFunction } from 'express';
+import { testXtreamLogin, XtreamAddon, XtreamError } from '@aiostreams/core';
 import { z } from 'zod';
-import { rawExtras } from '../../utils/extras.js';
 import { createResponse } from '../../utils/responses.js';
 import { requireSessionIfAuthRequired } from '../../middlewares/auth.js';
 import { userApiRateLimiter } from '../../middlewares/ratelimit.js';
+import { liveTvRouter } from './livetv.js';
 
-const router: Router = Router();
-
-interface Params {
-  encodedConfig: string;
-  type: string;
-  id: string;
-}
-
-const addonOf = (encodedConfig: string) =>
-  new XtreamAddon(JSON.parse(fromUrlSafeBase64(encodedConfig)));
-
-/** The provider's failures as the provider's, not as this server's. */
-const failure = (error: unknown) =>
-  error instanceof XtreamError
-    ? new APIError(constants.ErrorCode.UPSTREAM_ERROR, 502, error.message)
-    : error;
+const router = liveTvRouter((config) => new XtreamAddon(config), XtreamError);
 
 const LoginSchema = z.object({
   server: z.string().min(1),
@@ -61,65 +39,6 @@ router.post(
       );
     } catch (error) {
       next(error);
-    }
-  }
-);
-
-router.get(
-  '/:encodedConfig/manifest.json',
-  async (
-    req: Request<Pick<Params, 'encodedConfig'>>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      res.json(await addonOf(req.params.encodedConfig).getManifest());
-    } catch (error) {
-      next(failure(error));
-    }
-  }
-);
-
-router.get(
-  '/:encodedConfig/catalog/:type/:id{/:extras}.json',
-  async (
-    req: Request<Params & { extras?: string }>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    const { encodedConfig, type, id } = req.params;
-    try {
-      res.json(
-        await addonOf(encodedConfig).getCatalog(type, id, rawExtras(req))
-      );
-    } catch (error) {
-      next(failure(error));
-    }
-  }
-);
-
-router.get(
-  '/:encodedConfig/meta/:type/:id.json',
-  async (req: Request<Params>, res: Response, next: NextFunction) => {
-    const { encodedConfig, type, id } = req.params;
-    try {
-      res.json({ meta: await addonOf(encodedConfig).getMeta(type, id) });
-    } catch (error) {
-      next(failure(error));
-    }
-  }
-);
-
-router.get(
-  '/:encodedConfig/stream/:type/:id.json',
-  async (req: Request<Params>, res: Response, next: NextFunction) => {
-    const { encodedConfig, type, id } = req.params;
-    try {
-      res.json({
-        streams: await addonOf(encodedConfig).getStreams(type, id),
-      });
-    } catch (error) {
-      next(failure(error));
     }
   }
 );
