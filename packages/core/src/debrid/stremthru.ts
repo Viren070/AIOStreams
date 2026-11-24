@@ -19,6 +19,8 @@ import {
   parseFileNames,
   selectableFileNames,
   selectableFiles,
+  isArchiveFile,
+  isArchiveOnly,
 } from './utils.js';
 import {
   DebridServiceConfig,
@@ -1085,6 +1087,16 @@ export class StremThruService
       });
     }
 
+    if (isArchiveOnly(magnetDownload.files)) {
+      throw new DebridError('Download only contains archives', {
+        statusCode: 400,
+        statusText: 'The debrid service stores this torrent as an archive',
+        code: 'ARCHIVE_ONLY',
+        headers: {},
+        body: magnetDownload,
+      });
+    }
+
     let file:
       | { name?: string; link?: string; size: number; index?: number }
       | undefined;
@@ -1136,6 +1148,16 @@ export class StremThruService
           chosenIndex: playbackInfo.index,
         }
       );
+    }
+
+    if (file && isArchiveFile(file)) {
+      throw new DebridError('Selected file is an archive part', {
+        statusCode: 400,
+        statusText: 'Selected file is an archive part',
+        code: 'ARCHIVE_ONLY',
+        headers: {},
+        body: file,
+      });
     }
 
     if (!file?.link) {
