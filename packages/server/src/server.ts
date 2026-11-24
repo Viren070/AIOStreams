@@ -200,8 +200,8 @@ function registerUsenetTasks() {
     id: 'usenet-metrics-drain',
     label: 'Flush usenet provider metrics',
     description:
-      'Drains the in-memory native usenet engine counters into the hourly ' +
-      'provider metrics table that powers the dashboard charts.',
+      'Drains the in-memory native usenet engine counters and indexer search ' +
+      'counts into the hourly tables that power the dashboard.',
     category: 'usenet',
     kind: 'scheduled',
     intervalMs: 60_000,

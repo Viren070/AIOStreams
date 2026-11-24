@@ -132,6 +132,13 @@ export interface UsenetIndexerStatRow {
   lastError?: { status?: number; message: string; atMs: number };
 }
 
+export interface UsenetIndexerSearchRollup {
+  indexer: string;
+  searches: number;
+  results: number;
+  unique: number;
+}
+
 export interface UsenetStatsOverview {
   window: UsenetWindow;
   generatedAt: number;
@@ -151,6 +158,7 @@ export interface UsenetStatsOverview {
   };
   providers: UsenetProviderStatRow[];
   indexers: UsenetIndexerStatRow[];
+  indexerSearches: UsenetIndexerSearchRollup[];
   throughput: UsenetThroughputPoint[];
   firstSeenAt?: number;
 }
@@ -351,6 +359,8 @@ export interface UsenetStatsResetResult {
   providerBytes: number;
   indexerRows: number;
   indexerGrabs: number;
+  searchRows: number;
+  searches: number;
   lastErrorRows: number;
 }
 

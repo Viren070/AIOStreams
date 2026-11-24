@@ -60,6 +60,9 @@ export interface AnalyticsEvent {
   latency_ms?: number | null;
   result_count?: number | null;
   final_count?: number | null;
+  /** Per-user `addon_contribution`: results left after filters, and those no other addon returned. */
+  kept_count?: number | null;
+  unique_count?: number | null;
   /** Per-user `addon_contribution`: how this addon's request ended (see {@link AnalyticsDisposition}). */
   disposition?: AnalyticsDisposition | null;
   /** Per-user `addon_contribution`: services attributed to this addon's surviving streams. */
@@ -216,7 +219,7 @@ async function flush(): Promise<void> {
         e.service_breakdown && Object.keys(e.service_breakdown).length > 0
           ? JSON.stringify(e.service_breakdown)
           : null;
-      return sql`(${e.ts}, ${e.event_type}, ${e.resource ?? null}, ${e.uuid_hash ?? null}, ${e.addon_id ?? null}, ${e.addon_instance_hash ?? null}, ${e.preset_id ?? null}, ${e.url_overridden ?? false}, ${e.status ?? null}, ${e.error_stage ?? null}, ${e.error_kind ?? null}, ${e.latency_ms ?? null}, ${e.result_count ?? null}, ${e.final_count ?? null}, ${e.disposition ?? null}, ${serviceBreakdown}, ${e.addon_name ?? null}, ${e.feature_dim ?? null}, ${e.feature_key ?? null}, ${e.ip_prefix ?? null})`;
+      return sql`(${e.ts}, ${e.event_type}, ${e.resource ?? null}, ${e.uuid_hash ?? null}, ${e.addon_id ?? null}, ${e.addon_instance_hash ?? null}, ${e.preset_id ?? null}, ${e.url_overridden ?? false}, ${e.status ?? null}, ${e.error_stage ?? null}, ${e.error_kind ?? null}, ${e.latency_ms ?? null}, ${e.result_count ?? null}, ${e.final_count ?? null}, ${e.kept_count ?? null}, ${e.unique_count ?? null}, ${e.disposition ?? null}, ${serviceBreakdown}, ${e.addon_name ?? null}, ${e.feature_dim ?? null}, ${e.feature_key ?? null}, ${e.ip_prefix ?? null})`;
     });
     // Chunk to keep parameter counts sane.
     const CHUNK = 500;
@@ -224,7 +227,7 @@ async function flush(): Promise<void> {
       const slice = rows.slice(i, i + CHUNK);
       await db.exec(
         sql`INSERT INTO analytics_events
-          (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, disposition, service_breakdown, addon_name, feature_dim, feature_key, ip_prefix)
+          (ts, event_type, resource, uuid_hash, addon_id, addon_instance_hash, preset_id, url_overridden, status, error_stage, error_kind, latency_ms, result_count, final_count, kept_count, unique_count, disposition, service_breakdown, addon_name, feature_dim, feature_key, ip_prefix)
           VALUES ${join(slice)}`
       );
     }

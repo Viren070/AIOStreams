@@ -1,8 +1,11 @@
 import { settingsStore } from '../../../config/index.js';
 import { createLogger } from '../../../logging/logger.js';
+import { drainIndexerSearches } from '../search-metrics.js';
 import {
   UsenetMetricsRepository,
   UsenetIndexerMetricsRepository,
+  UsenetIndexerSearchesRepository,
+  type UsenetIndexerSearchRollup,
   type UsenetMetricDelta,
 } from '../../../db/index.js';
 import {
@@ -131,6 +134,7 @@ export interface UsenetStatsOverview {
   };
   providers: UsenetProviderStatRow[];
   indexers: UsenetIndexerStatRow[];
+  indexerSearches: UsenetIndexerSearchRollup[];
   throughput: UsenetThroughputPoint[];
   firstSeenAt?: number;
 }
@@ -184,7 +188,8 @@ function emptyCache(): CacheStats {
 
 /**
  * Drain in-memory per-provider deltas from every warm engine and fold them into
- * the hourly metrics table. Returns the number of provider deltas persisted.
+ * the hourly metrics table, then flush buffered indexer searches. Returns the
+ * number of provider deltas persisted.
  */
 export async function drainUsenetMetrics(): Promise<number> {
   const merged = new Map<string, UsenetMetricDelta>();
@@ -218,8 +223,12 @@ export async function drainUsenetMetrics(): Promise<number> {
     }
   }
   const deltas = [...merged.values()];
-  if (deltas.length === 0) return 0;
-  await UsenetMetricsRepository.addDeltas(deltas);
+  try {
+    if (deltas.length > 0) await UsenetMetricsRepository.addDeltas(deltas);
+  } finally {
+    // A failed provider write mustn't hold back the searches.
+    await drainIndexerSearches();
+  }
   return deltas.length;
 }
 
@@ -228,11 +237,12 @@ export async function pruneUsenetMetrics(
   retentionDays: number
 ): Promise<number> {
   const cutoff = Date.now() - retentionDays * DAY_MS;
-  const [providerRows, indexerRows] = await Promise.all([
+  const [providerRows, indexerRows, searchRows] = await Promise.all([
     UsenetMetricsRepository.pruneOlderThan(cutoff),
     UsenetIndexerMetricsRepository.pruneOlderThan(cutoff),
+    UsenetIndexerSearchesRepository.pruneOlderThan(cutoff),
   ]);
-  return providerRows + indexerRows;
+  return providerRows + indexerRows + searchRows;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +271,8 @@ export interface UsenetStatsResetResult {
   providerBytes: number;
   indexerRows: number;
   indexerGrabs: number;
+  searchRows: number;
+  searches: number;
   lastErrorRows: number;
 }
 
@@ -270,12 +282,14 @@ export interface UsenetStatsResetResult {
  * which discards the in-flight busy intervals live streams are mid-way through.
  * Sibling replicas hold their own, so a drain interval of theirs can still land.
  */
-async function flushBeforeDelete(): Promise<void> {
+async function flushBeforeDelete(touchesIndexers: boolean): Promise<void> {
   try {
     await drainUsenetMetrics();
   } catch (err) {
     logger.warn({ err }, 'drain before stats reset failed');
   }
+  // Not caught: unflushed searches would land after the delete.
+  if (touchesIndexers) await drainIndexerSearches();
 }
 
 /** Reset recorded rollups for one provider/indexer, or for all of them. */
@@ -288,7 +302,7 @@ export async function resetUsenetStats(
   const providerScope = { providerId: id, sinceMs, untilMs };
   const indexerScope = { indexer: id, sinceMs, untilMs };
 
-  if (!dryRun) await flushBeforeDelete();
+  if (!dryRun) await flushBeforeDelete(touchesIndexers);
 
   const provider = touchesProviders
     ? await UsenetMetricsRepository.sumScope(providerScope)
@@ -296,6 +310,9 @@ export async function resetUsenetStats(
   const indexer = touchesIndexers
     ? await UsenetIndexerMetricsRepository.sumScope(indexerScope)
     : { rows: 0, grabs: 0 };
+  const search = touchesIndexers
+    ? await UsenetIndexerSearchesRepository.sumScope(indexerScope)
+    : { rows: 0, searches: 0 };
 
   // The last-error row carries no hour, so only an unbounded reset can clear it.
   const clearsLastError =
@@ -305,8 +322,10 @@ export async function resetUsenetStats(
   if (!dryRun) {
     if (touchesProviders)
       await UsenetMetricsRepository.deleteScope(providerScope);
-    if (touchesIndexers)
+    if (touchesIndexers) {
       await UsenetIndexerMetricsRepository.deleteScope(indexerScope);
+      await UsenetIndexerSearchesRepository.deleteScope(indexerScope);
+    }
     if (clearsLastError)
       lastErrorRows = await UsenetIndexerMetricsRepository.deleteLastError(id);
     logger.warn(
@@ -318,6 +337,7 @@ export async function resetUsenetStats(
         untilMs,
         providerRows: provider.rows,
         indexerRows: indexer.rows,
+        searchRows: search.rows,
       },
       'usenet stats reset'
     );
@@ -330,6 +350,8 @@ export async function resetUsenetStats(
     providerBytes: provider.bytes,
     indexerRows: indexer.rows,
     indexerGrabs: indexer.grabs,
+    searchRows: search.rows,
+    searches: search.searches,
     lastErrorRows,
   };
 }
@@ -404,14 +426,21 @@ export async function getUsenetStatsOverview(
   const { live, pool, cache } = getUsenetLiveStats();
   const poolById = new Map(pool.providers.map((p) => [p.id, p]));
 
-  const [summary, series, firstSeenAt, indexerSummary, indexerErrors] =
-    await Promise.all([
-      UsenetMetricsRepository.summaryByProvider(sinceMs),
-      UsenetMetricsRepository.timeSeries(sinceMs, bucketMs),
-      UsenetMetricsRepository.firstHour(),
-      UsenetIndexerMetricsRepository.summaryByIndexer(sinceMs),
-      UsenetIndexerMetricsRepository.lastErrors(),
-    ]);
+  const [
+    summary,
+    series,
+    firstSeenAt,
+    indexerSummary,
+    indexerErrors,
+    indexerSearches,
+  ] = await Promise.all([
+    UsenetMetricsRepository.summaryByProvider(sinceMs),
+    UsenetMetricsRepository.timeSeries(sinceMs, bucketMs),
+    UsenetMetricsRepository.firstHour(),
+    UsenetIndexerMetricsRepository.summaryByIndexer(sinceMs),
+    UsenetIndexerMetricsRepository.lastErrors(),
+    UsenetIndexerSearchesRepository.summary(sinceMs),
+  ]);
   const summaryById = new Map(summary.map((s) => [s.providerId, s]));
 
   const totalArticles = summary.reduce((s, p) => s + p.articles, 0);
@@ -550,6 +579,7 @@ export async function getUsenetStatsOverview(
     totals,
     providers,
     indexers,
+    indexerSearches,
     throughput,
     firstSeenAt,
   };
