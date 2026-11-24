@@ -143,6 +143,8 @@ Inside `::each`, the track being rendered is available as `{track.*}`:
 | `{track.tags}`            | string[] | audio    | Audio format, then Atmos or DTS:X if present (e.g. `DD+`, `Atmos`)          |
 | `{track.tag}`             | string   | audio    | Deprecated: the first of `{track.tags}`                                     |
 | `{track.channels}`        | string   | audio    | Channels (e.g. `5.1`)                                                       |
+| `{track.bitrate}`         | number   | audio    | Bitrate in bits per second                                                  |
+| `{track.sampleRate}`      | number   | audio    | Sample rate in Hz (e.g. `48000`)                                            |
 | `{track.default}`         | boolean  | both     | Marked as the default track                                                 |
 | `{track.forced}`          | boolean  | subtitle | Forced subtitles                                                            |
 | `{track.hearingImpaired}` | boolean  | both     | For the hearing impaired (SDH)                                              |

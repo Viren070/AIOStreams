@@ -1391,6 +1391,8 @@ export const MediaTrackSchema = z.object({
   tag: z.string().optional(),
   tags: z.array(z.string()).optional(),
   channels: z.string().optional(),
+  bitrate: z.number().optional(),
+  sampleRate: z.number().optional(),
   default: z.boolean().optional(),
   forced: z.boolean().optional(),
   commentary: z.boolean().optional(),
