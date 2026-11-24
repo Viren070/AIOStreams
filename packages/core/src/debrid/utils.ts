@@ -430,16 +430,133 @@ export function selectableFileNames(
   return names;
 }
 
+/** The word, which only letters join: "Sample1" is a sample, "Sampler" not. */
+const SAMPLE_WORD = /(?<!\p{L})(?:sample|trailer|preview)s?(?!\p{L})/iu;
+
 function isSampleName(name: string | undefined): boolean {
-  const lower = name?.toLowerCase();
-  return (
-    !!lower &&
-    ['sample', 'trailer', 'preview'].some((keyword) => lower.includes(keyword))
-  );
+  return !!name && SAMPLE_WORD.test(name);
 }
 
 function isCreditlessName(name: string | undefined): boolean {
   return !!name && /nc(ed|op)/i.test(name);
+}
+
+/** A sample or creditless clip: its episode number is not an episode's. */
+function isClipName(name: string | undefined): boolean {
+  return isSampleName(name) || isCreditlessName(name);
+}
+
+/** An absolute number (of the show or of its split entry) names the episode. */
+function isAbsoluteMatch(
+  parsed: ParsedResult,
+  metadata: TitleMetadata | undefined
+): boolean {
+  return [metadata?.absoluteEpisode, metadata?.relativeAbsoluteEpisode].some(
+    (number) =>
+      !!number &&
+      number !== metadata?.episode &&
+      !!parsed.episodes?.includes(number)
+  );
+}
+
+/**
+ * A file named by its episode alone ("S2/03 Title.mkv") takes the season of the
+ * nearest folder that names one. A folder of several seasons answers nothing;
+ * a range of episodes ("13-24", read as S13E24) is not a season. A file
+ * numbered absolutely keeps no season, as its name gives none.
+ */
+function withFolderSeason(
+  parsed: ParsedResult | undefined,
+  file: DebridFile,
+  metadata: TitleMetadata | undefined
+): ParsedResult | undefined {
+  if (!parsed || parsed.seasons?.length || !file.path) return parsed;
+  if (isAbsoluteMatch(parsed, metadata)) return parsed;
+  const folders = file.path.split(/[\\/]/).filter(Boolean).slice(0, -1);
+  for (const folder of folders.reverse()) {
+    const { seasons, episodes } = parseTorrentTitleCached(folder);
+    if (episodes?.length === 1) continue;
+    if (seasons?.length) {
+      return seasons.length === 1 ? { ...parsed, seasons } : parsed;
+    }
+  }
+  return parsed;
+}
+
+/** A disc image, or a file of an extras or disc folder: no episode of its own. */
+function isExtraOrDisc(file: DebridFile): boolean {
+  return (
+    /\.iso$/i.test(file.name ?? '') ||
+    (file.path ?? '')
+      .split(/[\\/]/)
+      .slice(0, -1)
+      .some((folder) => /^(extras|featurettes|bonus|bdmv)$/i.test(folder))
+  );
+}
+
+/** An air date or an absolute number names the episode whatever the season. */
+function matchesWithoutSeason(
+  parsed: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  return (
+    (!!parsed.date && !!metadata.airDates?.includes(parsed.date)) ||
+    isAbsoluteMatch(parsed, metadata)
+  );
+}
+
+/**
+ * A pack of several seasons can lack the one asked for: its episode of another
+ * season is not the episode.
+ */
+function isPackSeasonWrong(
+  best: ParsedResult,
+  parsedTitle: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  return (
+    (parsedTitle.seasons?.length ?? 0) >= 2 &&
+    !matchesWithoutSeason(best, metadata) &&
+    isSeasonWrong(best, metadata)
+  );
+}
+
+function isBareEpisode(parsed: ParsedResult, episode: number): boolean {
+  return !parsed.seasons?.length && !!parsed.episodes?.includes(episode);
+}
+
+/** How many files, samples and creditless clips aside, are the episode with no season. */
+function countBareEpisodes(
+  scored: { file: DebridFile; parsed: ParsedResult }[],
+  metadata: TitleMetadata | undefined
+): number {
+  const episode = metadata?.episode;
+  if (!episode) return 0;
+  return scored.filter(
+    ({ file, parsed }) =>
+      isBareEpisode(parsed, episode) && !isClipName(file.name)
+  ).length;
+}
+
+/**
+ * In a pack of several seasons, an episode with no season in its name or
+ * folders is any of the files with that number: the size would pick one.
+ * Better no stream than another season's episode.
+ */
+function isEpisodeAmbiguous(
+  best: ParsedResult,
+  bareEpisodes: number,
+  parsedTitle: ParsedResult,
+  metadata: TitleMetadata
+): boolean {
+  const episode = metadata.episode;
+  if ((parsedTitle.seasons?.length ?? 0) < 2 || !metadata.season || !episode) {
+    return false;
+  }
+  if (!isBareEpisode(best, episode) || matchesWithoutSeason(best, metadata)) {
+    return false;
+  }
+  return bareEpisodes > 1;
 }
 
 /** Below this share of the largest video, a file is a clip, not a feature. */
@@ -519,11 +636,20 @@ export async function selectFileInTorrentOrNZB(
     torrentOrNZB.size || files.reduce((max, f) => Math.max(max, f.size), 0);
 
   // Score each file
-  const fileScores = [];
+  const fileScores: {
+    file: DebridFile;
+    parsed: ParsedResult;
+    score: number;
+    index: number;
+  }[] = [];
   for (let index = 0; index < debridDownload.files.length; index++) {
     const file = debridDownload.files[index];
     let score = 0;
-    const parsed = parsedFiles.get(file.name ?? '');
+    const parsed = withFolderSeason(
+      parsedFiles.get(file.name ?? ''),
+      file,
+      metadata
+    );
     const fileReport: SelectionReport['files'][number] = {
       index,
       name: file.name,
@@ -780,6 +906,7 @@ export async function selectFileInTorrentOrNZB(
 
     fileScores.push({
       file,
+      parsed,
       score: Math.max(score, 0),
       index,
     });
@@ -797,29 +924,106 @@ export async function selectFileInTorrentOrNZB(
   // Sort by score descending
   fileScores.sort((a, b) => b.score - a.score);
 
-  // Select the best matching file
-  const bestMatch = fileScores[0];
-  const parsedFile = parsedFiles.get(bestMatch.file.name ?? '');
   const parsedTitle = parsedFiles.get(torrentOrNZB.title ?? '');
-
+  const isPack = (parsedTitle?.seasons?.length ?? 0) >= 2;
+  // Counted once: refusal runs for each candidate, and a pack can have thousands.
+  const bareEpisodes = isPack ? countBareEpisodes(fileScores, metadata) : 0;
+  // A pack whose files name no episode (parts named by title) leaves the
+  // choice to the folders' seasons; a sample's number names none.
+  const namesEpisodes =
+    isPack &&
+    fileScores.some(
+      ({ file, parsed }) =>
+        !isClipName(file.name) && (!!parsed.episodes?.length || !!parsed.date)
+    );
+  // Without numbers, a file is episode 1 only as the one file of its season;
+  // extras and discs are left out, as they are no episode beside it. Not when
+  // TVDB numbers the episode otherwise: its episode 1 is another file.
+  const soleOfSeason = new Map<number, DebridFile | undefined>();
   if (
-    metadata &&
-    parsedFile &&
-    parsedTitle &&
-    !options?.skipSeasonEpisodeCheck
+    isPack &&
+    !namesEpisodes &&
+    metadata?.episode === 1 &&
+    (metadata.tvdbSeason ?? metadata.season) === metadata.season &&
+    (metadata.tvdbEpisode ?? metadata.episode) === metadata.episode
   ) {
-    if (
-      isEpisodeWrong(parsedFile, metadata) ||
-      isEpisodeWrong(parsedTitle, metadata)
-    ) {
-      logger.debug(
-        `Episode ${metadata.episode} or ${metadata.absoluteEpisode} not found in ${torrentOrNZB.title} and ${bestMatch.file.name}, skipping...`
-      );
-      report.skipped = true;
-      report.skipReason = `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`;
-      await handleReport();
+    for (const { file, parsed } of fileScores) {
+      if (
+        isClipName(file.name) ||
+        isExtraOrDisc(file) ||
+        parsed.seasons?.length !== 1
+      ) {
+        continue;
+      }
+      const season = parsed.seasons[0];
+      soleOfSeason.set(season, soleOfSeason.has(season) ? undefined : file);
+    }
+  }
+  /** Why a file is not the episode asked for: a debug line and a skip reason. */
+  const refusal = (
+    file: DebridFile,
+    parsed: ParsedResult
+  ): [string, string] | undefined => {
+    if (!metadata || !parsedTitle || options?.skipSeasonEpisodeCheck) {
       return undefined;
     }
+    if (
+      isEpisodeWrong(parsed, metadata) ||
+      isEpisodeWrong(parsedTitle, metadata)
+    ) {
+      return [
+        `Episode ${metadata.episode} or ${metadata.absoluteEpisode} not found in ${torrentOrNZB.title} and ${file.name}, skipping...`,
+        `Invalid episode number - Expected ${metadata.episode} or ${metadata.absoluteEpisode}, not found in file or torrent`,
+      ];
+    }
+    if (isPackSeasonWrong(parsed, parsedTitle, metadata)) {
+      return [
+        `Season ${metadata.season} not found in ${file.name} of ${torrentOrNZB.title}, skipping...`,
+        `Invalid season number - Expected ${metadata.season}, not found in the file of a multi-season pack`,
+      ];
+    }
+    if (
+      isPack &&
+      metadata.episode &&
+      !parsed.episodes?.length &&
+      !parsed.date &&
+      (metadata.season === undefined ||
+        soleOfSeason.get(metadata.season) !== file)
+    ) {
+      return [
+        `${file.name} of ${torrentOrNZB.title} names no episode, skipping...`,
+        `No episode - the file of a multi-season pack has no episode number or date`,
+      ];
+    }
+    if (isEpisodeAmbiguous(parsed, bareEpisodes, parsedTitle, metadata)) {
+      return [
+        `Episode ${metadata.episode} of ${torrentOrNZB.title} has no season in several files, skipping...`,
+        `Ambiguous episode - several files of a multi-season pack are episode ${metadata.episode} with no season`,
+      ];
+    }
+    return undefined;
+  };
+
+  // Select the best matching file. In a pack of several seasons, one refused
+  // gives way to the next that is not; with none, it stays and is refused.
+  const topRefusal =
+    isPack && refusal(fileScores[0].file, fileScores[0].parsed);
+  const bestMatch =
+    (topRefusal &&
+      fileScores.find(({ file, parsed }) => !refusal(file, parsed))) ||
+    fileScores[0];
+  if (topRefusal && bestMatch !== fileScores[0]) {
+    logger.debug(
+      `${fileScores[0].file.name} gives way to ${bestMatch.file.name}: ${topRefusal[0]}`
+    );
+  }
+  const refused = refusal(bestMatch.file, bestMatch.parsed);
+  if (refused) {
+    logger.debug(refused[0]);
+    report.skipped = true;
+    report.skipReason = refused[1];
+    await handleReport();
+    return undefined;
   }
   report.selectedFile = {
     name: bestMatch.file.name,
