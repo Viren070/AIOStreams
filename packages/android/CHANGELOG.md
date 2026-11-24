@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.18.1](https://github.com/Viren070/AIOStreams/compare/android-v0.18.0...android-v0.18.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **android:** free a file's cache and decoders when it's stopped after ending ([#1770](https://github.com/Viren070/AIOStreams/issues/1770)) ([b077c92](https://github.com/Viren070/AIOStreams/commit/b077c927f58ac04d2c618eb1a6196ca88e1b4ccb))
+
+
+### Performance Improvements
+
+* **web:** draw only the cards near the screen in long lists ([5a2d3b2](https://github.com/Viren070/AIOStreams/commit/5a2d3b2d1d995804a48b1c4cc70c256f18ee8add))
+
 ## [0.18.0](https://github.com/Viren070/AIOStreams/compare/android-v0.17.0...android-v0.18.0) (2026-11-21)
 
 
