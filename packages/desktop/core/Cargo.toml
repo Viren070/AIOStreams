@@ -16,3 +16,6 @@ serde.workspace = true
 serde_json.workspace = true
 url = "2"
 ureq = "3.4"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+unicode-normalization = "0.1"
