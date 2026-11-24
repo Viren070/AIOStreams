@@ -79,7 +79,7 @@ async function query(
   params.set('episodeLength', String(episodeLength));
   const base = ctx.baseUrl.replace(/\/+$/, '');
   const response = await makeRequest(
-    `${base}/v2/skip-times/${encodeURIComponent(String(lookup.ids.mal))}/${lookup.episode}?${params}`,
+    `${base}/v2/skip-times/${encodeURIComponent(String(lookup.ids.mal))}/${lookup.animeEpisode}?${params}`,
     {
       timeout: ctx.timeoutMs,
       headers: {
@@ -88,7 +88,10 @@ async function query(
       },
     }
   );
-  // 404 is its normal "nothing submitted", not a fault.
+  // 404 is its normal "nothing submitted", not a fault. A rate limit or a
+  // server error is thrown so it is not remembered as a miss.
+  if (response.status === 429 || response.status >= 500)
+    throw new Error(`AniSkip answered ${response.status}`);
   if (!response.ok) return [];
   const body = (await response.json()) as AniSkipResponse;
   if (!body?.found || !Array.isArray(body.results)) return [];
@@ -96,10 +99,14 @@ async function query(
 }
 
 /**
- * MAL-keyed, anime only. A length asks about that release alone, through a
- * window a few seconds wide that a runtime rounded to whole minutes rarely
- * lands in; 0 asks across every release, one submission per type. So discover
- * the lengths with 0, then ask again for whichever fits the runtime.
+ * MAL-keyed, anime only, numbered within the MAL entry: a split cour's second
+ * part starts again at 1 and One Piece counts on from 1 across every season,
+ * so the episode is `animeEpisode`, never the stated one.
+ *
+ * A length asks about that release alone, through a window a few seconds wide
+ * that a runtime rounded to whole minutes rarely lands in; 0 asks across every
+ * release, one submission per type. So discover the lengths with 0, then ask
+ * again for whichever fits the runtime.
  */
 export const aniSkipProvider: SegmentProvider = {
   id: 'aniskip',
@@ -109,7 +116,9 @@ export const aniSkipProvider: SegmentProvider = {
   idKeys: ['mal'],
 
   supports(lookup) {
-    return lookup.kind === 'episode' && !!lookup.ids.mal && !!lookup.episode;
+    return (
+      lookup.kind === 'episode' && !!lookup.ids.mal && !!lookup.animeEpisode
+    );
   },
 
   async fetch(lookup: SegmentLookup, ctx: ProviderContext) {
