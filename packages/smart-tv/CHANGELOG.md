@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.13.0...smart-tv-v0.13.1) (2026-11-24)
+
+
+### Performance Improvements
+
+* **web:** draw only the cards near the screen in long lists ([f9d76cc](https://github.com/Viren070/AIOStreams/commit/f9d76cc3d81a9ea7bc3425051a57dd17f0d90b4b))
+
 ## [0.13.0](https://github.com/Viren070/AIOStreams/compare/smart-tv-v0.12.0...smart-tv-v0.13.0) (2026-11-21)
 
 
