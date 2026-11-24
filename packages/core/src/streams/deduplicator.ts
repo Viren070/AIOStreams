@@ -78,10 +78,10 @@ function dedupKeys(
 ): string[] {
   const streamKeys: string[] = [];
 
-  if (keys.includes('filename') && stream.filename) {
+  const normaliseName = (name: string): string =>
     // Strip repost suffixes first: in `Name.mkv-xpost` the extension is
     // only at the end once the suffix is gone.
-    let normalisedFilename = stripRepostSuffixes(stream.filename)
+    stripRepostSuffixes(name)
       .replace(
         /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
         ''
@@ -89,10 +89,26 @@ function dedupKeys(
       .replace(/[^\p{L}\p{N}+]/gu, '')
       .replace(/\s+/g, '')
       .toLowerCase();
-    streamKeys.push(`filename:${normalisedFilename}`);
+
+  if (keys.includes('filename') && stream.filename) {
+    streamKeys.push(`filename:${normaliseName(stream.filename)}`);
   }
 
   const isUsenet = stream.type === 'usenet' || stream.type === 'stremio-usenet';
+
+  // A library entry's filename is the file inside the NZB, while a result the
+  // library has not seen keeps the NZB name as its filename. The library's
+  // folder is the NZB name, so keying on it lets the two states group
+  // together. Limited to library streams: elsewhere `folderName` may be a
+  // containing folder shared by unrelated NZBs.
+  if (
+    keys.includes('filename') &&
+    isUsenet &&
+    stream.library &&
+    stream.folderName
+  ) {
+    streamKeys.push(`filename:${normaliseName(stream.folderName)}`);
+  }
 
   // Some addons provide fileIdx (to distinguish multiple files
   // within a single torrent), while others don't. This creates an unavoidable trade-off

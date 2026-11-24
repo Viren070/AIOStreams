@@ -78,6 +78,72 @@ describe('deduplicate', () => {
   });
 });
 
+describe('deduplicate usenet library results', () => {
+  const nzbName =
+    'The Odyssey 2026 Hybrid 2160p UHD Blu-ray Bluray Remux DV HDR10P DTS-HD MA 5_1 x265 CiNEPHiLES NLsubs Retail';
+
+  function usenet(
+    filename: string,
+    folderName: string | undefined,
+    library: boolean,
+    nzbUrl: string
+  ): ParsedStream {
+    return {
+      ...makeStream(undefined, [], [], filename),
+      type: 'usenet',
+      folderName,
+      library,
+      nzbUrl,
+      service: { id: 'aiostreams', cached: true },
+    } as unknown as ParsedStream;
+  }
+
+  it('groups an un-imported duplicate with the library entry through the NZB name', async () => {
+    const library = usenet(
+      'The.Odyssey.2026.2160p.Bluray.DV.HDR.DTS-HD.MA.5.1.x265-CiNEPHiLES.mkv',
+      nzbName,
+      true,
+      'https://real.example/a'
+    );
+    // Not in the library, so its filename is still the NZB name.
+    const other = usenet(
+      'The.Odyssey.2026.Hybrid.2160p.UHD.Blu-ray.Bluray.Remux.DV.HDR10P.DTS-HD.MA.5_1.x265.CiNEPHiLES.NLsubs.Retail.mp4',
+      undefined,
+      false,
+      'https://fake.example/b'
+    );
+    const deduplicator = new StreamDeduplicator({
+      deduplicator: {
+        enabled: true,
+        keys: ['filename', 'infoHash'],
+        cached: 'single_result',
+        libraryBehaviour: 'prefer',
+      },
+      presets: [],
+      services: [],
+    } as unknown as UserData);
+    const results = await deduplicator.deduplicate([other, library]);
+    assert.equal(results.length, 1);
+    assert.equal(results[0].library, true);
+  });
+
+  it('does not merge non-library results that only share a folder name', async () => {
+    const a = usenet('Movie.A.2020.mkv', 'Downloads', false, 'https://x/a');
+    const b = usenet('Movie.B.2021.mkv', 'Downloads', false, 'https://x/b');
+    const deduplicator = new StreamDeduplicator({
+      deduplicator: {
+        enabled: true,
+        keys: ['filename', 'infoHash'],
+        cached: 'single_result',
+      },
+      presets: [],
+      services: [],
+    } as unknown as UserData);
+    const results = await deduplicator.deduplicate([a, b]);
+    assert.equal(results.length, 2);
+  });
+});
+
 describe('mergeLanguagesAndSubtitles', () => {
   it('takes only the probe, discarding the indexer entirely', () => {
     const winner = makeStream(undefined, [], []);
