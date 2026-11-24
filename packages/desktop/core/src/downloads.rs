@@ -592,29 +592,49 @@ fn work(
                 write_text(&path, &text.text).map_err(Failure::Error)?;
             }
         }
-        // Subtitles and art first, so they are there while the video comes.
-        let mut files: Vec<_> = spec.files.iter().collect();
-        files.sort_by_key(|f| f.kind == FileKind::Video);
-        for file in files {
-            let path = place(&folder, &file.path).map_err(Failure::Error)?;
-            let report = |bytes, total| {
-                if file.kind == FileKind::Video {
+        let (videos, extras): (Vec<_>, Vec<_>) =
+            spec.files.iter().partition(|f| f.kind == FileKind::Video);
+        // Subtitles and art come on a second thread while the video does, so a
+        // slow one, or one retried until it fails, never holds the video back.
+        thread::scope(|scope| {
+            // A thread the system can't give fails the download instead of
+            // leaving it running with nothing behind it.
+            let beside = thread::Builder::new()
+                .name("download".into())
+                .spawn_scoped(scope, || -> Result<(), Failure> {
+                    for file in extras {
+                        let path = place(&folder, &file.path).map_err(Failure::Error)?;
+                        match fetch(&agent, &file.url, &file.headers, &path, &stop, |_, _| {}) {
+                            // Art or a subtitle missing never costs the video.
+                            Err(Failure::Error(e)) => {
+                                log::warn!("download {}: skipped {}: {e}", spec.id, file.path)
+                            }
+                            result => result?,
+                        }
+                    }
+                    Ok(())
+                })
+                .map_err(|e| Failure::Error(e.to_string()))?;
+            let video = videos.into_iter().try_for_each(|file| {
+                let path = place(&folder, &file.path).map_err(Failure::Error)?;
+                let report = |bytes, total| {
                     let _ = events.send(Event::Progress {
                         id: spec.id.clone(),
                         bytes,
                         total,
                     });
-                }
-            };
-            match fetch(&agent, &file.url, &file.headers, &path, &stop, report) {
-                // Art or a subtitle missing never costs the video.
-                Err(Failure::Error(e)) if file.kind != FileKind::Video => {
-                    log::warn!("download {}: skipped {}: {e}", spec.id, file.path)
-                }
-                result => result?,
+                };
+                fetch(&agent, &file.url, &file.headers, &path, &stop, report)
+            });
+            if video.is_err() {
+                // The download ends here; the second thread lets go of its files first.
+                stop.store(true, Ordering::Relaxed);
             }
-        }
-        Ok(())
+            let extras = beside
+                .join()
+                .unwrap_or_else(|_| Err(Failure::Error("the subtitles and art stopped".into())));
+            video.and(extras)
+        })
     })();
     let _ = events.send(Event::Finished {
         id: spec.id,
@@ -775,5 +795,117 @@ fn fetch(
             }
             thread::sleep(Duration::from_millis(200));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bridge::DownloadFile;
+    use std::net::TcpListener;
+
+    /// A server whose subtitle answers `subtitle`, such as `502 Bad Gateway`,
+    /// and whose video answers at once.
+    fn serve(subtitle: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        thread::spawn(move || {
+            for mut stream in listener.incoming().flatten() {
+                let mut request = [0u8; 4096];
+                let n = stream.read(&mut request).unwrap_or(0);
+                let answer = if request[..n].starts_with(b"GET /subtitle") {
+                    format!("HTTP/1.1 {subtitle}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                } else {
+                    "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nvideo".into()
+                };
+                let _ = stream.write_all(answer.as_bytes());
+            }
+        });
+        address
+    }
+
+    struct Download {
+        folder: PathBuf,
+        stop: Arc<AtomicBool>,
+        received: Receiver<Event>,
+        worker: thread::JoinHandle<()>,
+    }
+
+    /// Downloads a subtitle and a video from `address`, into a folder named for the test.
+    fn download(address: &str, name: &str) -> Download {
+        let folder = std::env::temp_dir().join(format!("aiostreams-{name}-{}", std::process::id()));
+        let file = |path: &str, kind| DownloadFile {
+            url: format!("{address}/{path}"),
+            path: path.into(),
+            kind,
+            headers: BTreeMap::new(),
+        };
+        let spec = DownloadJob {
+            id: "test".into(),
+            title: "Test".into(),
+            files: vec![
+                file("subtitle.srt", FileKind::Subtitle),
+                file("video.mkv", FileKind::Video),
+            ],
+            texts: Vec::new(),
+        };
+        let stop = Arc::new(AtomicBool::new(false));
+        let (events, received) = mpsc::channel();
+        let worker = {
+            let (folder, stop) = (folder.clone(), stop.clone());
+            thread::spawn(move || work(spec, folder, agent(), stop, events))
+        };
+        Download {
+            folder,
+            stop,
+            received,
+            worker,
+        }
+    }
+
+    impl Download {
+        /// The result, and the video's bytes, once the download ends.
+        fn finish(self) -> (Result<(), Failure>, Vec<u8>) {
+            let result = loop {
+                match self.received.recv_timeout(Duration::from_secs(10)) {
+                    Ok(Event::Finished { result, .. }) => break result,
+                    Ok(_) => continue,
+                    Err(e) => panic!("the download did not finish: {e}"),
+                }
+            };
+            self.worker.join().unwrap();
+            let video = fs::read(self.folder.join("video.mkv")).unwrap_or_default();
+            let _ = fs::remove_dir_all(&self.folder);
+            (result, video)
+        }
+    }
+
+    #[test]
+    fn the_video_does_not_wait_for_a_subtitle_retried() {
+        let download = download(&serve("502 Bad Gateway"), "retried");
+        // The subtitle is retried for minutes, so the video's bytes within
+        // seconds mean the video did not wait for it.
+        let first = download.received.recv_timeout(Duration::from_secs(10));
+        assert!(matches!(first, Ok(Event::Progress { .. })));
+
+        // The last bytes come before the video takes its name, so a stop
+        // before then would leave it as a part.
+        let named = download.folder.join("video.mkv");
+        let until = Instant::now() + Duration::from_secs(10);
+        while !named.exists() && Instant::now() < until {
+            thread::sleep(Duration::from_millis(20));
+        }
+        download.stop.store(true, Ordering::Relaxed);
+        let (result, video) = download.finish();
+        assert!(matches!(result, Err(Failure::Stopped)));
+        assert_eq!(video, b"video");
+    }
+
+    #[test]
+    fn a_subtitle_that_fails_is_skipped() {
+        // A 404 is not retried, so the subtitle fails at once.
+        let (result, video) = download(&serve("404 Not Found"), "skipped").finish();
+        assert!(matches!(result, Ok(())));
+        assert_eq!(video, b"video");
     }
 }
