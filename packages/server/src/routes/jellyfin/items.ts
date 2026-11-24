@@ -43,6 +43,7 @@ import {
   groupSeasons,
   hasProgrammeVideos,
   identityFor,
+  isBareMeta,
   isLeafEntry,
   isUnairedVideo,
   itemKeyFor,
@@ -702,6 +703,7 @@ export async function itemFromDescriptor(
         playstate: opts.playstate,
         boxset: asBoxset,
         leaf: d.k === 'movie',
+        placeholder: !meta || isBareMeta(meta),
         childCount: asBoxset
           ? knownMemberCount(meta!)
           : d.k === 'series'
