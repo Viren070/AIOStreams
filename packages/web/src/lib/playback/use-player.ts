@@ -344,16 +344,16 @@ export function usePlayer(
         );
         const { positionMs } = event;
         const now = live.current;
-        carried.current =
-          positionMs !== undefined && now.loaded
-            ? { audio: now.audio, subtitle: now.subtitle }
-            : null;
+        // Only a version that loaded here goes on where and as it stopped; one
+        // that never loaded, as when WebGPU can't start, opens as it first would.
+        const moved = positionMs !== undefined && now.loaded;
+        carried.current = moved
+          ? { audio: now.audio, subtitle: now.subtitle }
+          : null;
         active.current.close();
         const next = use(engineAt.current + 1);
-        const file = latestFile.current(positionMs ?? startMs);
-        next.load(
-          positionMs === undefined ? file : { ...file, paused: now.paused }
-        );
+        const file = latestFile.current(moved ? positionMs : startMs);
+        next.load(moved ? { ...file, paused: now.paused } : file);
         if (now.rate !== 1) next.setRate?.(now.rate);
         return;
       }
