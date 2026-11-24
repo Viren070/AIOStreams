@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-18 20:31+0000\n"
+"PO-Revision-Date: 2026-11-23 20:07+0000\n"
 "Last-Translator: Nasos Vasileiadis <nosvasedis@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Greek <https://hosted.weblate.org/projects/aiostreams/web-app/el/>\n"
 "Language: el\n"
@@ -480,9 +480,8 @@ msgid "Added to {name}"
 msgstr "Προστέθηκε στη λίστα {name}"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Addons, catalogs and profiles are set up on the configuration page."
-msgstr "Τα πρόσθετα, οι κατάλογοι και οι χρήστες ορίζονται στη σελίδα διαμόρφωσης."
+msgstr "Τα πρόσθετα, οι κατάλογοι και τα προφίλ ρυθμίζονται στη σελίδα διαμόρφωσης."
 
 #: src/app/settings/about.tsx
 msgid "Address"
@@ -2237,7 +2236,7 @@ msgstr "Να αποχωρήσεις από το {from} για να το ανοί
 
 #: src/app/servers/page.tsx
 msgid "Leave off the profile picker"
-msgstr ""
+msgstr "Απόκρυψη από την επιλογή προφίλ"
 
 #: src/features/party/in-party.tsx
 msgid "Leave the party"
@@ -2358,9 +2357,8 @@ msgid "Main"
 msgstr "Κύριο"
 
 #: src/app.tsx
-#, fuzzy
 msgid "Manage servers"
-msgstr "Αλλαγή διακομιστή"
+msgstr "Διαχείριση διακομιστών"
 
 #: src/features/versions/external-prompt.tsx
 msgid "Mark as watched"
@@ -2540,9 +2538,8 @@ msgid "Navigation"
 msgstr "Πλοήγηση"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Needed to switch to this profile."
-msgstr "Απαιτείται για μετάβαση σε αυτόν τον χρήστη."
+msgstr "Απαιτείται για να αλλάξεις σε αυτό το προφίλ."
 
 #: src/app/downloads/page.tsx
 msgid "Needs attention"
@@ -3057,9 +3054,8 @@ msgid "Other pages, such as settings"
 msgstr "Άλλες σελίδες, όπως οι ρυθμίσεις"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "Other profile"
-msgstr "Άλλη εφαρμογή"
+msgstr "Άλλο προφίλ"
 
 #: src/app/player/page.tsx
 msgid "Other versions"
@@ -3387,7 +3383,7 @@ msgstr "Αναπαράχθηκε εδώ"
 #: src/app/settings/about.tsx src/app/settings/page.tsx
 #: src/app/settings/player.tsx src/lib/input/actions.ts
 msgid "Player"
-msgstr "Πρόγραμμα αναπαραγωγής"
+msgstr "Προβολή"
 
 #: src/app/settings/player.tsx
 msgid "Player link"
@@ -3535,7 +3531,7 @@ msgstr "Παραγωγός"
 
 #: src/app/history/page.tsx
 msgid "Profile"
-msgstr ""
+msgstr "Προφίλ"
 
 #: src/app/settings/_components/shortcut-settings.tsx
 msgid "Puts every key back the way it came."
@@ -3936,7 +3932,7 @@ msgstr "Αποθηκεύτηκε στο {folder}"
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to this profile, on every device it signs in on."
-msgstr ""
+msgstr "Αποθηκεύεται σε αυτό το προφίλ και ισχύει σε κάθε συσκευή όπου συνδέεσαι με αυτό."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "Saved to your account, so it follows you to every device."
@@ -4090,9 +4086,8 @@ msgid "Settings"
 msgstr "Ρυθμίσεις"
 
 #: src/app/settings/page.tsx
-#, fuzzy
 msgid "Settings for"
-msgstr "Ρυθμίσεις"
+msgstr "Ρυθμίσεις για"
 
 #: src/app/settings/player.tsx
 msgid "Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter."
@@ -4144,9 +4139,8 @@ msgid "Show messages over the video"
 msgstr "Εμφάνιση μηνυμάτων πάνω στο βίντεο"
 
 #: src/app/servers/page.tsx
-#, fuzzy
 msgid "Show on the profile picker"
-msgstr "Εμφάνιση προτροπής"
+msgstr "Εμφάνιση στην επιλογή προφίλ"
 
 #: src/app/settings/playback.tsx
 msgid "Show reactions over the video"
@@ -4611,9 +4605,8 @@ msgstr "Εναλλαγή"
 
 #: src/app/settings/account.tsx src/components/media/no-catalogs.tsx
 #: src/components/shell/layout.tsx
-#, fuzzy
 msgid "Switch profile"
-msgstr "Αλλαγή διακομιστή"
+msgstr "Αλλαγή προφίλ"
 
 #: src/app.tsx
 msgid "Switch server"
@@ -4806,11 +4799,11 @@ msgstr "Η εικόνα του τρέχοντος τίτλου εμφανίζε�
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every device. A device that changes it keeps its own."
-msgstr ""
+msgstr "Η προεπιλογή για όλες τις συσκευές. Κάθε συσκευή που την αλλάζει διατηρεί τη δική της ρύθμιση."
 
 #: src/app/settings/_components/settings-card.tsx
 msgid "The default for every profile. A profile that changes it keeps its own."
-msgstr ""
+msgstr "Η προεπιλογή για όλα τα προφίλ. Κάθε προφίλ που την αλλάζει διατηρεί τη δική του ρύθμιση."
 
 #: src/app/settings/account.tsx
 msgid "The device is signed in"
@@ -5066,9 +5059,8 @@ msgid "This item was not found"
 msgstr "Αυτό το στοιχείο δεν βρέθηκε"
 
 #: src/app/sign-in/page.tsx
-#, fuzzy
 msgid "This profile has a PIN."
-msgstr "Αυτός ο χρήστης έχει PIN."
+msgstr "Αυτό το προφίλ έχει PIN."
 
 #: src/features/downloads/download-button.tsx
 msgid "This season"
@@ -5518,9 +5510,8 @@ msgid "Watch along"
 msgstr "Παρακολούθηση μαζί"
 
 #: src/app/settings/account.tsx
-#, fuzzy
 msgid "Watch as someone else on this configuration. A profile with a PIN needs it again after switching away."
-msgstr "Παρακολούθησε ως άλλος χρήστης αυτής της διαμόρφωσης. Αν ένας χρήστης έχει PIN, θα ζητηθεί ξανά όταν επιστρέψεις σε αυτόν."
+msgstr "Παρακολούθησε με άλλο προφίλ αυτής της διαμόρφωσης. Αν το προφίλ έχει PIN, θα ζητηθεί ξανά όταν επιστρέψεις σε αυτό."
 
 #: src/app/settings/playback.tsx
 msgid "Watch parties"
@@ -5607,9 +5598,8 @@ msgid "What you can send from a party's chat."
 msgstr "Τι μπορείς να στείλεις από τη συνομιλία μιας ομαδικής προβολής."
 
 #: src/app/settings/apps.tsx
-#, fuzzy
 msgid "What your Discord profile shows."
-msgstr "Τι εμφανίζει το προφίλ σου στο Discord. Αποθηκεύεται σε αυτή τη συσκευή."
+msgstr "Τι εμφανίζει το προφίλ σου στο Discord."
 
 #: src/app/settings/audio.tsx
 msgid "What your speakers or receiver take. Surround sound with more is mixed down, with its dialogue kept in."

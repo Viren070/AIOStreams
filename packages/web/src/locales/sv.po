@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "POT-Creation-Date: 2026-10-16 20:39+0100\n"
-"PO-Revision-Date: 2026-11-15 22:54+0000\n"
-"Last-Translator: labbe <labbe@users.noreply.hosted.weblate.org>\n"
+"PO-Revision-Date: 2026-11-23 12:25+0000\n"
+"Last-Translator: Johan Helin <johan.helin@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Swedish <https://hosted.weblate.org/projects/aiostreams/web-app/sv/>\n"
 "Language: sv\n"
 "MIME-Version: 1.0\n"
@@ -182,7 +182,7 @@ msgstr "{name} lämnade partyt"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "{off} off"
-msgstr ""
+msgstr "{off} av"
 
 #: src/features/versions/version-list.tsx
 msgid "{others, plural, one {Pick the version to download. The other episode gets the same release where it has it.} other {Pick the version to download. The other # episodes get the same release where they have it.}}"
@@ -523,7 +523,7 @@ msgstr "Alla fält"
 
 #: src/app/settings/_components/gesture-settings.tsx
 msgid "All on"
-msgstr ""
+msgstr "Allt på"
 
 #: src/features/playlists/playlists.tsx
 msgid "All playlists"
