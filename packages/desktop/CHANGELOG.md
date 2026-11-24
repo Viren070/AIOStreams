@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.28.1](https://github.com/Viren070/AIOStreams/compare/desktop-v0.28.0...desktop-v0.28.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **desktop:** add the /lib GBM and DRI driver folders to the AppImage's environment ([0538179](https://github.com/Viren070/AIOStreams/commit/05381796c8b04037d892d8795e7a4a25eee0482c))
+
+
+### Performance Improvements
+
+* **desktop:** create mpv's render context on Linux when a file loads ([5453b56](https://github.com/Viren070/AIOStreams/commit/5453b56b68211e954e335e2e2621141b15beba1e))
+* **web:** draw only the cards near the screen in long lists ([7476298](https://github.com/Viren070/AIOStreams/commit/74762985bf2e1c65913527109780f245411d6833))
+
 ## [0.28.0](https://github.com/Viren070/AIOStreams/compare/desktop-v0.27.0...desktop-v0.28.0) (2026-11-21)
 
 
