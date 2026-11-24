@@ -56,13 +56,44 @@ export function videoSurface(video: HTMLVideoElement): PictureSurface {
     zIndex: () => getComputedStyle(video).zIndex,
     insert: (canvas) => video.after(canvas),
     frames(shown) {
-      let callback = 0;
-      const onFrame: VideoFrameRequestCallback = (_, frame) => {
+      let callback: number | undefined;
+      let lastFrame = -Infinity;
+      let active = true;
+      const onFrame: VideoFrameRequestCallback = (now, frame) => {
+        lastFrame = now;
         shown(frame);
-        callback = video.requestVideoFrameCallback(onFrame);
+        if (active) callback = video.requestVideoFrameCallback(onFrame);
       };
-      callback = video.requestVideoFrameCallback(onFrame);
-      return () => video.cancelVideoFrameCallback(callback);
+      // webOS can play on a hardware video plane without firing frame callbacks.
+      const fromClock = () => {
+        if (
+          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          !video.seeking
+        )
+          shown({
+            mediaTime: video.currentTime,
+            width: video.videoWidth,
+            height: video.videoHeight,
+          });
+      };
+      const onTime = () => {
+        if (performance.now() - lastFrame >= 250) fromClock();
+      };
+      video.addEventListener('timeupdate', onTime);
+      video.addEventListener('loadeddata', fromClock);
+      video.addEventListener('seeked', fromClock);
+      callback = video.requestVideoFrameCallback?.(onFrame);
+      // Subscribers finish initializing their layer before its first notification.
+      queueMicrotask(() => {
+        if (active) onTime();
+      });
+      return () => {
+        active = false;
+        video.removeEventListener('timeupdate', onTime);
+        video.removeEventListener('loadeddata', fromClock);
+        video.removeEventListener('seeked', fromClock);
+        if (callback !== undefined) video.cancelVideoFrameCallback(callback);
+      };
     },
     watch(moved) {
       const resize = new ResizeObserver(moved);
