@@ -6,6 +6,7 @@ import {
 } from '../index.js';
 import type { Response } from 'undici';
 import { createLogger } from '../../logging/logger.js';
+import { registerLockErrorClass } from '../lock-error-registry.js';
 import { shouldProxy } from './dispatcher.js';
 import type { HeaderReader } from './headers.js';
 import type { FetchContext } from './overrides.js';
@@ -28,6 +29,7 @@ export class RateLimitedError extends Error {
     this.name = 'RateLimitedError';
   }
 }
+registerLockErrorClass(RateLimitedError);
 
 // Retry-After header (delay-seconds or HTTP-date) -> delay in seconds.
 export function parseRetryAfter(value: string | null): number | undefined {
