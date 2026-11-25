@@ -668,6 +668,7 @@ export interface LinkedAccount {
     manifestUrls: string[];
   };
   autoPush: boolean;
+  pushOnParentChange: boolean;
   lastSyncedAt?: number;
   lastStatus?: 'ok' | 'error' | 'expired';
   lastError?: string;
@@ -822,7 +823,12 @@ export async function linkAccount(
 export async function updateLinkedAccount(
   credentials: Credentials,
   id: string,
-  patch: { label?: string; autoPush?: boolean; manifestUrls?: string[] }
+  patch: {
+    label?: string;
+    autoPush?: boolean;
+    pushOnParentChange?: boolean;
+    manifestUrls?: string[];
+  }
 ) {
   return api<LinkedAccount>(`PATCH /linked-accounts/${id}`, {
     ...authed(credentials),

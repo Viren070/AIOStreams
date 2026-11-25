@@ -89,7 +89,12 @@ export class LinkedAccountService {
   static async update(
     uuid: string,
     id: string,
-    patch: { label?: string; autoPush?: boolean; manifestUrls?: string[] }
+    patch: {
+      label?: string;
+      autoPush?: boolean;
+      pushOnParentChange?: boolean;
+      manifestUrls?: string[];
+    }
   ): Promise<LinkedAccount> {
     assertEnabled();
     const existing = await LinkedAccountRepository.get(uuid, id);
@@ -110,6 +115,7 @@ export class LinkedAccountService {
     const updated = await LinkedAccountRepository.update(uuid, id, {
       label: patch.label?.trim().slice(0, 64) || undefined,
       autoPush: patch.autoPush,
+      pushOnParentChange: patch.pushOnParentChange,
       config,
     });
     if (!updated) notFound();
@@ -140,9 +146,29 @@ export class LinkedAccountService {
    * a caller pushing several can report per-destination results.
    */
   static async push(uuid: string, id: string): Promise<PushResult> {
+    return (await this.pushAccount(uuid, id, false))!;
+  }
+
+  /**
+   * Like `push`, but leaves the platform alone when the manifests are the ones
+   * it was last given. Null when nothing was pushed.
+   */
+  static async pushIfChanged(
+    uuid: string,
+    id: string
+  ): Promise<PushResult | null> {
+    return this.pushAccount(uuid, id, true);
+  }
+
+  private static async pushAccount(
+    uuid: string,
+    id: string,
+    onlyIfChanged: boolean
+  ): Promise<PushResult | null> {
     assertEnabled();
     const account = await LinkedAccountRepository.resolve(uuid, id);
     if (!account) notFound();
+    await LinkedAccountRepository.markChecked(uuid, id);
 
     // Re-validated on every push: a password change rotates the encrypted
     // password in the URL, and an alias can be reassigned.
@@ -152,13 +178,19 @@ export class LinkedAccountService {
       // Fetched here rather than in each driver: Stremio needs the manifest to
       // store, and the fingerprint has to describe exactly what was pushed.
       const manifests = await fetchManifests(urls);
+      const manifestHash = manifestSetFingerprint(
+        manifests.map((m) => m.manifest)
+      );
+      if (onlyIfChanged && manifestHash === account.lastPushedManifestHash) {
+        return null;
+      }
       const result = await getPlatform(account.platform).push(
         account,
         manifests
       );
       await LinkedAccountRepository.recordPush(uuid, id, {
         status: 'ok',
-        manifestHash: manifestSetFingerprint(manifests.map((m) => m.manifest)),
+        manifestHash,
       });
       return result;
     } catch (error) {
