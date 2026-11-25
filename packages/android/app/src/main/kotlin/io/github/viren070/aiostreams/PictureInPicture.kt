@@ -39,6 +39,9 @@ class PictureInPicture(private val activity: Activity, private val video: View) 
         }
     }
 
+    /** Whether leaving the app opens the small window, the video playing on in it. */
+    val entersOnLeave get() = supported && allowed
+
     /** Android 12 and later enter on their own. */
     fun onUserLeaveHint() {
         if (supported && allowed && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) activity.enterPictureInPictureMode(params())

@@ -168,7 +168,8 @@ internal class OutputSink(sink: AudioSink) : ForwardingAudioSink(sink) {
     }
 
     // Media3 counts a paused file as loading while its sink holds no sound (MediaCodecAudioRenderer.isReady in 1.11.1),
-    // and the page shows a spinner over the still picture. Held back on purpose, the paused file is ready.
+    // and the page shows a spinner over the still picture. Held back on purpose, the paused file is ready. The paused
+    // frame's own seek while the app is away counts on this too: without it, that seek never ends while away.
     override fun hasPendingData(): Boolean {
         if (super.hasPendingData()) return true
         if (paused() && (heldSince != 0L || quiet())) return true

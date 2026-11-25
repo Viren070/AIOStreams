@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.Choreographer
+import android.view.SurfaceHolder
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -76,6 +77,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.json.JsonArray
@@ -400,9 +402,97 @@ class ExoEngine(private val context: Context) : Engine {
     override fun createView(context: Context): View = Stage(context, subtitles::stageLaidOut).also { stage ->
         this.stage = stage
         subtitles.attach(stage)
+        // Before Media3's own: told first as the surface goes, the seek reaches the player before Media3 lets go of it.
+        stage.video.holder.addCallback(surfaceGoes)
         player.setVideoSurfaceView(stage.video)
         upscaled = false
         routeVideo()
+    }
+
+    // The last frame shown, which a paused file shows again once its video surface comes back.
+    @Volatile
+    private var lastFrameUs = C.TIME_UNSET
+
+    // A paused player still renders a frame now and then (after a seek, or one already on its way): only the
+    // first after a seek counts as the frame on screen, so going away and back doesn't step on a frame each time.
+    @Volatile
+    private var playingNow = false
+
+    @Volatile
+    private var takeNextFrame = true
+
+    private fun windowOffsetUs(): Long {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return 0L
+        return timeline.getWindow(player.currentMediaItemIndex, Timeline.Window()).positionInFirstPeriodUs
+    }
+
+    // The frame a paused file shows again on coming back: the one paused on, until play or a seek from the page.
+    private var anchorUs = C.TIME_UNSET
+
+    // The paused frame's own seek runs, which the page shows no loading for.
+    private var holdingFrame = false
+
+    /** A file opens or stops: its frame and the seek that holds it belong to it. */
+    private fun forgetFrame() {
+        lastFrameUs = C.TIME_UNSET
+        takeNextFrame = true
+        anchorUs = C.TIME_UNSET
+        holdingFrame = false
+        main.removeCallbacks(frameLate)
+    }
+
+    // Android takes the video's surface away while the app is out of sight, and with it the frame on it.
+    private val surfaceGoes = object : SurfaceHolder.Callback {
+        // Back while the paused frame still builds. From memory that takes a moment; still at it a moment later, it
+        // comes from the cache or the server, and the page shows loading for it rather than an empty picture.
+        override fun surfaceCreated(holder: SurfaceHolder) {
+            if (!holdingFrame) return
+            main.removeCallbacks(frameLate)
+            main.postDelayed(frameLate, FRAME_LATE_MS)
+        }
+
+        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
+
+        // Media3 renders the frame it holds next onto a new surface at once, even while paused: one past the frame
+        // that was on screen. Seeking back to that frame as the surface goes makes it the one held, decoded while
+        // the app is away from the data kept behind the playhead, so coming back usually shows it at once.
+        override fun surfaceDestroyed(holder: SurfaceHolder) = holdLastFrame()
+    }
+
+    /**
+     * A paused file seeks back, exactly, to the frame it paused on, so the decoder holds that frame for the new surface.
+     * Left alone: a stream that can't seek, upscaling, a recovering audio output, and playing.
+     */
+    private fun holdLastFrame() {
+        if (url == null || upscaled || recovering || player.playWhenReady || !player.isCurrentMediaItemSeekable) return
+        // A frame's time counts from its period, a seek from the window: only where both start together (not a live
+        // window that moved on in its stream) is that frame's time a position to seek to.
+        if (player.isCurrentMediaItemLive || windowOffsetUs() != 0L) return
+        // The frame paused on, kept through every going away and coming back until play or a seek from the page.
+        if (anchorUs == C.TIME_UNSET) {
+            // Since a seek, no frame of the new position was shown: that position is the one to show.
+            anchorUs = lastFrameUs.takeIf { it != C.TIME_UNSET } ?: (player.currentPosition * 1000)
+        }
+        val at = anchorUs / 1000
+        // A frame time far from the position (a live window moved on, say) is no frame of here.
+        if (abs(at - player.currentPosition) > HOLD_FRAME_MAX_MS) {
+            anchorUs = C.TIME_UNSET
+            return
+        }
+        // Only as the picture goes, never while it shows.
+        AppLog.i(TAG, "the video goes while paused; holding its frame at $at ms for coming back")
+        // Rebuilt from the kept data while the app is away, which the page shows no loading for.
+        holdingFrame = true
+        main.removeCallbacks(frameLate)
+        seekExactly(at)
+    }
+
+    private val frameLate = Runnable {
+        if (!holdingFrame || player.playbackState != Player.STATE_BUFFERING) return@Runnable
+        AppLog.i(TAG, "the paused frame still loads after coming back; the page shows it")
+        holdingFrame = false
+        state(PlayerState(buffering = true))
     }
 
     // Exo has no queue of its own, so a file to play next waits for the page to load it.
@@ -418,6 +508,7 @@ class ExoEngine(private val context: Context) : Engine {
         selector.tracksKnown = false
         selector.forget()
         main.removeCallbacks(settled)
+        forgetFrame()
         player.stop()
         player.clearMediaItems()
         cache.play(null)
@@ -449,6 +540,10 @@ class ExoEngine(private val context: Context) : Engine {
         if (url == null) return@post
         // A held sound's queued restart starts where the page asked, not back where the sound stopped.
         heldFor = -1
+        anchorUs = C.TIME_UNSET
+        // The page's own seek shows as seeking; the paused frame's quiet one is over.
+        holdingFrame = false
+        main.removeCallbacks(frameLate)
         val snapUs = (snapMs * 1000).toLong()
         player.setSeekParameters(if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
         player.seekTo(positionMs.toLong().coerceAtLeast(0))
@@ -666,8 +761,10 @@ class ExoEngine(private val context: Context) : Engine {
             released = true
             main.removeCallbacks(poll)
             main.removeCallbacks(settled)
+            main.removeCallbacks(frameLate)
             stopRecovering()
             opens++
+            stage?.video?.holder?.removeCallback(surfaceGoes)
             upscaling = false
             upscaler?.let { stage?.video?.holder?.removeCallback(it) }
             player.release()
@@ -697,6 +794,7 @@ class ExoEngine(private val context: Context) : Engine {
         selector.tracksKnown = false
         selector.forget()
         main.removeCallbacks(settled)
+        forgetFrame()
         stopRecovering()
         outputRetries = 0
         if (url != null) listener?.onEnded("stop", null, null)
@@ -946,9 +1044,10 @@ class ExoEngine(private val context: Context) : Engine {
                         state(PlayerState(seeking = false))
                         listener?.onEvent("restart")
                     }
+                    holdingFrame = false
                     state(PlayerState(buffering = false))
                 }
-                Player.STATE_BUFFERING -> if (loaded && !seeking) state(PlayerState(buffering = true))
+                Player.STATE_BUFFERING -> if (loaded && !seeking && !holdingFrame) state(PlayerState(buffering = true))
                 Player.STATE_ENDED -> {
                     url = null
                     listener?.onEnded("eof", null, null)
@@ -965,17 +1064,32 @@ class ExoEngine(private val context: Context) : Engine {
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             wantsPlay = playWhenReady
+            if (playWhenReady) {
+                anchorUs = C.TIME_UNSET
+                // Played before the paused frame is ready: that wait is a real one.
+                if (holdingFrame && player.playbackState == Player.STATE_BUFFERING) state(PlayerState(buffering = true))
+                holdingFrame = false
+            }
             state(PlayerState(paused = !playWhenReady))
             updatePolling()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            playingNow = isPlaying
             updatePolling()
             updateClock()
         }
 
         override fun onPlaybackParametersChanged(parameters: PlaybackParameters) =
             state(PlayerState(speed = parameters.speed.toDouble()))
+
+        override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
+            // The frame last shown belongs to where the file was before.
+            if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+                lastFrameUs = C.TIME_UNSET
+                takeNextFrame = true
+            }
+        }
 
         override fun onVideoSizeChanged(size: VideoSize) {
             stage?.videoSize = size
@@ -1015,6 +1129,8 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onRenderedFirstFrame() = subtitles.firstFrameShown()
 
         override fun onPlayerError(error: PlaybackException) {
+            // What follows an error (a retry, a new start) is a real wait, not the paused frame's quiet seek.
+            holdingFrame = false
             // The file already failed or stopped. Media3 can still raise a second error for it, such as the
             // NullPointerException a capabilities change queued before the first error throws on the emptied queue.
             if (url == null) {
@@ -1062,7 +1178,13 @@ class ExoEngine(private val context: Context) : Engine {
             releaseTimeNs: Long,
             format: Format,
             mediaFormat: MediaFormat?,
-        ) = subtitles.frame(presentationTimeUs, releaseTimeNs)
+        ) {
+            if (playingNow || takeNextFrame) {
+                lastFrameUs = presentationTimeUs
+                takeNextFrame = false
+            }
+            subtitles.frame(presentationTimeUs, releaseTimeNs)
+        }
 
         override fun onVideoInputFormatChanged(
             eventTime: AnalyticsListener.EventTime,
@@ -1103,6 +1225,8 @@ class ExoEngine(private val context: Context) : Engine {
     private companion object {
         const val TAG = "exo"
         const val POLL_MS = 250L
+        const val HOLD_FRAME_MAX_MS = 5_000L
+        const val FRAME_LATE_MS = 1_000L
         const val SETTLE_POLL_MS = 250L
         const val AWAY_POLL_MS = 1000L
         const val MAX_OUTPUT_RETRIES = 3

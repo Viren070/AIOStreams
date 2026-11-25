@@ -43,12 +43,23 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
 
     override fun onReleased(playerId: PlayerId) = allocator.reset()
 
-    override fun getBackBufferDurationUs(playerId: PlayerId) = 0L
+    // Behind the playhead, a moment and everything back to its keyframe: a paused file builds the frame on screen
+    // again from memory as it leaves, not from the cache or the server, also through the seek a ms before it that
+    // Media3 needs to take a seek to where it is. The kept data counts against the byte target, and Media3 drops it
+    // when the player runs short ahead, so from memory is the usual case, not a promise.
+    override fun getBackBufferDurationUs(playerId: PlayerId) = BACK_US
 
-    override fun retainBackBufferFromKeyframe(playerId: PlayerId) = false
+    override fun retainBackBufferFromKeyframe(playerId: PlayerId) = true
 
-    override fun shouldContinueLoading(parameters: LoadControl.Parameters) =
-        allocator.totalBytesAllocated < targetBytes() && parameters.bufferedDurationUs < targetUs()
+    // A keyframe far behind (a 4K encode's ten seconds, say) can hold most of the byte target: the time just ahead
+    // still loads, up to half as much again as the heap's share.
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+        if (parameters.bufferedDurationUs >= targetUs()) return false
+        val bytes = allocator.totalBytesAllocated
+        return bytes < targetBytes() || parameters.bufferedDurationUs < FLOOR_US && bytes < ceilingBytes()
+    }
+
+    private fun ceilingBytes() = min(heapBytes + targetBytes(), heapBytes / 2 * 3)
 
     /** With the cache reading ahead, the player's own buffer only feeds the decoders. */
     private fun targetBytes() = if (cache.caching) min(heapBytes, CACHED_BYTES) else heapBytes
@@ -60,8 +71,11 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
             stalled = true
             stalls++
         }
-        val start = allocator.totalBytesAllocated >= targetBytes() || run {
-            val buffered = Util.getPlayoutDurationForMediaDuration(parameters.bufferedDurationUs, parameters.playbackSpeed)
+        val buffered = Util.getPlayoutDurationForMediaDuration(parameters.bufferedDurationUs, parameters.playbackSpeed)
+        // Full counts once the time ahead is there too, since the bytes include what is kept behind.
+        val bytes = allocator.totalBytesAllocated
+        val full = bytes >= targetBytes() && (parameters.bufferedDurationUs >= FLOOR_US || bytes >= ceilingBytes())
+        val start = full || run {
             val ahead = Util.getPlayoutDurationForMediaDuration(cache.aheadUs(), parameters.playbackSpeed)
             buffered >= MIN_START_US && buffered + ahead >= requiredUs(parameters.rebuffering)
         }
@@ -89,5 +103,7 @@ internal class BufferControl(private val cache: StreamCache) : LoadControl {
         const val MARGIN_US = 4_000_000L
         const val HORIZON_US = 120_000_000L
         const val MAX_START_US = 30_000_000L
+        const val BACK_US = 100_000L
+        const val FLOOR_US = 2_000_000L
     }
 }

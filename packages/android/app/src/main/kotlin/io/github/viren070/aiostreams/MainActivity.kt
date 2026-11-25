@@ -618,6 +618,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        // Left on purpose (Home, Recents), not covered by an overlay: paused at once, as Android takes its picture of the
+        // screen, which it shows again on coming back. The file stops on that frame, not half a second later as the app
+        // is out of sight.
+        if (started && player.hasFile && leavesPlayback() && !pip.entersOnLeave) player.change(Change(paused = true))
         if (started) pip.onUserLeaveHint()
     }
 
@@ -645,13 +649,16 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         if (!started) return
-        val background = player.session.item?.background == true
-        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) {
+        if (leavesPlayback()) {
             player.change(Change(paused = true))
             away = true
         }
         noteDoing()
     }
+
+    /** Leaving stops what plays: no change of configuration, no small window, nothing meant to play in the background. */
+    private fun leavesPlayback() =
+        !isChangingConfigurations && !isInPictureInPictureMode && player.session.item?.background != true
 
     override fun onDestroy() {
         if (::frameRates.isInitialized) frameRates.release()
