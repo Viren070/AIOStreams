@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Debug
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Choreographer
 import android.view.View
 import androidx.annotation.OptIn
@@ -16,6 +17,7 @@ import androidx.media3.common.FileTypes
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaLibraryInfo
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -96,20 +98,219 @@ class ExoEngine(private val context: Context) : Engine {
     private val data = DefaultDataSource.Factory(context, cache.factory)
     private val frames = VideoFrames()
     private val subtitles = Subtitles(context, frames, cache, DefaultDataSource.Factory(context, http))
-    private val audio = AudioOutput()
+    private val audio: AudioOutput = AudioOutput().also {
+        it.broke = {
+            main.post {
+                // A break told after release belongs to no file any more.
+                if (released) return@post
+                // The sound's clock stopped with it, and the picture follows that clock: where both start again.
+                heldAt = player.currentPosition
+                heldFor = opens
+                AppLog.i(TAG, "holding at $heldAt ms")
+                // A track breaking with no wait under way: HDMI links again for a reason the app didn't see.
+                if (!outputSettling()) outputBroke()
+            }
+        }
+        it.canResume = { !outputSettling() && !waiting() }
+        it.waits = { waiting() }
+        it.quiet = { !wantsPlay && (outputSettling() || away()) }
+        it.paused = { !wantsPlay }
+        it.resume = {
+            main.post {
+                if (url == null || released) return@post
+                // A file opened since the hold starts where it is: the seek lets go of a hold that isn't its own.
+                val at = if (heldFor == opens) heldAt else player.currentPosition
+                AppLog.i(TAG, "starting again together at $at ms")
+                seekExactly(at)
+            }
+        }
+        it.recovered = { main.post { outputRetries = 0 } }
+        it.repicking = { selector.wanted = true }
+    }
+
+    // Where sound and picture stopped as the audio output broke, and in which file.
+    private var heldAt = 0L
+    private var heldFor = -1
+    private var released = false
     private val tracks = ExoTracks()
     private val events = Events()
+
+    /** True while HDMI links again; output changes wait until then, and a broken audio output waits for it. */
+    @Volatile
+    var outputSettling: () -> Boolean = { false }
+
+    /** The app is out of sight with the file paused: the sound waits for it to come back, and so do picked tracks. */
+    @Volatile
+    var away: () -> Boolean = { false }
+
+    // Whether the file is to play, as the page or a remote's Play key asked; played on out of sight (the notification,
+    // a remote), nothing waits for coming back.
+    @Volatile
+    private var wantsPlay = false
+
+    /** The Dolby and DTS formats the output takes, as the app reads them, in mpv's names. */
+    @Volatile
+    var outputFormats: () -> List<String> = { emptyList() }
+
+    private fun selectedMime(tracks: Tracks, type: Int): String? {
+        for (group in tracks.groups) {
+            if (group.type != type) continue
+            for (i in 0 until group.length) if (group.isTrackSelected(i)) return group.getTrackFormat(i).sampleMimeType
+        }
+        return null
+    }
+
+    private fun waiting() = away() && !wantsPlay
+
+    /** Told when the audio track breaks with no wait under way: HDMI links again for a reason the app didn't see. */
+    var outputBroke: () -> Unit = {}
+
     private val selector = object : DefaultTrackSelector(context) {
         /** Media3 seeks the playing file when the output changes, and throws if there is none. */
         @Volatile
         var tracksKnown = false
+
+        @Volatile
+        private var deferred: Renderer? = null
 
         init {
             setParameters(buildUponParameters().setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true))
         }
 
         override fun onRendererCapabilitiesChanged(renderer: Renderer) {
-            if (tracksKnown) super.onRendererCapabilitiesChanged(renderer)
+            if (!tracksKnown) {
+                // A request of the sink's before the tracks are picked is in the pick to come.
+                wanted = false
+                return
+            }
+            if (outputSettling() || waiting()) {
+                if (deferred == null) AppLog.i(TAG, "holding back an output change while ${if (waiting()) "the app is away" else "the display settles"}")
+                deferred = renderer
+                main.removeCallbacks(settled)
+                main.postDelayed(settled, SETTLE_POLL_MS)
+                return
+            }
+            // Kept for the app's own reading of HDMI, which can come a moment later and tell otherwise.
+            if (soundStays()) {
+                skipped = renderer
+                // A reading that changed between the check and the note is looked at again.
+                main.post { recheck() }
+                return
+            }
+            pick(renderer)
+        }
+
+        // A change skipped as the sound stayed, looked at again as the app's reading of HDMI changes.
+        @Volatile
+        private var skipped: Renderer? = null
+
+        /** The app read HDMI's formats again: a change skipped for the old reading may be needed now. */
+        fun recheck() {
+            val renderer = skipped ?: return
+            if (!tracksKnown) {
+                skipped = null
+                return
+            }
+            if (soundStays()) return
+            skipped = null
+            onRendererCapabilitiesChanged(renderer)
+        }
+
+        fun forgetSkipped() {
+            skipped = null
+        }
+
+        /** A file opens or stops: what was held back or skipped belonged to the one before. */
+        fun forget() {
+            deferred = null
+            skipped = null
+            wanted = false
+        }
+
+        /**
+         * Whether a pick would leave the sound as it is: a Dolby or DTS track passed through while HDMI still takes it.
+         * After a broken track, Media3 reads the output as plain PCM until a playing track reports its device, and then
+         * reads it again: a pick for either seeks the file and starts its decoders and the sound's track again, for
+         * nothing, and one while it reads plain PCM decodes a track HDMI takes. Anything else, a decoded track included, picks as Media3 asks.
+         *
+         * Seen in Media3 1.11.1:
+         * - AudioTrackAudioOutputProvider.onRecoverableWriteError sets DEFAULT_AUDIO_CAPABILITIES without an event, until
+         *   onRoutedDeviceChanged: https://github.com/androidx/media/blob/1.11.1/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/audio/AudioTrackAudioOutputProvider.java#L576-L589
+         * - ExoPlayerImplInternal.reselectTracksInternalAndSeek seeks on every capability change, tracks the same or not:
+         *   https://github.com/androidx/media/blob/1.11.1/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/ExoPlayerImplInternal.java#L2393-L2396
+         * It isn't tied to that version: should either change, it only skips picks that would leave the sound as it is,
+         * and an output that no longer takes the track breaks it, which the held sound and the engine's retry pick
+         * again. At worst it skips a pick that does nothing.
+         */
+        private fun soundStays(): Boolean {
+            if (wanted || !audio.passingThrough()) return false
+            val name = SPDIF_NAMES[audioMime] ?: return false
+            return name in outputFormats() && audio.allows(audioMime)
+        }
+
+        private fun pick(renderer: Renderer) {
+            wanted = false
+            skipped = null
+            // A deferred change is in this pick too.
+            deferred = null
+            super.onRendererCapabilitiesChanged(renderer)
+        }
+
+        // The selected audio track's sample type, set on the main thread as the tracks are known.
+        @Volatile
+        var audioMime: String? = null
+
+        // The sink asked for a pick of its own (the page's passthrough, the speed), which the output's formats don't show.
+        @Volatile
+        var wanted = false
+
+        /**
+         * Picks tracks once for what changed while the output settled, unless the file is gone or the sound would
+         * stay as it is.
+         */
+        fun pickDeferred() {
+            val renderer = deferred ?: return
+            deferred = null
+            if (!tracksKnown) {
+                wanted = false
+                return
+            }
+            if (soundStays()) {
+                // Kept for the app's own reading of HDMI, which can come a moment later and tell otherwise.
+                skipped = renderer
+                return AppLog.i(TAG, "the display settled; the sound stays as it is, so the tracks do")
+            }
+            AppLog.i(TAG, "the display settled; picking tracks for the output again")
+            pick(renderer)
+        }
+    }
+    private val retryOutput: Runnable = object : Runnable {
+        override fun run() {
+            if (!recovering || url == null) return
+            val waited = SystemClock.uptimeMillis() - recoveringSince
+            if (waiting()) {
+                // The wait for HDMI counts from coming back, which links it again.
+                recoveringSince = SystemClock.uptimeMillis()
+                main.postDelayed(this, AWAY_POLL_MS)
+                return
+            }
+            if (outputSettling() && waited < MAX_SETTLE_WAIT_MS) {
+                main.postDelayed(this, SETTLE_POLL_MS)
+                return
+            }
+            recovering = false
+            AppLog.i(TAG, "the audio output settled after $waited ms; preparing the file again")
+            player.prepare()
+        }
+    }
+
+    private val settled: Runnable = object : Runnable {
+        override fun run() {
+            when {
+                waiting() -> main.postDelayed(this, AWAY_POLL_MS)
+                outputSettling() -> main.postDelayed(this, SETTLE_POLL_MS)
+                else -> selector.pickDeferred()
+            }
         }
     }
     private val loadErrors = LoadErrorPolicy()
@@ -122,6 +323,8 @@ class ExoEngine(private val context: Context) : Engine {
         .setLoadControl(BufferControl(cache))
         .build()
 
+    // Cleared by release() on any thread, read by Media3's callbacks on the main one.
+    @Volatile
     private var listener: Engine.Listener? = null
 
     @Volatile
@@ -131,6 +334,11 @@ class ExoEngine(private val context: Context) : Engine {
 
     // The file playing and what the page asked of it.
     private var url: String? = null
+
+    // An audio output that broke while HDMI settled: the file waits for it, then prepares again.
+    private var outputRetries = 0
+    private var recovering = false
+    private var recoveringSince = 0L
     private var options = TrackOptions(null)
     private var loaded = false
     private var chosen = false
@@ -201,12 +409,15 @@ class ExoEngine(private val context: Context) : Engine {
     override fun load(request: LoadRequest) = post { if (!request.append) open(request) }
 
     override fun stop() = post {
+        stopRecovering()
         // A file that ended or failed is no longer playing, yet still holds its cache and the player's decoders.
         val playing = url != null
         url = null
         // A live link still being told apart would start once that answers.
         opens++
         selector.tracksKnown = false
+        selector.forget()
+        main.removeCallbacks(settled)
         player.stop()
         player.clearMediaItems()
         cache.play(null)
@@ -236,6 +447,8 @@ class ExoEngine(private val context: Context) : Engine {
 
     override fun seek(positionMs: Double, snapMs: Double) = post {
         if (url == null) return@post
+        // A held sound's queued restart starts where the page asked, not back where the sound stopped.
+        heldFor = -1
         val snapUs = (snapMs * 1000).toLong()
         player.setSeekParameters(if (snapUs > 0) SeekParameters(snapUs, snapUs) else SeekParameters.EXACT)
         player.seekTo(positionMs.toLong().coerceAtLeast(0))
@@ -443,9 +656,18 @@ class ExoEngine(private val context: Context) : Engine {
         }
     }
 
+    /** The app read HDMI's formats again, which a change skipped for the old reading may need. */
+    fun outputChanged() = main.post { selector.recheck() }
+
     override fun release() {
+        // As mpv's engine does: a replaced engine reports nothing more, not even an error already on its way.
+        listener = null
         main.post {
+            released = true
             main.removeCallbacks(poll)
+            main.removeCallbacks(settled)
+            stopRecovering()
+            opens++
             upscaling = false
             upscaler?.let { stage?.video?.holder?.removeCallback(it) }
             player.release()
@@ -456,8 +678,27 @@ class ExoEngine(private val context: Context) : Engine {
         }
     }
 
+    private fun stopRecovering() {
+        recovering = false
+        main.removeCallbacks(retryOutput)
+    }
+
+    /** Seeks to [ms] itself, not a keyframe near it, even where the player is already: Media3 skips a seek to the ms it is at. */
+    private fun seekExactly(ms: Long) {
+        player.setSeekParameters(SeekParameters.EXACT)
+        if (ms != player.currentPosition) return player.seekTo(ms)
+        if (ms > 0) return player.seekTo(ms - 1)
+        // At 0 there is no earlier ms, and 1 ms would skip the first frame: through 1 ms back to 0 itself.
+        player.seekTo(1)
+        player.seekTo(0)
+    }
+
     private fun open(request: LoadRequest) {
         selector.tracksKnown = false
+        selector.forget()
+        main.removeCallbacks(settled)
+        stopRecovering()
+        outputRetries = 0
         if (url != null) listener?.onEnded("stop", null, null)
         http.setDefaultRequestProperties(request.headers)
         link.setDefaultRequestProperties(request.headers)
@@ -723,6 +964,7 @@ class ExoEngine(private val context: Context) : Engine {
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            wantsPlay = playWhenReady
             state(PlayerState(paused = !playWhenReady))
             updatePolling()
         }
@@ -746,10 +988,16 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onTracksChanged(tracks: Tracks) {
             this@ExoEngine.tracks.update(tracks)
             if (!tracks.isEmpty) selector.tracksKnown = true
+            val audioMime = selectedMime(tracks, C.TRACK_TYPE_AUDIO)
+            // Another sound track was picked: a change skipped for the one before is no longer the question.
+            if (audioMime != selector.audioMime) selector.forgetSkipped()
+            selector.audioMime = audioMime
             if (!chosen && !this@ExoEngine.tracks.isEmpty()) {
                 chosen = true
                 Failures.undecodable(tracks)?.let { error ->
                     url = null
+                    // Stopped with no period playing: Media3 can't re-pick tracks for a changed output now.
+                    selector.tracksKnown = false
                     player.stop()
                     listener?.onUnplayable(error)
                     return
@@ -767,9 +1015,36 @@ class ExoEngine(private val context: Context) : Engine {
         override fun onRenderedFirstFrame() = subtitles.firstFrameShown()
 
         override fun onPlayerError(error: PlaybackException) {
+            // The file already failed or stopped. Media3 can still raise a second error for it, such as the
+            // NullPointerException a capabilities change queued before the first error throws on the emptied queue.
+            if (url == null) {
+                AppLog.i(TAG, "a later error for a file that already ended (${error.errorCodeName}): ${error.cause?.message}")
+                return
+            }
             if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
                 player.seekToDefaultPosition()
                 player.prepare()
+                return
+            }
+            if (recovering) {
+                AppLog.i(TAG, "a later error while the audio output settles (${error.errorCodeName}): ${error.cause?.message}")
+                return
+            }
+            // HDMI linking again breaks the audio track for a while; the output it had comes back once it settles.
+            if (error.errorCode in AUDIO_OUTPUT_ERRORS && outputRetries < MAX_OUTPUT_RETRIES) {
+                // Only a break no known relink explains counts: those of HDMI linking again end with the relink.
+                val known = outputSettling() || waiting()
+                if (!known) {
+                    outputBroke()
+                    outputRetries++
+                }
+                recovering = true
+                // The failed file has no playing period until it is prepared again; Media3 throws on a re-pick then.
+                selector.tracksKnown = false
+                recoveringSince = SystemClock.uptimeMillis()
+                AppLog.i(TAG, "the audio output broke while HDMI settles (${error.errorCodeName}); waiting to play on${if (known) "" else ", try $outputRetries"}")
+                main.removeCallbacks(retryOutput)
+                main.postDelayed(retryOutput, SETTLE_POLL_MS)
                 return
             }
             url = null
@@ -828,6 +1103,24 @@ class ExoEngine(private val context: Context) : Engine {
     private companion object {
         const val TAG = "exo"
         const val POLL_MS = 250L
+        const val SETTLE_POLL_MS = 250L
+        const val AWAY_POLL_MS = 1000L
+        const val MAX_OUTPUT_RETRIES = 3
+        const val MAX_SETTLE_WAIT_MS = 20_000L
+        // Dolby and DTS sample types, in mpv's names as the app reads the output's formats.
+        val SPDIF_NAMES = mapOf(
+            MimeTypes.AUDIO_AC3 to "ac3",
+            MimeTypes.AUDIO_E_AC3 to "eac3",
+            MimeTypes.AUDIO_E_AC3_JOC to "eac3",
+            MimeTypes.AUDIO_DTS to "dts",
+            MimeTypes.AUDIO_DTS_HD to "dts-hd",
+            MimeTypes.AUDIO_DTS_X to "dts-hd",
+            MimeTypes.AUDIO_TRUEHD to "truehd",
+        )
+        val AUDIO_OUTPUT_ERRORS = setOf(
+            PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED,
+            PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
+        )
         const val IDLE_POLL_MS = 1000L
         const val IDLE_POLLS = 10
         const val VOLUME_MAX = 130.0

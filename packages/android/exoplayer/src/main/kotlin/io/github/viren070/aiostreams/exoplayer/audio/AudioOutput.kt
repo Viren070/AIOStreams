@@ -20,6 +20,16 @@ internal class AudioOutput {
     private lateinit var ac3: Ac3Sink
     private var ac3Encode = false
 
+    /** Told, on the player's thread, when the sound is held for an output that broke. */
+    var broke: () -> Unit = {}
+    var canResume: () -> Boolean = { true }
+    var waits: () -> Boolean = { false }
+    var quiet: () -> Boolean = { false }
+    var paused: () -> Boolean = { false }
+    var resume: () -> Unit = {}
+    var recovered: () -> Unit = {}
+    var repicking: () -> Unit = {}
+
     /** Built once, as the player is made. */
     fun sink(context: Context, enableFloatOutput: Boolean, enablePlaybackParameters: Boolean): AudioSink {
         val sink = DefaultAudioSink.Builder(context)
@@ -30,10 +40,24 @@ internal class AudioOutput {
             .build()
         ac3 = Ac3Sink(TrueHdSink(sink), levels)
         output = OutputSink(ac3)
+        output.broke = { broke() }
+        output.canResume = { canResume() }
+        output.waits = { waits() }
+        output.quiet = { quiet() }
+        output.paused = { paused() }
+        output.resume = { resume() }
+        output.recovered = { recovered() }
+        output.repicking = { repicking() }
         return output
     }
 
     fun decodesForSpeed(format: Format) = output.decodesForSpeed(format)
+
+    /** Whether the sound goes out as it is, not decoded. */
+    fun passingThrough() = output.passingThrough
+
+    /** Whether the page lets this sample type pass through. */
+    fun allows(mime: String?) = mime in output.passthrough
 
     fun setSettings(settings: PlayerSettings) {
         output.setSpdif(settings.passthrough)
