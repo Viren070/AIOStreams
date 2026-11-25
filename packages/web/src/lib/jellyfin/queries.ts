@@ -10,6 +10,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import type { JellyfinClient } from './client';
+import { fetchShowEpisodes } from './show-episodes';
 import { useSession } from './session';
 import { useFeature, useServerInfo } from './server-info';
 import { settings, useSetting } from '@/lib/settings';
@@ -524,9 +525,9 @@ function useShowOptions() {
       queryOptions({
         queryKey: [...key, 'episodes', seriesId, seasonId],
         meta: { cache: 'titles' },
+        // A season is fetched whole, page by page: one answer stops at 1000.
         queryFn: () =>
-          client.get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
-            userId: user.Id,
+          fetchShowEpisodes(client, user.Id!, seriesId, {
             SeasonId: seasonId,
           }),
       }),
@@ -656,12 +657,9 @@ export function useAdjacentEpisodes(item: BaseItemDto, enabled = true) {
       const skipped = (e: BaseItemDto) =>
         e.Id !== item.Id && isSkipped(e, skip);
       const episodes = (query: Record<string, string>) =>
-        client
-          .get<BaseItemDtoQueryResult>(`/Shows/${seriesId}/Episodes`, {
-            userId: user.Id,
-            ...query,
-          })
-          .then((res) => res.Items ?? []);
+        fetchShowEpisodes(client, user.Id!, seriesId!, query).then(
+            (res) => res.Items ?? []
+          );
       let items = await episodes({ AdjacentTo: item.Id! });
       // A run of skipped episodes needs the rest of the show.
       if (items.some(skipped)) items = await episodes({});

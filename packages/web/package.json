@@ -9,6 +9,7 @@
     "build": "rsbuild build",
     "build:standalone": "rsbuild build --env-mode standalone",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
     "preview": "rsbuild preview",
     "lint": "eslint src",
     "i18n:extract": "lingui extract --clean && lingui extract-template"
