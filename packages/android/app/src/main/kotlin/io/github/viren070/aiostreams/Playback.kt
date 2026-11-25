@@ -25,6 +25,26 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     /** Where the engine's view goes. */
     val stage = FrameLayout(context)
 
+    /** True while HDMI links again (a display mode switch, the app leaving or coming back); ExoPlayer waits until then. */
+    @Volatile
+    var outputSettling: () -> Boolean = { false }
+
+    /** ExoPlayer's audio track broke, which HDMI linking again does; the wait starts there too. */
+    var outputBroke: () -> Unit = {}
+
+    /** The app is out of sight with the file paused: nothing of it starts again until it comes back. */
+    @Volatile
+    var away: () -> Boolean = { false }
+
+    /** The Dolby and DTS formats the output takes, as the app reads them, in mpv's names. */
+    @Volatile
+    var outputFormats: () -> List<String> = { emptyList() }
+
+    /** The app read HDMI's formats again. */
+    fun outputChanged() {
+        (engine as? ExoEngine)?.outputChanged()
+    }
+
     var tunneling = false
         set(value) {
             field = value
@@ -114,7 +134,13 @@ class Playback(private val context: Context, private val announce: (engine: Stri
     }
 
     private fun create(name: String): Engine = when (name) {
-        EXOPLAYER -> ExoEngine(context).also { it.setTunneling(tunneling) }
+        EXOPLAYER -> ExoEngine(context).also {
+            it.setTunneling(tunneling)
+            it.outputSettling = { outputSettling() }
+            it.outputBroke = { outputBroke() }
+            it.away = { away() }
+            it.outputFormats = { outputFormats() }
+        }
         else -> MpvEngine(context)
     }.also {
         it.setDolbyVision(dolbyVision)

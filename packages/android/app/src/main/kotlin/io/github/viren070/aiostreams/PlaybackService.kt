@@ -51,7 +51,7 @@ class PlaybackService : MediaSessionService() {
                     val ignored = system && key?.keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE && expectedDrop()
                     if (key?.action == KeyEvent.ACTION_DOWN) {
                         val from = if (system) "software" else InputDevice.getDevice(key.deviceId)?.name ?: "device ${key.deviceId}"
-                        AppLog.i(TAG, "${KeyEvent.keyCodeToString(key.keyCode)} sent by $from${if (ignored) ", ignored after a display mode switch" else ""}")
+                        AppLog.i(TAG, "${KeyEvent.keyCodeToString(key.keyCode)} sent by $from${if (ignored) ", ignored as HDMI links again" else ""}")
                     }
                     return ignored || super.onMediaButtonEvent(session, controllerInfo, intent)
                 }
@@ -77,7 +77,7 @@ class PlaybackService : MediaSessionService() {
         /** Set by the activity before it connects. */
         var player: Player? = null
 
-        /** Set by the activity: while true, lost audio is HDMI's own after a display mode switch. */
+        /** Set by the activity: while true, lost audio is HDMI's own as it links again. */
         var expectedDrop: () -> Boolean = { false }
     }
 }

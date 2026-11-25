@@ -34,7 +34,7 @@ class AudioFocus(
         .build()
     private val noisy = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (expectedDrop()) return AppLog.i(TAG, "the audio output dropped after a display mode switch; playing on")
+            if (expectedDrop()) return AppLog.i(TAG, "the audio output dropped as HDMI links again; playing on")
             AppLog.i(TAG, "the audio output went away; pausing")
             pause()
         }
