@@ -1,4 +1,10 @@
-import { extract, full_process, ratio, FuzzballExtractOptions } from 'fuzzball';
+import {
+  extract,
+  full_process,
+  partial_ratio,
+  ratio,
+  FuzzballExtractOptions,
+} from 'fuzzball';
 import {
   createLogger,
   constants,
@@ -157,7 +163,8 @@ function bestDefaultScorerMatch(
 function _titleMatchInner(
   parsedTitle: string,
   titles: string[],
-  options: TitleMatchOptions
+  options: TitleMatchOptions,
+  cachePartialRatio = false
 ): TitleMatchInnerResult {
   const { threshold, limitTitles, ...extractOptions } = options;
 
@@ -177,10 +184,20 @@ function _titleMatchInner(
     return bestDefaultScorerMatch(parsedTitle, titles, threshold);
   }
 
-  const results = extract(parsedTitle, titles, {
-    ...extractOptions,
-    returnObjects: true,
-  }) as { choice: string; score: number; key: number }[];
+  // Only internally owned normalized lists are safe to cache by identity.
+  const results =
+    cachePartialRatio &&
+    extractOptions.scorer === partial_ratio &&
+    Object.keys(extractOptions).length === 1
+      ? (extract(
+          full_process(parsedTitle, FULL_PROCESS_OPTIONS),
+          processedTitles(titles),
+          { ...extractOptions, full_process: false, returnObjects: true }
+        ) as { choice: string; score: number; key: number }[])
+      : (extract(parsedTitle, titles, {
+          ...extractOptions,
+          returnObjects: true,
+        }) as { choice: string; score: number; key: number }[]);
 
   let bestScore = 0;
   let bestKey: number | undefined;
@@ -222,7 +239,8 @@ export function titleMatchWithLang(
     normalisedTitles = titles.map((t) => normaliseTitle(t.title));
     normalisedTitleLists.set(titles, normalisedTitles);
   }
-  const result = _titleMatchInner(parsedTitle, normalisedTitles, options);
+  // The normalized list is an internal snapshot, never exposed to callers.
+  const result = _titleMatchInner(parsedTitle, normalisedTitles, options, true);
   return {
     matched: result.matched,
     language:
