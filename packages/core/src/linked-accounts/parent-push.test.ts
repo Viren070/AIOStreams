@@ -27,7 +27,7 @@ function setup(overrides: Partial<ParentPushDeps> = {}) {
     sleep: async (ms) => {
       pushed.push(`sleep ${ms}`);
     },
-    targets: async (parent, _depth, limit) =>
+    targets: async (parent, limit) =>
       (tree[parent] ?? [])
         .flatMap((uuid) =>
           (links[uuid] ?? []).map((id) => ({

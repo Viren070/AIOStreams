@@ -1,26 +1,6 @@
 import { getDb } from '../db.js';
 import type { DbDriver } from '../driver/types.js';
-import { sql, type SqlFragment } from '../sql.js';
-
-/**
- * `descendants (uuid, depth)` for a `WITH RECURSIVE` clause: every configuration
- * that inherits from `parentUuid`, directly or through other configurations, at
- * most `maxDepth` levels down. The depth bound also ends a chain that loops
- * back on itself, so callers must still exclude `parentUuid`.
- */
-export function descendantsCte(
-  parentUuid: string,
-  maxDepth: number
-): SqlFragment {
-  return sql`descendants (uuid, depth) AS (
-      SELECT child_uuid, 1 FROM config_parents
-       WHERE parent_uuid = ${parentUuid}
-      UNION
-      SELECT c.child_uuid, d.depth + 1 FROM config_parents c
-        JOIN descendants d ON c.parent_uuid = d.uuid
-       WHERE d.depth < ${maxDepth}
-    )`;
-}
+import { sql } from '../sql.js';
 
 /** Bounds `ensure`'s memory; a forgotten config only costs one extra write. */
 const MAX_KNOWN = 10_000;
@@ -71,15 +51,16 @@ export class ConfigParentRepository {
     );
   }
 
-  /** The configurations `descendantsCte` describes. */
-  static async descendants(
-    parentUuid: string,
-    maxDepth: number
-  ): Promise<string[]> {
+  /**
+   * The configurations that inherit directly from `parentUuid`. A
+   * configuration merges only its parent's own settings, so saving a parent
+   * cannot change what its children's children build.
+   */
+  static async children(parentUuid: string): Promise<string[]> {
     const rows = await getDb().query<{ uuid: string }>(
-      sql`WITH RECURSIVE ${descendantsCte(parentUuid, maxDepth)}
-          SELECT DISTINCT uuid FROM descendants WHERE uuid <> ${parentUuid}
-          ORDER BY uuid`
+      sql`SELECT child_uuid AS uuid FROM config_parents
+           WHERE parent_uuid = ${parentUuid} AND child_uuid <> ${parentUuid}
+           ORDER BY child_uuid`
     );
     return rows.map((row) => row.uuid);
   }

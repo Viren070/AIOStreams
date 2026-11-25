@@ -1,7 +1,6 @@
 import { getDb } from '../db.js';
 import type { DbDriver } from '../driver/types.js';
 import { raw, sql } from '../sql.js';
-import { descendantsCte } from './config-parents.js';
 import {
   decryptString,
   encryptString,
@@ -117,14 +116,13 @@ export class LinkedAccountRepository {
   }
 
   /**
-   * Opted-in links of every configuration that inherits from `parentUuid`,
-   * nearest descendants first, then least recently checked, so a capped run
-   * reaches different links each time instead of always the same ones.
+   * Opted-in links of the configurations that inherit directly from
+   * `parentUuid`, least recently checked first, so a capped run reaches
+   * different links each time instead of always the same ones.
    * `urls` is how many manifests a push of the link fetches.
    */
   static async listForParentChange(
     parentUuid: string,
-    maxDepth: number,
     limit: number
   ): Promise<Array<{ uuid: string; id: string; urls: number }>> {
     const rows = await getDb().query<{
@@ -132,13 +130,12 @@ export class LinkedAccountRepository {
       id: string;
       config: string;
     }>(
-      sql`WITH RECURSIVE ${descendantsCte(parentUuid, maxDepth)}
-          SELECT l.uuid, l.id, l.config FROM linked_accounts l
-            JOIN (SELECT uuid, MIN(depth) AS depth FROM descendants
-                   GROUP BY uuid) d ON d.uuid = l.uuid
-           WHERE l.push_on_parent_change = 1
+      sql`SELECT l.uuid, l.id, l.config FROM linked_accounts l
+            JOIN config_parents c ON c.child_uuid = l.uuid
+           WHERE c.parent_uuid = ${parentUuid}
+             AND l.push_on_parent_change = 1
              AND l.uuid <> ${parentUuid}
-           ORDER BY d.depth, COALESCE(l.last_checked_at, 0), l.created_at, l.id
+           ORDER BY COALESCE(l.last_checked_at, 0), l.created_at, l.id
            LIMIT ${limit}`
     );
     return rows.map((row) => ({

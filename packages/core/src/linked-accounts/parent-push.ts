@@ -7,14 +7,6 @@ import type { PushResult } from './types.js';
 
 const logger = createLogger('linked-accounts');
 
-/**
- * How far below the saved configuration to look. A configuration's manifest
- * depends only on its direct parent today, so deeper descendants build an
- * unchanged manifest and are not pushed; the extra depth is there for chains
- * of inheritance, should parents' own parents ever be merged.
- */
-const MAX_PARENT_DEPTH = 5;
-
 // setTimeout runs anything longer than 2^31-1 ms after 1 ms instead.
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
@@ -27,7 +19,6 @@ export interface ParentPushDeps {
   sleep(ms: number): Promise<void>;
   targets(
     parentUuid: string,
-    maxDepth: number,
     limit: number
   ): Promise<Array<{ uuid: string; id: string; urls: number }>>;
   pushIfChanged(uuid: string, id: string): Promise<PushResult | null>;
@@ -49,8 +40,8 @@ const defaultDeps: ParentPushDeps = {
     );
   },
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-  targets: (uuid, depth, limit) =>
-    LinkedAccountRepository.listForParentChange(uuid, depth, limit),
+  targets: (uuid, limit) =>
+    LinkedAccountRepository.listForParentChange(uuid, limit),
   pushIfChanged: (uuid, id) => LinkedAccountService.pushIfChanged(uuid, id),
 };
 
@@ -112,7 +103,7 @@ export class ParentChangePusher {
     let targets: Array<{ uuid: string; id: string; urls: number }>;
     try {
       // One more than allowed, to tell a full run from a capped one.
-      targets = await this.deps.targets(parentUuid, MAX_PARENT_DEPTH, max + 1);
+      targets = await this.deps.targets(parentUuid, max + 1);
     } catch (error) {
       logger.warn(
         { parent: parentUuid, error: String(error) },
@@ -124,7 +115,7 @@ export class ParentChangePusher {
     if (targets.length > max) {
       logger.warn(
         { parent: parentUuid, max },
-        'too many links to push after a parent change; pushing the nearest, least recently checked ones'
+        'too many links to push after a parent change; pushing the least recently checked ones'
       );
       targets = targets.slice(0, max);
     }

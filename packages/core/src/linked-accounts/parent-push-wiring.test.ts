@@ -24,11 +24,7 @@ const base = (): UserData =>
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'parent-push-wiring-'));
 
 async function targetsOf(parent: string): Promise<string[]> {
-  const found = await LinkedAccountRepository.listForParentChange(
-    parent,
-    5,
-    10
-  );
+  const found = await LinkedAccountRepository.listForParentChange(parent, 10);
   return found.map((link) => link.uuid);
 }
 

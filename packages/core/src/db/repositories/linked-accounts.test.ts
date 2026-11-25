@@ -51,7 +51,7 @@ describe('LinkedAccountRepository', () => {
     await getDb().exec(sql`DELETE FROM users`);
   });
 
-  it('lists the opted-in links of descendants only', async () => {
+  it('lists the opted-in links of direct children only', async () => {
     await addUser('p');
     await addUser('a', 'p');
     await addUser('b', 'a');
@@ -62,10 +62,19 @@ describe('LinkedAccountRepository', () => {
     const b1 = await addLink('b', true);
     await addLink('c', true);
 
-    const found = await LinkedAccountRepository.listForParentChange('p', 5, 10);
-    assert.deepEqual(found.map((link) => link.id).sort(), [a1, b1].sort());
+    const found = await LinkedAccountRepository.listForParentChange('p', 10);
     assert.deepEqual(
-      await LinkedAccountRepository.listForParentChange('c', 5, 10),
+      found.map((link) => link.id),
+      [a1]
+    );
+    assert.deepEqual(
+      await LinkedAccountRepository.listForParentChange('a', 10).then((rows) =>
+        rows.map((link) => link.id)
+      ),
+      [b1]
+    );
+    assert.deepEqual(
+      await LinkedAccountRepository.listForParentChange('c', 10),
       []
     );
   });
@@ -78,27 +87,11 @@ describe('LinkedAccountRepository', () => {
     const third = await addLink('a', true);
     await LinkedAccountRepository.markChecked('a', first);
 
-    const found = await LinkedAccountRepository.listForParentChange('p', 5, 2);
+    const found = await LinkedAccountRepository.listForParentChange('p', 2);
     assert.deepEqual(
       found.map((link) => link.id).sort(),
       [second, third].sort()
     );
-  });
-
-  it('lists direct children before deeper descendants', async () => {
-    await addUser('p');
-    await addUser('a', 'p');
-    await addUser('b', 'a');
-    const grandchild = await addLink('b', true);
-    const child = await addLink('a', true);
-    await LinkedAccountRepository.markChecked('a', child);
-
-    const found = await LinkedAccountRepository.listForParentChange('p', 5, 1);
-    assert.deepEqual(
-      found.map((link) => link.id),
-      [child]
-    );
-    assert.notEqual(grandchild, child);
   });
 
   it('counts the manifests a push of the link fetches', async () => {
@@ -108,11 +101,7 @@ describe('LinkedAccountRepository', () => {
     await LinkedAccountRepository.update('a', id, {
       config: { manifestUrls: ['u1', 'u2'] },
     });
-    const [found] = await LinkedAccountRepository.listForParentChange(
-      'p',
-      5,
-      1
-    );
+    const [found] = await LinkedAccountRepository.listForParentChange('p', 1);
     assert.equal(found.urls, 2);
   });
 

@@ -40,66 +40,50 @@ describe('ConfigParentRepository', () => {
   it('finds direct children', async () => {
     await link('a', 'p');
     await link('b', 'p');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), [
-      'a',
-      'b',
-    ]);
+    assert.deepEqual(await ConfigParentRepository.children('p'), ['a', 'b']);
   });
 
-  it('finds children of children, down to the depth limit', async () => {
+  it('leaves out children of children, whose manifest a parent save cannot change', async () => {
     await link('a', 'p');
     await link('b', 'a');
-    await link('c', 'b');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), [
-      'a',
-      'b',
-      'c',
-    ]);
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 2), [
-      'a',
-      'b',
-    ]);
+    assert.deepEqual(await ConfigParentRepository.children('p'), ['a']);
   });
 
   it('replaces a parent instead of adding a second one', async () => {
     await link('a', 'p');
     await link('a', 'd');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
-    assert.deepEqual(await ConfigParentRepository.descendants('d', 5), ['a']);
+    assert.deepEqual(await ConfigParentRepository.children('p'), []);
+    assert.deepEqual(await ConfigParentRepository.children('d'), ['a']);
   });
 
   it('forgets a parent that was removed', async () => {
     await link('a', 'p');
     await link('a', undefined);
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
+    assert.deepEqual(await ConfigParentRepository.children('p'), []);
   });
 
-  it('stops at a chain that loops back', async () => {
+  it('leaves out a configuration that names itself as its parent', async () => {
+    await link('p', 'p');
     await link('a', 'p');
-    await link('b', 'a');
-    await link('p', 'b');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), [
-      'a',
-      'b',
-    ]);
+    assert.deepEqual(await ConfigParentRepository.children('p'), ['a']);
   });
 
   it('indexes a configuration that was saved before the index existed', async () => {
     await ConfigParentRepository.ensure('a', 'p');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), ['a']);
+    assert.deepEqual(await ConfigParentRepository.children('p'), ['a']);
   });
 
   it('never overwrites a parent a save recorded', async () => {
     // A read that started before the save still carries the old parent.
     await link('b', 'd');
     await ConfigParentRepository.ensure('b', 'p');
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
-    assert.deepEqual(await ConfigParentRepository.descendants('d', 5), ['b']);
+    assert.deepEqual(await ConfigParentRepository.children('p'), []);
+    assert.deepEqual(await ConfigParentRepository.children('d'), ['b']);
   });
 
   it('drops the row when the child is deleted', async () => {
     await link('a', 'p');
     await getDb().exec(sql`DELETE FROM users WHERE uuid = 'a'`);
-    assert.deepEqual(await ConfigParentRepository.descendants('p', 5), []);
+    assert.deepEqual(await ConfigParentRepository.children('p'), []);
   });
 });
