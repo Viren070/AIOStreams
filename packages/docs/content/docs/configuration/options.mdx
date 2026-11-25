@@ -1,298 +1,534 @@
 ---
 title: Configure Options
-description: A complete reference for every option on the AIOStreams configuration page.
+description: What every option on the configure page does, when it runs, and what it costs.
 ---
 
-### Description
+This page covers every page of the configure page, in the order of its sidebar: **Sources**, **Streams**, **AIOStreams app**, **Install** and **Manage**. For a guided first setup, follow the [Setup Guide](/configuration/setup) instead.
+
+A few things apply throughout:
+
+- **Simple and Advanced mode.** The switch is on the **Configuration** page. Many options only show in Advanced mode; this page marks them _Advanced_. Options you set in Advanced mode keep working after you switch back.
+- **Your instance sets limits.** Whoever runs your instance can cap or turn off some features (regex filters, variants, the proxy, the AIOStreams app and others). Those settings are named here with their [environment variable](/configuration/environment-variables), and the configure page tells you when one applies to you.
+- **Nothing changes until you save.** Every page edits the same configuration; **Save** at the top writes it.
+
+## How a stream request works
+
+When an app asks for streams, AIOStreams runs these steps in order. Most surprises with filters, failover and limits come from this order, so it is worth knowing.
+
+1. **Work out what is being asked for**: a movie, a series, or anime (anime is decided by AIOStreams' anime database). Metadata, release dates and SeaDex data start loading at the same time.
+2. **Ask your addons.** Addons whose **Media Types** exclude this request are skipped. With the default fetching strategy every addon is asked at once and AIOStreams waits for all of them; [Groups](#groups) and [Dynamic](#dynamic) change that.
+3. **Process each batch of results as it arrives**: tag it (SeaDex, stored media info, RemuxDB), filter it, apply the instance's release blocklist, remove duplicates, and work out preferred and ranked matches.
+4. **Resolve [Service Wrap](#service-wrap) results** through your services, once every addon has answered. If that added results, the whole list is filtered and deduplicated again.
+5. **Sort.**
+6. **Apply Excluded and Required stream expressions**, then `pin()`.
+7. **Apply result limits.**
+8. **Proxy** the results, if a proxy is on. Results that can't be proxied are removed.
+9. **Add external download links**, if on.
+10. **Format** each result for the app, and add statistic and error rows.
+
+[Failover](#failover) builds its chain after step 5, 6 or 7, depending on its position. Next-episode pre-caching and stream preloading start in the background once the response is ready.
 
 <Callout type="info">
-  This is the guide for v2 of AIOStreams, looking for the guide for v1? You can
-  find it [here](/migrations/v1-to-v2).
+  Some consequences of this order:
+
+- Limits only count results that survived every filter, and they cut by your sort order.
+- Duplicates are removed before sorting, and the copy that survives is chosen by **service and addon order**, not by your sort order. See [Duplicates](#duplicates).
+- Failover in its default position only sees the results left after limits.
+- External download links are added after limits, so they can double the list.
+
 </Callout>
 
-This addon lets you combine all of your addons into one and provide consistent formatting, sorting, and filtering of the results.
-It is immensely configurable, allowing you to fine tune your catalogues too.
+## Sources
 
-I will attempt to explain every single option available.
+### Services
 
-<h3>Configuration</h3>
+#### Accounts
+
+Add the services you use (debrid, Usenet and others), turn them on or off, and drag them into order. The order matters in two places:
+
+- the **Service** sort key ranks results by this order;
+- [Duplicates](#duplicates) keeps the copy from the service highest in this list (enabled services only).
+
+Your instance can turn services off for everyone (`DISABLED_SERVICES`); those can't be enabled.
+
+#### Metadata
+
+Your TMDB Read Access Token or API key, and your TVDB API key. AIOStreams uses yours first, then the instance's if it has one. When both TMDB kinds are set, the API key is used.
+
+Metadata comes from TMDB, TVDB, Cinemeta and AIOStreams' anime database, and is used for:
+
+- [Matching](#matching) results to the title, year and episode;
+- the [Digital Release Filter](#release-checks);
+- estimating bitrate from file size and runtime;
+- episode counts and air dates (pre-caching the next episode, for example).
+
+Saving needs a TMDB key, yours or the instance's, while any of these is on: **Title Matching**, **Year Matching**, the **Digital Release Filter**, or **Use Runtime from Metadata** on the [Bitrate](#size-and-bitrate) filter. That last one turns on by itself once you set any bitrate range. A key you enter is checked when you save.
+
+#### Service Wrap
+
+_Advanced. Off by default._
+
+Service Wrap lets AIOStreams play results from addons that can't use your service themselves, such as torrent addons without debrid support, without giving those addons your keys.
+
+How it works:
+
+1. For each enabled addon in scope that can return torrents, AIOStreams adds a second copy of it that has no services, so it returns plain torrents. Your keys are never sent to that copy. The addon's normal copy stays only for services AIOStreams can't resolve itself.
+2. Once every addon has answered, AIOStreams checks those torrents against your services (and your library, if [Check Library](#check-library) is on) and turns each one into an AIOStreams playback link.
+
+Because they become AIOStreams links, wrapped results behave like results from AIOStreams' built-in addons: [Failover](#failover), [Cache and Play](#cache-and-play), [Auto Remove Downloads](#auto-remove-downloads) and Check Library all apply to them, and stored media info is added to them.
 
 <Callout type="warn">
-  Torrentio is disabled on the public ElfHosted instance.
+  **Service Wrap makes results slower.** The service check starts only after
+  every addon has answered, and is followed by a second round of filtering and
+  duplicate removal. Each wrapped addon also counts toward your instance's addon
+  limit (`MAX_ADDONS`, 15 by default), and one torrent becomes one result per
+  service before duplicates are removed.
 </Callout>
 
-To get started, you'll want to head to the configuration page by clicking the "Configure" button above. Then, you'll
-need to click the big white `Configure` button on AIOStreams' configuration page.
+Things to know:
 
-<h4>Services</h4>
+- If you have no service that can check torrents, or none of them has a torrent, the wrapped results are **dropped**, not kept as torrents. Missing services show an error row.
+- [Groups](#groups) and [Dynamic](#dynamic) conditions run before wrapping, so they see wrapped results as plain torrents with no service. `cached(streams)` won't count them.
+- Language, subtitle and stream type filters skip these torrents in the first round and apply to them after wrapping.
 
-This is where you can enter credentials for, reorder, and toggle services like Real Debrid, Torbox etc.
+Options:
 
-The order of the services determines a couple things:
+| Option                  | What it does                                                                                                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Wrap Addons**         | Which addons to wrap. Empty means every addon that can return torrents. Custom addons can't get a second copy, but their torrent results are still wrapped when they carry an info hash. |
+| **Processing Services** | Which of your services check the torrents. Empty means every enabled service AIOStreams can check itself, except NzbDAV and AltMount.                                                    |
+| **Reconfigure Service** | Also checks the debrid results of addons in scope through your own services. The addon's original result stays as well, so expect duplicates for [Duplicates](#duplicates) to merge.     |
 
-- The priority order when deduplicating streams - given that the deduplicator is enabled.
-- The ranking of services used when sorting - given that the sorting uses service as a criterion.
+#### Auto Remove Downloads
 
-Below all the services, there will be a field to enter your RPDB API Key. Add this if you would like to configure supported catalogue addons you add to use
-posters from RPDB.
+_Advanced. Off by default._
 
-<h4>Addons</h4>
+After AIOStreams creates a playback link, it removes the torrent or NZB from your service, so your service's list doesn't fill up.
 
-Here you can manage your installed addons, add new ones, and configure them. You can also manage your catalogues here, as well as using
-the [Group](/guides/groups) feature to group addons together. I will not be covering the Groups feature here, as it is not
-required and is a feature meant for advanced users. You may join the [AIOStreams Discord](https://discord.viren070.me) to view the community's configurations.
+- Applies to built-in addons and Service Wrap results.
+- Works for debrid torrents (not private torrents) and Usenet downloads. NzbDAV, AltMount, Easynews, Stremio NNTP and StremThru Newz have nothing to remove, so the setting does nothing there.
+- Separately, when parallel [Failover](#failover) starts several downloads, the ones that lose the race are always removed, except private torrents.
 
-To install addons, head to the `Marketplace` tab. You can choose from a variety of addons, and filter by supported services and the type of content or streams they provide.
-You may also use the `Custom Addon` feature to add any addon you want as long as you have the manifest URL. The addons provided in the Marketplace
-are all provided for convenience's sake to ensure you can easily add addons without having to leave AIOStreams.
+#### Check Library
 
-Upon clicking `Configure` on an addon, you will be presented with a list of options. In most cases, you don't have to change anything, and click `Install` on the popup
-that appears. However, some addons may require you to enter credentials or API keys, and some may have additional options that you can configure.
+_Advanced. On by default._
 
-As most options are generally explained well in the popup, I'm not going to cover them here. However, I will cover some of the more important ones that tend to appear
-on every addon.
+AIOStreams reads your service's library and marks results you already have, which feeds the **Library** sort key and the library option in [Duplicates](#duplicates).
 
-- `Name` - This lets you change the name of the addon as it appears in AIOStreams. This name is only used for stream results, it does not affect any catalog names.
-- `Timeout` - This lets you change the time that AIOStreams waits for the addon to respond before it aborts the request to it. Used for all requests to the addon, including catalogues, streams, subtitles etc.
-- `Resources` - This option allows you to override the resources that AIOStreams would use from the addon. This is useful if you want to disable catalogues from the addon, but keep its streams. So you would only select `stream` here. In most cases, its recommended to leave this blank, or at the defaults - as it is automatically determined by AIOStreams later.
-- `URL` - In most cases, you will be able to override the URL of the addon here. Usually this is generated automatically by AIOStreams - A benefit of this is you never having to worry about other addon updates, as AIOStreams will always use the latest version of the addon. However, if you want to use a custom URL, you can do so here. This is useful for using a specific configuration of the addon. Note: you will need to configure any debrid services separately, debrid services configured in AIOStreams do not apply to overriden URLs.
+- Applies to built-in addons and Service Wrap results.
+- Reads up to 500 items per service. The list is kept for up to a week and refreshed in the background when it is more than 10 minutes old, so something you added a moment ago may not show as in your library yet.
 
-Once you've installed your addons, you can head back to the `Installed` tab to view them. You'll be able to click
-the edit icon to edit the configuration, the delete icon to remove the addon from your installed addons, and optionally toggle the addon on or off
-to temporarily disable it without removing it.
+### Addons
 
-<h5>Catalogues</h5>
+Install addons from **Browse addons**, or add any Stremio addon with **Custom addon** and its manifest URL. Drag addons into order: the **Addon** sort key and [Duplicates](#duplicates) both use it.
 
-Within the `Installed` tab of the `Addons` menu, you will find a section where you can control your catalogues (given that you have at least one addon installed).
+Each addon has these options. Most addons also have their own, explained in the addon's settings.
 
-You'll first want to click the refresh icon on the top right corner. This will fetch the catalogues from all your addons and display them here.
+| Option          | What it does                                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name**        | The name on its results. Catalog names don't change.                                                                                                                                                                                                                |
+| **Timeout**     | How long AIOStreams waits for this addon, for every request. The default is 7 seconds unless the addon has its own; instances usually allow 1 to 50 seconds. With the default fetching strategy, your slowest addon's timeout is how long you can wait for results. |
+| **Media Types** | Skips the addon for other kinds of request. Anime is a kind of its own: an addon set to Movies and Series is skipped for anime.                                                                                                                                     |
+| **Resources**   | _Advanced._ Which of the addon's resources to use, for example only streams and not its catalogs. Leave it empty unless you need it.                                                                                                                                |
+| **URL**         | _Advanced._ Replaces the addon's address. Your services are not added to an address you set yourself, so configure the addon's own debrid settings in it.                                                                                                           |
 
-There are a few options available here to you to help you manage your catalogues. For each catalogue, you will see the following options:
+Some addons also have:
 
-- To the left of each catalogue card, you can drag the black bar to reorder your catalogues. The order here determines the order they are displayed in on Stremio or other clients.
-- The edit icon next to the catalogue name allows you to edit a catalogues `name` and `type`. Both these values can be edited to your liking and those changes will be reflected in Stremio.
-- To the right, you also have position controls to allow you to instantly move a catalogue to the top or bottom of the list.
-- There is also a switch to toggle the catalogue on or off. This is useful if you want to hide specific catalogues.
-- Below that, there is a settings section that you can expand which allows you to apply certain modifications to the catalogue. Each modification also has a icon button to provide quick access to toggling it.
+- **Pin Position**: keeps the addon's results at the top or bottom, whatever your sort order.
+- **Library Addon**: marks all its results as in your library.
+- **Format Passthrough**: keeps the addon's own name and description instead of your [formatter](#formatter).
+- **Result Passthrough**: its results skip filters, duplicate removal, limits, matching, stream expressions and the digital release check. They are still removed by the instance's release blocklist, by stream types the instance turns off, and when a proxy fails, and they still stop once the overall limit is reached.
 
-Below the catalogue section, you will notice the Groups section. Like I mentioned earlier, this is an advanced feature that allows you to group addons together and I will not be covering it here.
-The [Groups guide](/guides/groups) has more information on how to use this feature.
+Your instance limits how many addons you can have (`MAX_ADDONS`, 15 by default). The limit counts the addons AIOStreams generates, not the ones you see: some marketplace addons generate one per service, and [Service Wrap](#service-wrap) adds a copy per wrapped addon.
 
-<h3>Filters</h3>
+#### Who gets this
 
-One of AIOStreams' most recongisable feature is its advanced filtering system. This menu may look a bit overwhelming, but it is neatly organised into sections
-to try and make it easier to understand.
+When you have [variants](#variants) or [profiles](#profiles), each addon (and each catalog) has a **Who gets this** control, which turns it on or off for each variant link and profile. It writes the variants' scripts for you.
 
-<h4>Cache</h4>
+#### Addon Fetching Strategy
 
-This section allows you to filter streams based on whether they are cached or not. There is a cached section and an uncached section.
+_Advanced. Shown once you have addons._
 
-Each section will have a toggle to completely disable cached/uncached streams, and optionally a more granular filter
-to exclude cached/uncached streams from specific addons, services, or stream types.
+**Default** asks every addon at once and waits for all of them, up to each one's timeout.
 
-The apply mode setting controls how your 3 filters (addons, services, and stream types) are applied.
-The `OR` mode means that a cached/uncached stream will be excluded if it is either from an addon, service, or stream type that is excluded.
-The `AND` mode means that a cached/uncached stream will be excluded only if it is from all of the addons, services, and stream types that are excluded.
+<a id="groups"></a>**Groups** split addons into groups with conditions, so later groups are only used when earlier ones didn't find enough. Addons in no group join group 1, which always runs. Your instance caps the number of groups (`MAX_GROUPS`, 20 by default). The [Groups guide](/guides/groups) covers conditions in full.
 
-The stream type setting allows you to exclude uncached results for debrid, while keeping uncached results for usenet. Useful for TorBox pro users.
+- **Parallel** (the default) asks every group at once, then checks each later group's condition in order. When a condition is false, **Stop** drops that group and every later one, **Skip** drops only that group, and **Include finished** keeps every later group that has already answered.
+- **Sequential** only asks a group when its condition passes on the results so far, and stops at the first false condition. Slower, but it doesn't query addons you didn't need.
+- `totalTimeTaken` in a condition is the sum of the groups' times in Sequential, and the longest in Parallel.
 
-<h4>Generic Stream Attributes</h4>
-
-The next couple sections allow you to filter streams based on generic attributes:
-
-- `Resolution` - The resolution of the stream, such as 1080p, 720p, etc.
-- `Encode` - The encoding of the stream, such as HEVC, AVC etc.
-- `Stream Type` - The type of the stream, such as p2p, debrid, http, usenet, etc.
-- `Visual Tag` - The visual tag of the stream, such as HDR, Dolby Vision, etc.
-- `Audio Tag` - The audio tag of the stream, such as Dolby Atmos, DTS, etc.
-- `Audio Channel` - The audio channel of the stream, such as 5.1, 7.1, etc.
-- `Language` - The language of the stream, such as English, Spanish, etc.
-
-Each of these sections above have very similar options:
-
-- `Required` - Excludes streams that don't have one of the selected attributes. For example, if you set `1080p` as a required resolution, any streams that are not 1080p will be excluded.
-- `Excluded` - Excludes streams that have at least one of the selected attributes. For example, if you set `720p` as an excluded resolution, any streams that are 720p will be excluded.
-- `Included` - Prevents streams that have at least one of the selected attributes from being filtered out by all other exclude/required filters. For example, if you set `HDR` as an included visual tag, any streams that are HDR will not be filtered out by the other filters, even if they don't match the required or excluded attributes.
-- `Preferred` - This is a special filter that allows you to set a ranking for that specific attribute. This ranking is used when you enable the relevant sorting option in the `Sorting` section. For example, if you set `1080p` as a preferred resolution, any streams that are 1080p will be ranked higher than streams that are not 1080p when sorting by resolution.
-
-<h4>Seeders</h4>
-
-This section allows you to filter streams based on the number of seeders they have. You can set 3 ranges of seeders
-
-- `Required` - Excludes streams whose number of seeders is not within the range.
-- `Excluded` - Excludes streams whose number of seeders is within the range.
-- `Included` - Prevents streams whose number of seeders is within the range from being filtered out by all other exclude/required filters.
-
-You can also optionally set stream types for which the seeders filter should be applied. This is useful if you want to only apply these seeder filters to p2p streams, for example.
-
-<h4>Matching</h4>
-
-This section allows you to filter streams out based on whether they match with the requested content or not.
-You can apply title matching and season/episode matching.
-
-<h5>Title Matching</h5>
-
-This option fetches titles from the TMDB API and compares them to the titles of the streams returned by your addons.
-
-This allows you to filter streams based on whether they match the title of the requested content or not.
-You can set the `Matching mode` to either `Exact` or `Partial`. The `Exact` mode will only match streams that have the exact same title as the requested content, while the `contains` mode will match streams that have the requested content's title anywhere in their title.
-
-As the TMDB API is being used, it is required to provide a **TMDB API Key**. This can be obtained by creating an account on [TMDB](https://www.themoviedb.org/) and generating an API key in your account settings.
-You can then enter the key in the `TMDB API Key` field.
+<a id="dynamic"></a>**Dynamic** treats each addon as its own group and checks your exit condition every time an addon answers, against the filtered, deduplicated results so far. When the condition passes, AIOStreams stops waiting. A condition using `totalTimeTaken` is also checked on a timer. Dynamic wins if Groups is also on. It costs a filter and duplicate pass per addon.
 
 <Callout type="info">
-  You can use fake information when creating your application on TMDB
+  With Groups or Dynamic, preferred and ranked stream expressions run on each
+  batch separately. Expressions that look at the whole list, such as `slice()`
+  or `count()`, only see one batch at a time.
 </Callout>
 
-You can then optionally limit the title matching to specific addons or request types (e.g. movies, series, anime)
+### Catalogs
 
-<h5>Season/Episode Matching</h5>
+Turn catalogs on or off, rename them, change their type, and drag them into order. **Refresh** fetches your addons' current catalogs.
 
-This section is the same as the above, except it doesn't require a TMDB API Key, simply enable it if you wish to use it.
+Each catalog has these modifications:
 
-<h4>Keyword</h4>
+| Modification                     | What it does                                                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Shuffle**                      | Shuffles each page separately. **Persist shuffle for** keeps one order for up to 24 hours; 0 reshuffles every time. Not applied to search. |
+| **Reverse**                      | Reverses the order. Ignored while Shuffle is on, and not applied to search.                                                                |
+| **Poster service**               | Uses your [poster service](#posters) for this catalog. Only items that already have a poster get one.                                      |
+| **Discover Only**                | Hides the catalog from the home screen; it only shows in Discover.                                                                         |
+| **Show on Home**                 | Shows a catalog on the home screen when the addon would only show it in Discover. Only for catalogs whose only requirement is a genre.     |
+| **Search Only / Disable Search** | Only for catalogs that support search.                                                                                                     |
 
-This section allows you to filter streams based on whether they contain specific keywords in their title or not. You can enter multiple words
-or phrases in 4 different fields:
+Per addon, **Turn new catalogs on** decides whether catalogs the addon adds later start on or hidden, and **Keep the addon's order** follows the addon's own order instead of yours.
 
-- `Required` - Excludes streams that do not contain at least one of the words or phrases in their title.
-- `Excluded` - Excludes streams that contain at least one of the words or phrases in their title.
-- `Included` - Prevents streams that contain at least one of the words or phrases in their title from being filtered out by all other exclude/required filters.
-- `Preferred` - This is a special filter that allows you to set a ranking for a specific set of keyword. This ranking is used when you enable the relevant sorting option in the `Sorting` section.
-  For example, if you add `ilikethisterm` as a preferred keyword, any streams that contain `ilikethisterm` in their title will be ranked higher than streams that do not contain that term when sorting by keyword.
+#### Merged catalogs
 
-<h4>Regex</h4>
+A merged catalog combines up to 10 catalogs into one. Its sources disappear from the list while it is on.
+
+- **Merge method**: one after another (the default), interleaved, by IMDb rating, or by release date.
+- **Remove duplicates** by ID, by title, or both.
+- Every page asks every source for that page, so rating and date ordering apply within each page, not across the whole catalog.
+- A filter or search option is kept if any source supports it, and is required only if every source requires it.
+
+#### Posters
+
+Replaces catalog posters with rated posters: RPDB, Top Poster, AIORatings, OpenPosterDB or your own URL.
+
+- **Use Poster Redirect API**: poster links point at AIOStreams, which looks the poster up when it is shown, instead of AIOStreams looking up every poster while it builds the catalog.
+- **Use for Library and Continue Watching**: also replaces posters on single items, not only in catalogs. People are never changed.
 
 <Callout type="info">
-  This filter is only available on self hosted instances, due to potential abuse
-  You will either need to add your UUID to **Trusted UUIDs**
-  (`TRUSTED_UUIDS`), or set **Regex filter access** (`REGEX_FILTER_ACCESS`) to
-  `all` — only recommended if your instance is access-controlled (login
-  required via `AIOSTREAMS_AUTH` / `AIOSTREAMS_AUTH_REQUIRED`) so no one
-  unauthorised can access it. These are runtime settings, configurable from the
-  dashboard Settings page or the matching environment variables.
+  **Stremio needs a reinstall** after these changes: adding, removing or
+  reordering catalogs; renaming one or changing its type or options; and adding
+  a resource or ID type it didn't have before. Your name, logo and description
+  don't need one. The configure page tells you when a save needs it, and
+  [linked accounts](#linked-accounts) can do it for you. The AIOStreams app
+  picks changes up by itself.
 </Callout>
 
-This is essentially a more powerful version of the keyword filter, allowing you to use regular expressions to filter streams.
-The only difference is in the preferred section. With regex, the order of the regexes you enter matters, and streams that match a regex higher up in the list
-are ranked higher than streams that match a regex lower down in the list when sorting by regex.
+## Streams
 
-<h4>Size</h4>
-This section allows you to filter streams based on their size.
+### Filters
 
-You can set separate global size limits for movies and series. Any streams whose size does not lie within the specified range will be excluded.
-If you leave the two slider thumbs at opposite ends, no size filtering is applied.
+Filters are grouped into **Quality**, **Language**, **Source**, **Rules** and **Matching**. In Simple mode only the main tabs show.
 
-You can also optionally set a specific size limit for movies and series per resolution. This is useful if you want to have different size limits for different resolutions.
-Only one set of size limits will be applied at a time, meaning a resolution specific size limit will take precedence over the global size limits.
+#### How the lists work
 
-<h4>Result Limits</h4>
-This section allows you to limit the number of results returned by AIOStreams.
-You can set a maximum number of results to return, and optionally also limit the
-number of results per: service, addon, resolution, quality, indexer, and release
-group.
+Most filter tabs have up to four lists:
 
-What this means is that AIOStreams will cut off streams after a specific group limit is reached. This means that it would keep streams
-higher up in the list (which depends on your sorting options) and remove streams lower down in the list.
-
-<h4>Deduplicator</h4>
-
-The deduplicator is a powerful feature that allows you to remove duplicate streams from your results.
-
-`Detection Methods` - Allows you to control what attributes are used to determine whether two streams are duplicates or not.
-
-- `filename` - Uses fuzzy filename matching.
-- `infoHash` - uses the hash of the torrent file (available for all torrent streams, and some debrid streams) - this is the most accurate method.
-- `smartDetect` - This uses a hash generated using a combination of the streams metadata - including file size, resolution, audio tags, visual tags etc.
-
-You can then control how duplicates are removed for specific types (cached, uncached, P2P), these are the 3 options you can choose:
-
-- `Single Result` - This keeps only one result, ranking the duplicates based on the serivce its from, and then the addon its from.
-- `Per Service` - This aims to keep the best result from each service, determined by the ranking of the addons.
-- `Per Addon` - This aims to keep the best result from each addon, determined by the ranking of the services.
-
-<h4>Sorting</h4>
-
-The sorting system uses a hierarchical approach to determine how content is sorted:
-
-1. Primary Sorts: Define the main sorting order for different content types:
-
-- Global: Used as a fallback when no specific type sort is defined (You most likely just want to define this and ignore everything else.)
-- Movies: Specific sorting for movies
-- Series: Specific sorting for TV series
-- Anime: Specific sorting for anime content
-
-2. Cached/Uncached Sorting: If your primary sort has "cached" at the top and there is both an `uncached` and `cached` sort criteria defined:
-
-- Content is split into cached and uncached groups
-- Each group is sorted separately using its specific sort criteria
-- Groups are then combined based on the cached sort direction
-- Type-specific cached/uncached sorts (e.g., "Cached Movies") take priority over global cached/uncached sorts
-
-<h4>Formatter</h4>
-
-Here, you can customise the way your streams are displayed in Stremio.
-
-You can either choose from a list of pre-defined formats, or create your own custom format using AIOStreams` [Formatter Syntax](/reference/custom-formatter)
+- **Excluded** removes a result with a value in the list. For visual tags, audio tags and audio channels, any one listed value removes it. For **languages and subtitles**, a result is removed only when **all** its languages are excluded, so a multi-language release with one language you want stays.
+- **Required** keeps only results with at least one listed value. A result with no value counts as **Unknown**, so add Unknown to keep untagged results. _Advanced._
+- **Included** keeps a result and lets it skip every later filter: the other excluded and required lists, cached and uncached, regex, keywords, seeders, age, matching, size and bitrate. It doesn't protect against Excluded and Required stream expressions, the release blocklist, duplicate removal, limits, the digital release check, a failed proxy, or the addon's Media Types. _Advanced._
+- **Preferred** removes nothing. It ranks results for the sort key of the same name, so it only matters when that key is in your [sort order](#sort-order).
 
 <Callout type="info">
-  Join AIOStreams' [Discord](https://discord.viren070.me) to see the formats
-  created by the community, or to share your own formats!
+  **The Original language.** Results in the title's original language also
+  count as **Original**. Excluding Japanese doesn't remove a Japanese-only
+  release of a Japanese title unless you exclude Original too.
 </Callout>
 
-There is a preview section that allows you to see how your streams will look like in Stremio. You can adjust specific values in the preview to see how they affect the display of the streams.
+#### Quality
 
-<h4>Proxy</h4>
+Resolution, Quality, Encode, Visual Tag, Audio Tag and Audio Channel. All but Resolution are _Advanced_.
 
-You can use this section to optionally configure a stream proxy for AIOStreams.
-You can choose from either [MediaFlow Proxy](https://github.com/mhdzumair/mediaflow-proxy) or [StremThru](https://github.com/MunifTanjim/stremthru).
+Visual tags include three combinations for filtering: **HDR+DV**, **DV Only** and **HDR Only**. They aren't shown in your formatter.
 
-The rest of the options are already explained well in the UI, so I will not be covering them here.
+#### Language
 
-<h4>Miscellaneous</h4>
+Language and Subtitle, with the lists above. Languages come from the release name and from stored media info; see also **Language Inference** under [Matching](#matching).
 
-The options on this menu are already explained well in the UI, so I will not be covering them here.
+#### Source
 
-<h4>Save & Install</h4>
+**Cached and uncached.** Removes all cached or all uncached results, or (in Advanced mode) only those from chosen addons, services or stream types. Only results with a service are cached or uncached: torrents without one and direct links are never removed here. With **OR**, a result is removed when any list matches it. With **AND**, it is removed only when all three lists are filled in and all match.
 
-Here, you will be able to create a new user on your AIOStreams instance, or update the existing user with the current configuration.
+**Stream Type** _(Advanced)_: debrid, Usenet, torrent, direct link, YouTube, live and others.
 
-When creating a new user, you will need to set a reasonably strong password. You will also be given a unique UUID that you may need to access your configuration, should you lose your installation URL.
+**Seeders.** Ranges of seeders. Required keeps results inside its range, Excluded removes them, and Included keeps them past every other filter; a result on either end counts as inside. A result without a seeder count counts as 0, so a minimum on the required range removes it. **Stream Types** limits the filter to torrents, cached results or uncached results; left empty, it applies to everything, including Usenet and direct links, which have no seeders.
 
-Once you create a user, you will be presented with a button to install the addon using your preferred method.
+**Age.** Ranges in hours since upload, which work like the seeder ranges, for debrid, Usenet or torrent results. New configurations apply them to Usenet only; left empty, they apply to all three.
 
-<Callout type="error">
-Make sure you save your UUID and password somewhere safe, as you will need them to access your configuration in the future.
-You will **NOT** be able to recover your configuration, or reset your password if you lose them.
+<a id="size-and-bitrate"></a>**Size and Bitrate.** Ranges for movies, series and anime, with per-resolution ranges in Advanced mode. A per-resolution range replaces the overall one, and anime uses its own range before falling back to the series one. Results with no known size or bitrate pass. Bitrate is worked out from size and the title's runtime when **Use Runtime from Metadata** is on (the default), which needs a TMDB key.
 
-You can, however, keep exports of your configurations as backups, which I will discuss below.
+#### Rules
 
+_Advanced._
+
+**Keyword.** Whole words, not case sensitive; a space also matches `.`, `-` or `_`. Checked against the file name, release group, indexer and folder name. Up to 30 per list. Preferred keywords feed the **Keyword** sort key.
+
+**Release Group.** Exact names, not case sensitive; a result with no group is **Unknown**. The preferred order feeds the **Release Group** sort key.
+
+**Regex.** Regular expressions, written plain (case sensitive) or as `/pattern/flags`, checked against the file name, release group, indexer and folder name.
+
+- Your instance decides who can use regex (`REGEX_FILTER_ACCESS`: none, trusted or all; trusted by default, with `TRUSTED_UUIDS`), and can allow specific patterns or pattern lists for everyone. Patterns you aren't allowed are skipped.
+- **Preferred** ranks by the first pattern that matches, for the **Regex Patterns** sort key.
+- **Ranked** adds up each matching pattern's score, for the **Regex Score** sort key. It only looks at the file name and folder name, and skips results with no file name.
+- **Synced URLs** pull pattern lists from a URL and keep them up to date; overrides change single patterns in them.
+
+**Stream Expression.** Rules written in the [stream expression language](/reference/stream-expressions), which can look at the whole list at once.
+
+- **Included** runs with the other filters on each batch, and is checked again on the full list.
+- **Excluded** and **Required** run after sorting, before limits. Required keeps a result if any expression selects it.
+- **Preferred** ranks by the first expression that matches; **Ranked** adds up scores. See [Scored Sorting](/guides/scored-sorting).
+- `pin()` moves results to the top or bottom.
+- Instances cap expressions (200, 50,000 characters in total and 3,000 each by default) and decide who can sync them from a URL.
+
+#### Matching
+
+_Advanced. Each matcher can be limited to request types and addons. Results from addons with Result Passthrough skip them._
+
+- **Title Matching** compares each result's title with the title's names from its metadata. Both modes are fuzzy, with a similarity of 0.85 needed: **Exact** compares the whole title, **Contains** looks for the title inside the result's. Results with no title in their name are removed, and so are results whose country tag doesn't match the title's. With **Ambiguous results** set to discard, results for another series with the same name are only kept when the year, country or episode title confirms them. Needs a TMDB key.
+- **Year Matching** allows a difference of 1 year by default, and by default removes movies with no year. Series are matched against the year of their season, unless the release covers several seasons. Needs a TMDB key.
+- **Season/Episode Matching** removes movie results tagged with a season or episode, and series results for another season or episode. It handles absolute and AniDB episode numbers and date-named episodes. **Strict** also removes series results with no season or episode.
+- **Episode Title Matching** removes a result only when its episode title is different in a language the metadata covers.
+- **Language Inference** (on by default) adds the language of the title a result matched, for sorting and your formatter. It is added after the language filters, so it can't be filtered on.
+
+#### Release checks
+
+- **Digital Release Filter** removes every result for a movie or episode that isn't out digitally yet, except from addons it doesn't apply to and addons with Result Passthrough. **Also check result age** removes results uploaded before the release date. **Show info stream when filtered** (on by default) adds a row saying why the list is empty. Needs a TMDB key.
+- **SeaDex** (on by default) marks the best anime releases from SeaDex, for sorting and your formatter. Anime results wait for SeaDex before they are filtered, so a slow SeaDex slows anime results.
+- **RemuxDB** (on by default, when your instance has it) fills in audio and subtitle tracks for torrent and NZB results that don't list them. It sends the IMDb ID, season and episode to RemuxDB and waits up to 2 seconds per batch.
+- **Exclude Season Packs** is an older option, shown only if it is already on, so you can turn it off.
+
+### Results
+
+#### Sort order
+
+_Advanced, but every configuration has one._
+
+A list of sort keys, applied in order, with optional separate lists for movies, series and anime. See [Scored Sorting](/guides/scored-sorting) for building one around scores.
+
+- When the first key is **Cached** and both a cached and an uncached list are set, cached and uncached results are sorted separately by their own list. Results with no service count as cached here.
+- **Service** follows your [Services](#accounts) order, **Addon** your [Addons](#addons) order.
+- Preferred lists on the Filters page only have an effect through their sort key.
+
+#### Duplicates
+
+Removes copies of the same release. Simple mode only has the on/off switch.
+
+**Detection.** Two results are the same release when they share a file name, an info hash (with the same file) or NZB URL, or a **Smart Detect** fingerprint (size within 10% by default, plus the attributes you pick). Copies link up: if A matches B and B matches C, all three are one release.
+
+**What is kept**, for cached, uncached and torrent results separately:
+
+| Mode              | Keeps                                                         |
+| ----------------- | ------------------------------------------------------------- |
+| **Single Result** | one copy                                                      |
+| **Per Service**   | one copy per service; not for torrents, which have no service |
+| **Per Addon**     | one copy per addon                                            |
+| **Disabled**      | every copy                                                    |
+
+**When a release is both cached and uncached** (Multi-Group Behaviour): **Aggressive** keeps only the cached copies (and torrents over uncached), **Conservative** drops uncached copies from services that have it cached, and drops torrents when a cached copy exists, and **Keep All** keeps both.
+
+**Which copy wins** is not decided by your sort order. In order:
+
+1. your library, when **Library** is set to Prefer;
+2. your [Services](#accounts) order;
+3. tiebreakers set to come before addon order;
+4. your [Addons](#addons) order;
+5. tiebreakers set to come after it;
+6. preferred stream types.
+
+Tiebreakers are seeders (torrents and uncached results) and Usenet age (only when the ages differ by more than a day). **Library** can also be **Exclusive**, which drops copies not in your library. **Addon Exclusions** keeps every result from the chosen addons. **Merge** copies details (languages, subtitles, sizes, library and SeaDex marks) from the dropped copies into the winner, and keeps the dropped copies as [failover](#failover) fallbacks.
+
+Duplicates are removed from each batch as it arrives, and again from the full list.
+
+#### Limits
+
+Caps the number of results, overall and per resolution, and in Advanced mode per service, addon, quality, indexer and release group. Limits apply to the sorted list, after stream expressions and before the proxy, and keep the results highest in your sort order.
+
+- **Independent** (the default) counts each category separately. Results with no indexer or release group don't count toward those.
+- **Conjunctive** counts the combination of every category you limit, and uses the smallest limit for it.
+
+Results from addons with Result Passthrough don't count, but stop once the overall limit is reached.
+
+#### Also in the list
+
+_Advanced._
+
+- **Statistic Streams** add rows with each addon's results and timing, and why results were filtered. Some rows show even with this off: the digital release notice, filter details when nothing is left, and stream types your instance turned off. Error rows always come after the results.
+- **External Downloads** adds a copy of each result that has a link, which opens it in the browser to download. Added after limits, so it can double the list. Torrents, YouTube and external results don't get one.
+- **Hide Errors** hides error rows, for every resource or the ones you choose. It also hides errors in the AIOStreams app's version list.
+
+### Formatter
+
+How each result's name and description look in Stremio and other apps. Pick a ready-made format, or write your own with the [formatter syntax](/reference/custom-formatter); the preview shows the result. Formatting is the last step, so it knows whether a result was proxied. Addons with Format Passthrough keep their own text.
+
+### Playback
+
+#### Proxy
+
+Plays results through a proxy: AIOStreams' **built-in** proxy, [StremThru](https://github.com/MunifTanjim/stremthru) or [MediaFlow](https://github.com/mhdzumair/mediaflow-proxy). A proxy lets you watch from more than one place at once on services that limit you to one IP, or hide your IP from the service.
+
+- The built-in proxy needs an `AIOSTREAMS_AUTH` user with the proxy permission on your instance.
+- Only results with a link are proxied: never torrents, YouTube or external results. Results from NzbDAV and AltMount can only use the built-in proxy.
+- **Proxied Services** and **Proxied Addons** (_Advanced_) both have to match; empty means all. **None** in Proxied Services means results with no service. Proxied Addons also decides which addons are sent the proxy's IP instead of yours.
+- **Public IP** skips looking the proxy's IP up. If the lookup fails, you can't save, and requests fail until it works.
+- **Public URL** replaces the proxy's address in the links you are given.
+- Results that can't be proxied are removed, with an error row.
+
+Your instance can force proxy settings for everyone (`FORCE_PROXY_*`) and prefill them for new configurations (`DEFAULT_PROXY_*`).
+
+#### Preloading
+
+**Pre-cache Next Episode** (off by default). After you open an episode, AIOStreams fetches results for the next one in the background, into the next season when it knows the episode count, and opens the results your selector picks so your service starts downloading them. During that fetch, Exclude Uncached, Groups and Dynamic are off.
+
+- The default selector picks uncached results only when there are no cached ones.
+- **First stream only** opens just the first one. At most 2 are opened either way, once per episode a day.
+
+**Preload Streams** opens the results your selector picks, in the background, once your list is ready, so playback starts faster. Your formatter can show them as preloading. The default selector picks the first two. Each title is preloaded at most once an hour.
+
+#### Cache and Play
+
+_Advanced._
+
+When you play an uncached result, AIOStreams waits for your service to finish downloading it instead of playing a "downloading" video. It checks every 10 seconds for up to 2 minutes (every 2 seconds for up to 90 seconds with NzbDAV, AltMount and StremThru Newz). Choose Usenet, torrents or both.
+
+It applies to results from built-in addons and Service Wrap torrents. StremThru Newz always waits, whatever this is set to.
+
+#### Failover
+
+_Advanced._
+
+When a result fails to play, AIOStreams tries the next ones in your list until one works, so you don't have to go back and pick another.
+
+<Callout type="warn">
+  **Only AIOStreams' own links start failover**: Usenet and debrid results from
+  built-in addons and from [Service Wrap](#service-wrap). Playing a result from
+  any other addon never fails over, even a debrid one. With **Include External
+  Addon Targets** (below), other addons' debrid results can be what failover
+  falls back to, but they still can't start it.
 </Callout>
 
-Below the installation button, you will find a backup section that allows you to export your configuration as a JSON file and also import these configurations later.
-You can use this to backup your configuration, or to share it with others. You can also use this to import configurations from other users.
+- It happens when you press play, while the link is being created. Once a video is playing, it can't help.
+- It tries results below the one you picked, in list order, and needs at least two that qualify (or [merged](#duplicates) copies of the same release).
+- When trying one at a time, a result that is still downloading counts as failed, so playing an uncached result starts its download and plays the next ready one.
+- Sign-in and quota errors stop the chain, since the next result would fail the same way. A file your service blocks for legal reasons moves on to the next one.
 
-You can expand the `Export Settings` to toggle the `Exclude Credentials` option, which will exclude any credentials you have entered in the configuration from the exported file.
-Note that while this option filters out all sensitive information entered in AIOStreams, it will not filter out any URLs from custom addons or URLs that you have overriden.
-These URLs can possible contain sensitive information, so make sure to double check the exported file before sharing it with others.
+| Option                             | Default | What it does                                                                                                                                                                                                              |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Failover Content Types**         | Usenet  | Which kinds of result can be tried. The one you picked is always tried first.                                                                                                                                             |
+| **Allow Cross-Type Failover**      | Off     | Lets a Usenet result fail over to debrid, and the other way round.                                                                                                                                                        |
+| **Include External Addon Targets** | Off     | Lets failover fall back to debrid results from other addons, when they are on the addon's own address. AIOStreams checks them by reading the start of the file. Playing one of them yourself still never starts failover. |
+| **Max Failover Attempts**          | 3       | How many results to try. Your instance caps it (`MAX_FAILOVER_ATTEMPTS`, 5 by default).                                                                                                                                   |
+| **Same-Release Failover Attempts** | 2       | How many [merged](#duplicates) copies of the same release to try first. Needs Merge on in Duplicates.                                                                                                                     |
+| **Only Same-Release Failover**     | Off     | Only tries copies of the same release.                                                                                                                                                                                    |
+| **Parallel Attempts**              | 1       | How many to try at once. Your instance caps it (2 by default). More is faster, but starts more downloads on your service; the ones that lose are removed, except private torrents.                                        |
+| **Backup delay**                   | 1 s     | Parallel only: how long to wait before starting the next try. **Same-release backup delay** (0 s) is the same for copies of one release.                                                                                  |
+| **Preferred-item grace**           | 2 s     | Parallel only: how long a result higher in the list gets to finish before a lower one that is already ready plays.                                                                                                        |
+| **Max wait**                       | 30 s    | Parallel only: how long to try in total. Trying one at a time has no overall time limit.                                                                                                                                  |
+| **During Pre-cache**               | Off     | Also fails over while pre-caching the next episode.                                                                                                                                                                       |
+| **Failover Position**              | Last    | Which list failover picks from: before stream expressions, before limits, or the final list. Earlier positions can fall back to results you never see in the list.                                                        |
 
-<h3>FAQ</h3>
+The [Usenet guide](/guides/usenet#4-make-it-resilient-failover) covers setting it up for Usenet.
 
-<h4>How do I edit my configuration?</h4>
+#### Next episode
 
-When you create a user, you are given a unique installation URL ending in `/manifest.json`
-Most apps will display a `Configure` button next to the addon, which will take you to the configuration page.
-If this does not exist, you can manually navigate to the URL by replacing `/manifest.json` with `/configure`.
+_Advanced._
 
-You may also manually go to the configuration page by navigating to `https://your-instance-url/stremio/configure` where `your-instance-url` is the URL of your AIOStreams instance,
-and then click the login icon on the bottom left corner, where you will be asked for your UUID and password.
+**Auto Play** decides which result plays for the next episode when an app plays episodes back to back. It sets Stremio's binge group, which the AIOStreams app also uses. **Matching file** picks a result from the same addon with the same attributes (resolution, quality and release group by default), **Matching index** the one at the same position in the list, and **First file** the first result from the same addon. Off, results have no binge group, so Stremio won't play the next episode by itself. In Stremio, its own auto play setting has to be on too.
 
-<h4>How do I update my configuration?</h4>
+**Are you still there?** stops Stremio playing the next episode after a number of episodes (3 by default) watched within a cooldown (60 minutes by default), so a series doesn't play all night. Stremio only.
 
-You can update your configuration by going to the configuration page and clicking the `Update user` button on the `Save & Install` menu.
+## AIOStreams app
 
-You don't have to reinstall the addon in Stremio, as the manifest URL will remain the same. **Note: This does not apply if you make changes that cause the manifest of the addon to change, such as reordering or editing catalogues or adding a type of addon (e.g. subtitle) that was not previously provided by your installation. In that case, you will need to reinstall the addon in Stremio.**
+The [AIOStreams app](/apps) and [Jellyfin apps](/apps/jellyfin) sign in to your configuration through your instance's media server; [Media server](/apps/media-server) explains how it works. When your instance has it turned off, **Setup** only shows the app and where to get it, and **Profiles** only shows if your configuration already has profiles.
 
-<h3>Need Help?</h3>
+### Setup
 
-If you need help in configuring this addon, feel free to ask in the [AIOStreams Discord](https://discord.viren070.me) in the `#support` channel,
+**Skip intro and credits** finds intro and credits markers, when your instance offers them. Some sources need a PublicMetaDB API key.
+
+**Jellyfin apps** holds settings for other Jellyfin apps. If you only use the AIOStreams app, leave them as they are.
+
+- **Resolve streams when an item opens** (on by default) fetches results as soon as you open a title, so the version list is ready. Your instance can force it on or off.
+- **Versions per item** is how many results Jellyfin apps list. Your instance caps it (`JELLYFIN_MAX_VERSIONS`, 25 by default). The AIOStreams app lists more, up to your [limits](#limits).
+- **Wait for tracks on play** waits up to 30 seconds for a result's audio and subtitle tracks before playing, so your track choices apply.
+- **Mark unaired episodes** (off by default).
+
+### Profiles
+
+Profiles are the people who watch with this configuration, each with their own settings, their own or the owner's history, and an optional PIN. They can also have their own addons and catalogs through [variants](#variants) and [Who gets this](#who-gets-this). See [Profiles and PINs](/apps/media-server#profiles-and-pins). Your instance caps how many you can have (20 by default).
+
+## Install
+
+### Stremio
+
+Install with the link on this page, or copy it into any app that supports Stremio addons.
+
+- **Variants and profiles.** Pick [variants](#variants) or [profiles](#profiles) to install a version of your configuration with them applied, in the order you pick them. Each pick installs as a separate addon. A profile's link follows the profile's variants, so changing them doesn't need a reinstall. **Selector location** puts the choice in the path (`/v/…`, which works with apps that drop query strings) or in the query (`?v=…`).
+- **Manifest change notices**: **Always** (the default) tells you after a save when Stremio needs a reinstall, **Significant** only when the change is a big one, and **Never** doesn't.
+
+#### Linked accounts
+
+Links your Stremio account (or AIOManager) so a save that changes your addon updates it there for you. **Push to linked accounts** can ask each time (the default), do it automatically, or never. Automatic pushes happen even with change notices off. Signing in with a Stremio email that has no account creates one.
+
+### Other apps
+
+- **Chillio** installs with its own ChillLink address.
+- **Seanime** needs a configuration you sign in to with its UUID, not a share alias. See the [Seanime guide](/guides/seanime).
+- **Aniyomi and Animiru** use an unofficial extension.
+- **Newznab and Torznab** let Sonarr, Radarr and Prowlarr search your configuration. See [Sonarr and Radarr](/guides/sonarr-radarr).
+- **Search API** returns your results as JSON. See [Search API](/apis/search).
+
+Your instance can turn the Newznab, Torznab and Search APIs off.
+
+## Manage
+
+### Configuration
+
+**Creating it.** The first save asks for a password (at least 6 characters) and gives you a UUID. Your instance may also ask for an access key. Keep the UUID and password: there is no way to recover a configuration without them, other than an [export](#backups).
+
+**Saved configuration.** When you are signed in to an account on the instance, you can save the configuration to it, so you don't need the UUID and password to open it. A **share alias** replaces the UUID and password in your links, and gives the same access. See [Saved configurations](/guides/config-profiles).
+
+**Name and look.** The addon's name, logo, background and description in Stremio.
+
+#### Backups
+
+**Export** saves your configuration as a file. **Exclude Credentials** removes your service credentials, metadata and poster keys, proxy details and secret addon options, but **not**:
+
+- your parent configuration, which includes its UUID and password;
+- custom addon addresses and addresses you set on addons, which often contain keys;
+- variant scripts and profile details.
+
+Check the file before you share it.
+
+**Import** replaces each section in the file wholesale. Importing an export without credentials clears your service credentials until you enter them again. Templates are imported and exported separately; see [Templates](/reference/templates).
+
+#### This page
+
+- **Simple / Advanced** mode.
+
+#### Danger zone
+
+- **Change Password**: every installed link contains your password, so reinstall everywhere afterwards.
+- **Delete Configuration**: permanent.
+- **Reset**: clears the editor. Nothing is stored until you save.
+
+### Advanced
+
+#### Parent configuration
+
+Links this configuration to another one, which it reads from every time it loads, so changes to the parent reach every child without editing them.
+
+- One level only: a parent's own parent is ignored.
+- Each section **inherits** the parent, **extends** it (addons and services: the parent's plus yours), or **overrides** it with yours. **Field overrides** pick single fields, and win over sections.
+- Not inherited: variants, profiles, health checks, applied templates, the AIOStreams app settings, RemuxDB, change notices and linked accounts.
+- With Services set to extend, a service you turned off yourself is skipped, so a child can't turn off a parent's service.
+- If the parent can't be loaded, saving fails, and while it is unavailable your configuration quietly uses only its own settings.
+
+#### Variants
+
+Variants change your configuration for some requests: from a variant link, for a profile, or automatically when their condition is true. They are written in [config expressions](/reference/config-expressions). Changing a variant's ID breaks links that use it. Your instance decides who can use them (`VARIANT_ACCESS`) and how many (50 by default).
+
+#### Health checks
+
+Checks an address and gives the result to your variants and conditions as `health('id')`, for example to switch to a backup addon when one is down. A check runs again after its interval (at least 60 seconds), and the first request after that waits for it. Your instance decides who can use them and allows 5 by default.
+
+### Stats
+
+Shows how your addons perform: results, timing and failures, per addon and per service. It needs a saved configuration, and an instance with per-user stats on.
+
+## Editing later
+
+Open the configure page from the **Configure** button next to the addon in Stremio, or go to `/stremio/configure` on your instance and sign in with your UUID and password (or your account, if you saved it there). Saving updates every install; Stremio only needs a reinstall for the changes listed under [Catalogs](#catalogs).
+
+If you get stuck, ask in `#support` on the [AIOStreams Discord](https://discord.viren070.me).

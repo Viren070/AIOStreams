@@ -4,7 +4,6 @@ import {
   formatZodError,
   makeRequest,
   DistributedLock,
-  HEADER_PRESETS,
 } from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
@@ -70,8 +69,6 @@ const getNzbUrl = (torrent: TsukihimeTorrent) =>
   ).toString();
 
 class TsukihimeAPI {
-  private headers: Record<string, string>;
-
   private readonly searchCache = Cache.getInstance<
     string,
     TsukihimeTorrentsResponse
@@ -80,14 +77,6 @@ class TsukihimeAPI {
   private readonly animeIdCache = Cache.getInstance<string, number | null>(
     'tsukihime:anime-id'
   );
-
-  constructor() {
-    this.headers = {
-      'Content-Type': 'application/json',
-      'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
-      Accept: 'application/json',
-    };
-  }
 
   async getAnimeId(
     idType: 'mal' | 'anidb' | 'anilist',
@@ -108,7 +97,7 @@ class TsukihimeAPI {
         try {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
-            headers: this.headers,
+            preset: 'chrome',
             timeout,
           });
           // only a 404 is a real miss; other failures must not be cached
@@ -186,7 +175,7 @@ class TsukihimeAPI {
         try {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
-            headers: this.headers,
+            preset: 'chrome',
             timeout,
           });
 

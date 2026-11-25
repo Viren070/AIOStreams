@@ -13,6 +13,7 @@ import {
 } from '../../par2/decode.js';
 import { NzbFile } from '../../nzb/model.js';
 import { isProbablyObfuscated } from '../../nzb/obfuscation.js';
+import { archiveKindOf } from '../archive/archive-volume.js';
 import { CommandPriority } from '../../types.js';
 import { InspectOptions, InspectResult } from './types.js';
 import type { SiblingSizes } from './probe-plan.js';
@@ -273,5 +274,39 @@ export async function inspectFile(
             : 'open_failed',
       },
     };
+  }
+}
+
+/**
+ * Takes the exact size and yEnc name of a file whose first article is gone
+ * from its last part's header, so an archive volume can keep its place in its
+ * set.
+ */
+export async function probeTail(
+  file: NzbFile,
+  result: InspectResult,
+  pool: MultiProviderPool,
+  nzbHash: string,
+  opts: InspectOptions
+): Promise<void> {
+  if (file.segments.length < 2 || opts.signal?.aborted) return;
+  try {
+    const last = await pool.fetchSegmentHead(
+      file.segments[file.segments.length - 1],
+      nzbHash,
+      opts.signal,
+      CommandPriority.Low,
+      0
+    );
+    const fragment =
+      last.totalParts !== undefined && last.totalParts > file.segments.length;
+    if (!last.byteRange || fragment) return;
+    const filename = pickProbeName(file.filename, last.name);
+    result.file.filename = filename;
+    result.file.size = last.byteRange[1];
+    result.file.sizeExact = true;
+    if (archiveKindOf(filename)) result.file.category = 'archive';
+  } catch {
+    /* the file keeps its estimate */
   }
 }

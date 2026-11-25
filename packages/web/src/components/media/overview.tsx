@@ -14,10 +14,9 @@ function Banner({ image }: { image: string[] }) {
       data-ui="overview-banner"
       className="pointer-events-none absolute inset-x-0 top-0 h-32 overflow-hidden"
     >
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]">
         <Artwork src={image} alt="" />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[--paper] to-transparent" />
     </div>
   );
 }

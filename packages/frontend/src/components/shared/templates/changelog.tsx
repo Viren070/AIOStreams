@@ -133,7 +133,7 @@ export function TemplateChangelogModal({
 /**
  * Fetches a template's changelog from `changelogUrl`, filters to entries
  * newer than `update.appliedVersion`, and renders them.
- * Used inside the "Template Updates Available" modal in the About page.
+ * Used inside the "Template Updates Available" modal on the Home page.
  */
 export function TemplateUpdateChangelogSection({
   update,

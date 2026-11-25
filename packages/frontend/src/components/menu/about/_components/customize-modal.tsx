@@ -11,24 +11,28 @@ export function CustomizeModal({
   onOpenChange,
   currentName,
   currentLogo,
+  currentBackground,
   currentDescription,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentName: string;
   currentLogo: string | undefined;
+  currentBackground: string | undefined;
   currentDescription: string | undefined;
 }) {
   const { setUserData } = useUserData();
   const [name, setName] = useState(currentName);
   const [logo, setLogo] = useState(currentLogo);
+  const [background, setBackground] = useState(currentBackground);
   const [description, setDescription] = useState(currentDescription);
 
   useEffect(() => {
     setName(currentName);
     setLogo(currentLogo);
+    setBackground(currentBackground);
     setDescription(currentDescription);
-  }, [currentName, currentLogo, currentDescription]);
+  }, [currentName, currentLogo, currentBackground, currentDescription]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,6 +45,7 @@ export function CustomizeModal({
       ...prev,
       addonName: name.trim(),
       addonLogo: logo?.trim(),
+      addonBackground: background?.trim() || undefined,
       addonDescription: description?.trim() || undefined,
     }));
 
@@ -79,6 +84,22 @@ export function CustomizeModal({
             <p className="text-xs text-[--muted]">
               Enter a valid URL for your addon&apos;s logo image. Leave blank
               for default logo.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <TextInput
+              label="Background URL"
+              value={background}
+              onValueChange={(value) =>
+                setBackground(value.trim() || undefined)
+              }
+              placeholder="Enter background image URL"
+              type="url"
+            />
+            <p className="text-xs text-[--muted]">
+              Shown behind the addon&apos;s page in Stremio. Leave blank for
+              none.
             </p>
           </div>
 

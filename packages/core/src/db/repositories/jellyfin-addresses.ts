@@ -2,13 +2,13 @@ import { constants } from '../../utils/index.js';
 import { getDb } from '../db.js';
 import type { DbDriver } from '../driver/types.js';
 import { join, sql } from '../sql.js';
-import type { JellyfinPersona } from '../schemas.js';
+import type { Profile } from '../schemas.js';
 
 /** What a separate user's own sign-in address opens. */
 export interface JellyfinAddressTarget {
   uuid: string;
   encryptedPassword: string;
-  persona: string;
+  profile: string;
 }
 
 interface AddressRow {
@@ -40,7 +40,7 @@ export class JellyfinAddressRepository {
     const value = {
       uuid: row.uuid,
       encryptedPassword: row.encrypted_password,
-      persona: row.persona,
+      profile: row.persona,
     };
     this.cache.set(code, { value, at: Date.now() });
     return value;
@@ -51,17 +51,14 @@ export class JellyfinAddressRepository {
       if (entry.value.uuid === uuid) this.cache.delete(code);
   }
 
-  /**
-   * Makes the stored addresses those of the configuration's hidden users.
-   * Takes the save's transaction, so a refused address refuses the save.
-   */
+  /** Takes the save's transaction, so a refused address refuses the save. */
   static async syncForUuid(
     tx: DbDriver,
     uuid: string,
     encryptedPassword: string,
-    personas: JellyfinPersona[]
+    profiles: Profile[]
   ): Promise<void> {
-    const wanted = personas.filter((p) => p.hidden && p.address);
+    const wanted = profiles.filter((p) => p.id && p.hidden && p.address);
     if (wanted.length) {
       const taken = await tx.query<{ code: string }>(
         sql`SELECT code FROM jellyfin_user_addresses
@@ -80,10 +77,10 @@ export class JellyfinAddressRepository {
     await tx.exec(
       sql`DELETE FROM jellyfin_user_addresses WHERE uuid = ${uuid}`
     );
-    for (const persona of wanted) {
+    for (const profile of wanted) {
       await tx.exec(
         sql`INSERT INTO jellyfin_user_addresses (code, uuid, persona, encrypted_password)
-            VALUES (${persona.address}, ${uuid}, ${persona.id}, ${encryptedPassword})`
+            VALUES (${profile.address}, ${uuid}, ${profile.id}, ${encryptedPassword})`
       );
     }
     this.forget(uuid);

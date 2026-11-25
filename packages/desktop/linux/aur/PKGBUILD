@@ -1,0 +1,41 @@
+# Maintainer: Viren070 <viren070@protonmail.com>
+# A template: each desktop release attaches it with its version and checksums filled in.
+pkgname=aiostreams-desktop-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='AIOStreams in a native window, playing through mpv'
+arch=('x86_64' 'aarch64')
+url='https://github.com/Viren070/AIOStreams'
+license=('AGPL-3.0-only')
+depends=(
+  'alsa-lib'
+  'ca-certificates'
+  'fontconfig'
+  'glib2'
+  'glibc'
+  'gtk4'
+  'hicolor-icon-theme'
+  'libdrm'
+  'libgcc'
+  'libglvnd'
+  'libpulse'
+  'libstdc++'
+  'libva'
+  'webkitgtk-6.0'
+)
+provides=('aiostreams-desktop')
+conflicts=('aiostreams-desktop')
+options=('!strip' '!debug')
+source_x86_64=("$pkgname-$pkgver.deb::$url/releases/download/desktop-v$pkgver/aiostreams-desktop-linux-x64.deb")
+source_aarch64=("$pkgname-$pkgver.deb::$url/releases/download/desktop-v$pkgver/aiostreams-desktop-linux-arm64.deb")
+sha256sums_x86_64=('@SHA256_X86_64@')
+sha256sums_aarch64=('@SHA256_AARCH64@')
+
+package() {
+  bsdtar -xf data.tar.xz -C "$pkgdir"
+  # The .deb's AppArmor profile is for Ubuntu's user namespace restriction.
+  rm -r "$pkgdir/etc"
+  install -d "$pkgdir/usr/share/licenses"
+  mv "$pkgdir/usr/share/doc/aiostreams-desktop" "$pkgdir/usr/share/licenses/$pkgname"
+  rmdir "$pkgdir/usr/share/doc"
+}

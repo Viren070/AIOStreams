@@ -71,6 +71,7 @@ import { KnabenPreset } from './knaben.js';
 import { LibraryPreset } from './library.js';
 import { EztvPreset } from './eztv.js';
 import { XtreamPreset } from './xtream.js';
+import { M3uPreset } from './m3u.js';
 import { TheRARBGPreset } from './therarbg.js';
 import { ThePirateBayPreset } from './thePirateBay.js';
 import { TsukihimePreset } from './tsukihime.js';
@@ -146,6 +147,7 @@ let PRESET_LIST: string[] = [
   'yastream',
   'streamasia',
   'xtream',
+  'm3u',
   'usa-tv',
   'usa-tv-next',
   'argentina-tv',
@@ -343,6 +345,8 @@ export class PresetManager {
         return LibraryPreset;
       case 'eztv':
         return EztvPreset;
+      case 'm3u':
+        return M3uPreset;
       case 'xtream':
         return XtreamPreset;
       case 'therarbg':

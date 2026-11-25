@@ -52,10 +52,10 @@ export const NAV: DashboardNavItem[] = [
     desc: 'CPU, memory & lifecycle',
   },
   {
-    label: 'Users',
+    label: 'Configurations',
     href: '/dashboard/users',
     icon: BiGroup,
-    desc: 'Accounts & their configs',
+    desc: 'Every configuration on this instance',
   },
   {
     label: 'Tasks',

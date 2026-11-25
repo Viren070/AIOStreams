@@ -1,5 +1,3 @@
-import { cn } from '@aiostreams/ui/core/styling';
-import { PageControls } from '../../../shared/page-controls';
 import {
   RESOLUTIONS,
   QUALITIES,
@@ -59,31 +57,6 @@ export const defaultPreferredStreamTypes: StreamType[] = [];
 export const defaultPreferredVisualTags: VisualTag[] = [];
 export const defaultPreferredAudioTags: AudioTag[] = [];
 
-// Tab styling constants
-
-export const tabsRootClass = cn(
-  'w-full grid grid-cols-1 lg:grid lg:grid-cols-[300px,1fr] gap-4'
-);
-
-export const tabsTriggerClass = cn(
-  'font-bold text-base px-6 rounded-[--radius-md] w-fit lg:w-full border-none data-[state=active]:bg-[--subtle] data-[state=active]:text-white dark:hover:text-white',
-  'h-9 lg:justify-start px-3 transition-all duration-200 hover:bg-white/[0.03] hover:transform'
-);
-
-export const tabsListClass = cn(
-  'w-full flex flex-wrap lg:flex-nowrap h-fit xl:h-10',
-  'lg:block p-2 lg:p-0'
-);
-
-// display:contents below lg so mobile keeps the flat wrapped pill list
-export const tabsGroupClass = cn(
-  'contents lg:block border-0 bg-transparent lg:border lg:bg-[--paper] overflow-clip p-1'
-);
-
-export const tabsContentClass = cn(
-  'space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-300'
-);
-
 // Utility functions
 
 /**
@@ -96,19 +69,6 @@ export function formatAgeDisplay(hours: number): string {
   }
   const days = Math.floor(hours / 24);
   return `${days}d`;
-}
-
-// Shared components
-
-export function HeadingWithPageControls({ heading }: { heading: string }) {
-  return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-      <h3>{heading}</h3>
-      <div className="hidden lg:block lg:ml-auto">
-        <PageControls />
-      </div>
-    </div>
-  );
 }
 
 // Deduplicator constants

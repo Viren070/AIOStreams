@@ -79,28 +79,27 @@ const WINDOWED = 40;
 /** Cards drawn past each side of the view, so the next one a key moves to is there. */
 const MARGIN = 12;
 
-/** The cards a long row draws: around its start at first, then wherever it has been scrolled. */
-function useWindow(count: number, start: number, loading: boolean) {
-  // Decided as the cards first arrive, so a row that grows as it pages keeps them all.
-  const [windowed, setWindowed] = React.useState<boolean>();
-  if (windowed === undefined && !loading && count)
-    setWindowed(count > WINDOWED);
+/**
+ * The cards a long row draws: around its start at first, then around wherever
+ * it has been scrolled, letting go of those left behind.
+ */
+function useWindow(count: number, start: number) {
   const [first] = React.useState<[number, number]>([
     Math.max(0, start - MARGIN),
     start + 2 * MARGIN,
   ]);
   const [range, setRange] = React.useState(first);
   const view = React.useCallback((from: number, to: number) => {
-    setRange((r) =>
-      from - MARGIN < r[0] || to + MARGIN > r[1]
-        ? [
-            Math.max(0, Math.min(r[0], from - MARGIN)),
-            Math.max(r[1], to + 2 * MARGIN),
-          ]
-        : r
-    );
+    setRange((r) => {
+      const short = Math.max(0, from - MARGIN) < r[0] || to + MARGIN > r[1];
+      const long = from - 4 * MARGIN > r[0] || to + 4 * MARGIN < r[1];
+      return short || long
+        ? [Math.max(0, from - 2 * MARGIN), to + 2 * MARGIN]
+        : r;
+    });
   }, []);
-  if (!windowed) return { drawn: () => true, fades: () => true };
+  if (count <= WINDOWED)
+    return { drawn: () => true, fades: () => true, onView: view };
   return {
     drawn: (i: number) => i >= range[0] && i < range[1],
     // Only the first cards fade in; later ones are drawn ahead of the view.
@@ -435,7 +434,7 @@ export function MediaRow({
     () => React.Children.toArray(children),
     [children]
   );
-  const { drawn, fades, onView } = useWindow(items.length, start, !!loading);
+  const { drawn, fades, onView } = useWindow(items.length, start);
   // A finger scrolls a plain scroller on the compositor; Embla is for a mouse to drag.
   const touch = useMediaQuery('(pointer: coarse)');
   if (!loading && !items.length) return null;

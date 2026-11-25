@@ -59,7 +59,7 @@ Everything else is the app you know from the browser: the same home page, catalo
     {
       src: '/apps/desktop/episodes-list.webp',
       alt: "Severance's second season as a list of episodes, with their descriptions and watched marks",
-      caption: 'Or as a list, under Settings → Interface → Episode layout',
+      caption: 'Or as a list, under Settings → Browsing → Episode layout',
       width: 2288,
       height: 1430,
     },
@@ -83,22 +83,22 @@ The [desktop release](https://github.com/Viren070/AIOStreams/releases/tag/deskto
 | Windows on Arm, such as Snapdragon   | An installer, or a portable copy  |
 | Mac with Apple silicon (M1 or later) | An installer, or the app in a zip |
 | Intel Mac                            | An installer, or the app in a zip |
-| Linux, on most PCs (Intel or AMD)    | A Flatpak                         |
-| Linux on Arm                         | A Flatpak                         |
+| Linux, on most PCs (Intel or AMD)    | An AppImage, a .deb or a Flatpak  |
+| Linux on Arm                         | An AppImage, a .deb or a Flatpak  |
 
-It needs Windows 10 or 11, macOS 11 or later, or a Linux distribution with Flatpak, which most include.
+It needs Windows 10 or 11, macOS 11 or later, or Linux.
 
 - **The portable copy** runs without installing and keeps everything, including your sign-ins, in a `data` folder beside it.
 - **On a Mac**, the app is not signed by Apple yet, so macOS refuses to open it the first time. Open **System Settings → Privacy & Security** and press **Open Anyway**.
-- **On Linux**, open the Flatpak in your software centre, or run `flatpak install --user` with the file's name. The first install also fetches the runtime it needs from Flathub.
+- **On Linux**, the AppImage runs on any distribution and updates itself: make the file executable (`chmod +x` and its name, or its file properties), then open it. The .deb is for Ubuntu 24.04, Linux Mint 22, Debian 13 and later; install it with `sudo apt install ./` and the file's name. Open the Flatpak in your software centre, or run `flatpak install --user` with the file's name; the first install also fetches the runtime it needs from Flathub.
 
 ## Signing in
 
 <Steps>
   <Step>
-    Add your server. For AIOStreams, press **Open in desktop app** under **Save & Install →
-    AIOStreams app** on the configure page, and the app opens with your address filled in. The
-    portable copy can't be opened this way, so open **Sign-in addresses** there instead and
+    Add your server. For AIOStreams, press **Open in desktop app** on the configure page, under **AIOStreams app →
+    Setup**, and the app opens with your address filled in. The
+    portable copy can't be opened this way, so copy an address from **Connect** there instead and
     paste one into the app; the address with a sign-in picker is the easiest.
   </Step>
   <Step>
@@ -115,9 +115,9 @@ The player works as it does in the web app, with a few extras that need mpv:
 
 - **Subtitles inside the file** play with their own styling.
 - **Stats.** Press `i` for what is playing: the format, resolution, decoder and dropped frames.
-- **Picture-in-picture**, on Windows for now. The button in the player's controls shrinks the window to the video and keeps it above your other windows, with its own play, skip and volume controls. It keeps the video's shape as you resize it and opens where you left it, and **Exit picture-in-picture** brings the whole window back.
-- **Anime upscaling.** **Anime upscaling** under **Settings → Playback → Video** sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime, and **U** in the player turns it on and off for what's playing, so you can compare. It leaves HDR videos and videos about as large as the window as they are, and turns itself off for a video the computer can't keep up with. On a Mac, the **System** video output doesn't run it.
-- **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer, or turn off **Dolby Vision** under **Settings → Playback → Video** to play the HDR10 picture most of these videos also carry.
+- **Picture-in-picture**, on Windows and macOS for now. The button in the player's controls shrinks the window to the video and keeps it above your other windows, with its own play, skip and volume controls. It keeps the video's shape as you resize it and opens where you left it, and **Exit picture-in-picture** brings the whole window back.
+- **Anime upscaling.** **Anime upscaling** under **Settings → Player → Video** sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles your catalogs mark as anime, and **U** in the player turns it on and off for what's playing, so you can compare. It leaves HDR videos and videos about as large as the window as they are, and turns itself off for a video the computer can't keep up with. On a Mac, the **System** video output doesn't run it.
+- **HDR on Windows.** Turn on **Use HDR** in Windows' display settings and HDR video plays in HDR. Dolby Vision is converted to HDR10, as on any computer, or turn off **Dolby Vision** under **Settings → Player → Video** to play the HDR10 picture most of these videos also carry.
 - **HDR on a Mac.** On a screen that shows HDR, such as a MacBook Pro's, HDR video plays in HDR and fits the screen's brightness as you change it. **Video output** (see [Settings](#settings)) picks what draws it. On Linux, HDR video is shown in SDR for now.
 
 Subtitles from your subtitle addons, or a file you add, line up with the subtitles inside the video by themselves, whatever their language, within a moment of showing. Subtitles made for a version at another frame rate are stretched to fit first.
@@ -159,11 +159,11 @@ _Sintel_ is © Blender Foundation, shared under [CC BY 3.0](https://creativecomm
 
 ### Your own mpv
 
-To play in your own mpv, in its own window with its settings and scripts, pick **mpv** under **Settings → Playback → Player**. The app looks where mpv is usually installed, or you choose it there. The app's controls still drive it, your place and watched marks save, and the next episode plays in the same window. It also waits in mpv's playlist, so mpv's own next key moves to it. Closing mpv's window ends playback. The Flatpak can't start other programs, so it plays in the app only.
+To play in your own mpv, in its own window with its settings and scripts, pick **mpv** under **Settings → Player**. The app looks where mpv is usually installed, or you choose it there. The app's controls still drive it, your place and watched marks save, and the next episode plays in the same window. It also waits in mpv's playlist, so mpv's own next key moves to it. Closing mpv's window ends playback. The Flatpak can't start other programs, so it plays in the app only.
 
 For your mpv settings without a second window, put them in the app's own mpv folder instead (see [Settings](#settings)).
 
-Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` or the scroll wheel for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode. Press `?` anywhere for the full list, and change any of them under **Settings → Shortcuts**, which also takes a remote's or gamepad's buttons. The arrow keys, a remote or a gamepad move between everything on screen, and `Esc` goes back. On Linux, gamepads need Flatpak 1.15.6 or newer (see `flatpak --version`).
+Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` or the scroll wheel for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode. Press `?` anywhere for the full list, and change any of them under **Settings → Shortcuts**, which also takes a remote's or gamepad's buttons. The arrow keys, a remote or a gamepad move between everything on screen, and `Esc` goes back. In the Linux Flatpak, gamepads need Flatpak 1.15.6 or newer (see `flatpak --version`).
 
 ## Downloads
 
@@ -173,19 +173,22 @@ The desktop app downloads movies, episodes and whole seasons into a folder you c
 
 ## Settings
 
-The app adds a **Desktop app** section to the settings. These stay on the computer:
+The app adds settings of its own, which stay on the computer. Under **Settings → Player**:
 
-- **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows and Mac only.
+- **Cache size** sets how much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, so seeking back is instant. **Automatic** sizes it from the computer's memory. A `demuxer-max-bytes` line in your `mpv.conf` takes its place.
 - **Hardware decoding**: turn it off if video shows artefacts or stays black.
-- **Audio**: how many channels your speakers take, and whether to pass Dolby and DTS audio through to a receiver that decodes them.
 - **Video output**, on a Mac with macOS 14 or later, from the next start:
   - **mpv** (the default) draws the video itself, with your `mpv.conf` and shaders, as on Windows.
   - **System** has macOS draw it, which uses less power and shows Dolby Vision as the screen supports it. Shaders and mpv's own picture options don't apply.
   - **Compatibility** is the older way mpv draws, for a Mac where the others fail. Dolby Vision videos without an HDR10 picture underneath show the wrong colours. Older macOS versions always use it.
 - **mpv configuration**: opens the folder for your own `mpv.conf`, `input.conf`, scripts and shaders.
-- **Logs** and **Report a problem**: open the log folder, or send the app's versions and recent log to your server, and to the developer if you choose, with a code to give whoever looks into it. **Copy** puts the same on the clipboard.
 
-**Cache size**, under **Settings → Playback → Player**, sets how much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, so seeking back is instant. **Automatic** sizes it from the computer's memory. A `demuxer-max-bytes` line in your `mpv.conf` takes its place.
+Under **Settings → Audio**: how many channels your speakers take, and whether to pass Dolby and DTS audio through to a receiver that decodes them.
+
+Under **Settings → Desktop app**:
+
+- **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows, Mac and the Linux AppImage only.
+- **Logs** and **Report a problem**: open the log folder, or send the app's versions and recent log to your server, and to the developer if you choose, with a code to give whoever looks into it. **Copy** puts the same on the clipboard.
 
 ## Updates
 
@@ -193,19 +196,19 @@ The app checks for updates when it starts and every six hours, downloads them in
 
 Nightly builds come from every change, ahead of releases. They get fixes sooner but can break; switch back under **Settings → Desktop app → Updates**.
 
-The Linux Flatpak does not update itself yet. To update it, download the newer file and install it the same way; your sign-ins and settings stay. For nightly builds on Linux, take the Flatpak from the [nightly release](https://github.com/Viren070/AIOStreams/releases/tag/desktop-nightly).
+On Linux, the AppImage updates itself like the other downloads. The .deb and the Flatpak do not yet: download the newer file and install it the same way, and your sign-ins and settings stay. For their nightly builds, take them from the [nightly release](https://github.com/Viren070/AIOStreams/releases/tag/desktop-nightly).
 
 <Callout type="info">
   Something wrong? The logs are the first thing to share. **Settings → Desktop
   app → Report a problem** sends what is needed, or find them in `%LOCALAPPDATA%\AIOStreams Desktop\logs`
   on Windows (`data\logs` in a portable copy), `~/Library/Application Support/AIOStreams Desktop/logs`
-  on a Mac, and `~/.var/app/io.github.viren070.aiostreams/data/AIOStreams Desktop/logs` on Linux.
+  on a Mac, and `~/.local/share/AIOStreams Desktop/logs` on Linux (`~/.var/app/io.github.viren070.aiostreams/data/AIOStreams Desktop/logs` for the Flatpak).
 </Callout>
 
 ## Credits
 
 - **[Seanime](https://github.com/5rahim/seanime)** by 5rahim. The app's interface is built on its UI components.
-- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. On Windows and Mac the app ships libmpv from [AIOStreams/libs](https://github.com/AIOStreams/libs), whose mpv and FFmpeg carry [edde746's MPVKit](https://github.com/edde746/MPVKit) patches; the Flatpak builds its own.
+- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. The app ships libmpv from [AIOStreams/libs](https://github.com/AIOStreams/libs), whose mpv and FFmpeg carry [edde746's MPVKit](https://github.com/edde746/MPVKit) patches; the Flatpak builds its own.
 - **[Jellyfin](https://jellyfin.org)**, whose API the app speaks.
 
 The app's **Settings → About** lists these too. The licences of everything it ships are in `third-party-licenses.html`, beside the app on Windows and in the app's `Contents/Resources` on a Mac.

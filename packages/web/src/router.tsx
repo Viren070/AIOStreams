@@ -10,9 +10,11 @@ import {
 } from '@tanstack/react-router';
 import { PageMessage } from './components/shell/page';
 import { WebLayout } from './components/shell/layout';
+import type { PageView } from './components/shell/page-stack';
 import { navigate, setNavigator, to } from './lib/paths';
 import { lastCatalog } from './lib/settings';
 import { openStartPage } from './lib/start-page';
+import { HomePage } from './app/home/page';
 import { DiscoverIndex, DiscoverPage } from './app/discover/page';
 import { FavouritesPage } from './app/favourites/page';
 import { CalendarPage } from './app/calendar/page';
@@ -29,6 +31,13 @@ import { Button } from '@aiostreams/ui/button';
 import { LuffyError } from '@aiostreams/ui/shared/luffy-error';
 import { SettingsPage } from './app/settings/page';
 
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** What the layout shows for each of the route's history entries, rather than its outlet. */
+    page?: PageView;
+  }
+}
+
 const rootRoute = createRootRoute({ component: Outlet });
 
 const shellRoute = createRoute({
@@ -37,23 +46,22 @@ const shellRoute = createRoute({
   component: WebLayout,
 });
 
-// The layout renders the home page itself, to keep it while others are open.
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/',
-  component: () => null,
+  staticData: { page: () => <HomePage /> },
 });
 
 const historyRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/history',
-  component: HistoryPage,
+  staticData: { page: () => <HistoryPage /> },
 });
 
 const downloadsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/downloads',
-  component: DownloadsPage,
+  staticData: { page: () => <DownloadsPage /> },
 });
 
 const favouritesRoute = createRoute({
@@ -62,13 +70,10 @@ const favouritesRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     kind: search.kind == null ? undefined : String(search.kind),
   }),
-  component: FavouritesRouteView,
+  staticData: {
+    page: ({ search }) => <FavouritesPage kind={search.kind} />,
+  },
 });
-
-function FavouritesRouteView(): React.ReactElement {
-  const { kind } = favouritesRoute.useSearch();
-  return <FavouritesPage kind={kind} />;
-}
 
 const liveRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -77,13 +82,12 @@ const liveRoute = createRoute({
     group: search.group == null ? undefined : String(search.group),
     view: search.view == null ? undefined : String(search.view),
   }),
-  component: LiveRouteView,
+  staticData: {
+    page: ({ search }) => (
+      <LiveTvPage group={search.group} view={search.view} />
+    ),
+  },
 });
-
-function LiveRouteView(): React.ReactElement {
-  const { group, view } = liveRoute.useSearch();
-  return <LiveTvPage group={group} view={view} />;
-}
 
 const calendarRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -91,32 +95,24 @@ const calendarRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     month: search.month == null ? undefined : String(search.month),
   }),
-  component: CalendarRouteView,
+  staticData: {
+    page: ({ search }) => <CalendarPage month={search.month} />,
+  },
 });
-
-function CalendarRouteView(): React.ReactElement {
-  const { month } = calendarRoute.useSearch();
-  return <CalendarPage month={month} />;
-}
 
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
   validateSearch: (search: Record<string, unknown>) => ({
     tab: search.tab == null ? '' : String(search.tab),
+    for: search.for == null ? '' : String(search.for),
   }),
-  component: SettingsRouteView,
+  staticData: {
+    page: ({ search }) => (
+      <SettingsPage tab={search.tab ?? ''} who={search.for ?? ''} />
+    ),
+  },
 });
-
-function SettingsRouteView(): React.ReactElement {
-  const { tab } = settingsRoute.useSearch();
-  return (
-    <SettingsPage
-      tab={tab}
-      onTabChange={(next) => navigate(to.settings(next), { replace: true })}
-    />
-  );
-}
 
 const searchRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -124,18 +120,17 @@ const searchRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     q: search.q == null ? '' : String(search.q),
   }),
-  component: SearchRouteView,
+  staticData: {
+    page: ({ search }) => <SearchPage initialTerm={search.q ?? ''} />,
+  },
 });
-
-function SearchRouteView(): React.ReactElement {
-  const { q } = searchRoute.useSearch();
-  return <SearchPage initialTerm={q} />;
-}
 
 const discoverIndexRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/discover',
-  component: () => <DiscoverIndex lastViewId={lastCatalog()} />,
+  staticData: {
+    page: () => <DiscoverIndex lastViewId={lastCatalog()} />,
+  },
 });
 
 const discoverRoute = createRoute({
@@ -145,28 +140,31 @@ const discoverRoute = createRoute({
     genre: search.genre == null ? undefined : String(search.genre),
     kind: search.kind == null ? undefined : String(search.kind),
   }),
-  component: DiscoverRouteView,
+  staticData: {
+    page: ({ params, search }) => (
+      <DiscoverPage
+        viewId={params.viewId}
+        genre={search.genre}
+        kind={search.kind}
+      />
+    ),
+  },
 });
-
-function DiscoverRouteView(): React.ReactElement {
-  const { viewId } = discoverRoute.useParams();
-  const { genre, kind } = discoverRoute.useSearch();
-  return <DiscoverPage viewId={viewId} genre={genre} kind={kind} />;
-}
 
 /** Where catalogs used to live. */
 const libraryRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/library/$viewId',
-  component: LibraryRouteView,
+  staticData: {
+    page: ({ params }) => <LibraryRedirect viewId={params.viewId} />,
+  },
 });
 
-function LibraryRouteView(): React.ReactElement {
-  const { viewId } = libraryRoute.useParams();
+function LibraryRedirect({ viewId }: { viewId: string }): null {
   React.useEffect(() => {
     navigate(to.discover(viewId), { replace: true });
   }, [viewId]);
-  return <></>;
+  return null;
 }
 
 const itemRoute = createRoute({
@@ -178,34 +176,26 @@ const itemRoute = createRoute({
     pick: search.pick == null ? undefined : String(search.pick),
     playlist: search.playlist == null ? undefined : String(search.playlist),
   }),
-  component: ItemRouteView,
+  staticData: {
+    page: ({ params, search }) => (
+      <ItemPage
+        itemId={params.itemId}
+        seasonId={search.season}
+        episodeId={search.episode}
+        pickId={search.pick}
+        playlistId={search.playlist}
+      />
+    ),
+  },
 });
-
-function ItemRouteView(): React.ReactElement {
-  const { itemId } = itemRoute.useParams();
-  const { season, episode, pick, playlist } = itemRoute.useSearch();
-  return (
-    <ItemPage
-      key={itemId}
-      itemId={itemId}
-      seasonId={season}
-      episodeId={episode}
-      pickId={pick}
-      playlistId={playlist}
-    />
-  );
-}
 
 const personRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/person/$personId',
-  component: PersonRouteView,
+  staticData: {
+    page: ({ params }) => <PersonPage personId={params.personId} />,
+  },
 });
-
-function PersonRouteView(): React.ReactElement {
-  const { personId } = personRoute.useParams();
-  return <PersonPage key={personId} personId={personId} />;
-}
 
 const playRoute = createRoute({
   getParentRoute: () => shellRoute,

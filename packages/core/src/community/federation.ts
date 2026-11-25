@@ -3,7 +3,7 @@ import { config as appConfig, subscribeToConfig } from '../config/index.js';
 import { createLogger } from '../logging/logger.js';
 import { TaskManager } from '../tasks/index.js';
 import { hmac } from '../analytics/index.js';
-import { fetchRemoteCapped } from '../utils/safe-fetch.js';
+import { fetchRemoteCapped } from '../utils/http/safe-fetch.js';
 import type { Template } from '../db/schemas.js';
 import { validateCommunityPayload } from './validators/index.js';
 import type { CommunityItemPublic, CommunityKind } from './types.js';

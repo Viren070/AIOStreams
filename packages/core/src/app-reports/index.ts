@@ -8,7 +8,7 @@ import {
 } from '../db/index.js';
 import { createLogger } from '../logging/logger.js';
 import { redactUrlParams } from '../logging/redact.js';
-import { makeRequest } from '../utils/http.js';
+import { makeRequest } from '../utils/http/index.js';
 
 const logger = createLogger('app-reports');
 
@@ -94,7 +94,7 @@ export function appReportsForward(): boolean {
 /** Keeps a report from one of this server's users, and passes it on when asked. */
 export async function submitAppReport(
   body: AppReportBody,
-  from: { uuid: string; persona: string | null },
+  from: { uuid: string; profile: string | null },
   forward: boolean
 ): Promise<SentReport> {
   if (appConfig.appReports.accept === 'off')
@@ -102,7 +102,7 @@ export async function submitAppReport(
   const code = await keep({
     ...toInput(redacted(body, false)),
     uuid: from.uuid,
-    persona: from.persona,
+    profile: from.profile,
   });
   logger.info(
     { code, kind: body.kind, platform: body.platform },

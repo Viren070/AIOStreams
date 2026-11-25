@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { PageControls } from '../shared/page-controls';
-import { PageWrapper } from '../shared/page-wrapper';
 import { SettingsCard } from '../shared/settings-card';
 import { Combobox } from '@aiostreams/ui/combobox';
-import { useUserData, useParentInheritance } from '@/context/userData';
-import { InheritedBadge } from '../shared/inherited-badge';
+import { useUserData } from '@/context/userData';
 import { IconButton } from '@aiostreams/ui/button';
 import { MenuTabs } from '../shared/menu-tabs';
 import {
@@ -639,17 +636,8 @@ function SortTabContent({
   );
 }
 
-export function SortingMenu() {
-  return (
-    <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <Content />
-    </PageWrapper>
-  );
-}
-
-function Content() {
+export function SortingContent() {
   const { userData, setUserData } = useUserData();
-  const { isInherited, hasParent } = useParentInheritance();
   const [activeTab, setActiveTab] = useState('global');
 
   useEffect(() => {
@@ -703,23 +691,6 @@ function Content() {
 
   return (
     <>
-      <div className="flex items-center w-full">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2>Sorting</h2>
-            {hasParent && isInherited('sorting') && (
-              <InheritedBadge section="sorting" />
-            )}
-          </div>
-          <p className="text-[--muted]">
-            Configure how your streams are sorted and organised.
-          </p>
-        </div>
-        <div className="hidden lg:block lg:ml-auto">
-          <PageControls />
-        </div>
-      </div>
-
       <SortPreviewCard />
 
       <MenuTabs

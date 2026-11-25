@@ -394,7 +394,7 @@ export function normaliseTitle(title: string) {
 
 export function cleanTitle(title: string, language?: string) {
   return foldToAscii(title, language)
-    .replace(/[♪♫★☆♡♥\-;:]/g, ' ')
+    .replace(/[♪♫★☆♡♥\-;:/\\_|~·–—]/g, ' ')
     .replace(/&/g, 'and')
     .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalise spaces

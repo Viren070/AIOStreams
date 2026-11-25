@@ -438,6 +438,9 @@ pub enum Outbound {
         ffmpeg: Option<String>,
         #[serde(rename = "ac3Encoder")]
         ac3_encoder: bool,
+        /// The graphics card can upscale video itself.
+        #[serde(rename = "superResolution")]
+        super_resolution: bool,
     },
     /// `outputs` is empty where there is no choice.
     VideoOutput {

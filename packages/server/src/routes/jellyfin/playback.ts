@@ -101,7 +101,7 @@ async function locate(
         req,
         pointer.uuid,
         pointer.encryptedPassword,
-        pointer.persona
+        pointer.profile
       )) ?? undefined;
     if (!ctx) return null;
   }
@@ -134,7 +134,7 @@ async function locate(
     const norm = rawMsid.replace(/-/g, '').toLowerCase();
     if (norm !== itemId && norm !== playedId) requestedMsid = norm;
   }
-  // No persona check: personas on the same variants share a memo and its session.
+  // No profile check: profiles on the same variants share a memo and its session.
   const scope =
     opts.bySession && session?.scope && session.uuid === ctx.uuid
       ? session.scope
@@ -300,14 +300,18 @@ async function playbackInfo(req: Request, res: Response) {
     : undefined;
   if (named && !memo.sources.includes(named)) {
     memo.sources.push(named);
-    await writePlaybackMemo(memo, loc.ctx.scope(), loc.ctx.persona?.id);
+    await writePlaybackMemo(
+      memo,
+      loc.ctx.scope(),
+      loc.ctx.profile.id || undefined
+    );
   }
   if (req.jf)
     await writeClientSession(
       req.jf.token,
       memo,
       loc.ctx.scope(),
-      loc.ctx.persona?.id
+      loc.ctx.profile.id || undefined
     );
   const target = loc.requestedMsid ?? offered[0].msid;
   if (bodyOf(req).SkipSubtitles !== true)

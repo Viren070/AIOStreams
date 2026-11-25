@@ -188,7 +188,7 @@ export async function ensurePlaybackSink(
   scope: WatchScope,
   sink: ResolvedPlaybackSink
 ): Promise<SinkRow> {
-  const key = `${scope.uuid}|${scope.persona}|${sink.instanceId}`;
+  const key = `${scope.uuid}|${scope.profile}|${sink.instanceId}`;
   const hash = routingHashOf(sink);
   const now = Date.now();
 
@@ -235,7 +235,7 @@ export async function retireUnusedSinks(
   scope: WatchScope,
   keep: readonly string[]
 ): Promise<void> {
-  const prefix = `${scope.uuid}|${scope.persona}|`;
+  const prefix = `${scope.uuid}|${scope.profile}|`;
   for (const key of sinkRows.keys()) {
     if (key.startsWith(prefix) && !keep.includes(key.slice(prefix.length)))
       sinkRows.delete(key);
@@ -243,18 +243,18 @@ export async function retireUnusedSinks(
   await PlaybackHandoffRepository.retireSinksExcept(scope, keep, Date.now());
 }
 
-export async function retireOtherPersonaSinks(
+export async function retireOtherProfileSinks(
   uuid: string,
-  keepPersonaIds: readonly string[]
+  keepProfileIds: readonly string[]
 ): Promise<void> {
   for (const key of sinkRows.keys()) {
-    const [owner, persona] = key.split('|');
-    if (owner === uuid && persona && !keepPersonaIds.includes(persona))
+    const [owner, profile] = key.split('|');
+    if (owner === uuid && profile && !keepProfileIds.includes(profile))
       sinkRows.delete(key);
   }
-  await PlaybackHandoffRepository.retireOtherPersonas(
+  await PlaybackHandoffRepository.retireOtherProfiles(
     uuid,
-    keepPersonaIds,
+    keepProfileIds,
     Date.now()
   );
 }

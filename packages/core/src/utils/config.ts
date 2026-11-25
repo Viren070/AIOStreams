@@ -32,8 +32,8 @@ import {
   knownHealthCheckIds,
   validateConditionalActivation,
   validateVariants,
-  withOwnAccountLock,
 } from '../variants/runtime.js';
+import { isOwner, migrateProfiles } from './profiles.js';
 import { parseSyncedUrl } from './sync/index.js';
 import { ZodError } from 'zod';
 import {
@@ -244,7 +244,7 @@ export async function validateConfig(
       config.preferredKeywords,
       appConfig.userLimits.maxKeywordFilters,
     ],
-    groups: [config.groups, appConfig.userLimits.maxGroups],
+    groups: [config.groups?.groupings, appConfig.userLimits.maxGroups],
   };
 
   for (const [name, [items, max]] of Object.entries(validations)) {
@@ -279,18 +279,10 @@ export async function validateConfig(
       }
     }
   };
-  const personas = config.jellyfin?.personas ?? [];
-  checkLinked('The primary user', config.jellyfin?.primary?.variants ?? []);
-  for (const persona of personas) {
-    checkLinked(`Persona "${persona.name}"`, persona.variants ?? []);
-  }
-  const primaryName = config.jellyfin?.primary?.name?.trim().toLowerCase();
-  if (
-    primaryName &&
-    personas.some((p) => p.name.trim().toLowerCase() === primaryName)
-  ) {
-    throw new Error(
-      `A persona and the primary user share the name "${config.jellyfin?.primary?.name}"`
+  for (const profile of config.profiles ?? []) {
+    checkLinked(
+      isOwner(profile) ? 'The owner' : `Profile "${profile.name}"`,
+      profile.variants ?? []
     );
   }
 
@@ -465,7 +457,7 @@ export async function validateConfig(
 
   if (needTmdb && !tmdbAuth) {
     throw new Error(
-      'A TMDB API key or access token is required for the following features: title matching, year matching, and digital release filter'
+      'A TMDB API key or access token is required for the following features: title matching, year matching, digital release filter, and bitrate from metadata runtime'
     );
   }
 
@@ -570,6 +562,14 @@ function removeInvalidPresetReferences(config: UserData) {
       existingPresetIds?.includes(preset)
     );
   }
+  // An emptied list stays None: automatic could take trackers others picked.
+  for (const profile of config.profiles ?? []) {
+    if (profile.trackers) {
+      profile.trackers = profile.trackers.filter((id) =>
+        existingPresetIds?.includes(id)
+      );
+    }
+  }
   return config;
 }
 
@@ -610,6 +610,8 @@ export function applyMigrations(config: any): UserData {
         break;
     }
   }
+
+  migrateProfiles(config);
 
   if (typeof config.digitalReleaseFilter === 'boolean') {
     const oldValue = config.digitalReleaseFilter;
@@ -898,6 +900,16 @@ export function applyMigrations(config: any): UserData {
         api.apiKey = apiKey;
       }
       return { ...preset, options: { ...rest, api } };
+    });
+
+    config.presets = config.presets.map((preset: any) => {
+      if (preset.type !== 'xtream' || !preset.options) return preset;
+      const { server, username, password, ...rest } = preset.options;
+      if (rest.login !== undefined || server === undefined) return preset;
+      return {
+        ...preset,
+        options: { ...rest, login: { server, username, password } },
+      };
     });
   }
 
@@ -1245,7 +1257,11 @@ export function validateOption(
     }
     return value;
   }
-  if (option.type === 'subsection' || option.type === 'nab-endpoint') {
+  if (
+    option.type === 'subsection' ||
+    option.type === 'nab-endpoint' ||
+    option.type === 'endpoint'
+  ) {
     for (const subOption of option.subOptions ?? []) {
       // for subsection, the value must be an object
       if (typeof value !== 'object' || Array.isArray(value)) {
@@ -1523,7 +1539,8 @@ const METADATA_FIELDS: (keyof UserData)[] = [
 // prettier-ignore
 const MISC_FIELDS: (keyof UserData)[] = [
   'autoPlay', 'areYouStillThere', 'statistics', 'dynamicAddonFetching',
-  'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams', 'precacheSelector',
+  'failover', 'serviceWrap', 'cacheAndPlay', 'preloadStreams',
+  'precacheNextEpisode', 'precacheSelector', 'precacheSingleStream',
   'hideErrors', 'hideErrorsForResources', 'addonCategoryColors', 'catalogModifications', 'newCatalogsDisabled', 'upstreamCatalogOrder', 'mergedCatalogs',
   'accessKey', 'externalDownloads', 'autoRemoveDownloads', 'checkOwned', 'showChanges',
 ];
@@ -1539,7 +1556,7 @@ const BRANDING_FIELDS: (keyof UserData)[] = [
 // so a parent's would target fields the child lacks.
 // prettier-ignore
 const PERSONAL_FIELDS: (keyof UserData)[] = [
-  'appliedTemplates', 'variants', 'healthChecks',
+  'appliedTemplates', 'variants', 'healthChecks', 'profiles',
 ];
 
 /**
@@ -1716,15 +1733,5 @@ export function mergeConfigs(parent: UserData, child: UserData): UserData {
       }
     }
   }
-
-  // Personas key this config's own rows and name its own variants.
-  if (child.jellyfin?.personas) {
-    result.jellyfin = {
-      ...result.jellyfin,
-      personas: child.jellyfin.personas,
-    };
-  } else if (result.jellyfin?.personas) {
-    result.jellyfin = { ...result.jellyfin, personas: undefined };
-  }
-  return withOwnAccountLock(result, child);
+  return result;
 }

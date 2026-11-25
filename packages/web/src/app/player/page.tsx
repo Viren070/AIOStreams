@@ -18,6 +18,7 @@ import { cn } from '@aiostreams/ui/core/styling';
 import { useSession } from '@/lib/jellyfin/session';
 import { useItem } from '@/lib/jellyfin/queries';
 import {
+  useLaterSubtitles,
   useMaxBitrate,
   usePlaybackInfo,
   usePlaybackInfoOptions,
@@ -701,8 +702,9 @@ function SubtitleText({
         transitionTimingFunction: SUBTITLE_LIFT_EASE,
       }}
     >
+      {/* Each line takes its own direction, as native cues do. */}
       <span
-        className="whitespace-pre-line px-2"
+        className="whitespace-pre-line px-2 [unicode-bidi:plaintext]"
         style={{
           fontSize: `calc(${subtitleScale(style)} * 5${unit})`,
           fontWeight,
@@ -881,6 +883,7 @@ function Player({
       pictures: trickplayFeed(client, item, source),
     };
   }, [local, youTube, client, item, source]);
+  const laterSubtitles = useLaterSubtitles(item.Id!, source, !local?.local);
   const own = usePlayer(engines, {
     client,
     item,
@@ -889,6 +892,7 @@ function Player({
       : (youTube ?? directUrl(client, item.Id!, source)),
     headers: local?.local ? undefined : requiredHeaders(source),
     subtitleUrl: local ? localSubtitle : undefined,
+    laterSubtitles,
     source,
     startMs,
     onEnded,

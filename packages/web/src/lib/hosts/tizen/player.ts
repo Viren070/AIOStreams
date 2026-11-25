@@ -18,12 +18,14 @@ import {
   ownTrackLost,
   readOwnCues,
 } from '@/lib/playback/page-subtitles';
-import type {
-  EngineFactory,
-  EngineFile,
-  EngineState,
-  EngineTrack,
-  VideoFrame,
+import {
+  liveUserAgent,
+  type EngineFactory,
+  type EngineFile,
+  type EngineState,
+  type EngineTrack,
+  type ServerSubtitle,
+  type VideoFrame,
 } from '@/lib/playback/engine';
 import type { AvPlay } from '.';
 
@@ -103,6 +105,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
   const audioControl = window.tizen?.tvaudiocontrol;
   const report = (state: EngineState) => emit({ type: 'state', state });
   let file: EngineFile | null = null;
+  let subtitles: ServerSubtitle[] = [];
   let position = 0;
   // When AVPlay last said where it was, and whether it was playing on.
   let positionAt = 0;
@@ -142,11 +145,14 @@ export const avPlayEngine: EngineFactory = (emit) => {
     const sx = 1920 / innerWidth;
     const sy = 1080 / innerHeight;
     const r = frame ?? { x: 0, y: 0, width: innerWidth, height: innerHeight };
+    // AVPlay refuses a rect past the screen's edges.
+    const width = Math.min(Math.round(r.width * sx), 1920);
+    const height = Math.min(Math.round(r.height * sy), 1080);
     av.setDisplayRect(
-      Math.round(r.x * sx),
-      Math.round(r.y * sy),
-      Math.round(r.width * sx),
-      Math.round(r.height * sy)
+      Math.min(Math.max(Math.round(r.x * sx), 0), 1920 - width),
+      Math.min(Math.max(Math.round(r.y * sy), 0), 1080 - height),
+      width,
+      height
     );
   };
 
@@ -273,7 +279,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
       {
         own: ownTracks ?? [],
         embedded: reading,
-        server: file?.subtitles ?? [],
+        server: subtitles,
       },
       surface,
       { delayMs, height: liftHeight },
@@ -318,6 +324,7 @@ export const avPlayEngine: EngineFactory = (emit) => {
     load(next) {
       teardown();
       file = next;
+      subtitles = next.subtitles;
       position = next.startMs;
       delayMs = next.subtitleDelayMs;
       subtitle = null;
@@ -357,8 +364,9 @@ export const avPlayEngine: EngineFactory = (emit) => {
       const shown = document.createElement('object');
       object = shown;
       shown.type = 'application/avplayer';
+      // The video shows through all beneath the object, so it sits under the page's background.
       shown.style.cssText =
-        'position:fixed;left:0;top:0;width:100%;height:100%';
+        'position:fixed;left:0;top:0;width:100%;height:100%;z-index:-20';
       document.body.prepend(shown);
 
       const onPrepared = () => {
@@ -415,6 +423,8 @@ export const avPlayEngine: EngineFactory = (emit) => {
         });
         place();
         av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+        if (next.source.IsInfiniteStream)
+          av.setStreamingProperty('USER_AGENT', liveUserAgent(next.headers));
         // AVPlay starts a trailer's playlist on its smallest size and stays there.
         if (/^https:\/\/[^/]+\.googlevideo\.com\//.test(next.url))
           av.setStreamingProperty(
@@ -499,6 +509,9 @@ export const avPlayEngine: EngineFactory = (emit) => {
     },
     setAudio: (id) => run(() => av.setSelectTrack('AUDIO', Number(id))),
     setSubtitle,
+    setSubtitles(next) {
+      subtitles = next;
+    },
     setSubtitleDelay(ms) {
       delayMs = ms;
       showText();

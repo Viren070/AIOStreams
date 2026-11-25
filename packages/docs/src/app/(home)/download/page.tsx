@@ -48,7 +48,7 @@ const STEPS = [
     body: (
       <>
         Press <strong>Open in app</strong> under{' '}
-        <strong>Save &amp; Install</strong>, or approve a{' '}
+        <strong>AIOStreams app → Setup</strong>, or approve a{' '}
         <strong>Quick Connect</strong> code on a TV.{' '}
         <Link href="/apps#signing-in" className="underline">
           More on signing in
@@ -105,8 +105,7 @@ export default function DownloadPage() {
             </h2>
             <p className="mb-4 text-sm text-fd-muted-foreground">
               AIOStreams is also a Stremio addon, with nothing to download.
-              Install it from <strong>Save &amp; Install</strong> on the
-              configure page.
+              Install it from <strong>Stremio</strong> on the configure page.
             </p>
             <Link
               href="/getting-started"

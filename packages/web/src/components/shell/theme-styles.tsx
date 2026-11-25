@@ -10,10 +10,11 @@ export function ThemeStyles() {
   const [colors] = useSetting(settings.theme.colors);
   const [css] = useSetting(settings.theme.customCss);
   const [blurSpoilers] = useSetting(settings.interface.blurSpoilers);
-  const [artBackground] = useSetting(settings.theme.artBackground);
+  const [artPages] = useSetting(settings.theme.artBackground);
+  const artOff = !artPages.length;
   React.useEffect(() => {
-    if (!artBackground) clearArtBackground();
-  }, [artBackground]);
+    if (artOff) clearArtBackground();
+  }, [artOff]);
   React.useEffect(() => {
     document.documentElement.toggleAttribute(
       'data-blur-spoilers',

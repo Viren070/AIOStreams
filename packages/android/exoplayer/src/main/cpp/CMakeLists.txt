@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.22.1)
 project(aiostreams_exoplayer C)
 
 # ass/ holds the public headers of the libs AAR's libass.so, which the library loads.
-add_library(aiostreams_ass SHARED ass_surface.c)
-target_compile_options(aiostreams_ass PRIVATE -O3 -Wall)
+add_library(aiostreams_ass SHARED
+    subtitles/ass_surface.c subtitles/masks.c subtitles/blend.c subtitles/gl.c subtitles/gl_masks.c)
+target_compile_options(aiostreams_ass PRIVATE -O3 -Wall -fvisibility=hidden)
 target_link_libraries(aiostreams_ass PRIVATE android dl log EGL GLESv2)
 
 add_library(aiostreams_dolby_vision SHARED dolby_vision.c)

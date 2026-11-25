@@ -1,10 +1,10 @@
 import React from 'react';
 import { t } from '@lingui/core/macro';
-import { motion } from 'motion/react';
 import {
   Outlet,
   useChildMatches,
   useRouterState,
+  type AnyRouter,
 } from '@tanstack/react-router';
 import {
   BiCalendar,
@@ -30,9 +30,8 @@ import { Sidebar, type SidebarItem } from '@aiostreams/ui/shared/sidebar';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { useSession } from '@/lib/jellyfin/session';
-import { useLiveTvView } from '@/lib/jellyfin/queries';
-import { usePickableUsers } from '@/lib/jellyfin/history';
-import { pageOpening } from '@/lib/page-open';
+import { useLiveTvShown } from '@/features/live-tv/live-tv';
+import { useCanSwitch } from '@/lib/profiles';
 import { navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
 import { shellHost } from '@/lib/hosts/shell';
@@ -57,9 +56,7 @@ import { WatchNextSync } from './watch-next';
 import { ReminderHost } from '@/features/live-tv/live-reminders';
 import { RandomPick } from '@/components/media/random-pick';
 import { ItemMenuHost } from '@/components/media/item-menu';
-import { HomePage } from '@/app/home/page';
 import { PlayerPage } from '@/app/player/page';
-import { PageShown } from '@/lib/page-shown';
 import { GlideLayers } from './glide-layers';
 import { UpdatePrompt } from './update-prompt';
 import { UsageStats } from './usage-stats';
@@ -69,9 +66,13 @@ import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
 import { useTrailerCovers } from '@/features/trailers/preview';
-import { PageScroll } from './page-scroll';
+import { PageStack } from './page-stack';
 import { ArtWash } from './art-wash';
-import { setWashPaused } from '@/lib/artwork/background';
+import {
+  artPageOf,
+  setWashPaused,
+  setWashVisible,
+} from '@/lib/artwork/background';
 import { HistoryButtons } from './history-buttons';
 import { ConnectionNote } from './unreachable';
 import { Logo, onBar } from './nav/common';
@@ -82,25 +83,22 @@ import { TvRail } from './nav/tv-rail';
 import { CornerMenu } from './nav/corner-menu';
 import { TOP_BAR_HEIGHT, TopTabs } from './nav/top-tabs';
 
-// Kept mounted under every page, so it skips the layout's render on each route change.
-const KeptHome = React.memo(HomePage);
-
-const PAGE_FADE = {
-  initial: { opacity: 0, top: 6 },
-  animate: { opacity: 1, top: 0 },
-  transition: { type: 'spring', damping: 28, stiffness: 260, mass: 0.7 },
-} as const;
-
 /**
  * The backdrop as one element that never fades with the screens, so a
  * transparent page shows nothing beneath it; the player hides it.
  */
-export function PageBackground() {
-  const [wash] = useSetting(settings.theme.artBackground);
+export function PageBackground({ router }: { router: AnyRouter }) {
+  const [pages] = useSetting(settings.theme.artBackground);
   const [glass] = useSetting(settings.theme.artGlass);
   const [surface] = useSetting(settings.theme.glassSurface);
+  const pathname = useRouterState({
+    router,
+    select: (s) => s.location.pathname,
+  });
+  const shown = pages.includes(artPageOf(pathname));
   const playing = !!usePlayback();
   React.useEffect(() => setWashPaused(playing), [playing]);
+  React.useLayoutEffect(() => setWashVisible(shown), [shown]);
   React.useEffect(() => {
     const root = document.documentElement;
     if (glass && surface !== 'solid') root.dataset.artGlass = surface;
@@ -110,15 +108,12 @@ export function PageBackground() {
     <div
       aria-hidden
       data-ui="page-background"
-      className="page-background pointer-events-none fixed inset-0 -z-10 bg-[--background]"
+      // The tallest the viewport gets: a browser's bars slide away mid-scroll before it grows to match.
+      className="page-background pointer-events-none fixed inset-x-0 top-0 -z-10 h-screen bg-[--background]"
     >
-      {wash && <ArtWash />}
+      {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
     </div>
   );
-}
-
-function pageName(pathname: string): string {
-  return pathname.split('/')[1] || 'home';
 }
 
 /** Phones and TVs leave it to their first video. */
@@ -143,13 +138,8 @@ const WARM_UP_AFTER_MS = 10_000;
 
 export function WebLayout() {
   const { switchUser, user } = useSession();
-  const users = usePickableUsers();
-  const several = (users.data?.length ?? 0) > 1;
+  const several = useCanSwitch();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const entry = useRouterState({
-    select: (s) => s.location.state.__TSR_key ?? s.location.href,
-  });
-  const onHome = pathname === '/';
   // From the match the outlet shows, which can trail the location for a render.
   const playing = useChildMatches({
     select: (matches) => !!matches[0]?.pathname.startsWith('/play/'),
@@ -160,11 +150,6 @@ export function WebLayout() {
   usePlayerLeaving();
   // Another user, or signing out, takes what played with the pages.
   React.useEffect(() => closePlayback, [user.Id]);
-  // Home stays, hidden, while other pages and the player are open: going back
-  // to its entry shows it again rather than building it anew. Any other visit
-  // starts afresh.
-  const [kept, setKept] = React.useState<string>();
-  if (onHome && kept !== entry) setKept(entry);
   const activity: SidebarItem = {
     id: 'activity',
     name: t`Activity`,
@@ -203,7 +188,7 @@ export function WebLayout() {
   React.useEffect(() => {
     document.documentElement.dataset.nav = nav;
   }, [nav]);
-  const live: SidebarItem | null = useLiveTvView().data
+  const live: SidebarItem | null = useLiveTvShown()
     ? {
         id: 'live',
         name: t`Live TV`,
@@ -280,7 +265,7 @@ export function WebLayout() {
 
   const switchItem: SidebarItem = {
     id: 'switch-user',
-    name: t`Switch user`,
+    name: t`Switch profile`,
     iconType: BiTransferAlt,
     onClick: switchUser,
   };
@@ -423,36 +408,7 @@ export function WebLayout() {
                   {currentHost().watchNext && <WatchNextSync />}
                   <ItemMenuHost>
                     <GlideLayers name="page">
-                      {kept && (
-                        <motion.div
-                          key={kept}
-                          data-page="home"
-                          {...PAGE_FADE}
-                          inert={!onHome}
-                          className={cn(
-                            page,
-                            !onHome &&
-                              'invisible absolute inset-x-0 top-0 [content-visibility:hidden]'
-                          )}
-                        >
-                          <PageShown.Provider value={onHome}>
-                            <KeptHome />
-                          </PageShown.Provider>
-                          {onHome && <PageScroll />}
-                        </motion.div>
-                      )}
-                      {!onHome && !playing && (
-                        <motion.div
-                          key={pathname}
-                          data-page={pageName(pathname)}
-                          {...PAGE_FADE}
-                          initial={pageOpening() ? false : PAGE_FADE.initial}
-                          className={page}
-                        >
-                          <Outlet />
-                          <PageScroll />
-                        </motion.div>
-                      )}
+                      <PageStack className={page} covered={playing} />
                     </GlideLayers>
                   </ItemMenuHost>
                 </VersionPickerProvider>

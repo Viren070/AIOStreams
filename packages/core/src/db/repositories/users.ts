@@ -1,5 +1,5 @@
 ﻿import { EventEmitter } from 'node:events';
-import { UserData, isPersonaLockHash } from '../schemas.js';
+import { UserData, isProfileLockHash } from '../schemas.js';
 import { getDb } from '../db.js';
 import { sql } from '../sql.js';
 import { config as appConfig } from '../../config/index.js';
@@ -166,7 +166,7 @@ export class UserRepository {
           tx,
           uuid,
           encryptedPassword,
-          validatedConfig.jellyfin?.personas ?? []
+          validatedConfig.profiles ?? []
         );
       });
       logger.info(`Created a new user with UUID: ${uuid}`);
@@ -483,7 +483,7 @@ export class UserRepository {
           tx,
           uuid,
           encryptedPassword.data,
-          validatedConfig.jellyfin?.personas ?? []
+          validatedConfig.profiles ?? []
         );
       });
       logger.info(`Updated user ${uuid} with an updated configuration`);
@@ -640,12 +640,9 @@ export class UserRepository {
     salt?: string
   ): Promise<{ encryptedConfig: string; salt: string }> {
     // Every stored config passes here, so a PIN is never kept plain.
-    for (const user of [
-      config.jellyfin?.primary,
-      ...(config.jellyfin?.personas ?? []),
-    ]) {
-      if (user?.lock && !isPersonaLockHash(user.lock))
-        user.lock = await getTextHash(user.lock);
+    for (const profile of config.profiles ?? []) {
+      if (profile.lock && !isProfileLockHash(profile.lock))
+        profile.lock = await getTextHash(profile.lock);
     }
     const { key, salt: saltUsed } = await deriveKey(
       `${password}:${appConfig.bootstrap.secretKey}`,

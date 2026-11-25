@@ -4,7 +4,6 @@ import {
   formatZodError,
   makeRequest,
   DistributedLock,
-  HEADER_PRESETS,
 } from '../../utils/index.js';
 import { createLogger } from '../../utils/index.js';
 import { searchWithBackgroundRefresh } from '../utils/general.js';
@@ -46,20 +45,10 @@ type ThePirateBaySearchResponse = z.infer<typeof ThePirateBaySearchResponse>;
 const getApiBaseUrl = () => appConfig.builtins.thePirateBay.url;
 
 class ThePirateBayAPI {
-  private headers: Record<string, string>;
-
   private readonly searchCache = Cache.getInstance<
     string,
     ThePirateBaySearchResponse
   >('the-pirate-bay:search');
-
-  constructor() {
-    this.headers = {
-      'Content-Type': 'application/json',
-      'User-Agent': HEADER_PRESETS.chrome['User-Agent'],
-      Accept: 'application/json',
-    };
-  }
 
   async search(query: string): Promise<ThePirateBaySearchResponse> {
     const cacheKey = JSON.stringify({ query });
@@ -89,7 +78,7 @@ class ThePirateBayAPI {
         try {
           const response = await makeRequest(url.toString(), {
             method: 'GET',
-            headers: this.headers,
+            preset: 'chrome',
             timeout,
           });
 

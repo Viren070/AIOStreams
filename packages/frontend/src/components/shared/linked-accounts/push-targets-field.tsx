@@ -12,6 +12,7 @@ export type PushTarget = string[];
 
 interface PushTargetsFieldProps {
   variants: VariantOption[];
+  profiles?: VariantOption[];
   value: PushTarget[];
   onChange: (value: PushTarget[]) => void;
   baseUrl: string;
@@ -40,6 +41,7 @@ export function pushTargetsToUrls(
  */
 export function PushTargetsField({
   variants,
+  profiles,
   value,
   onChange,
   baseUrl,
@@ -82,6 +84,7 @@ export function PushTargetsField({
               <VariantPills
                 className="flex-1"
                 variants={usable}
+                profiles={profiles}
                 value={row}
                 onChange={(next) => setRow(index, next)}
               />

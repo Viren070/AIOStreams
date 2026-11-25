@@ -75,8 +75,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/haasn/libplacebo.git
-        tag: v7.360.1
-        commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
+        tag: v7.387.0
+        commit: 275f7dea27924cdd34ab2e6c20e448b6bc4fab65
 
   - name: uchardet
     buildsystem: cmake-ninja
@@ -105,8 +105,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/AIOStreams/libass.git
-        tag: aiostreams-20261028
-        commit: 4edfaf6eedd36892d38e278d832d442e91ec613b
+        tag: aiostreams-20261117
+        commit: 77731e1160d4d1327780b384a169df7857ee17e4
 
   - name: libmpv
     buildsystem: meson
@@ -121,6 +121,8 @@ modules:
       - -Dlua=luajit
       # Subtitle files that are not UTF-8.
       - -Duchardet=enabled
+      # FFmpeg opens network streams, as in the libmpv the other apps ship.
+      - -Dlibcurl=disabled
       - -Dwayland=enabled
       - -Dx11=enabled
       - -Dvulkan=enabled
@@ -136,11 +138,12 @@ modules:
       - -Dvdpau=enabled
       - -Dvdpau-gl-x11=enabled
     post-install:
-      - cd $FLATPAK_BUILDER_BUILDDIR && install -Dm644 Copyright LICENSE.GPL LICENSE.LGPL -t /app/lib/aiostreams-desktop/licenses/mpv
+      - cd $FLATPAK_BUILDER_BUILDDIR && install -Dm644 Copyright LICENSE.GPL LICENSE.LGPL LICENSE.MPVKit -t /app/lib/aiostreams-desktop/licenses/mpv
     sources:
-      - type: archive
-        url: https://github.com/mpv-player/mpv/archive/v0.41.0.tar.gz
-        sha256: ee21092a5ee427353392360929dc64645c54479aefdb5babc5cfbb5fad626209
+      - type: git
+        url: https://github.com/AIOStreams/mpv.git
+        tag: aiostreams-20261116
+        commit: aeb726b441fd36b1ad4c2d34699e9e2ac0bb8a5f
 
   - name: aiostreams-desktop
     buildsystem: simple

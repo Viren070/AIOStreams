@@ -125,6 +125,7 @@ export interface ContentFileRef {
   segments?: number;
   /** `number=` of the file's first segment (1 for a complete post). */
   firstSegmentNumber?: number;
+  headMissing?: boolean;
 }
 
 /**
@@ -416,7 +417,9 @@ export async function inspectArchiveSets(
           heads[0] !== undefined &&
           memberSizes.every((s) => s !== undefined && s > 0) &&
           heads.slice(1, -1).some((h) => h === undefined) &&
-          memberFiles.every((f) => f?.firstSegmentNumber === 1);
+          memberFiles.every(
+            (f) => f?.firstSegmentNumber === 1 && !f.headMissing
+          );
         const attempt = async (
           memberSizes: (number | undefined)[],
           exact = false

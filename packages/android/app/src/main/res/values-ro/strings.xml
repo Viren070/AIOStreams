@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's own words outside the web app, in British English. Weblate adds the values-* copies. --><resources>
+    <string name="channel_downloads">Descărcări</string>
+    <plurals name="downloading_items">
+        <item quantity="one">Se descarcă %d element</item>
+        <item quantity="few">Se descarcă %d elemente</item>
+        <item quantity="other">Se descarcă %d de elemente</item>
+    </plurals>
+    <string name="channel_updates">Actualizări</string>
+    <string name="updated_to">Actualizat la %1$s</string>
+    <string name="tap_to_open">Apasă pentru a deschide</string>
+    <string name="update_no_build">Nu există o versiune pentru procesorul acestui dispozitiv</string>
+    <string name="update_damaged">Fișierul descărcat este corupt</string>
+    <string name="update_install_failed">Instalarea a eșuat la: %1$s</string>
+    <string name="update_feed_answered">Fluxul a răspuns %1$d</string>
+    <string name="download_folder_title">Alege unde se salvează descărcările</string>
+    <string name="download_folder_free">%1$s · %2$s liber</string>
+    <string name="file_saved">%1$s s-a salvat în Descărcări</string>
+    <string name="file_not_saved">N-am putut salva %1$s</string>
+    <string name="webview_version_unknown">necunoscut</string>
+    <string name="webview_too_old">Versiunea WebView este prea veche pentru această aplicație: versiunea %1$s, și aplicația necesită %2$d sau mai nouă.</string>
+    <string name="webview_update">Actualizează Android System WebView, sau sistemul, și apoi deschide aplicația din nou.</string>
+</resources>

@@ -237,7 +237,6 @@ export interface NZB extends BaseFile {
   hash: string;
   nzb: string;
   easynewsUrl?: string;
-  zyclopsHealth?: string;
   serviceItemId?: string;
   releaseKey?: string;
   infoUrl?: string;

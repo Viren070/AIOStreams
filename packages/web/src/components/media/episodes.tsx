@@ -34,7 +34,9 @@ import { useVersionPicker } from '@/features/versions/version-picker';
 import { DownloadButton } from '@/features/downloads/download-button';
 import { useDownloadOf } from '@/lib/downloads';
 import { useHold } from '@/hooks/use-hold';
+import { ScrollRoot } from '@/hooks/use-in-view';
 import { fadeIn } from './media-row';
+import { NearCell, scrollParent } from './near-cell';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 
 function episodeNumber(episode: BaseItemDto): string | null {
@@ -506,6 +508,10 @@ function EpisodeListItem({
   );
 }
 
+const LONG_LIST = 60;
+const FIRST_EPISODES = 24;
+const AROUND_ANCHOR = 12;
+
 export function EpisodeList({
   episodes,
   highlightId,
@@ -521,29 +527,58 @@ export function EpisodeList({
   /** Side by side on wide screens. */
   columns?: boolean;
 }) {
+  const long = episodes.length > LONG_LIST;
+  const list = React.useRef<HTMLDivElement>(null);
+  const height = React.useRef(0);
+  const outer = React.useContext(ScrollRoot);
+  // A dialog's scroller clips the list, so nearness is measured against it.
+  const [root, setRoot] = React.useState(outer);
+  React.useLayoutEffect(() => {
+    if (long && list.current) setRoot(scrollParent(list.current) ?? outer);
+  }, [long, outer]);
+  const anchor = anchorId ? episodes.findIndex((e) => e.Id === anchorId) : -1;
   return (
-    <div
-      data-ui="episode-list"
-      data-nav-group
-      className={cn(
-        '-mx-2 grid gap-x-6 gap-y-1',
-        columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'
-      )}
-    >
-      {episodes.map((episode, i) => (
-        <div
-          key={episode.Id}
-          ref={episode.Id === anchorId ? anchorRef : undefined}
-        >
-          <div {...fadeIn(i)}>
-            <EpisodeListItem
-              episode={episode}
-              highlighted={episode.Id === highlightId}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
+    <ScrollRoot.Provider value={root}>
+      <div
+        ref={list}
+        data-ui="episode-list"
+        data-nav-group
+        className={cn(
+          '-mx-2 grid gap-x-6 gap-y-1',
+          columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'
+        )}
+      >
+        {episodes.map((episode, i) => {
+          const ref = episode.Id === anchorId ? anchorRef : undefined;
+          const item = (
+            <div {...fadeIn(i)}>
+              <EpisodeListItem
+                episode={episode}
+                highlighted={episode.Id === highlightId}
+              />
+            </div>
+          );
+          return long ? (
+            <NearCell
+              key={episode.Id}
+              ref={ref}
+              first={
+                i < FIRST_EPISODES ||
+                (anchor >= 0 && Math.abs(i - anchor) <= AROUND_ANCHOR)
+              }
+              height={height}
+              estimate="h-[8.5rem]"
+            >
+              {item}
+            </NearCell>
+          ) : (
+            <div key={episode.Id} ref={ref}>
+              {item}
+            </div>
+          );
+        })}
+      </div>
+    </ScrollRoot.Provider>
   );
 }
 

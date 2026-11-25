@@ -14,21 +14,32 @@ class FrameRateMatch(
     /** Pauses what plays while a TV blanks to switch modes; false when it was already paused. */
     private val hold: () -> Boolean,
     private val resume: () -> Unit,
+    private val hasFile: () -> Boolean,
 ) {
     var enabled = false
         set(value) {
             field = value
-            if (!value) match(null)
+            if (!value) restore()
+        }
+
+    /** The page draws the video in a box of its own, as a card's trailer or the mini player, and the display keeps its mode. */
+    var framed = false
+        set(value) {
+            if (field == value) return
+            field = value
+            match(wanted.takeIf { hasFile() })
         }
 
     private val main = Handler(Looper.getMainLooper())
+    private var wanted: Double? = null
     private var matched = 0.0
     private var original: Int? = null
     private var waiting: Runnable? = null
     private var switchedAt = -RELINK_MS
 
     fun match(frameRate: Double?) {
-        if (frameRate == null || !enabled) return restore()
+        wanted = frameRate
+        if (frameRate == null || !enabled || framed) return restore()
         if (abs(frameRate - matched) < 0.01) return
         matched = frameRate
         val display = activity.window.decorView.display ?: return

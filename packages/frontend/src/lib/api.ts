@@ -889,8 +889,8 @@ export interface TrackerExchange {
 
 export interface WatchStateTracker {
   addon: string;
-  /** Absent for the primary user's trackers. */
-  persona?: string;
+  /** Absent for the owner's trackers. */
+  profile?: string;
   status: 'connected' | 'auth_expired' | 'error';
   /** Absent when the addon or the instance does not use that direction. */
   push?: TrackerExchange;
@@ -900,7 +900,7 @@ export interface WatchStateTracker {
 }
 
 export interface WatchStateTrackerOption {
-  /** Empty for the primary user, otherwise the persona id. */
+  /** Empty for the owner, otherwise the profile id. */
   user: string;
   presetId: string;
   addon: string;
@@ -925,7 +925,7 @@ export async function getWatchStateTrackers(credentials: Credentials) {
 export async function approveJellyfinQuickConnect(
   credentials: Credentials,
   code: string,
-  persona?: string,
+  profile?: string,
   pin?: string
 ) {
   return api<{
@@ -933,7 +933,7 @@ export async function approveJellyfinQuickConnect(
     device: { name: string; app: string; version: string };
   }>('POST /jellyfin/quickconnect/approve', {
     ...authed(credentials),
-    body: { code, ...(persona ? { persona } : {}), ...(pin ? { pin } : {}) },
+    body: { code, ...(profile ? { profile } : {}), ...(pin ? { pin } : {}) },
   });
 }
 

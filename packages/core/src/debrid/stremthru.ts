@@ -369,6 +369,7 @@ export class StremThruService
               size: file.size,
               index: file.index,
               mediaInfo: (file as any).media_info,
+              mediaInfoSource: 'stremthru' as const,
               videoHash: (file as any).video_hash,
             };
           }),

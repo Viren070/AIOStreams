@@ -17,9 +17,9 @@ export interface PlayingTracks {
  */
 export interface WatchSessionRow extends Required<PlayingTracks> {
   uuid: string;
-  persona: string;
+  profile: string;
   /** Who was signed in; a shared-history persona shares the account's scope. */
-  userPersona: string | null;
+  userProfile: string | null;
   sessionKey: string;
   itemKey: string;
   kind: WatchKind;
@@ -44,7 +44,7 @@ export interface WatchSessionRow extends Required<PlayingTracks> {
 }
 
 export interface WatchSessionUpsert extends PlayingTracks {
-  userPersona?: string | null;
+  userProfile?: string | null;
   itemKey: string;
   kind: WatchKind;
   mediaType: string;
@@ -100,8 +100,8 @@ function optionalNumber(v: number | string | null): number | null {
 function toRow(r: DbRow): WatchSessionRow {
   return {
     uuid: r.uuid,
-    persona: r.persona,
-    userPersona: r.user_persona ?? null,
+    profile: r.persona,
+    userProfile: r.user_persona ?? null,
     sessionKey: r.session_key,
     itemKey: r.item_key,
     kind: r.kind as WatchKind,
@@ -135,7 +135,7 @@ export class WatchSessionRepository {
   ): Promise<WatchSessionRow | null> {
     const row = await getDb().maybeOne<DbRow>(
       sql`SELECT * FROM watch_sessions
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND session_key = ${sessionKey}`
     );
     return row ? toRow(row) : null;
@@ -149,7 +149,7 @@ export class WatchSessionRepository {
     const keys = join(sessionKeys.map((key) => sql`${key}`));
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_sessions
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND session_key IN (${keys})`
     );
     return rows.map(toRow);
@@ -169,8 +169,8 @@ export class WatchSessionRepository {
              device_id, client, device_name, app_version, media_source_id,
              audio_stream_index, subtitle_stream_index, position_ms,
              duration_ms, paused, started_at, last_checkin_at, ended_at, live)
-          VALUES (${scope.uuid}, ${scope.persona}, ${sessionKey},
-                  ${input.userPersona ?? null},
+          VALUES (${scope.uuid}, ${scope.profile}, ${sessionKey},
+                  ${input.userProfile ?? null},
                   ${input.itemKey}, ${input.kind}, ${input.mediaType},
                   ${input.baseId}, ${input.season ?? null},
                   ${input.episode ?? null}, ${input.videoId ?? null},
@@ -240,7 +240,7 @@ export class WatchSessionRepository {
             media_source_id = COALESCE(${patch.mediaSourceId ?? null}, media_source_id),
             audio_stream_index = COALESCE(${patch.audioStreamIndex ?? null}, audio_stream_index),
             subtitle_stream_index = COALESCE(${patch.subtitleStreamIndex ?? null}, subtitle_stream_index)
-          WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+          WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
             AND session_key = ${sessionKey} AND ended_at IS NULL`
     );
   }
@@ -252,7 +252,7 @@ export class WatchSessionRepository {
   ): Promise<WatchSessionRow | null> {
     const row = await getDb().maybeOne<DbRow>(
       sql`UPDATE watch_sessions SET ended_at = ${at}, last_checkin_at = ${at}
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND session_key = ${sessionKey}
           RETURNING *`
     );
@@ -266,7 +266,7 @@ export class WatchSessionRepository {
   ): Promise<WatchSessionRow[]> {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_sessions
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
            ORDER BY last_checkin_at DESC
            LIMIT ${limit}`
     );

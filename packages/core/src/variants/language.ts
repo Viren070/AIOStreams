@@ -113,18 +113,16 @@ const MAX_NOTES = 100;
 
 /**
  * Roots present in `FIELD_META` that must never be writable. `variants`, or one
- * variant could rewrite another mid-composition; `healthChecks`, or one could
- * rewrite the checks that decide whether it activates in the first place.
+ * variant could rewrite another mid-composition; `healthChecks` and `profiles`,
+ * or one could rewrite what decides whether it applies in the first place.
  */
 export const DENIED_ROOT_KEYS: ReadonlySet<string> = new Set([
   'accessKey',
   'parentConfig',
   'variants',
   'healthChecks',
+  'profiles',
 ]);
-
-/** Nested fields no variant may write: the persona list decides which variant applies. */
-export const DENIED_PATHS: ReadonlySet<string> = new Set(['jellyfin.personas']);
 
 const FORBIDDEN_KEYS: ReadonlySet<string> = new Set([
   '__proto__',
@@ -546,24 +544,16 @@ function parsePath(s: Scanner): CelPath {
     });
   }
 
-  const segments = parseSegments(s, root);
+  const segments = parseSegments(s);
   return { root, segments, raw: s.src.slice(start, s.pos), index: start };
 }
 
-function parseSegments(s: Scanner, root: string): CelPathSegment[] {
+function parseSegments(s: Scanner): CelPathSegment[] {
   const segments: CelPathSegment[] = [];
   while (!s.eof) {
     if (s.peek() === '.') {
       s.advance();
-      const keyStart = s.pos;
       const name = readIdent(s);
-      if (!segments.length && DENIED_PATHS.has(`${root}.${name}`)) {
-        s.fail(`"${root}.${name}" cannot be changed by a variant`, {
-          index: keyStart,
-          source: name,
-          category: 'denied-field',
-        });
-      }
       segments.push({ kind: 'key', name });
     } else if (s.peek() === '[') {
       s.advance();
@@ -635,7 +625,7 @@ function parseAnchor(s: Scanner): CelAnchor {
   if (s.peek() !== '[') {
     s.fail(`expected an entry of the same list, ${ANCHOR_HINT}`);
   }
-  const segments = parseSegments(s, '');
+  const segments = parseSegments(s);
   const raw = s.src.slice(start, s.pos);
   const segment = segments[0];
   if (

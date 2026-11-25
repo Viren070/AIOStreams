@@ -40,6 +40,8 @@ pub enum UserEvent {
     ToggleMaximize,
     WindowState,
     WindowButtons(bool),
+    #[cfg(target_os = "macos")]
+    FullscreenLeft,
     Link(String),
     LinksReady,
     ChoosePlayer(external::Kind),
@@ -299,6 +301,9 @@ fn main() {
         log::info!("already running; brought its window forward");
         return;
     };
+    platform::check_super_resolution();
+    #[cfg(target_os = "linux")]
+    platform::check_web_sandbox();
     #[cfg(target_os = "linux")]
     if let Some(port) = args.debug_port {
         // SAFETY: set before the web view starts, which is what reads it.
@@ -442,6 +447,7 @@ pub fn start_player(
         &required,
         auto_cache,
         paths.upscaling_hook.clone(),
+        platform::display_probe(video),
         Arc::new(emit),
     )
     .unwrap_or_else(|e| platform::fatal(&format!("mpv failed to start: {e}")))
@@ -725,6 +731,7 @@ pub fn handle(
                 mpv,
                 ffmpeg,
                 ac3_encoder: player.as_ref().is_some_and(Player::ac3_encoder),
+                super_resolution: platform::super_resolution(),
             });
         }
         Inbound::VideoOutput { output } => {

@@ -22,6 +22,7 @@ export enum ErrorCode {
   // Other
   MISSING_REQUIRED_FIELDS = 'MISSING_REQUIRED_FIELDS',
   INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
+  UPSTREAM_ERROR = 'UPSTREAM_ERROR',
   METHOD_NOT_ALLOWED = 'METHOD_NOT_ALLOWED',
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
   BAD_REQUEST = 'BAD_REQUEST',
@@ -102,6 +103,10 @@ export const ErrorMap: Record<ErrorCode, ErrorDetails> = {
   [ErrorCode.INTERNAL_SERVER_ERROR]: {
     statusCode: 500,
     message: 'An unexpected error occurred',
+  },
+  [ErrorCode.UPSTREAM_ERROR]: {
+    statusCode: 502,
+    message: 'The service behind this request failed',
   },
   [ErrorCode.METHOD_NOT_ALLOWED]: {
     statusCode: 405,

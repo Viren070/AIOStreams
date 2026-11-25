@@ -111,6 +111,13 @@ export class NZBHydraPreset extends NewznabPreset {
         ],
       },
       {
+        id: 'proxyAuth',
+        name: 'AIOStreams Proxy Auth',
+        description: `Provide a username:password pair from the \`AIOSTREAMS_AUTH\` environment variable to use for proxying the NZB.`,
+        type: 'password',
+        required: false,
+      },
+      {
         id: 'searchMode',
         name: 'Search Mode',
         description:
@@ -123,6 +130,25 @@ export class NZBHydraPreset extends NewznabPreset {
           { label: 'Auto', value: 'auto' },
           { label: 'Forced Query', value: 'query' },
           { label: 'Both', value: 'both' },
+        ],
+      },
+      {
+        id: 'seasonEpisodeStrategy',
+        name: 'Season/Episode Search Strategy',
+        description:
+          "Controls whether series searches in `Auto` mode query at the episode level, the season level, or both - useful for private trackers where season packs replace individual episodes. A season-level search may return season packs, individual episodes, or both, depending on the indexer. `Dynamic` decides based on whether the season is still airing. Pair with `Season/Episode Matching` in Filters to filter out results that don't match.",
+        type: 'select',
+        required: false,
+        showInSimpleMode: false,
+        default: 'episode',
+        options: [
+          { label: 'Episode', value: 'episode' },
+          { label: 'Season', value: 'season' },
+          { label: 'Dynamic (Season Preferred)', value: 'dynamic' },
+          {
+            label: 'Episode First, Season Fallback',
+            value: 'episodeFirst',
+          },
         ],
       },
       {
@@ -201,9 +227,11 @@ export class NZBHydraPreset extends NewznabPreset {
       // always a base url, since NZBHydra only ever serves its api at /api
       apiPath: '/api',
       apiKey: nzbhydraApiKey,
+      proxyAuth: options.proxyAuth,
       forceQuerySearch: options.forceQuerySearch ?? true,
       forceInitialLimit: options.initialLimit ?? 250,
       paginate: options.paginate ?? false,
+      seasonEpisodeStrategy: options.seasonEpisodeStrategy ?? 'episode',
     };
 
     const configString = this.base64EncodeJSON(config, 'urlSafe');

@@ -18,6 +18,7 @@ import {
   LuChevronsDown,
   LuMerge,
   LuSettings2,
+  LuTrash2,
 } from 'react-icons/lu';
 import {
   TbSearch,
@@ -30,6 +31,8 @@ import { FaArrowLeftLong, FaArrowRightLong, FaShuffle } from 'react-icons/fa6';
 import { PiStarFill, PiStarBold } from 'react-icons/pi';
 import { toast } from 'sonner';
 import { catalogKey } from './catalog-order';
+import { withoutMergedCatalog } from './merged-catalogs';
+import { useUserData } from '@/context/userData';
 import { AudienceButton } from '../../../shared/audience-modal';
 
 export type CatalogUpdate = (
@@ -354,6 +357,7 @@ function CatalogSettingsModal({
   onClose: () => void;
 }) {
   const merged = isMerged(catalog);
+  const { setUserData } = useUserData();
   const [newName, setNewName] = useState(catalog.name || '');
   const [newType, setNewType] = useState(
     catalog.overrideType || catalog.type || ''
@@ -371,15 +375,30 @@ function CatalogSettingsModal({
     >
       <div className="space-y-4">
         {merged && (
-          <Button
-            className="w-full"
-            intent="white"
-            rounded
-            leftIcon={<LuMerge />}
-            onClick={onEditMerged}
-          >
-            Edit name and sources
-          </Button>
+          <div className="space-y-2">
+            <Button
+              className="w-full"
+              intent="white"
+              rounded
+              leftIcon={<LuMerge />}
+              onClick={onEditMerged}
+            >
+              Edit name and sources
+            </Button>
+            <Button
+              className="w-full"
+              intent="alert-subtle"
+              rounded
+              leftIcon={<LuTrash2 />}
+              onClick={() => {
+                setUserData((prev) => withoutMergedCatalog(prev, catalog.id));
+                toast.success('Merged catalog deleted');
+                onClose();
+              }}
+            >
+              Delete merged catalog
+            </Button>
+          </div>
         )}
         {!merged && (
           <form

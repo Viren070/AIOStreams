@@ -118,3 +118,38 @@
       0 0 16px 3px rgb(var(--color-brand-500) / 0);
   }
 }
+
+/* Pushing and popping a page, see lib/slide.ts. */
+:root[data-slide]::view-transition-group(*) {
+  animation: none;
+}
+:root[data-slide]::view-transition-old(*),
+:root[data-slide]::view-transition-new(*) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-slide='open']::view-transition-new(root),
+:root[data-slide='open']::view-transition-new(slide-page),
+:root[data-slide='back']::view-transition-old(root),
+:root[data-slide='back']::view-transition-old(slide-page) {
+  z-index: 1;
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
+}
+/* Where the animation starts, held by CSS too: the browser can draw a frame before it begins. */
+:root[data-slide='open'][data-slide-scope='root']::view-transition-new(root),
+:root[data-slide='open'][data-slide-scope='page']::view-transition-new(
+    slide-page
+  ) {
+  transform: translateX(100%);
+}
+:root[data-slide='back'][data-slide-scope='root']::view-transition-new(root),
+:root[data-slide='back'][data-slide-scope='page']::view-transition-new(
+    slide-page
+  ) {
+  transform: translateX(-25%);
+  opacity: 0.6;
+}
+/* Clipped across only: an old page taller than the new one would lose its foot. */
+::view-transition-group(slide-page) {
+  overflow-x: clip;
+}

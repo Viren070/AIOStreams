@@ -22,7 +22,14 @@ export const to = {
     const query = params.toString();
     return `/live${query ? `?${query}` : ''}`;
   },
-  settings: (tab?: string) => (tab ? `/settings?tab=${tab}` : '/settings'),
+  /** `who` is a user id, or everyone's, whose settings to show instead of this device's. */
+  settings: (tab?: string, who?: string) => {
+    const params = new URLSearchParams();
+    if (tab) params.set('tab', tab);
+    if (who) params.set('for', who);
+    const query = params.toString();
+    return `/settings${query ? `?${query}` : ''}`;
+  },
   search: (term?: string) =>
     term ? `/search?q=${encodeURIComponent(term)}` : '/search',
   discover: (
@@ -83,6 +90,8 @@ interface NavigateOptions {
   replace?: boolean;
   keepScroll?: boolean;
   fromHero?: boolean;
+  /** Slides in over this page, as a title does. */
+  over?: boolean;
 }
 
 type Push = (path: string, opts: NavigateOptions) => void;
@@ -108,7 +117,11 @@ export function navigate(path: string, opts: NavigateOptions = {}) {
     pathname !== location.hash.slice(1).split('?')[0] &&
     !opts.replace &&
     !opts.keepScroll;
-  if (opensTitle) openPage(() => push(path, opts), opts.fromHero);
+  if (opensTitle || opts.over)
+    openPage(() => push(path, opts), {
+      fromHero: opts.fromHero,
+      title: opensTitle,
+    });
   else push(path, opts);
 }
 

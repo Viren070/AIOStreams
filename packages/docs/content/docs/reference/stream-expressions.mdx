@@ -141,7 +141,7 @@ Whether a health check is currently passing. Available **everywhere**: filters, 
 | --------- | -------- | ----------------------------------------------------- |
 | `id`      | `string` | Id of a health check, quoted. Must be one you defined |
 
-Define health checks in **Miscellaneous → Health Checks**; see [conditional activation](/reference/config-expressions#conditional-activation) for what they can test and how often they run. Every check is resolved once per request, so one request sees one answer everywhere.
+Define health checks in **Advanced → Health Checks**; see [conditional activation](/reference/config-expressions#conditional-activation) for what they can test and how often they run. Every check is resolved once per request, so one request sees one answer everywhere.
 
 ```
 # Skip a group entirely while your indexer is down
@@ -392,6 +392,18 @@ mediaInfoQuality(streams, 'probe', 'indexer')
 
 ---
 
+#### `mediaInfoSource()`
+
+Filter by which source a stream's probed media info came from. Streams whose media info did not come from a probe match `'unknown'`.
+
+**Accepted values:** `'local'` `'stremthru'` `'remuxdb'` `'remote'` `'stremthru-addon'` `'unknown'`
+
+```
+mediaInfoSource(streams, 'local', 'remuxdb')
+```
+
+---
+
 #### `type()`
 
 Filter by stream type.
@@ -487,6 +499,8 @@ entry does, so `tags=Atmos` matches an Atmos track.
 | `tags`            | audio    | `TrueHD`, `DD+`, `Atmos`, `DTS:X`, the same names as `audioTag()`                            |
 | `tag`             | audio    | deprecated: the first of `tags`                                                              |
 | `channels`        | audio    | `2.0`, `5.1`, `7.1`                                                                          |
+| `bitrate`         | audio    | bits per second, e.g. `640000`                                                               |
+| `sampleRate`      | audio    | Hz, e.g. `48000`                                                                             |
 | `default`         | both     | flag                                                                                         |
 | `forced`          | subtitle | flag                                                                                         |
 | `hearingImpaired` | both     | flag                                                                                         |
@@ -782,7 +796,7 @@ Streams are matched against SeaDex in two ways: by **info hash** (exact, the str
 
 <Callout type="info">
   Only active when SeaDex integration is enabled under **Filters →
-  Miscellaneous**.
+  Release checks**.
 </Callout>
 
 ```

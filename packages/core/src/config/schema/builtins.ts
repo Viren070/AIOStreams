@@ -600,6 +600,17 @@ export const builtinsSchema = {
       requiresRestart: false,
       secret: false,
     },
+    emptyResultCacheTtl: {
+      schema: seconds,
+      default: 1800,
+      label: 'Newznab/Torznab empty result cache TTL (s)',
+      env: 'BUILTIN_NAB_EMPTY_RESULT_CACHE_TTL',
+      description:
+        'Cache TTL for Newznab/Torznab searches that returned zero results. ' +
+        'Set to 0 to never cache empty results.',
+      requiresRestart: false,
+      secret: false,
+    },
     capabilitiesCacheTtl: {
       schema: seconds,
       default: 14 * Day,
@@ -672,16 +683,6 @@ export const builtinsSchema = {
         'download is cut off and only the whole results received so far are ' +
         'used, rather than failing the search. Accepts plain bytes or ' +
         '`10MB`-style strings.',
-      requiresRestart: false,
-      secret: false,
-    },
-    zyclopsHealthProxyEndpoint: {
-      schema: urlString,
-      default: 'https://zyclops.elfhosted.com',
-      label: 'Zyclops health proxy endpoint',
-      description:
-        'Base URL of the Zyclops health proxy used by the Newznab preset.',
-      env: 'ZYCLOPS_HEALTH_PROXY_ENDPOINT',
       requiresRestart: false,
       secret: false,
     },
@@ -1314,6 +1315,136 @@ export const builtinsSchema = {
       description:
         "Memory for channels' programmes, shared by every account on the same server. A channel's week takes around 100 KB. Guides that leave are read back from Redis, or the database without it.",
       requiresRestart: true,
+      secret: false,
+    },
+  },
+  m3u: {
+    timeout: {
+      schema: positiveInt,
+      default: 20000,
+      label: 'M3U playlist timeout (ms)',
+      env: 'BUILTIN_M3U_TIMEOUT',
+      description: 'How long downloading an M3U playlist may take.',
+      requiresRestart: false,
+      secret: false,
+    },
+    userAgent: {
+      schema: nullableString,
+      default: null,
+      label: 'M3U user agent',
+      env: 'BUILTIN_M3U_USER_AGENT',
+      description:
+        'User-Agent sent when downloading playlists and guides, for providers that only answer known players.',
+      requiresRestart: false,
+      secret: false,
+    },
+    playlistMaxBytes: {
+      schema: byteSize,
+      default: 16 * MB,
+      label: 'M3U playlist size limit',
+      env: 'BUILTIN_M3U_PLAYLIST_MAX_BYTES',
+      description:
+        "The largest playlist downloaded, after decompression. Larger ones are refused. A provider's movies and series count, though only its channels are kept.",
+      requiresRestart: false,
+      secret: false,
+    },
+    lineupTtl: {
+      schema: seconds,
+      default: 6 * Hour,
+      label: 'M3U playlist refresh (s)',
+      env: 'BUILTIN_M3U_LINEUP_TTL',
+      description:
+        'How old a playlist gets before it is downloaded again. The old one keeps answering while the new one loads.',
+      requiresRestart: false,
+      secret: false,
+    },
+    lineupMemory: {
+      schema: byteSize,
+      default: 64 * MB,
+      label: 'M3U playlist memory',
+      env: 'BUILTIN_M3U_LINEUP_MEMORY',
+      description:
+        "Memory for playlists' channels, shared by every user of the same playlist, the least recently used leaving first. 10,000 channels take about 7 MB. Playlists that leave are read back from the database.",
+      requiresRestart: true,
+      secret: false,
+    },
+    guideTimeout: {
+      schema: positiveInt,
+      default: 120000,
+      label: 'M3U guide timeout (ms)',
+      env: 'BUILTIN_M3U_GUIDE_TIMEOUT',
+      description: 'How long downloading and reading one XMLTV guide may take.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideMaxBytes: {
+      schema: byteSize,
+      default: 128 * MB,
+      label: 'M3U guide size limit',
+      env: 'BUILTIN_M3U_GUIDE_MAX_BYTES',
+      description:
+        'The largest XMLTV guide read, after decompression. Larger ones are refused, and tried again after the guide refresh.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideMaxProgrammes: {
+      schema: positiveInt,
+      default: 200_000,
+      label: 'M3U guide programme limit',
+      env: 'BUILTIN_M3U_GUIDE_MAX_PROGRAMMES',
+      description:
+        'Programmes one read of an XMLTV guide holds. A guide with more is read per playlist instead, which leaves out the rest. Each takes around 500 bytes of memory while the guide is read.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideUrls: {
+      schema: positiveInt,
+      default: 10,
+      label: 'M3U guides per playlist',
+      env: 'BUILTIN_M3U_GUIDE_URLS',
+      description:
+        'XMLTV guides read for one playlist, in the order it lists them, up to 128; the rest are left out. Playlists take turns reading theirs, so one listing many slows only itself.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideConcurrency: {
+      schema: positiveInt,
+      default: 2,
+      label: 'M3U guides read at once',
+      env: 'BUILTIN_M3U_GUIDE_CONCURRENCY',
+      description:
+        'XMLTV guides downloaded and read at once by this instance. The rest wait, playlists taking turns.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideTtl: {
+      schema: seconds,
+      default: 12 * Hour,
+      label: 'M3U guide refresh (s)',
+      env: 'BUILTIN_M3U_GUIDE_TTL',
+      description:
+        'How old a guide gets before it is downloaded again. The old one keeps answering while the new one loads.',
+      requiresRestart: false,
+      secret: false,
+    },
+    guideMemory: {
+      schema: byteSize,
+      default: 128 * MB,
+      label: 'M3U guide memory',
+      env: 'BUILTIN_M3U_GUIDE_MEMORY',
+      description:
+        "Memory for channels' programmes, shared by every playlist using the same guide. A channel's week takes around 100 KB. Programmes that leave are read back from the database.",
+      requiresRestart: true,
+      secret: false,
+    },
+    pageWait: {
+      schema: positiveInt,
+      default: 4000,
+      label: 'M3U guide page wait (ms)',
+      env: 'BUILTIN_M3U_PAGE_WAIT',
+      description:
+        "How long a guide page waits for guides being read. Programmes that arrive later appear on the next request. Keep it under the addon's timeout.",
+      requiresRestart: false,
       secret: false,
     },
   },

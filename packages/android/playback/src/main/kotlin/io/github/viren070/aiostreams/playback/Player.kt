@@ -99,6 +99,7 @@ data class PlayerSettings(
     val audioDelayMs: Double = 0.0,
     /** Megabytes of the stream to hold, 0 to size it from the device's memory. */
     val cacheMb: Int = 0,
+    val gpuSubtitles: Boolean = true,
 )
 
 data class TimeRange(val startMs: Double, val endMs: Double)
@@ -248,6 +249,7 @@ object PlayerProtocol {
         passthroughAuto = message.flag("passthroughAuto") == true,
         audioDelayMs = message.number("audioDelayMs") ?: 0.0,
         cacheMb = message.number("cacheMb")?.toInt() ?: 0,
+        gpuSubtitles = message.flag("gpuSubtitles") != false,
     )
 
     fun state(state: PlayerState) = buildJsonObject {

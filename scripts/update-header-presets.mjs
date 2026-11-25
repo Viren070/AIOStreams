@@ -7,7 +7,7 @@
  *   - the app version;
  *   - the `(alpine X.Y.Z)` suffix on the *arr presets, which is the OS the
  *     LinuxServer container reports.
- *   - Chrome's `Sec-Ch-Ua`, whose GREASE brand, version and ordering are all
+ *   - Chrome's `sec-ch-ua`, whose GREASE brand, version and ordering are all
  *     derived from the major version and change together.
  */
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -15,7 +15,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PRESETS_PATH = join(ROOT, 'packages/core/src/utils/header-presets.ts');
+const PRESETS_PATH = join(
+  ROOT,
+  'packages/core/src/utils/http/header-presets.ts'
+);
 const CHECK_ONLY = process.argv.includes('--check');
 const USER_AGENT = 'AIOStreams-header-preset-updater';
 
@@ -110,6 +113,20 @@ async function chromeMajorVersion() {
   return version.split('.')[0];
 }
 
+/** The feed VLC itself polls for updates; its first line is the version. */
+async function vlcVersion() {
+  const status = await get('https://update.videolan.org/vlc/status-win-x64', {
+    target: 'vlc',
+    json: false,
+  });
+  const version = status?.split(/\r?\n/, 1)[0].trim();
+  if (!version || !/^\d+(?:\.\d+)+$/.test(version)) {
+    skip('vlc', 'update feed returned no plain version');
+    return null;
+  }
+  return version;
+}
+
 // Ported from Chromium `components/embedder_support/user_agent_utils.cc`
 const GREASE_CHARS = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
 const GREASE_VERSIONS = ['8', '99', '24'];
@@ -193,16 +210,18 @@ const ARR = {
 
 let content = readFileSync(PRESETS_PATH, 'utf8');
 
-const [sabnzbd, nzbget, nzbhydra2, chromeMajor, ...arr] = await Promise.all([
-  latestGithubRelease('sabnzbd/sabnzbd', 'sabnzbd'),
-  latestGithubRelease('nzbgetcom/nzbget', 'nzbget'),
-  latestGithubRelease('theotherp/nzbhydra2', 'nzbhydra2'),
-  chromeMajorVersion(),
-  ...Object.entries(ARR).flatMap(([app, spec]) => [
-    latestGithubRelease(spec.repo, app),
-    alpineVersionFor(app),
-  ]),
-]);
+const [sabnzbd, nzbget, nzbhydra2, vlc, chromeMajor, ...arr] =
+  await Promise.all([
+    latestGithubRelease('sabnzbd/sabnzbd', 'sabnzbd'),
+    latestGithubRelease('nzbgetcom/nzbget', 'nzbget'),
+    latestGithubRelease('theotherp/nzbhydra2', 'nzbhydra2'),
+    vlcVersion(),
+    chromeMajorVersion(),
+    ...Object.entries(ARR).flatMap(([app, spec]) => [
+      latestGithubRelease(spec.repo, app),
+      alpineVersionFor(app),
+    ]),
+  ]);
 
 content = edit(content, 'sabnzbd', 'version', /SABnzbd\/([\d.]+)/, sabnzbd);
 content = edit(content, 'nzbget', 'version', /nzbget\/([\d.]+)/, nzbget);
@@ -213,6 +232,9 @@ content = edit(
   /NZBHydra2 ([\d.]+)/,
   nzbhydra2
 );
+
+content = edit(content, 'vlc', 'version', /\bVLC\/([\d.]+)/, vlc);
+content = edit(content, 'vlc', 'libvlc', /LibVLC\/([\d.]+)/, vlc);
 
 Object.keys(ARR).forEach((app, index) => {
   content = edit(content, app, 'version', ARR[app].pattern, arr[index * 2]);
@@ -237,7 +259,7 @@ if (chromeMajor) {
     content,
     'chrome',
     'sec-ch-ua',
-    /'Sec-Ch-Ua':\s*'([^']*)'/,
+    /'sec-ch-ua':\s*'([^']*)'/,
     secChUa(chromeMajor)
   );
 }

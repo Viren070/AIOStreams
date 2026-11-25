@@ -82,7 +82,6 @@ export function PictureInPicture({
     ready: started,
     visible: () => visible,
     wake,
-    glance: wake,
     glancing: () => false,
     hide,
     notice: showNotice,

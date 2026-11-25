@@ -1,12 +1,6 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Template,
-  Option,
-  StatusResponse,
-  ServiceId,
-  MenuId,
-} from '@aiostreams/core';
+import { Template, Option, StatusResponse, ServiceId } from '@aiostreams/core';
 import { applyMigrations, useUserData } from '@/context/userData';
 import {
   applyTemplateConditionals,
@@ -39,7 +33,7 @@ export interface UseTemplateWizardParams {
   setUserData: (updater: (prev: any) => any) => void;
   validationModal: UseValidationModal;
   templateValidations: Record<string, TemplateValidation>;
-  setSelectedMenu: (menu: MenuId) => void;
+  openInstallPage: () => void;
   onOpenChange: (open: boolean) => void;
   /** Step the wizard opens on, and returns to when cancelled. */
   initialStep?: WizardStep;
@@ -89,7 +83,7 @@ export function useTemplateWizard({
   setUserData,
   validationModal,
   templateValidations,
-  setSelectedMenu,
+  openInstallPage,
   onOpenChange,
   initialStep = 'browse',
 }: UseTemplateWizardParams): UseTemplateWizard {
@@ -98,7 +92,7 @@ export function useTemplateWizard({
     'browse',
     'review',
   ]);
-  // `initialStep` can change after mount (the About page decides between the
+  // `initialStep` can change after mount (the Home page decides between the
   // first-run screen and the browser), so cancelling must read the live value.
   const initialStepRef = useRef(initialStep);
   initialStepRef.current = initialStep;
@@ -340,7 +334,7 @@ export function useTemplateWizard({
       setSelectedServices([]);
       setInputValues({});
       setWizardHistory([]);
-      if (setToSaveInstallMenu) setSelectedMenu('save-install');
+      if (setToSaveInstallMenu) openInstallPage();
       onOpenChange(false);
     } catch (err) {
       console.error('Error loading template:', err);

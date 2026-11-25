@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Template } from '@aiostreams/core';
 
-import { PageWrapper } from '@/components/shared/page-wrapper';
 import { SettingsCard } from '@/components/shared/settings-card';
 import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
 import { ConfigTemplatesModal } from '@/components/shared/templates';
@@ -24,23 +23,14 @@ import { AboutHero } from './_components/hero';
 import { GetStartedCard } from './_components/get-started-card';
 import { FeaturedSetups } from './_components/featured-setups';
 import { Resources } from './_components/resources';
-import { InterfaceMode } from './_components/interface-mode';
 import { WhatsNew } from './_components/whats-new';
 import { InstanceUpdatedModal } from './_components/instance-updated-modal';
 import { CustomizeModal } from './_components/customize-modal';
 import { TemplateUpdatesModal } from './_components/template-updates-modal';
 
-export function AboutMenu() {
-  return (
-    <PageWrapper className="space-y-5 p-4 sm:p-8">
-      <Content />
-    </PageWrapper>
-  );
-}
-
-function Content() {
+export function AboutContent() {
   const { status } = useStatus();
-  const { nextMenu, setSelectedMenu } = useMenu();
+  const { setPage } = useMenu();
   const { userData, setUserData, uuid, password } = useUserData();
   const { isFirstTime, setIsFirstTime } = useMode();
   const loader = useTemplateLoader(status);
@@ -117,7 +107,7 @@ function Content() {
       templatesModal.open();
       url.searchParams.delete('template');
       url.searchParams.delete('templateId');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState(window.history.state, '', url.toString());
     }
   }, []);
 
@@ -217,9 +207,9 @@ function Content() {
           isSignedIn={isSignedIn}
           hasConfig={hasConfig}
           onStartSetup={() => openSetup({ welcome: true })}
-          onContinue={() => nextMenu()}
+          onContinue={() => setPage('services')}
           onBrowseSetups={() => openSetup()}
-          onInstall={() => setSelectedMenu('save-install')}
+          onInstall={() => setPage('stremio')}
           onSignIn={() => openSignIn()}
         />
 
@@ -239,8 +229,6 @@ function Content() {
           docsEntries={docsEntries}
           docsLoading={docs.isLoading}
         />
-
-        <InterfaceMode />
 
         <Resources
           discordUrl={discordUrl}
@@ -276,6 +264,7 @@ function Content() {
         onOpenChange={customizeModal.toggle}
         currentName={addonName}
         currentLogo={userData.addonLogo}
+        currentBackground={userData.addonBackground}
         currentDescription={userData.addonDescription}
       />
 
@@ -293,7 +282,7 @@ function Content() {
         deepLinkTemplateId={deepLinkTemplateId}
         initialExpandedTemplateId={featuredTemplateToOpen?.metadata.id}
         startAtWelcome={startAtWelcome}
-        onStartFresh={() => nextMenu()}
+        onStartFresh={() => setPage('services')}
         onSignIn={() => openSignIn()}
       />
 

@@ -1,13 +1,43 @@
 ﻿import type { Logger } from '../../logging/logger.js';
 import { Cache } from '../../utils/cache.js';
-import { createLogger } from '../../utils/index.js';
+import { constants, createLogger } from '../../utils/index.js';
 import { config as appConfig } from '../../config/index.js';
+import type { NZB } from '../../debrid/index.js';
+import { BuiltinProxy, createProxy } from '../../proxy/index.js';
 import pLimit from 'p-limit';
 
 const logger = createLogger('builtin:scrape');
 
 export const createQueryLimit = () =>
   pLimit(appConfig.builtins.scrape.queryConcurrency);
+
+/** Points each NZB at an AIOStreams proxy URL, so a service can fetch it without reaching the indexer. */
+export async function proxyNzbs(nzbs: NZB[], auth: string): Promise<void> {
+  BuiltinProxy.validateAuth(auth);
+  const proxy = createProxy({
+    id: constants.BUILTIN_SERVICE,
+    url: appConfig.bootstrap.baseUrl,
+    credentials: auth,
+  });
+  const nzbsToProxy = nzbs.map((nzb) => ({
+    url: nzb.nzb,
+    filename: nzb.title,
+  }));
+  const proxiedUrls = await proxy.generateUrls(
+    nzbsToProxy.map(({ url, filename }) => ({
+      url,
+      filename: filename || url.split('/').pop(),
+      type: 'nzb',
+    })),
+    false // don't encrypt NZB URLs to make sure the URLs stay the same.
+  );
+  if (!proxiedUrls || 'error' in proxiedUrls) {
+    throw new Error('Failed to proxy NZBs: ' + proxiedUrls?.error || '');
+  }
+  for (let i = 0; i < nzbs.length; i++) {
+    nzbs[i].nzb = proxiedUrls[i];
+  }
+}
 
 /** Hours since `date` (e.g. an indexer's pubDate), or undefined if unparsable or in the future. */
 export function ageInHoursSince(date: string): number | undefined {
@@ -219,6 +249,7 @@ interface SearchWithBgRefreshOptions<T> {
   searchCacheKey: string;
   bgCacheKey: string;
   cacheTTL: number;
+  emptyResultTTL?: number;
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
@@ -233,7 +264,7 @@ interface SearchWithBgRefreshOptions<T> {
  *
  * When no cached result exists:
  * - Performs the search synchronously
- * - Caches the result (unless empty)
+ * - Caches the result (`emptyResultTTL` if empty, `cacheTTL` otherwise)
  * - Records the refresh timestamp
  *
  * @param options - Configuration options for the search
@@ -247,6 +278,7 @@ export async function searchWithBackgroundRefresh<T>(
     bgCacheKey,
     searchCache,
     cacheTTL,
+    emptyResultTTL,
     fetchFn,
     isEmptyResult,
     logger,
@@ -260,6 +292,7 @@ export async function searchWithBackgroundRefresh<T>(
       searchCacheKey,
       bgCacheKey,
       cacheTTL,
+      emptyResultTTL,
       fetchFn,
       isEmptyResult,
       logger,
@@ -269,9 +302,15 @@ export async function searchWithBackgroundRefresh<T>(
 
   const result = await fetchFn();
 
-  // Don't cache empty results
   if (!isEmptyResult(result)) {
     await searchCache.set(searchCacheKey, result, cacheTTL);
+    await bgRefreshCache.set(
+      bgCacheKey,
+      Date.now(),
+      appConfig.builtins.torrent.minimumBackgroundRefreshInterval
+    );
+  } else if (emptyResultTTL) {
+    await searchCache.set(searchCacheKey, result, emptyResultTTL);
     await bgRefreshCache.set(
       bgCacheKey,
       Date.now(),
@@ -291,6 +330,7 @@ function triggerBackgroundRefresh<T>(options: {
   searchCacheKey: string;
   bgCacheKey: string;
   cacheTTL: number;
+  emptyResultTTL?: number;
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
@@ -300,6 +340,7 @@ function triggerBackgroundRefresh<T>(options: {
     bgCacheKey,
     searchCache,
     cacheTTL,
+    emptyResultTTL,
     fetchFn,
     isEmptyResult,
     logger,
@@ -320,16 +361,29 @@ function triggerBackgroundRefresh<T>(options: {
       // Perform background refresh
       logger.debug(`Starting background refresh for: ${searchCacheKey}`);
       const freshResult = await fetchFn();
+      const refreshedAt = Date.now();
 
       // Update cache if result is not empty
       if (!isEmptyResult(freshResult)) {
         await searchCache.set(searchCacheKey, freshResult, cacheTTL, true);
         await bgRefreshCache.set(
           bgCacheKey,
-          now,
+          refreshedAt,
           appConfig.builtins.torrent.minimumBackgroundRefreshInterval
         );
         logger.info(`Background refreshed cache for: ${searchCacheKey}`);
+      } else if (emptyResultTTL) {
+        await searchCache.set(
+          searchCacheKey,
+          freshResult,
+          emptyResultTTL,
+          true
+        );
+        await bgRefreshCache.set(
+          bgCacheKey,
+          refreshedAt,
+          appConfig.builtins.torrent.minimumBackgroundRefreshInterval
+        );
       }
     } catch (error) {
       logger.error(

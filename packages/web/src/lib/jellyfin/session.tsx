@@ -17,6 +17,7 @@ import { watchServer } from './connection';
 import { startOver } from '@/lib/paths';
 import { startPath } from '@/lib/start-page';
 import type {
+  AiostreamsUser,
   AuthenticationResult,
   Branding,
   PickableUser,
@@ -64,7 +65,56 @@ const lastUserKey = (base: string) => `aiostreams-web-last-user:${base}`;
  * unlocked; after, they need it to come back, even once the app restarts.
  */
 const leftKey = (base: string) => `aiostreams-web-left-user:${base}`;
+/** Picked on the shared picker, so its launch doesn't ask again. */
+const pickedKey = (base: string) => `aiostreams-web-picked-user:${base}`;
 const AWAY_MS = 30 * 60_000;
+
+export function asksWho(base: string): boolean {
+  const stored = readCredentials(base);
+  if (!stored || storage.get<string>(pickedKey(base)) === stored.userId)
+    return false;
+  return (
+    storage.get<string>(leftKey(base)) === stored.userId ||
+    settings.account.askWho.read()
+  );
+}
+
+/** Who carries on without their PIN: the last user, unless they left for the picker. */
+export function stayingUser(base: string): string | null {
+  const stored = readCredentials(base);
+  return stored && storage.get<string>(leftKey(base)) !== stored.userId
+    ? stored.userId
+    : null;
+}
+
+/** Through the session this device already has on that server; true when it switched user. */
+export async function enterOn(
+  base: string,
+  userId: string,
+  secret?: string
+): Promise<boolean> {
+  const stored = readCredentials(base);
+  if (!stored) throw new Error('Not signed in there');
+  if (stored.userId !== userId || secret) {
+    const auth = await new JellyfinClient(
+      base,
+      stored.token
+    ).post<AuthenticationResult>('/AIOStreams/Token', {
+      UserId: userId,
+      ...(secret ? { Pw: secret } : {}),
+    });
+    saveCredentials(base, {
+      serverId: auth.ServerId ?? '',
+      token: auth.AccessToken!,
+      userId,
+    });
+    saveUser(base, auth.User!);
+  }
+  storage.set(lastUserKey(base), userId);
+  storage.remove(leftKey(base));
+  storage.set(pickedKey(base), userId);
+  return stored.userId !== userId;
+}
 
 /** Ends the token on the server and forgets the sign-in here. */
 export function endSession(base: string, token: string | null): void {
@@ -102,12 +152,17 @@ export function pickerAccount(base: string): string {
 
 /**
  * Signs in the way jellyfin-web does, then lets a configuration with several
- * users pick one.
+ * users pick one. With `askAll`, switching and coming back ask on the shared
+ * picker instead.
  */
-export function useSessionPhase(base: string) {
+export function useSessionPhase(base: string, askAll?: () => void) {
   const queryClient = useQueryClient();
   const [phase, setPhase] = React.useState<SessionPhase>({ kind: 'loading' });
   React.useEffect(() => watchServer(base), [base]);
+  const askShared = React.useCallback(async () => {
+    await startOver(startPath());
+    askAll?.();
+  }, [askAll]);
 
   const adopt = React.useCallback(
     (proof: JellyfinClient, auth: AuthenticationResult) => {
@@ -221,7 +276,8 @@ export function useSessionPhase(base: string) {
         // Opens with the saved user at once; the server's answer replaces it.
         const saved = savedUser(base, stored.userId);
         const left = storage.get<string>(leftKey(base)) === stored.userId;
-        const mayAsk = left || settings.account.askWho.read();
+        const mayAsk = asksWho(base);
+        storage.remove(pickedKey(base));
         if (saved && !mayAsk && !cancelled)
           setPhase({ kind: 'ready', client, user: saved });
         const [me, asking] = await Promise.all([
@@ -229,7 +285,7 @@ export function useSessionPhase(base: string) {
             (user) => ({ user }),
             (error: unknown) => ({ error })
           ),
-          askWho(client, left),
+          mayAsk ? askWho(client, left) : null,
         ]);
         if ('user' in me) {
           saveUser(base, me.user);
@@ -336,26 +392,32 @@ export function useSessionPhase(base: string) {
   const switchUser = React.useCallback(async () => {
     if (phase.kind !== 'ready') return;
     const proof = phase.client;
-    const users = await proof.get<PickableUser[]>('/AIOStreams/Users');
+    const users = askAll
+      ? null
+      : await proof.get<PickableUser[]>('/AIOStreams/Users');
     storage.set(leftKey(base), phase.user.Id);
-    await pick(proof, users);
-  }, [base, phase, pick]);
+    await (users ? pick(proof, users) : askShared());
+  }, [base, phase, pick, askAll, askShared]);
 
   // Back after a while away counts as opening the app.
-  const latest = useLatest({ phase, pick, askWho });
+  const latest = useLatest({ phase, pick, askWho, askAll, askShared });
   React.useEffect(() => {
     let hiddenAt = 0;
     const onVisibility = () => {
       if (document.hidden) return void (hiddenAt = Date.now());
       const away = hiddenAt > 0 && Date.now() - hiddenAt >= AWAY_MS;
       hiddenAt = 0;
-      const { phase, pick, askWho } = latest.current;
+      const { phase, pick, askWho, askAll, askShared } = latest.current;
       if (
         !away ||
         phase.kind !== 'ready' ||
         location.hash.startsWith('#/play/')
       )
         return;
+      if (askAll) {
+        if (settings.account.askWho.read()) void askShared();
+        return;
+      }
       void askWho(phase.client, false).then(
         (users) => users && pick(phase.client, users, phase.user)
       );
@@ -412,7 +474,11 @@ export function SessionProvider({
 }) {
   const others = React.useRef(new Map<string, Promise<JellyfinClient>>());
   React.useEffect(() => others.current.clear(), [client]);
-  React.useEffect(() => syncPreferences(client, user.Id!), [client, user.Id]);
+  const everyoneId = (user as AiostreamsUser).aiostreams?.everyone;
+  React.useEffect(
+    () => syncPreferences(client, user.Id!, everyoneId),
+    [client, user.Id, everyoneId]
+  );
 
   const clientFor = React.useCallback(
     (userId: string) => {

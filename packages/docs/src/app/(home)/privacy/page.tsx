@@ -158,10 +158,11 @@ export default function PrivacyPage() {
 
       <h2>Deleting your data</h2>
       <p>
-        <strong>Delete User</strong>, under <strong>Save &amp; Install</strong>{' '}
-        on the configure page, deletes your configuration along with what
-        you&apos;ve watched and your app reports. Logs and usage counts expire
-        on their own, and copies may stay in backups for a limited time.
+        <strong>Delete Configuration</strong>, under{' '}
+        <strong>Configuration → Danger zone</strong> on the configure page,
+        deletes your configuration along with what you&apos;ve watched and your
+        app reports. Logs and usage counts expire on their own, and copies may
+        stay in backups for a limited time.
       </p>
       <p>
         Deleting your configuration doesn&apos;t delete what the services you

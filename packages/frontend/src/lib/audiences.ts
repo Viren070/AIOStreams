@@ -1,4 +1,4 @@
-import type { UserData } from '@aiostreams/core';
+import type { Profile, UserData } from '@aiostreams/core';
 import {
   createCelBudget,
   parseCelScript,
@@ -6,6 +6,7 @@ import {
   type CelPath,
   type CelProgram,
 } from '../../../core/src/variants/language';
+import { isOwner, profilesOf } from '../../../core/src/utils/profiles';
 
 /**
  * The scripts stay the only record: a row is read by applying its variants,
@@ -32,7 +33,7 @@ export interface Audience {
   chain: string[];
   /** The variant its choices are written to. */
   own?: string;
-  /** The Jellyfin user it is, `''` for the primary user. */
+  /** The profile it is, `''` for the owner. */
   userId?: string;
   /** Why its choices can't be made here. */
   locked?: string;
@@ -49,25 +50,44 @@ export interface Toggle {
   entries: EntryRef[];
 }
 
-const PRIMARY_VARIANT_ID = 'primary';
+/** Saved configurations point at this id. */
+const OWNER_VARIANT_ID = 'primary';
 
 /**
- * Where a user's own choices live: a persona's id, or `primary` for the
- * primary user (`''`). Undefined for the primary user while a persona holds
- * that id.
+ * Where a profile's own choices live: its id, or `primary` for the owner.
+ * Undefined for the owner while another profile holds that id.
  */
 function ownVariantId(
-  userData: Pick<UserData, 'jellyfin'>,
+  userData: Pick<UserData, 'profiles'>,
   userId: string
 ): string | undefined {
   if (userId) return userId;
-  return userData.jellyfin?.personas?.some((p) => p.id === PRIMARY_VARIANT_ID)
+  return userData.profiles?.some((p) => p.id === OWNER_VARIANT_ID)
     ? undefined
-    : PRIMARY_VARIANT_ID;
+    : OWNER_VARIANT_ID;
+}
+
+export function profileLabel(
+  userData: Pick<UserData, 'addonName'>,
+  profile: Profile
+): string {
+  return profile.name || userData.addonName || 'Owner';
+}
+
+/** Only profiles with variants, as their `@id`. */
+export function profileInstallOptions(
+  userData: Pick<UserData, 'profiles' | 'addonName'>
+): { id: string; name: string }[] {
+  return profilesOf(userData)
+    .filter((profile) => profile.variants?.length)
+    .map((profile) => ({
+      id: `@${profile.id}`,
+      name: profileLabel(userData, profile),
+    }));
 }
 
 export function listAudiences(
-  userData: Pick<UserData, 'variants' | 'jellyfin' | 'addonName'>,
+  userData: Pick<UserData, 'variants' | 'profiles' | 'addonName'>,
   jellyfin: boolean
 ): Audience[] {
   const variants = userData.variants ?? [];
@@ -80,38 +100,27 @@ export function listAudiences(
       chain: [],
     },
   ];
-  const primary = userData.jellyfin?.primary;
-  const users = [
-    {
-      id: '',
-      name: primary?.name || userData.addonName || 'Primary user',
-      avatar: primary?.avatar,
-      variants: primary?.variants ?? [],
-    },
-    ...(userData.jellyfin?.personas ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      avatar: p.avatar,
-      variants: p.variants ?? [],
-    })),
-  ];
-  const used = new Set(users.flatMap((user) => user.variants));
-  if (jellyfin) {
-    for (const user of users) {
-      const own = ownVariantId(userData, user.id);
+  const profiles = profilesOf(userData);
+  const used = new Set(profiles.flatMap((p) => p.variants ?? []));
+  // Profiles reach Stremio through their install links, the apps through the media server.
+  if (jellyfin || profiles.length > 1) {
+    for (const profile of profiles) {
+      const own = ownVariantId(userData, profile.id);
+      const chain = profile.variants ?? [];
+      const label = profileLabel(userData, profile);
       audiences.push({
-        key: `user:${user.id}`,
+        key: `user:${profile.id}`,
         kind: 'user',
-        label: user.name,
-        caption: user.id ? undefined : 'Primary user',
-        avatar: user.avatar,
-        chain: user.variants,
+        label,
+        caption: isOwner(profile) ? 'Owner' : undefined,
+        avatar: profile.avatar,
+        chain,
         own,
-        userId: user.id,
+        userId: profile.id,
         locked: !own
-          ? 'Another user has the id "primary", so the primary user has no variant of its own.'
-          : variants.some((v) => v.id === own) && !user.variants.includes(own)
-            ? `A variant called "${own}" already exists. Pick it for ${user.name} under Users to choose for them here.`
+          ? 'Another profile has the id "primary", so the owner has no variant of its own.'
+          : variants.some((v) => v.id === own) && !chain.includes(own)
+            ? `A variant called "${own}" already exists. Pick it for ${label} under Profiles to choose for them here.`
             : undefined,
       });
     }
@@ -284,16 +293,17 @@ function withoutLines(script: string, refs: EntryRef[]): string {
     .trimEnd();
 }
 
-/** Edits to variants and users' lists, tracked so empty own variants can go. */
+/** Edits to variants and profiles' lists, tracked so empty own variants can go. */
 class VariantEdits {
   variants: Variant[];
-  jellyfin: UserData['jellyfin'];
+  profiles: Profile[];
+  listsChanged = false;
   programs: Map<string, CelProgram>;
   readonly touched = new Set<string>();
 
   constructor(userData: UserData) {
     this.variants = [...(userData.variants ?? [])];
-    this.jellyfin = userData.jellyfin;
+    this.profiles = profilesOf(userData);
     this.programs = compilePrograms(this.variants);
   }
 
@@ -321,34 +331,22 @@ class VariantEdits {
   }
 
   listOf(userId: string): string[] {
-    const list = userId
-      ? this.jellyfin?.personas?.find((p) => p.id === userId)?.variants
-      : this.jellyfin?.primary?.variants;
-    return list ?? [];
+    return this.profiles.find((p) => p.id === userId)?.variants ?? [];
   }
 
   setList(userId: string, list: string[]): void {
     const variants = list.length ? list : undefined;
-    this.jellyfin = userId
-      ? {
-          ...this.jellyfin,
-          personas: this.jellyfin?.personas?.map((p) =>
-            p.id === userId ? { ...p, variants } : p
-          ),
-        }
-      : {
-          ...this.jellyfin,
-          primary: { ...this.jellyfin?.primary, variants },
-        };
+    this.profiles = this.profiles.map((p) =>
+      p.id === userId ? { ...p, variants } : p
+    );
+    this.listsChanged = true;
   }
 
   isReferenced(id: string, exceptUser: string): boolean {
-    const users = [
-      { id: '', variants: this.jellyfin?.primary?.variants },
-      ...(this.jellyfin?.personas ?? []),
-    ];
     return (
-      users.some((u) => u.id !== exceptUser && u.variants?.includes(id)) ||
+      this.profiles.some(
+        (p) => p.id !== exceptUser && p.variants?.includes(id)
+      ) ||
       [...this.programs.values()].some((p) =>
         p.referencedVariants.some((ref) => ref.toLowerCase() === id)
       )
@@ -372,7 +370,7 @@ class VariantEdits {
     return {
       ...userData,
       variants: this.variants.length ? this.variants : undefined,
-      jellyfin: this.jellyfin,
+      ...(this.listsChanged ? { profiles: this.profiles } : {}),
     };
   }
 }
@@ -506,20 +504,16 @@ export function forgetEntries(userData: UserData, refs: EntryRef[]): UserData {
   const edits = new VariantEdits(userData);
   for (const variant of userData.variants) edits.strip(variant.id, refs);
   if (!edits.touched.size) return userData;
-  const users = [
-    { id: '', variants: userData.jellyfin?.primary?.variants },
-    ...(userData.jellyfin?.personas ?? []),
-  ];
-  for (const user of users) {
-    const own = ownVariantId(userData, user.id);
-    if (own && edits.touched.has(own) && user.variants?.includes(own)) {
-      edits.release(own, user.id);
+  for (const profile of profilesOf(userData)) {
+    const own = ownVariantId(userData, profile.id);
+    if (own && edits.touched.has(own) && profile.variants?.includes(own)) {
+      edits.release(own, profile.id);
     }
   }
   return edits.apply(userData);
 }
 
-/** Removes a user's own variant unless something else still uses it. */
+/** Keeps the variant while something else still uses it. */
 export function releaseOwnVariant(
   userData: UserData,
   userId: string

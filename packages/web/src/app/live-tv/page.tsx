@@ -40,10 +40,18 @@ import {
   usePlayback,
 } from '@/lib/playback/session';
 import { navigate, to } from '@/lib/paths';
-import { focusOn, isTextField, pickOnFocus, useAction } from '@/lib/input';
+import {
+  focusOn,
+  isTextField,
+  moveTo,
+  navSide,
+  pickOnFocus,
+  useAction,
+  type Direction,
+} from '@/lib/input';
 import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
-import { PageMessage } from '@/components/shell/page';
+import { PAGE_TOP, PageHeader, PageMessage } from '@/components/shell/page';
 import { fitsAsPills, PillTabs } from '@/components/pill-tabs';
 import { Combobox } from '@aiostreams/ui/combobox';
 import { Select } from '@aiostreams/ui/select';
@@ -74,7 +82,8 @@ const DETAILS_DELAY_MS = 150;
 const PAGE_HEIGHT =
   'h-[calc(100dvh-var(--nav-bar)-var(--mini-bar,0px)-var(--top-bar,0px))]';
 const PAGE = cn(
-  'relative z-[1] flex flex-col gap-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] lg:ps-0 lg:pe-10 lg:pt-[calc(2rem+env(safe-area-inset-top))]',
+  'relative z-[1] flex flex-col gap-4 px-4 lg:ps-0 lg:pe-10',
+  PAGE_TOP,
   PAGE_HEIGHT
 );
 
@@ -224,10 +233,13 @@ export function LiveTvPage({
     }
     return index;
   };
+  // A page kept for Back can be another Live TV.
+  const root = React.useRef<HTMLDivElement>(null);
+  const find = (selector: string) =>
+    root.current?.querySelector<HTMLElement>(selector) ?? null;
+  const channelsBox = () => find('[data-ui=guide], [data-ui=channel-list]');
   const focusChannels = () => {
-    const grid = document.querySelector<HTMLElement>(
-      '[data-ui=guide], [data-ui=channel-list]'
-    );
+    const grid = channelsBox();
     if (grid) focusOn(grid);
   };
   // Back from the player, the page opens on the channel it was left on, loading
@@ -290,19 +302,46 @@ export function LiveTvPage({
   // focused on the way would pick instead.
   const leaveUp = () => {
     const target =
-      document.querySelector<HTMLElement>(
-        '[data-name=live-group] [aria-selected=true]'
-      ) ?? document.querySelector<HTMLElement>('[data-ui=live-group-picker]');
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-ui=live-group-picker]');
     if (target) focusOn(target);
   };
   // The guide has the programme's details above it, where the list has the groups.
   const leaveGuideUp = () => {
-    const target = document.querySelector<HTMLElement>(
-      '[data-ui=live-top] button'
-    );
+    const target = find('[data-ui=live-top] button');
     if (target) focusOn(target);
     else leaveUp();
   };
+  // Down from the picker skips the pills, which would pick another group.
+  useAction('nav.down', () => {
+    if (document.activeElement !== find('[data-ui=live-group-picker]'))
+      return false;
+    const grid = channelsBox();
+    if (grid) focusOn(grid);
+    else return pages.isLoading;
+  });
+  // Toward the pills, the picker goes to the app's own groups.
+  const pillsFrom = (side: Direction) => () => {
+    const picker = find('[data-ui=live-group-picker]');
+    if (
+      !picker ||
+      side !== navSide('start') ||
+      document.activeElement !== picker
+    )
+      return false;
+    const target =
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-name=live-group] [data-ui=pill-tab]:last-child');
+    if (!target) return false;
+    // Narrow windows put the picker on its own line, at the start.
+    const at = target.getBoundingClientRect();
+    const from = picker.getBoundingClientRect();
+    if (side === 'left' ? at.right > from.left : at.left < from.right)
+      return false;
+    moveTo(target, side);
+  };
+  useAction('nav.left', pillsFrom('left'));
+  useAction('nav.right', pillsFrom('right'));
   // A remote's digits go to the channel with that number, loading on to it.
   // Numbers run through the whole lineup, so one outside the group opens All
   // channels on it.
@@ -403,16 +442,55 @@ export function LiveTvPage({
   const numberShown = numbers.typed && (
     <NumberEntry typed={numbers.typed} className="fixed z-50" />
   );
-  // One row of controls, so the day and the view are a few presses on from the group.
   const header = (
-    <header className="flex flex-none flex-col gap-3">
-      <h1 data-ui="page-title" className="text-3xl font-bold">
-        <Trans>Live TV</Trans>
-      </h1>
-      <div
-        data-ui="live-controls"
-        className="flex flex-wrap items-center gap-x-4 gap-y-2"
-      >
+    <header className="flex flex-none flex-col gap-6">
+      <PageHeader
+        title={<Trans>Live TV</Trans>}
+        actions={
+          (picked || guide) && (
+            <>
+              {picked && (
+                <Combobox
+                  data-ui="live-group-picker"
+                  aria-label={t`Group`}
+                  placeholder={t`Groups`}
+                  emptyMessage={t`Nothing matches.`}
+                  keepOpenOnSelect={false}
+                  className="rounded-full"
+                  fieldClass="sm:w-64"
+                  options={addonGroups.map((g) => ({
+                    value: g.id,
+                    label: g.name,
+                    textValue: g.name,
+                  }))}
+                  value={addonGroups.some((g) => g.id === group) ? [group] : []}
+                  onValueChange={(next) => next[0] && chooseGroup(next[0])}
+                  {...pickOnFocus(
+                    addonGroup && addonGroup !== group
+                      ? () => chooseGroup(addonGroup)
+                      : undefined
+                  )}
+                />
+              )}
+              {guide && (
+                <DayPicker
+                  days={days}
+                  value={dayOffset}
+                  onChange={(offset) => {
+                    setDayOffset(offset);
+                    // Another day opens at the same time of day.
+                    place(
+                      active,
+                      new Date(now).setDate(new Date(now).getDate() + offset)
+                    );
+                  }}
+                />
+              )}
+            </>
+          )
+        }
+      />
+      <div data-ui="live-controls" className="flex flex-col gap-3">
         <PillTabs
           name="live-group"
           options={(picked ? ownGroups : groups).map((g) => ({
@@ -422,45 +500,6 @@ export function LiveTvPage({
           value={group}
           onChange={chooseGroup}
         />
-        {picked && (
-          <div className="w-full sm:w-64">
-            <Combobox
-              data-ui="live-group-picker"
-              aria-label={t`Group`}
-              placeholder={t`Groups`}
-              emptyMessage={t`Nothing matches.`}
-              keepOpenOnSelect={false}
-              className="rounded-full"
-              options={addonGroups.map((g) => ({
-                value: g.id,
-                label: g.name,
-                textValue: g.name,
-              }))}
-              value={addonGroups.some((g) => g.id === group) ? [group] : []}
-              onValueChange={(next) => next[0] && chooseGroup(next[0])}
-              {...pickOnFocus(
-                addonGroup && addonGroup !== group
-                  ? () => chooseGroup(addonGroup)
-                  : undefined
-              )}
-            />
-          </div>
-        )}
-        <div className="ms-auto" />
-        {guide && (
-          <DayPicker
-            days={days}
-            value={dayOffset}
-            onChange={(offset) => {
-              setDayOffset(offset);
-              // Another day opens at the same time of day.
-              place(
-                active,
-                new Date(now).setDate(new Date(now).getDate() + offset)
-              );
-            }}
-          />
-        )}
         {wide && hasGuide && (
           <PillTabs
             name="live-view"
@@ -485,6 +524,7 @@ export function LiveTvPage({
     const programme = programmeAt(shownProgrammes, at);
     return (
       <div
+        ref={root}
         data-ui="live-tv"
         data-view="guide"
         className={PAGE}
@@ -572,6 +612,7 @@ export function LiveTvPage({
 
   return (
     <div
+      ref={root}
       data-ui="live-tv"
       data-view="list"
       className={PAGE}

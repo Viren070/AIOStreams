@@ -116,6 +116,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
     private var window: Surface? = null
     private var windowWidth = 0
     private var windowHeight = 0
+    private var gpu = true
     private var mustDraw = false
     private var shownMs = NONE
 
@@ -230,6 +231,15 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
         aheadBytes = if (mb > 0) (mb.toLong() shl 20) / 2 else AHEAD_BYTES
     }
 
+    /** Whether the GPU draws the subtitles' masks, rather than the CPU blending them into one picture. */
+    fun setGpu(on: Boolean) = shower.post {
+        if (on == gpu) return@post
+        gpu = on
+        if (handle == 0L) return@post
+        AssNative.setGpu(handle, on)
+        invalidate()
+    }
+
     fun setStage(stage: StageLayout) = queue {
         this.stage = stage
         applyLayout()
@@ -314,6 +324,7 @@ internal class AssSurface(context: Context, private val frames: VideoFrames, fon
 
     private fun attachWindow() {
         if (handle == 0L || window == null) return
+        AssNative.setGpu(handle, gpu)
         AssNative.setWindow(handle, window, windowWidth, windowHeight)
         mustDraw = true
     }

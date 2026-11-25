@@ -66,6 +66,112 @@ function makeTiebreakerCmp(tiebreakers: Tiebreaker[]): TiebreakerCmp {
   };
 }
 
+type Deduplicator = NonNullable<UserData['deduplicator']>;
+
+function dedupKeys(
+  stream: ParsedStream,
+  keys: NonNullable<Deduplicator['keys']>,
+  smartDetect: Pick<
+    Deduplicator,
+    'smartDetectAttributes' | 'smartDetectRounding'
+  > = {}
+): string[] {
+  const streamKeys: string[] = [];
+
+  if (keys.includes('filename') && stream.filename) {
+    // Strip repost suffixes first: in `Name.mkv-xpost` the extension is
+    // only at the end once the suffix is gone.
+    let normalisedFilename = stripRepostSuffixes(stream.filename)
+      .replace(
+        /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
+        ''
+      )
+      .replace(/[^\p{L}\p{N}+]/gu, '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+    streamKeys.push(`filename:${normalisedFilename}`);
+  }
+
+  const isUsenet = stream.type === 'usenet' || stream.type === 'stremio-usenet';
+
+  // Some addons provide fileIdx (to distinguish multiple files
+  // within a single torrent), while others don't. This creates an unavoidable trade-off
+  // where addons that provide fileIdx will not deduplicate properly with those that don't
+  // via infoHash alone.
+  if (keys.includes('infoHash') && stream.torrent?.infoHash && !isUsenet) {
+    streamKeys.push(
+      `infoHash:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`
+    );
+  }
+  if (keys.includes('infoHash') && isUsenet && stream.nzbUrl) {
+    streamKeys.push(`infoHash:${stream.nzbUrl}`);
+  }
+
+  if (keys.includes('smartDetect')) {
+    const roundPct = smartDetect.smartDetectRounding ?? 10;
+    const geometricRound = (value: number): string => {
+      if (value <= 0) return '0';
+      const logStep = Math.log(1 + roundPct / 100);
+      const bucketIndex = Math.round(Math.log(value) / logStep);
+      return String(Math.round(Math.exp(bucketIndex * logStep)));
+    };
+    const attrs =
+      smartDetect.smartDetectAttributes ??
+      constants.DEFAULT_SMART_DETECT_ATTRIBUTES;
+    const parts = attrs.map((attr) => {
+      switch (attr) {
+        case 'size':
+          return stream.size !== undefined
+            ? geometricRound(stream.size)
+            : undefined;
+        case 'bitrate':
+          return stream.bitrate !== undefined
+            ? geometricRound(stream.bitrate)
+            : undefined;
+        default: {
+          const val = (
+            stream.parsedFile as Record<string, unknown> | undefined
+          )?.[attr];
+          if (val === undefined) return undefined;
+          if (Array.isArray(val)) return [...val].map(String).sort().join(',');
+          return String(val);
+        }
+      }
+    });
+    const hash = getSimpleTextHash(
+      parts.filter((p) => p !== undefined).join('|')
+    );
+    streamKeys.push(`smartDetect:${hash}`);
+  }
+
+  return streamKeys;
+}
+
+/** Groups streams sharing any key, transitively; singletons included. */
+function groupDuplicates(
+  streams: ParsedStream[],
+  keysOf: (stream: ParsedStream) => string[]
+): ParsedStream[][] {
+  const dsu = new DSU<string>();
+  const firstIdByKey = new Map<string, string>();
+  for (const stream of streams) {
+    dsu.makeSet(stream.id);
+    for (const key of keysOf(stream)) {
+      const firstId = firstIdByKey.get(key);
+      if (firstId !== undefined) dsu.union(firstId, stream.id);
+      else firstIdByKey.set(key, stream.id);
+    }
+  }
+  const groups = new Map<string, ParsedStream[]>();
+  for (const stream of streams) {
+    const root = dsu.find(stream.id);
+    const group = groups.get(root);
+    if (group) group.push(stream);
+    else groups.set(root, [stream]);
+  }
+  return [...groups.values()];
+}
+
 class StreamDeduplicator {
   private userData: UserData;
 
@@ -95,7 +201,11 @@ class StreamDeduplicator {
       keys: deduplicationKeys,
       cached: deduplicator.cached || 'per_addon',
       uncached: deduplicator.uncached || 'per_addon',
-      p2p: deduplicator.p2p || 'per_addon',
+      // P2P results have no service, so one per service is one in all.
+      p2p:
+        deduplicator.p2p === 'per_service'
+          ? 'single_result'
+          : deduplicator.p2p || 'per_addon',
       http: deduplicator.http || 'disabled',
       live: deduplicator.live || 'disabled',
       youtube: deduplicator.youtube || 'disabled',
@@ -121,11 +231,6 @@ class StreamDeduplicator {
       return 0;
     };
 
-    // Group streams by their deduplication keys
-    // const streamGroups = new Map<string, ParsedStream[]>();
-    const dsu = new DSU<string>();
-    const keyToStreamIds = new Map<string, string[]>();
-
     const excludedStreamIds = new Set<string>();
     for (const stream of streams) {
       const isExcluded =
@@ -137,114 +242,11 @@ class StreamDeduplicator {
       }
     }
 
-    // Process ALL streams (including excluded ones) for deduplication grouping
-    for (const stream of streams) {
-      // Create a unique key based on the selected deduplication methods
-      dsu.makeSet(stream.id);
-      const currentStreamKeyStrings: string[] = [];
-
-      if (deduplicationKeys.includes('filename') && stream.filename) {
-        // Strip repost suffixes first: in `Name.mkv-xpost` the extension is
-        // only at the end once the suffix is gone.
-        let normalisedFilename = stripRepostSuffixes(stream.filename)
-          .replace(
-            /(mkv|mp4|avi|mov|wmv|flv|webm|m4v|mpg|mpeg|3gp|3g2|m2ts|ts|vob|ogv|ogm|divx|xvid|rm|rmvb|asf|mxf|mka|mks|mk3d|webm|f4v|f4p|f4a|f4b)$/i,
-            ''
-          )
-          .replace(/[^\p{L}\p{N}+]/gu, '')
-          .replace(/\s+/g, '')
-          .toLowerCase();
-        currentStreamKeyStrings.push(`filename:${normalisedFilename}`);
-      }
-
-      const isUsenet =
-        stream.type === 'usenet' || stream.type === 'stremio-usenet';
-
-      // Some addons provide fileIdx (to distinguish multiple files
-      // within a single torrent), while others don't. This creates an unavoidable trade-off
-      // where addons that provide fileIdx will not deduplicate properly with those that don't
-      // via infoHash alone.
-      if (
-        deduplicationKeys.includes('infoHash') &&
-        stream.torrent?.infoHash &&
-        !isUsenet
-      ) {
-        currentStreamKeyStrings.push(
-          `infoHash:${stream.torrent.infoHash}${stream.torrent.fileIdx ?? 0}`
-        );
-      }
-      if (deduplicationKeys.includes('infoHash') && isUsenet && stream.nzbUrl) {
-        currentStreamKeyStrings.push(`infoHash:${stream.nzbUrl}`);
-      }
-
-      if (deduplicationKeys.includes('smartDetect')) {
-        const roundPct = deduplicator.smartDetectRounding ?? 10;
-        const geometricRound = (value: number): string => {
-          if (value <= 0) return '0';
-          const logStep = Math.log(1 + roundPct / 100);
-          const bucketIndex = Math.round(Math.log(value) / logStep);
-          return String(Math.round(Math.exp(bucketIndex * logStep)));
-        };
-        const attrs =
-          deduplicator.smartDetectAttributes ??
-          constants.DEFAULT_SMART_DETECT_ATTRIBUTES;
-        const parts = attrs.map((attr) => {
-          switch (attr) {
-            case 'size':
-              return stream.size !== undefined
-                ? geometricRound(stream.size)
-                : undefined;
-            case 'bitrate':
-              return stream.bitrate !== undefined
-                ? geometricRound(stream.bitrate)
-                : undefined;
-            default: {
-              const val = (
-                stream.parsedFile as Record<string, unknown> | undefined
-              )?.[attr];
-              if (val === undefined) return undefined;
-              if (Array.isArray(val))
-                return [...val].map(String).sort().join(',');
-              return String(val);
-            }
-          }
-        });
-        const hash = getSimpleTextHash(
-          parts.filter((p) => p !== undefined).join('|')
-        );
-        currentStreamKeyStrings.push(`smartDetect:${hash}`);
-      }
-
-      if (currentStreamKeyStrings.length > 0) {
-        for (const key of currentStreamKeyStrings) {
-          if (!keyToStreamIds.has(key)) {
-            keyToStreamIds.set(key, []);
-          }
-          keyToStreamIds.get(key)!.push(stream.id);
-        }
-      }
-    }
-
-    // Perform union operations based on shared keys
-    for (const streamIdsSharingCommonKey of keyToStreamIds.values()) {
-      if (streamIdsSharingCommonKey.length > 1) {
-        const firstStreamId = streamIdsSharingCommonKey[0];
-        for (let i = 1; i < streamIdsSharingCommonKey.length; i++) {
-          dsu.union(firstStreamId, streamIdsSharingCommonKey[i]);
-        }
-      }
-    }
-    // Group actual stream objects by their DSU representative ID
     const idToStreamMap = new Map(streams.map((s) => [s.id, s])); // For quick lookup
-    const finalDuplicateGroupsMap = new Map<string, ParsedStream[]>(); // Maps representative ID to stream objects
-
-    for (const stream of streams) {
-      const representativeId = dsu.find(stream.id);
-      if (!finalDuplicateGroupsMap.has(representativeId)) {
-        finalDuplicateGroupsMap.set(representativeId, []);
-      }
-      finalDuplicateGroupsMap.get(representativeId)!.push(stream);
-    }
+    // Group ALL streams (including excluded ones)
+    const duplicateGroups = groupDuplicates(streams, (stream) =>
+      dedupKeys(stream, deduplicationKeys, deduplicator)
+    );
 
     const processedStreams = new Set<ParsedStream>();
     for (const excludedStreamId of excludedStreamIds) {
@@ -254,7 +256,7 @@ class StreamDeduplicator {
       }
     }
 
-    for (const group of finalDuplicateGroupsMap.values()) {
+    for (const group of duplicateGroups) {
       const groupWinners: ParsedStream[] = [];
       // Group streams by type
       const streamsByType = new Map<string, ParsedStream[]>();
@@ -318,8 +320,10 @@ class StreamDeduplicator {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
-        const mode = deduplicator[type as keyof typeof deduplicator] as string;
-        if (mode === 'disabled') {
+        const mode = deduplicator[type as keyof typeof deduplicator] as
+          string | undefined;
+        // Types with no setting of their own, such as archives, are all kept.
+        if (!mode || mode === 'disabled') {
           rawTypeStreams.forEach((stream) => processedStreams.add(stream));
           continue;
         }
@@ -659,6 +663,7 @@ class StreamDeduplicator {
       if (bestTier && bestTier !== winner.parsedFile.mediaInfoQuality) {
         winner.parsedFile.mediaInfoQuality = bestTier;
       }
+      winner.parsedFile.mediaInfoSource = probed?.mediaInfoSource;
     }
 
     // Merge actual subtitle tracks (with URLs) by unique (lang, url).

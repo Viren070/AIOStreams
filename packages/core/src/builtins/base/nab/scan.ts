@@ -53,12 +53,7 @@ const CAPS_AVAILABLE = 'yes';
 
 /** Element names whose text a profile can ask for. */
 export type NabTextField =
-  | 'title'
-  | 'guid'
-  | 'comments'
-  | 'pubDate'
-  | 'size'
-  | 'type';
+  'title' | 'guid' | 'comments' | 'pubDate' | 'size' | 'type';
 /** Indexer-name elements Prowlarr and Jackett add to each item. */
 export type NabIndexerField = 'prowlarrindexer' | 'jackettindexer';
 export type NabAttrType = 'string' | 'number';
@@ -123,11 +118,17 @@ export interface NabSearchFunction {
   supportedParams: string[];
 }
 
+export interface NabCapsCategory {
+  id: number;
+  subcats: number[];
+}
+
 export interface NabCapsDocument {
   kind: 'caps';
   server: { title?: string };
   limits?: { default?: number; max?: number };
   searching: Record<string, NabSearchFunction>;
+  categories: NabCapsCategory[];
 }
 
 export interface NabScanOptions {
@@ -267,7 +268,12 @@ export class NabScanner {
       throw new NabScanError(`unexpected root element <${root.name}>`);
     }
 
-    const caps: NabCapsDocument = { kind: 'caps', server: {}, searching: {} };
+    const caps: NabCapsDocument = {
+      kind: 'caps',
+      server: {},
+      searching: {},
+      categories: [],
+    };
     let pos = root.contentStart;
 
     while (pos < end) {
@@ -303,8 +309,10 @@ export class NabScanner {
             ? fn.contentStart
             : this.skipElement(fn.contentStart, fn.name, limit);
         }
+      } else if (name === 'categories' && !elem.selfClosing) {
+        caps.categories = this.scanCategories(contentStart);
       }
-      // Everything else (categories, groups, genres, tags) is stepped over.
+      // Everything else (groups, genres, tags) is stepped over.
       pos = elem.selfClosing
         ? contentStart
         : this.skipElement(contentStart, name, end);
@@ -314,6 +322,42 @@ export class NabScanner {
     // exist even when an indexer does not advertise it.
     caps.searching.search ??= { available: false, supportedParams: [] };
     return caps;
+  }
+
+  private scanCategories(from: number): NabCapsCategory[] {
+    const close = this.buf.indexOf(closer('categories'), from);
+    const limit = close === -1 ? this.end : close;
+    const categories: NabCapsCategory[] = [];
+    let pos = from;
+    while (pos < limit) {
+      const elem = this.nextElement(pos, limit);
+      if (!elem) break;
+      const id = toNumber(this.parseAttrs(elem.nameEnd, elem.attrsTo).id);
+      if (elem.name !== 'category' || elem.selfClosing) {
+        if (elem.name === 'category' && id !== undefined) {
+          categories.push({ id, subcats: [] });
+        }
+        pos = elem.selfClosing
+          ? elem.contentStart
+          : this.skipElement(elem.contentStart, elem.name, limit);
+        continue;
+      }
+      const end = this.skipElement(elem.contentStart, elem.name, limit);
+      const subcats: number[] = [];
+      let inner = elem.contentStart;
+      while (inner < end) {
+        const sub = this.nextElement(inner, end);
+        if (!sub) break;
+        const subId = toNumber(this.parseAttrs(sub.nameEnd, sub.attrsTo).id);
+        if (sub.name === 'subcat' && subId !== undefined) subcats.push(subId);
+        inner = sub.selfClosing
+          ? sub.contentStart
+          : this.skipElement(sub.contentStart, sub.name, end);
+      }
+      if (id !== undefined) categories.push({ id, subcats });
+      pos = end;
+    }
+    return categories;
   }
 
   private yield(): Promise<void> {

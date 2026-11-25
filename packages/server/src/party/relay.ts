@@ -8,6 +8,7 @@ import {
   andThen,
   config as appConfig,
   createLogger,
+  isSeparate,
   PARTY_LIMITS,
   PARTY_PROTOCOL,
   sharedBackend,
@@ -30,7 +31,7 @@ import {
 } from '@aiostreams/core';
 import { isTrustedIp } from '../middlewares/ip.js';
 import { userForToken, type TokenUser } from '../routes/jellyfin/context.js';
-import { accountName } from '../routes/jellyfin/users.js';
+import { profileName } from '../routes/jellyfin/users.js';
 import { AddressBook, Bucket, withinQueue } from './limits.js';
 import { parseMessage } from './messages.js';
 import { ticketExpiry, ticketFor } from './ticket.js';
@@ -608,12 +609,10 @@ function homeOf(user: TokenUser | null, code: string | undefined): Home | null {
   return {
     uuid: user.uuid,
     userId: user.userId,
-    hidden: !!user.persona?.hidden,
+    hidden: isSeparate(user.profile),
     code,
-    host: user.persona?.name ?? accountName(user.userData),
-    avatar: user.persona
-      ? user.persona.avatar
-      : user.userData.jellyfin?.primary?.avatar,
+    host: profileName(user.userData, user.profile),
+    avatar: user.profile.avatar,
   };
 }
 
@@ -1111,7 +1110,7 @@ export async function listedParties(user: TokenUser): Promise<PartyListing[]> {
     const home = party?.home;
     if (!party || !home) continue;
     const visible =
-      home.hidden || user.persona?.hidden
+      home.hidden || isSeparate(user.profile)
         ? home.userId === user.userId
         : instance || home.uuid === user.uuid;
     if (!visible || party.lock.joins) continue;

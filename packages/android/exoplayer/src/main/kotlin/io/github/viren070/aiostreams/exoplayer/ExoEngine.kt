@@ -201,13 +201,17 @@ class ExoEngine(private val context: Context) : Engine {
     override fun load(request: LoadRequest) = post { if (!request.append) open(request) }
 
     override fun stop() = post {
-        if (url == null) return@post
+        // A file that ended or failed is no longer playing, yet still holds its cache and the player's decoders.
+        val playing = url != null
         url = null
+        // A live link still being told apart would start once that answers.
+        opens++
         selector.tracksKnown = false
         player.stop()
         player.clearMediaItems()
         cache.play(null)
         subtitles.close()
+        if (!playing) return@post
         listener?.onEnded("stop", null, null)
         state(PlayerState(idle = true))
     }
@@ -280,6 +284,7 @@ class ExoEngine(private val context: Context) : Engine {
     override fun setSettings(settings: PlayerSettings) = post {
         audio.setSettings(settings)
         cache.limitMb = settings.cacheMb
+        subtitles.setGpu(settings.gpuSubtitles)
     }
 
     override val checksOutput = true

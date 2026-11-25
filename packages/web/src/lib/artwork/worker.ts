@@ -263,7 +263,7 @@ async function shrink({
   }
   const bitmap = await createImageBitmap(canvas);
   later.push({ url, width, height, canvas, copy: save ? copy : null });
-  if (later.length > LATER_MAX) later.shift();
+  if (later.length > LATER_MAX) release(later.shift()!.canvas);
   return { id, bitmap };
 }
 
@@ -360,6 +360,12 @@ const LATER_MAX = 60;
 let active = 0;
 let encoding = false;
 
+/** Frees a canvas's pixels now, which the worker's collector doesn't count and seldom gets to. */
+function release(canvas: OffscreenCanvas) {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
 async function encodeLater() {
   if (encoding) return;
   encoding = true;
@@ -369,6 +375,7 @@ async function encodeLater() {
       const blob = await canvas
         .convertToBlob({ type: 'image/webp', quality: 0.92 })
         .catch(() => null);
+      release(canvas);
       if (!blob) continue;
       if (copy)
         void writeImage(copy, blob.type, blob).then(

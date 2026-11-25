@@ -82,6 +82,8 @@ typedef struct ass_image {
         IMAGE_TYPE_SHADOW
     } type;
 
+    uint32_t cache_id;          // Stable ID for the source bitmap, or 0
+
     // New fields can be added here in new ABI-compatible library releases.
 } ASS_Image;
 

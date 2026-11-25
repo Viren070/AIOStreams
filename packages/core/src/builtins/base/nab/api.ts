@@ -1,4 +1,4 @@
-﻿import {
+import {
   Cache,
   DistributedLock,
   getSimpleTextHash,
@@ -8,15 +8,22 @@
   makeUrlLogSafe,
   readBodyUpTo,
   registerLockErrorClass,
+  resolveHeaderOverride,
 } from '../../../utils/index.js';
 import { config as appConfig } from '../../../config/index.js';
 import type { Logger } from '../../../logging/logger.js';
 import { searchWithBackgroundRefresh } from '../../utils/general.js';
 import {
+  formatNabQuery,
+  nabQueryStyle,
+  type NabQueryStyle,
+} from './query-styles.js';
+import {
   NabScanError,
   NabScanner,
   type NabAttrs,
   type NabAttrType,
+  type NabCapsCategory,
   type NabCapsDocument,
   type NabEnclosure,
   type NabErrorDocument,
@@ -52,6 +59,7 @@ export type Capabilities = {
   server: { title?: string };
   limits?: { default?: number; max?: number };
   searching: Record<string, NabSearchFunction>;
+  categories?: NabCapsCategory[];
 };
 
 /**
@@ -81,7 +89,6 @@ const NEWZNAB_PROFILE: NabScanProfile = {
   indexers: new Set(['prowlarrindexer'] as const),
   enclosureLength: true,
   attrs: new Map<string, NabAttrType>([
-    ['zyclopsHealth', 'string'],
     ['usenetdate', 'string'],
     ['language', 'string'],
     ['subs', 'string'],
@@ -241,7 +248,7 @@ export class BaseNabApi<N extends NabNamespace> {
   private readonly searchCache: Cache<string, SearchResponse<N>>;
   private readonly profile: NabScanProfile;
   private readonly logger: Logger;
-  private readonly params: Record<string, string>;
+  private readonly params: Record<string, string> = {};
   private readonly userAgent: string;
   private readonly httpProxy: string | undefined;
 
@@ -250,15 +257,11 @@ export class BaseNabApi<N extends NabNamespace> {
     logger: Logger,
     private readonly baseUrl: string,
     private readonly apiKey?: string,
-    private readonly apiPath: string = '/api',
-    params: Record<string, string | number | boolean> = {}
+    private readonly apiPath: string = '/api'
   ) {
     this.logger = logger;
     this.baseUrl = this.removeTrailingSlash(baseUrl);
     this.apiPath = this.removeTrailingSlash(apiPath);
-    this.params = Object.fromEntries(
-      Object.entries(params).map(([key, value]) => [key, String(value)])
-    );
     const apiPathUrl = new URL(this.baseUrl + this.apiPath);
     // append any search params from the apiPath to this.params
     if (apiPathUrl.search) {
@@ -271,7 +274,8 @@ export class BaseNabApi<N extends NabNamespace> {
       this.apiPath = apiPathUrl.pathname;
     }
     this.profile = namespace === 'torznab' ? TORZNAB_PROFILE : NEWZNAB_PROFILE;
-    this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps`);
+    // v2: caps now carry their categories.
+    this.capabilitiesCache = Cache.getInstance(`${namespace}:api:caps:v2`);
     // v3: the cached item shape is now the scanner's projection.
     this.searchCache = Cache.getInstance(`${namespace}:api:search:v3`);
     this.userAgent =
@@ -300,6 +304,7 @@ export class BaseNabApi<N extends NabNamespace> {
       searchCacheKey: cacheKey,
       bgCacheKey: `nab:${cacheKey}`,
       cacheTTL: appConfig.builtins.nab.searchCacheTtl,
+      emptyResultTTL: appConfig.builtins.nab.emptyResultCacheTtl,
       fetchFn: () => this.request(searchFunction, 'search', params),
       isEmptyResult: (result) => result.results.length === 0,
       logger: this.logger,
@@ -312,6 +317,11 @@ export class BaseNabApi<N extends NabNamespace> {
    * `caps` proves the url and api path; the bare `search` proves the api key,
    * since plenty of indexers serve caps without authenticating.
    */
+  get style(): NabQueryStyle {
+    const url = new URL(`${this.baseUrl}${this.apiPath}`);
+    return nabQueryStyle(resolveHeaderOverride(url, this.namespace)?.preset);
+  }
+
   public async testConnection(): Promise<NabTestResult> {
     let capabilities: Capabilities;
     try {
@@ -343,12 +353,17 @@ export class BaseNabApi<N extends NabNamespace> {
     };
 
     try {
-      const response = await this._request(
-        'search',
-        'search',
-        { limit: 1 },
-        NAB_TEST_TIMEOUT
-      );
+      let response: SearchResponse<N> = { results: [] };
+      for (const { t, ...params } of this.style.test) {
+        response = await this._request(
+          t,
+          'search',
+          params,
+          NAB_TEST_TIMEOUT,
+          false
+        );
+        if (response.results.length > 0) break;
+      }
       const missingInfoHash =
         this.namespace === 'torznab' && response.results.length > 0
           ? !response.results.some((r) =>
@@ -400,28 +415,25 @@ export class BaseNabApi<N extends NabNamespace> {
     return result;
   }
 
+  /** A connection test writes its requests out in full, without defaults. */
   private async _request<K extends NabRequestKind>(
     func: string,
     kind: K,
     params: Record<string, string | number | boolean> = {},
-    timeout?: number
+    timeout?: number,
+    withDefaults = true
   ): Promise<NabRequestResult<N, K>> {
     const start = Date.now();
-    const url = new URL(`${this.baseUrl}${this.apiPath}`);
-    const searchParams = new URLSearchParams({
+    const style = this.style;
+    const query: Record<string, string> = {
+      ...(kind === 'search' && withDefaults ? style.defaults : {}),
       t: func,
-      ...Object.fromEntries(
-        Object.entries(params).map(([k, v]) => [k, String(v)])
-      ),
-    });
-    for (const [key, value] of Object.entries(this.params)) {
-      if (!searchParams.has(key)) {
-        searchParams.set(key, value);
-      }
+    };
+    for (const [key, value] of Object.entries(params)) {
+      query[key] = String(value);
     }
-    if (this.apiKey) searchParams.set('apikey', this.apiKey);
-    url.search = searchParams.toString();
-    const urlString = url.toString();
+    const order = kind === 'caps' ? style.caps : style.search;
+    const urlString = `${this.baseUrl}${this.apiPath}?${formatNabQuery(style, order, query, this.params, this.apiKey)}`;
 
     this.logger.info(
       `Making ${this.namespace} request to: ${makeUrlLogSafe(urlString)}`
@@ -445,10 +457,7 @@ export class BaseNabApi<N extends NabNamespace> {
       } = await readBodyUpTo(response, appConfig.builtins.nab.maxResponseBytes);
 
       let document:
-        | NabCapsDocument
-        | NabSearchDocument
-        | NabErrorDocument
-        | undefined;
+        NabCapsDocument | NabSearchDocument | NabErrorDocument | undefined;
       let scanError: NabScanError | undefined;
       try {
         const scanner = new NabScanner(body);

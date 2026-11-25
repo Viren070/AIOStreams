@@ -403,8 +403,9 @@ export async function getPlayChain(
 }
 
 /**
- * Whether a resolve error warrants moving on to the next chain item. Auth /
- * quota / legal failures are terminal for that service, so they stop the chain.
+ * Whether a resolve error warrants moving on to the next chain item. Auth and
+ * quota failures are terminal for that service, so they stop the chain; a
+ * legal block is one file's, so the next may play.
  */
 export function isFailoverRetryableError(error: DebridError | Error): boolean {
   const code = (error as any).code;
@@ -414,7 +415,6 @@ export function isFailoverRetryableError(error: DebridError | Error): boolean {
     case 'TOO_MANY_REQUESTS':
     case 'PAYMENT_REQUIRED':
     case 'STORE_LIMIT_EXCEEDED':
-    case 'UNAVAILABLE_FOR_LEGAL_REASONS':
     case 'NOT_IMPLEMENTED':
       return false;
     default:

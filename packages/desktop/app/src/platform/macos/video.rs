@@ -17,7 +17,7 @@ use objc2::runtime::{AnyObject, NSObjectProtocol, ProtocolObject};
 use objc2::{MainThreadMarker, msg_send, sel};
 use objc2_app_kit::{NSApplicationDidChangeScreenParametersNotification, NSScreen, NSView};
 use objc2_core_foundation::CFString;
-use objc2_core_graphics::CGColorSpace;
+use objc2_core_graphics::{CGColorSpace, kCGColorSpaceSRGB};
 use objc2_foundation::{
     NSNotification, NSNotificationCenter, NSOperatingSystemVersion, NSOperationQueue,
     NSProcessInfo, NSString,
@@ -345,7 +345,7 @@ impl State {
             Output::Compatibility => {
                 layer.setWantsExtendedDynamicRangeContent(false);
                 if let Some(layer) = layer.downcast_ref::<CAOpenGLLayer>() {
-                    layer.setColorspace(None);
+                    set_sdr_colorspace(layer);
                 }
                 for name in ["target-prim", "target-trc", "target-peak"] {
                     if name != "target-peak" || !self.own_peak {
@@ -363,6 +363,13 @@ impl State {
         }
         log::info!("hdr off");
     }
+}
+
+/// A float layer without a colour space shows SDR video far too bright.
+pub(super) fn set_sdr_colorspace(layer: &CAOpenGLLayer) {
+    // SAFETY: CoreGraphics' own constant.
+    let srgb = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }));
+    layer.setColorspace(srgb.as_deref());
 }
 
 fn set(mpv: &Mpv, name: &str, value: &str) {

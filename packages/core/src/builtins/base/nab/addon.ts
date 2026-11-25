@@ -18,6 +18,7 @@ import {
   SearchResponse,
   SearchResultItem,
 } from './api.js';
+import { sendsParam } from './query-styles.js';
 import {
   createQueryLimit,
   getTitleLanguagesForUrl,
@@ -122,12 +123,22 @@ export abstract class BaseNabAddon<
       searchCapabilities,
     });
 
+    const style = this.api.style;
     queryParams.limit = String(
-      Math.min(
-        this.userData.forceInitialLimit ?? capabilities.limits?.max ?? 10000,
-        appConfig.builtins.nab.maxResults
-      )
+      this.userData.forceInitialLimit === undefined && style.pageSize
+        ? style.pageSize
+        : Math.min(
+            this.userData.forceInitialLimit ??
+              capabilities.limits?.max ??
+              10000,
+            appConfig.builtins.nab.maxResults
+          )
     );
+    const categories = style.categories?.(
+      parsedId.mediaType === 'movie' ? 'movie' : 'series',
+      capabilities.categories ?? []
+    );
+    if (categories?.length) queryParams.cat = categories.join(',');
 
     if (this.userData.forceQuerySearch) {
     } else if (
@@ -179,6 +190,7 @@ export abstract class BaseNabAddon<
     if (
       !this.userData.forceQuerySearch &&
       searchCapabilities.supportedParams.includes('year') &&
+      sendsParam(style, 'year') &&
       metadata.year &&
       parsedId.mediaType === 'movie'
     )

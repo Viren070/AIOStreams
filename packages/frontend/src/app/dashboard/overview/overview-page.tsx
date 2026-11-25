@@ -173,7 +173,7 @@ export function DashboardHome() {
         )}
       >
         <Stat
-          label="Users"
+          label="Configurations"
           value={overview.data?.totalUsers ?? '—'}
           hint={
             overview.data

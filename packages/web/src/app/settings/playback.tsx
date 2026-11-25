@@ -1,60 +1,24 @@
-import React from 'react';
 import { plural, t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
 import { Select } from '@aiostreams/ui/select';
 import { Switch } from '@aiostreams/ui/switch';
-import { TextInput } from '@aiostreams/ui/text-input';
-import { Button } from '@aiostreams/ui/button';
-import { formatBytes } from '@aiostreams/ui/core/format';
-import { currentHost } from '@/lib/hosts';
-import {
-  shellHost,
-  chooseExternalPlayer,
-  useExternalPlayers,
-} from '@/lib/hosts/shell';
+import { shellHost } from '@/lib/hosts/shell';
 import { usePlaybackPrefs } from '@/lib/jellyfin/user-config';
-import {
-  CUSTOM_LINK,
-  LAUNCHED_PLAYERS,
-  canPlayWithWebGpu,
-  linkPreset,
-  canUpscale,
-  playerOptions,
-} from '@/lib/playback/player-choice';
-import { addShader, removeShader, shaderNames } from '@/lib/playback/shaders';
-import { canPickPipWindow } from '@/lib/playback/document-pip';
 import {
   settings,
   useSetting,
   NEXT_COUNTDOWNS,
   NEXT_LEADS,
   STILL_WATCHING_AFTER,
-  HOLD_RATES,
-  SEEK_STEPS,
-  VOLUME_STEPS,
   SEGMENT_ACTIONS,
   SEGMENT_TYPES,
-  CACHE_SIZES,
-  type CacheSize,
-  type PlayerBack,
-  type PlayerEngine,
-  type PipWindow,
   type NextPrompt,
   type SegmentAction,
   type SegmentType,
 } from '@/lib/settings';
 import { useFeature } from '@/lib/jellyfin/server-info';
-import { useSession } from '@/lib/jellyfin/session';
-import { mayConvert, qualityOptions } from '@/lib/playback/quality';
-import { canMinimise } from '@/lib/playback/session';
-import { SettingsCard, SettingsRow } from './_components/settings-card';
+import { SettingsCard } from './_components/settings-card';
 import { BadgesRow, QuickFiltersRow } from './_components/version-settings';
-import {
-  onDevice,
-  followsYou,
-  seconds,
-  ShaderFilesRow,
-} from './_components/common';
+import { seconds } from './_components/common';
 import { ReactionSetting } from './_components/reaction-setting';
 
 const nextPromptHelp = (prompt: NextPrompt) =>
@@ -108,14 +72,6 @@ function SegmentActionSelect({ type }: { type: SegmentType }) {
 
 export function PlaybackSection() {
   const { prefs, update, locked } = usePlaybackPrefs();
-  const [seekStep, setSeekStep] = useSetting(settings.controls.seekStep);
-  const [volumeStep, setVolumeStep] = useSetting(settings.controls.volumeStep);
-  const [holdRate, setHoldRate] = useSetting(settings.controls.holdRate);
-  const [thumbnails, setThumbnails] = useSetting(settings.controls.thumbnails);
-  const [clock, setClock] = useSetting(settings.controls.clock);
-  const [showOnPauseAndSkip, setShowOnPauseAndSkip] = useSetting(
-    settings.controls.showOnPauseAndSkip
-  );
   const [autoPlay, setAutoPlay] = useSetting(settings.playback.autoPlayFirst);
   const [preload, setPreload] = useSetting(settings.playback.preloadVersions);
   const [nextPrompt, setNextPrompt] = useSetting(settings.next.prompt);
@@ -129,7 +85,6 @@ export function PlaybackSection() {
   );
   const [skipFillers, setSkipFillers] = useSetting(settings.next.skipFillers);
   const [skipRecaps, setSkipRecaps] = useSetting(settings.next.skipRecaps);
-  const [markUnaired, setMarkUnaired] = useSetting(settings.next.markUnaired);
   const marked = useFeature('fillers');
   const [partyMessages, setPartyMessages] = useSetting(settings.party.messages);
   const [partyReactions, setPartyReactions] = useSetting(
@@ -139,30 +94,15 @@ export function PlaybackSection() {
     settings.party.speedSync
   );
   const autoplay = prefs.EnableNextEpisodeAutoPlay !== false;
-  const [hardwareDecoding, setHardwareDecoding] = useSetting(
-    settings.video.hardwareDecoding
-  );
   const [chapterSkips, setChapterSkips] = useSetting(
     settings.playback.chapterSkips
   );
-  const [dolbyVision, setDolbyVision] = useSetting(settings.video.dolbyVision);
   const bingeGroups = useFeature('versions');
   const shell = !!shellHost();
-  const [engine] = useSetting(settings.player.engine);
-  const [frameRate, setFrameRate] = useSetting(settings.video.frameRate);
-  const [tunneling, setTunneling] = useSetting(settings.video.tunneling);
-  const androidTv = currentHost().name === 'android-app' && !!currentHost().tv;
-  // ExoPlayer decodes with the hardware it picks itself; `auto` may still use mpv.
-  const decoding =
-    shell && !(currentHost().name === 'android-app' && engine === 'exoplayer');
 
   return (
     <>
-      <SettingsCard
-        name="versions"
-        title={t`Versions`}
-        description={followsYou()}
-      >
+      <SettingsCard name="versions" title={t`Versions`} holds="profile">
         <Switch
           side="right"
           label={t`Auto-play the first version`}
@@ -184,11 +124,7 @@ export function PlaybackSection() {
         <QuickFiltersRow />
         <BadgesRow />
       </SettingsCard>
-      <SettingsCard
-        name="next-episode"
-        title={t`Next episode`}
-        description={followsYou()}
-      >
+      <SettingsCard name="next-episode" title={t`Next episode`} holds="profile">
         <Switch
           side="right"
           label={t`Play it automatically`}
@@ -201,6 +137,23 @@ export function PlaybackSection() {
           disabled={locked}
           onValueChange={(v) => update({ EnableNextEpisodeAutoPlay: v })}
         />
+        {autoplay && (
+          <Select
+            label={t`Ask if you are still watching`}
+            help={t`Pauses and asks before the next episode once this many have played in a row without a key, click or button press.`}
+            options={STILL_WATCHING_AFTER.map((n) => ({
+              value: String(n),
+              label: n
+                ? plural(n, {
+                    one: 'After # episode',
+                    other: 'After # episodes',
+                  })
+                : t`Never`,
+            }))}
+            value={String(stillWatching)}
+            onValueChange={(v) => setStillWatching(Number(v))}
+          />
+        )}
         <Switch
           side="right"
           label={
@@ -272,36 +225,8 @@ export function PlaybackSection() {
             onValueChange={setSkipRecaps}
           />
         )}
-        <Switch
-          side="right"
-          label={t`Mark unaired episodes`}
-          help={t`Episodes that haven't aired yet show as unaired, ask before playing, and are passed over when playing on or downloading a season. Turn off if their air dates are often wrong.`}
-          value={markUnaired}
-          onValueChange={setMarkUnaired}
-        />
-        {autoplay && (
-          <Select
-            label={t`Ask if you are still watching`}
-            help={t`Pauses and asks before the next episode once this many have played in a row without a key, click or button press.`}
-            options={STILL_WATCHING_AFTER.map((n) => ({
-              value: String(n),
-              label: n
-                ? plural(n, {
-                    one: 'After # episode',
-                    other: 'After # episodes',
-                  })
-                : t`Never`,
-            }))}
-            value={String(stillWatching)}
-            onValueChange={(v) => setStillWatching(Number(v))}
-          />
-        )}
       </SettingsCard>
-      <SettingsCard
-        name="skipping"
-        title={t`Skipping`}
-        description={followsYou()}
-      >
+      <SettingsCard name="skipping" title={t`Skipping`} holds="profile">
         {SEGMENT_TYPES.map((type) => (
           <SegmentActionSelect key={type} type={type} />
         ))}
@@ -318,7 +243,7 @@ export function PlaybackSection() {
       <SettingsCard
         name="watch-parties"
         title={t`Watch parties`}
-        description={followsYou()}
+        holds="profile"
       >
         <Switch
           side="right"
@@ -342,380 +267,6 @@ export function PlaybackSection() {
           onValueChange={setPartySpeedSync}
         />
       </SettingsCard>
-      <SettingsCard
-        name="controls"
-        title={t`Controls`}
-        description={onDevice()}
-      >
-        <Select
-          label={t`Skip length`}
-          help={t`How far the skip buttons, double taps and the arrow keys jump.`}
-          options={SEEK_STEPS.map((s) => ({
-            value: String(s),
-            label: seconds(s),
-          }))}
-          value={String(seekStep)}
-          onValueChange={(v) => setSeekStep(Number(v))}
-        />
-        {!currentHost().tv && (
-          <Select
-            label={t`Volume step`}
-            help={t`How much the volume keys and the scroll wheel change the volume.`}
-            options={VOLUME_STEPS.map((s) => ({
-              value: String(s),
-              label: t`${s}%`,
-            }))}
-            value={String(volumeStep)}
-            onValueChange={(v) => setVolumeStep(Number(v))}
-          />
-        )}
-        <Select
-          label={t`Held speed`}
-          help={t`How fast playback runs while you press and hold the video, or hold Space or Select.`}
-          options={HOLD_RATES.map((r) => ({
-            value: String(r),
-            label: t`${r}×`,
-          }))}
-          value={String(holdRate)}
-          onValueChange={(v) => setHoldRate(Number(v))}
-        />
-        <Switch
-          side="right"
-          label={t`Show the controls on pause and skip`}
-          help={t`Pausing, playing or skipping with a remote or the keyboard brings the controls up, for a moment after a skip. Turned off, only a brief icon shows.`}
-          value={showOnPauseAndSkip}
-          onValueChange={setShowOnPauseAndSkip}
-        />
-        <Switch
-          side="right"
-          label={t`Show the time`}
-          help={t`Shows the time of day at the top of the player with the controls.`}
-          value={clock}
-          onValueChange={setClock}
-        />
-        <Switch
-          side="right"
-          label={t`Seek bar previews`}
-          help={t`Shows a picture of the video where you point, drag or skip to on the seek bar. Each one loads a little data, so turn them off to save it.`}
-          value={thumbnails}
-          onValueChange={setThumbnails}
-        />
-      </SettingsCard>
-      {shell && (
-        <SettingsCard name="video" title={t`Video`} description={onDevice()}>
-          {decoding && (
-            <Switch
-              side="right"
-              label={t`Hardware decoding`}
-              help={t`Decodes on the graphics card. Turn it off if video shows artefacts or stays black.`}
-              value={hardwareDecoding}
-              onValueChange={setHardwareDecoding}
-            />
-          )}
-          <Switch
-            side="right"
-            label={t`Dolby Vision`}
-            help={t`Plays Dolby Vision where the screen shows it. Turn it off to play the HDR10 picture most of these videos also carry, if Dolby Vision looks dim or flickers. Videos with no HDR10 picture still play in Dolby Vision.`}
-            value={dolbyVision}
-            onValueChange={setDolbyVision}
-          />
-          {canUpscale() && <UpscalingSwitch />}
-          {androidTv && (
-            <Switch
-              side="right"
-              label={t`Match the video's frame rate`}
-              help={t`Switches the TV to a refresh rate that suits each video, so motion plays smoothly, and back when you stop. The screen goes blank for a moment as it switches.`}
-              value={frameRate}
-              onValueChange={setFrameRate}
-            />
-          )}
-          {androidTv && engine !== 'mpv' && (
-            <Switch
-              side="right"
-              label={t`Tunneled playback`}
-              help={
-                engine === 'auto'
-                  ? t`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Only for videos ExoPlayer plays. Turn it off if video stutters or stays black.`
-                  : t`Lets the TV's decoder keep picture and sound in step itself, which plays 4K and HDR more smoothly on some TVs. Turn it off if video stutters or stays black.`
-              }
-              value={tunneling}
-              onValueChange={setTunneling}
-            />
-          )}
-        </SettingsCard>
-      )}
-      {!currentHost().play && <PlayerCard />}
     </>
-  );
-}
-
-const backOptions = (): { value: PlayerBack; label: string }[] => [
-  { value: 'stop', label: t`Stops playing` },
-  { value: 'minimise', label: t`Opens the mini player` },
-];
-
-const pipOptions = (): { value: PipWindow; label: string }[] => [
-  { value: 'player', label: t`Player window` },
-  { value: 'video', label: t`Video only` },
-];
-
-const pipHelp = (window: PipWindow) =>
-  ({
-    player: t`A small window with the player in it: subtitles, controls and the seek bar. The browser adds a bar of its own at the top.`,
-    video: t`This browser's own window of the video alone, without that bar, but with no subtitles and only the browser's play and pause.`,
-  })[window];
-
-const engineOptions = (): { value: PlayerEngine; label: string }[] => [
-  { value: 'auto', label: t`Automatic` },
-  { value: 'exoplayer', label: 'ExoPlayer' },
-  { value: 'mpv', label: 'mpv' },
-];
-
-const browserEngineOptions = (): { value: PlayerEngine; label: string }[] => [
-  { value: 'webgpu', label: 'WebGPU' },
-  { value: 'browser', label: t`This browser` },
-];
-
-const engineHelp = (engine: PlayerEngine) =>
-  ({
-    auto: t`ExoPlayer, which uses less battery, and mpv for a video this device has no decoder for.`,
-    mpv: t`Decodes nearly any video, in software where the device has no decoder for it. Takes your mpv.conf under Android app.`,
-    exoplayer: t`Android's own player, which uses less battery: the screen shows the video as the device decodes it, at the video's frame rate. Plays video the device can decode. Styled subtitles look as they do in mpv.`,
-    webgpu: t`Reads and decodes the file itself and draws it on the graphics card, so it also plays formats this browser can't, such as HEVC, Dolby Vision, AC-3, E-AC-3, TrueHD and DTS. A version it can't play goes to this browser's own player.`,
-    browser: t`This browser's own player, which plays the formats this browser supports.`,
-  })[engine];
-
-const cacheOptions = () =>
-  CACHE_SIZES.map((size) => ({
-    value: size,
-    label: size === 'auto' ? t`Automatic` : formatBytes(Number(size) * 1e6),
-  }));
-
-// What the player link takes, written the same in every language.
-const LINK_TOKENS = {
-  url: '{url}',
-  encodedUrl: '{encodedUrl}',
-  scheme: '{scheme}',
-  filename: '{filename}',
-  subtitles: '{subtitles}',
-  title: '{title}',
-  position: '{position}',
-  positionMs: '{positionMs}',
-  returnUrl: '{returnUrl}',
-};
-
-function HdrOutputSwitch() {
-  const [hdrOutput, setHdrOutput] = useSetting(settings.video.hdrOutput);
-  return (
-    <Switch
-      side="right"
-      label={t`HDR output`}
-      help={t`Shows HDR video in HDR on a screen that can show it, instead of converting it to SDR. Leave it off on a screen without HDR.`}
-      value={hdrOutput}
-      onValueChange={setHdrOutput}
-    />
-  );
-}
-
-function UpscalingSwitch() {
-  const [upscaling, setUpscaling] = useSetting(settings.video.upscaling);
-  return (
-    <Switch
-      side="right"
-      label={t`Anime upscaling`}
-      help={t`Sharpens the lines and cleans up the compression in anime as it plays, most of all in older and lower-resolution shows. It applies to titles marked as anime. With a keyboard, U in the player switches it for what's playing. Uses more power, and turns itself off for a video this device can't keep up with. HDR videos, and videos about as large as the screen, stay as they are.`}
-      value={upscaling}
-      onValueChange={setUpscaling}
-    />
-  );
-}
-
-function PlayerCard() {
-  const [player, setPlayer] = useSetting(settings.player.choice);
-  const [link, setLink] = useSetting(settings.player.link);
-  const [engine, setEngine] = useSetting(settings.player.engine);
-  const browserEngine = engine === 'browser' ? engine : 'webgpu';
-  const [cacheSize, setCacheSize] = useSetting(settings.player.cacheSize);
-  const [back, setBack] = useSetting(settings.player.back);
-  const [pipWindow, setPipWindow] = useSetting(
-    settings.player.pictureInPicture
-  );
-  const [quality, setQuality] = useSetting(settings.player.quality);
-  const { user } = useSession();
-  const found = useExternalPlayers();
-  const launched = LAUNCHED_PLAYERS.find((p) => p.id === player);
-  const preset = linkPreset(player);
-  const program = found?.find((p) => p.id === player)?.path;
-  const name = launched?.name ?? '';
-  const target = preset ? (preset.target ?? preset.name) : '';
-  let help: React.ReactNode;
-  if (launched)
-    help = (
-      <Trans>
-        The {name} installed on this computer, in a window of its own with its
-        own controls and configuration. This app still saves your place, marks
-        what you watched and plays the next episode. Compared with the built-in
-        player, you lose:
-        <ul className="mt-1 list-disc ps-5">
-          <li>
-            The controls, skip buttons and next episode card over the video.
-            They stay in this window, which works as a remote.
-          </li>
-          <li>
-            This app&apos;s subtitle style, video fit, hardware decoding and
-            audio output settings.
-          </li>
-        </ul>
-      </Trans>
-    );
-  else if (preset)
-    help =
-      preset.template.includes('{returnUrl}') &&
-      (!preset.template.startsWith('intent:') ||
-        currentHost().name === 'android-app')
-        ? t`Opens versions in ${target}, which brings you back here with your place saved.`
-        : t`Opens versions in ${target}. It can't tell this app where you stopped, so you mark what you watched yourself.`;
-  else if (player !== CUSTOM_LINK)
-    help =
-      currentHost().name === 'desktop'
-        ? t`mpv inside this window, with this app's controls and playback settings. Your own mpv.conf, scripts and shaders work here too: put them in its mpv folder under Desktop app.`
-        : currentHost().name === 'android-app'
-          ? t`Versions play in the app, with its controls and playback settings. Choose another player to open them in it instead.`
-          : t`Versions play in this browser. Choose another player to open them in it instead.`;
-  const {
-    url,
-    encodedUrl,
-    scheme,
-    filename,
-    subtitles,
-    title,
-    position,
-    positionMs,
-    returnUrl,
-  } = LINK_TOKENS;
-  return (
-    <SettingsCard name="player" title={t`Player`} description={onDevice()}>
-      <Select
-        label={t`Play versions in`}
-        help={help}
-        options={playerOptions(found?.map((p) => p.id) ?? [])}
-        value={player}
-        onValueChange={setPlayer}
-      />
-      {canMinimise() && !launched && !preset && player !== CUSTOM_LINK && (
-        <Select
-          label={t`Back in the player`}
-          help={t`The mini player keeps the video going over the pages while you look around. Tap it to open the player again, or close it with its cross.`}
-          options={backOptions()}
-          value={back}
-          onValueChange={(v) => setBack(v as PlayerBack)}
-        />
-      )}
-      {!currentHost().player &&
-        canPlayWithWebGpu() &&
-        !launched &&
-        !preset &&
-        player !== CUSTOM_LINK && (
-          <>
-            <Select
-              label={t`Engine`}
-              help={engineHelp(browserEngine)}
-              options={browserEngineOptions()}
-              value={browserEngine}
-              onValueChange={(v) => setEngine(v as PlayerEngine)}
-            />
-            {browserEngine === 'webgpu' && (
-              <>
-                <UpscalingSwitch />
-                <HdrOutputSwitch />
-                <ShaderFilesRow
-                  help={t`Shader files (.wgsl) for the WebGPU engine, applied in name order to what plays. They stay in this browser. Heavy ones can make video stutter.`}
-                  accept=".wgsl"
-                  read={shaderNames}
-                  add={addShader}
-                  remove={removeShader}
-                />
-              </>
-            )}
-          </>
-        )}
-      {!currentHost().player &&
-        !currentHost().tv &&
-        canPickPipWindow() &&
-        !launched &&
-        !preset &&
-        player !== CUSTOM_LINK && (
-          <Select
-            label={t`Picture-in-picture`}
-            help={pipHelp(pipWindow)}
-            options={pipOptions()}
-            value={pipWindow}
-            onValueChange={(v) => setPipWindow(v as PipWindow)}
-          />
-        )}
-      {shellHost() && !launched && !preset && player !== CUSTOM_LINK && (
-        <>
-          {currentHost().name === 'android-app' && (
-            <Select
-              label={t`Engine`}
-              help={engineHelp(engine)}
-              options={engineOptions()}
-              value={engine}
-              onValueChange={(v) => setEngine(v as PlayerEngine)}
-            />
-          )}
-          <Select
-            label={t`Cache size`}
-            help={t`How much of the video the player holds in memory: ahead, to ride out a slow connection, and behind, to seek back at once. Automatic sizes it from this device's memory.`}
-            options={cacheOptions()}
-            value={cacheSize}
-            onValueChange={(v) => setCacheSize(v as CacheSize)}
-          />
-        </>
-      )}
-      {mayConvert(user) && !launched && !preset && player !== CUSTOM_LINK && (
-        <Select
-          label={t`Quality`}
-          help={t`The most a version may stream at. Above it, the server converts it down, which helps on a slow connection. Original plays every version as it is. The player's own quality menu changes this too.`}
-          options={qualityOptions().map(({ id, label }) => ({
-            value: id,
-            label,
-          }))}
-          value={String(quality)}
-          onValueChange={(v) => setQuality(Number(v))}
-        />
-      )}
-      {launched && (
-        <SettingsRow
-          label={t`Your ${name}`}
-          help={
-            <span className="[overflow-wrap:anywhere]">
-              {program ??
-                t`Not found on this computer. Choose where ${name} is installed.`}
-            </span>
-          }
-        >
-          <Button
-            intent="gray-outline"
-            className="w-full rounded-full sm:w-auto"
-            onClick={() => chooseExternalPlayer(launched.id)}
-          >
-            <Trans>Choose</Trans>
-          </Button>
-        </SettingsRow>
-      )}
-      {player === CUSTOM_LINK && (
-        <TextInput
-          label={t`Player link`}
-          placeholder="vlc://{url}"
-          value={link}
-          onValueChange={setLink}
-          help={t({
-            comment: 'Each {name} is written in the player link as it is here.',
-            message: `${url} is the stream address, ${encodedUrl} the same address URL-encoded, ${scheme} its scheme, ${filename} the file's name, ${subtitles} each external subtitle (its parameter repeats per file), ${title} the title with the episode, ${position} the second to start at (${positionMs} in milliseconds), and ${returnUrl} a link back here for a player that reports where it stopped. Values other than ${url} are URL-encoded. After intent://, ${url} goes without its scheme.`,
-          })}
-        />
-      )}
-    </SettingsCard>
   );
 }

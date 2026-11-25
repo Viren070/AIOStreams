@@ -21,8 +21,7 @@ const SURFACE =
   'flex items-center rounded-md border border-[--border] bg-white/[0.03] hover:bg-[--subtle] text-[--muted] hover:text-[--foreground] transition-colors';
 
 /**
- * The sidebar entry point to a command palette, for both the configure and the
- * dashboard sidebar.
+ * The dashboard sidebar's entry point to its command palette.
  *
  * The sidebar is an icon rail on desktop but a full-width drawer on mobile, so
  * the button follows suit: a square with a tooltip when it is a rail, a

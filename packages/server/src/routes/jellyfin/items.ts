@@ -28,6 +28,7 @@ import {
   liveCatalogs,
   Cache,
   collectionMembers,
+  collectionParts,
   viewCollectionType,
   config as appConfig,
   contentDescriptor,
@@ -53,7 +54,6 @@ import {
   showEpisodesOf,
   withPlayedCounts,
   isMemoFresh,
-  JellyfinRepository,
   resolveByItem,
   resolveByMediaSource,
   stripInternal,
@@ -87,6 +87,7 @@ import {
   type UserItemDataDto,
 } from '@aiostreams/core';
 import { stremioStreamRateLimiter } from '../../middlewares/ratelimit.js';
+import { storedPreferences } from './preferences.js';
 import { StaticFiles } from '../../utils/static-errors.js';
 import {
   ANDROID_PLAYER_CLIENT,
@@ -253,6 +254,7 @@ export async function attachUserData(
       d.k === 'genre' ||
       d.k === 'person' ||
       d.k === 'source' ||
+      d.k === 'part' ||
       d.k === 'season' ||
       d.k === 'livetv' ||
       d.k === 'program'
@@ -333,6 +335,35 @@ function knownMemberCount(
   return undefined;
 }
 
+async function withCollectionParts(
+  ctx: JellyfinRequestContext,
+  item: JellyfinItem,
+  d: { t: string; i: string },
+  meta: ParsedMeta
+): Promise<void> {
+  const parts = await collectionParts(await ctx.engine(), meta);
+  if (parts.length < 2) return;
+  item.aiostreams = {
+    ...(item.aiostreams as object | undefined),
+    ...(meta.collection?.layout === 'rows' && { layout: 'rows' }),
+    ...(meta.collection?.showAll === false && { showAll: false }),
+    sources: parts.map(({ source, name, kind }) => ({
+      id: encodeItemId({
+        k: 'part',
+        t: d.t,
+        i: d.i,
+        ...(source && {
+          st: source.type,
+          c: source.catalogId,
+          ...(source.genre && { g: source.genre }),
+        }),
+      }),
+      name: name ?? item.Name,
+      ...(kind && { collectionType: kind }),
+    })),
+  };
+}
+
 export async function itemsFromPreviews(
   ctx: JellyfinRequestContext,
   previews: MetaPreview[],
@@ -380,7 +411,7 @@ export async function userViews(
 }
 
 export function playlistOwner(ctx: JellyfinRequestContext): PlaylistOwner {
-  return { uuid: ctx.uuid, persona: ctx.persona?.id ?? '' };
+  return { uuid: ctx.uuid, profile: ctx.profile.id };
 }
 
 /** A playlist, pictured by its first title, or that episode's show. */
@@ -629,10 +660,13 @@ export async function itemFromDescriptor(
         { ...meta, type: d.t },
         { boxset: true, childCount: knownMemberCount(meta) }
       );
+      await withCollectionParts(ctx, item, d, meta);
       return opts.bare
         ? item
         : attachUserData(ctx, [item]).then(([built]) => built);
     }
+    case 'part':
+      return null;
     case 'movie':
     case 'series': {
       const meta = await getMeta(ctx, d.t, d.i);
@@ -674,7 +708,10 @@ export async function itemFromDescriptor(
             ? meta?.videos?.length || undefined
             : undefined,
       });
-      if (asBoxset) item.Id = encodeItemId(d);
+      if (asBoxset) {
+        item.Id = encodeItemId(d);
+        await withCollectionParts(ctx, item, d, meta!);
+      }
       if (!meta) item.aiostreams = { noMeta: true };
       if (d.k === 'movie' && !asBoxset) {
         const ids = item.ProviderIds as Record<string, string> | undefined;
@@ -921,9 +958,7 @@ export function nothingToPlayPath(
 export async function trackPreferences(
   ctx: JellyfinRequestContext
 ): Promise<TrackPreferences> {
-  return trackPreferencesFrom(
-    await JellyfinRepository.getUserConfiguration(ctx.watch)
-  );
+  return trackPreferencesFrom(await storedPreferences(ctx.watch));
 }
 
 /** MediaSources for an item, from a memo; the first source carries `firstId`. */
@@ -989,7 +1024,7 @@ function rememberMarker(ctx: JellyfinRequestContext, itemId: string): string {
     uuid: ctx.uuid,
     encryptedPassword: ctx.encryptedPassword,
     itemId,
-    persona: ctx.persona?.id,
+    profile: ctx.profile.id || undefined,
   }).catch(() => undefined);
   return marker;
 }

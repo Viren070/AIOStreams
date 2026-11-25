@@ -86,6 +86,7 @@ const ACRONYMS: Record<string, string> = {
   ttl: 'TTL',
   nab: 'NAB',
   db: 'DB',
+  m3u: 'M3U',
 };
 
 function humanise(s: string): string {

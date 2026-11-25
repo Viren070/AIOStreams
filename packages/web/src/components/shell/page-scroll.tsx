@@ -46,8 +46,9 @@ export function useScrollAway(
           return;
         }
       }
-      if (y <= (bar.current?.offsetHeight ?? 0)) setAway(false);
-      else if (Math.abs(y - last) < SCROLL_TURN_PX) return;
+      if (y <= (bar.current?.offsetHeight ?? 0)) {
+        if (y < last) setAway(false);
+      } else if (Math.abs(y - last) < SCROLL_TURN_PX) return;
       else setAway(y > last);
       last = y;
     };

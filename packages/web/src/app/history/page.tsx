@@ -43,7 +43,7 @@ import {
 } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
-import { PageBody } from '@/components/shell/page';
+import { PageBody, PageHeader } from '@/components/shell/page';
 import { SessionsRow } from './_components/sessions';
 import { PillTabs } from '@/components/pill-tabs';
 import { Artwork, type ArtworkSource } from '@/components/media/cards';
@@ -95,17 +95,36 @@ export function HistoryPage() {
 
   return (
     <PageBody>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 data-ui="page-title" className="text-3xl font-bold">
-          <Trans>Activity</Trans>
-        </h1>
-        {full && (
-          <div className="flex items-center gap-2">
-            <ExportButton />
-            {selected && <ResetButton owner={selected} />}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title={<Trans>Activity</Trans>}
+        actions={
+          <>
+            <div
+              data-ui="history-view"
+              className="flex gap-1 rounded-full bg-gray-900 p-1"
+            >
+              <IconButton
+                size="xs"
+                intent={view === 'days' ? 'white' : 'gray-basic'}
+                className="rounded-full"
+                icon={<BiGridAlt />}
+                aria-label={t`Group by day`}
+                onClick={() => setView('days')}
+              />
+              <IconButton
+                size="xs"
+                intent={view === 'table' ? 'white' : 'gray-basic'}
+                className="rounded-full"
+                icon={<BiListUl />}
+                aria-label={t`Table`}
+                onClick={() => setView('table')}
+              />
+            </div>
+            {full && <ExportButton />}
+            {full && selected && <ResetButton owner={selected} />}
+          </>
+        }
+      />
       {!full && !unlisted && <OwnTotals />}
 
       <SessionsRow sessions={sessions} />
@@ -119,7 +138,7 @@ export function HistoryPage() {
         />
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {full && (
         <PillTabs
           name="source"
           options={[
@@ -128,30 +147,8 @@ export function HistoryPage() {
           ]}
           value={localOnly}
           onChange={setLocalOnly}
-          className={cn(!full && 'invisible')}
         />
-        <div
-          data-ui="history-view"
-          className="flex gap-1 rounded-full bg-gray-900 p-1"
-        >
-          <IconButton
-            size="xs"
-            intent={view === 'days' ? 'white' : 'gray-basic'}
-            className="rounded-full"
-            icon={<BiGridAlt />}
-            aria-label={t`Group by day`}
-            onClick={() => setView('days')}
-          />
-          <IconButton
-            size="xs"
-            intent={view === 'table' ? 'white' : 'gray-basic'}
-            className="rounded-full"
-            icon={<BiListUl />}
-            aria-label={t`Table`}
-            onClick={() => setView('table')}
-          />
-        </div>
-      </div>
+      )}
 
       {history.isError ? (
         <LuffyError title={t`Could not load the history`} />
@@ -777,7 +774,7 @@ function HistoryTable({
               </th>
               {names && (
                 <th className="hidden p-3 sm:table-cell">
-                  <Trans>User</Trans>
+                  <Trans>Profile</Trans>
                 </th>
               )}
               <th className="p-3">

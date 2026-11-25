@@ -304,6 +304,8 @@ export function canonicalDescriptor(d: JellyfinDescriptor): string {
     case 'series':
     case 'boxset':
       return `${d.k}|${d.t}|${d.i}`;
+    case 'part':
+      return `part|${d.t}|${d.i}|${d.st ?? ''}|${d.c ?? ''}|${d.g ?? ''}`;
     case 'season':
       return `season|${d.t}|${d.i}|${d.s}`;
     case 'episode':
@@ -441,7 +443,7 @@ export function encodeItemId(d: JellyfinDescriptor): string {
     case 'program':
       return programId(d);
     default: {
-      const packed = tryPack(d);
+      const packed = d.k === 'part' ? null : tryPack(d);
       if (packed) return packed;
       const id = marked(MARK_HASHED, canonicalDescriptor(d));
       rememberHashed(id, d);
@@ -575,9 +577,9 @@ export function uuidToUserId(uuid: string): string {
 }
 
 /** The account keeps the bare uuid id, which signed-in clients already hold. */
-export function personaUserId(uuid: string, persona: string): string {
-  if (!persona) return uuidToUserId(uuid);
-  return sha(`jellyfin-persona:${uuid}:${persona}`)
+export function profileUserId(uuid: string, profile: string): string {
+  if (!profile) return uuidToUserId(uuid);
+  return sha(`jellyfin-persona:${uuid}:${profile}`)
     .toString('hex')
     .slice(0, 32);
 }

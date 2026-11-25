@@ -2,7 +2,6 @@ import { cva } from 'class-variance-authority';
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from 'embla-carousel-react';
-import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
 import * as React from 'react';
 import { IconButton } from '../button';
 import { cn, defineStyleAnatomy } from '../core/styling';
@@ -105,6 +104,9 @@ function useKeepPositionOnReInit(api: CarouselApi) {
 /** How long a row glides to a focused slide. */
 const GLIDE_MS = 300;
 
+/** Sent by a slide whose width changed, so the row measures it at once and keeps focus in view. */
+export const SLIDE_RESIZE = 'slide-resize';
+
 /**
  * Scrolls a focused slide just into view. Focus would otherwise scroll the
  * clipped viewport itself, which Embla can't see. The row jumps and a CSS
@@ -159,15 +161,78 @@ function useFollowFocus(api: CarouselApi, anchor?: () => boolean) {
     const onScroll = () => {
       if (viewport.scrollLeft) follow();
     };
+    const resized = () => {
+      api.reInit();
+      follow();
+    };
     viewport.addEventListener('focusin', follow);
     viewport.addEventListener('scroll', onScroll);
+    viewport.addEventListener(SLIDE_RESIZE, resized);
     api.on('pointerDown', still);
     return () => {
       still();
       viewport.removeEventListener('focusin', follow);
       viewport.removeEventListener('scroll', onScroll);
+      viewport.removeEventListener(SLIDE_RESIZE, resized);
       api.off('pointerDown', still);
     };
+  }, [api]);
+}
+
+/** Wheel events further apart than this start a new gesture. */
+const GESTURE_GAP_MS = 150;
+const DECIDE_PX = 4;
+/** How much more sideways than upright a gesture starts to move the row. */
+const SIDEWAYS = 2;
+
+/**
+ * Scrolls the row step for step with a sideways wheel or swipe, as a page
+ * scrolls. A gesture that starts mostly upright scrolls the page throughout,
+ * however a trackpad drifts.
+ */
+function useWheelScroll(api: CarouselApi) {
+  React.useEffect(() => {
+    if (!api) return;
+    const viewport = api.rootNode();
+    const container = api.containerNode();
+    let last = -Infinity;
+    let axis: 'x' | 'y' | null = null;
+    let travel = 0;
+    let across = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return;
+      const starts = e.timeStamp - last > GESTURE_GAP_MS;
+      if (starts) {
+        axis = null;
+        travel = across = 0;
+      }
+      last = e.timeStamp;
+      const unit =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 40
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? viewport.clientWidth
+            : 1;
+      const dx = e.deltaX * unit;
+      if (!axis) {
+        travel += Math.abs(dx);
+        across += Math.abs(e.deltaY * unit);
+        // A browser only lets a gesture's later events be cancelled when its
+        // first one was, so the row holds any start that isn't plainly upright.
+        if (starts && across > travel * SIDEWAYS) axis = 'y';
+        else if (travel + across < DECIDE_PX) return e.preventDefault();
+        else axis = travel > across * SIDEWAYS ? 'x' : 'y';
+      }
+      if (axis !== 'x') return;
+      e.preventDefault();
+      // No easing: a transition restarted by every event flickers.
+      container.style.transition = '';
+      const sign = rtl() ? -1 : 1;
+      jumpTo(api, api.internalEngine().target.get() - sign * dx);
+      api.emit('scroll');
+    };
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', onWheel);
   }, [api]);
 }
 
@@ -251,13 +316,14 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
         direction: rtl() ? 'rtl' : 'ltr',
         watchFocus: false,
       },
-      [WheelGesturesPlugin(), ...(plugins ?? [])]
+      plugins
     );
     const [canScrollPrev, setCanScrollPrev] = React.useState(false);
     const [canScrollNext, setCanScrollNext] = React.useState(false);
     useKeepPositionOnReInit(api);
     useRestorePosition(api, restoreKey);
     useFollowFocus(api, anchor);
+    useWheelScroll(api);
     useMarkOutOfView(api);
 
     // Embla's own answer is about the selected snap, which a free drag can

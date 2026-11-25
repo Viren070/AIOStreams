@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import * as constants from '../utils/constants.js';
 import { config } from '../config/index.js';
+import { MEDIA_INFO_BACKFILL_SOURCES } from '../config/schema/media-info.js';
 import { WD1_KEY_REGEX } from '../release-blocklist/keys.js';
 
 /**
@@ -111,51 +112,101 @@ const Formatter = z.object({
 const CONFIG_UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const PERSONA_PIN_PATTERN = /^\d{4,12}$/;
+export const PROFILE_PIN_PATTERN = /^\d{4,12}$/;
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 /** A plain PIN as entered, or the bcrypt hash it was saved as. */
-const PERSONA_LOCK_PATTERN = new RegExp(
-  `${PERSONA_PIN_PATTERN.source}|${BCRYPT_HASH_PATTERN.source}`
+const PROFILE_LOCK_PATTERN = new RegExp(
+  `${PROFILE_PIN_PATTERN.source}|${BCRYPT_HASH_PATTERN.source}`
 );
 
-export function isPersonaLockHash(value: string): boolean {
+export function isProfileLockHash(value: string): boolean {
   return BCRYPT_HASH_PATTERN.test(value);
 }
 
-/** A PIN's bcrypt hash; a plain PIN sent here is hashed when the config is saved. */
-const UserLockSchema = z
-  .string()
-  .regex(PERSONA_LOCK_PATTERN, 'A PIN must be 4 to 12 digits.')
-  .optional();
+const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 
-/** A user a Jellyfin client can sign in as. Shares the configuration's credential. */
-const JellyfinPersonaSchema = z.object({
+/** The first, with id `''`, is the owner. */
+const ProfileSchema = z.object({
   // Names the DB partition, so a rename must not touch it.
   id: z
     .string()
     .regex(
-      /^[a-z0-9][a-z0-9_-]{0,31}$/,
-      'Persona id must be 1-32 characters: lowercase letters, digits, "-" or "_", starting with a letter or digit.'
+      new RegExp(`^$|${PROFILE_ID_PATTERN.source}`),
+      'Profile id must be 1-32 characters: lowercase letters, digits, "-" or "_", starting with a letter or digit.'
     ),
-  name: z.string().min(1).max(32),
+  /** Required on every profile but the owner, which falls back to the addon name. */
+  name: z.string().min(1).max(32).optional(),
   avatar: z.string().url().max(2048).optional(),
-  /** Variants applied while this persona is signed in, in this order. */
-  variants: z.array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)).optional(),
-  /** `shared` reads and writes the account's rows, trackers included. */
-  history: z.enum(['own', 'shared']).default('own'),
-  /** Preset ids of the trackers it syncs with; absent is automatic. */
+  /** Variants applied while this profile is signed in, in this order. */
+  variants: z.array(z.string().regex(PROFILE_ID_PATTERN)).optional(),
+  /** `shared` reads and writes the owner's rows, trackers included. */
+  history: z.enum(['own', 'shared']).optional(),
+  /** Preset ids of the trackers it syncs with; absent is all for the owner, automatic for others. */
   trackers: z.array(z.string().min(1)).max(50).optional(),
-  /** Kept out of the picker and apart from the other users; still usable by name. */
+  /** Kept out of the picker and apart from the other profiles; still usable by name. */
   hidden: z.boolean().optional(),
-  /** The code of a hidden user's own sign-in address, `/jellyfin/p/<address>`. */
+  /** The code of a hidden profile's own sign-in address, `/jellyfin/p/<address>`. */
   address: z
     .string()
     .regex(/^[a-z0-9]{10,32}$/)
     .optional(),
-  lock: UserLockSchema,
+  /** A PIN's bcrypt hash; a plain PIN sent here is hashed when the config is saved. */
+  lock: z
+    .string()
+    .regex(PROFILE_LOCK_PATTERN, 'A PIN must be 4 to 12 digits.')
+    .optional(),
 });
 
-export type JellyfinPersona = z.infer<typeof JellyfinPersonaSchema>;
+export type Profile = z.infer<typeof ProfileSchema>;
+
+const ProfilesSchema = z.array(ProfileSchema).superRefine((profiles, ctx) => {
+  const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
+  const others = profiles.filter((p) => p.id !== '');
+  const max = config.jellyfin.maxProfiles;
+  if (others.length > max) {
+    issue(
+      max === 0
+        ? 'This instance does not allow extra profiles.'
+        : `At most ${max} profiles besides the owner.`
+    );
+  }
+  if (profiles.some((p, i) => p.id === '' && i > 0)) {
+    issue('The owner must be the first profile.');
+  }
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const addresses = new Set<string>();
+  for (const profile of profiles) {
+    const owner = profile.id === '';
+    if (ids.has(profile.id)) issue(`Duplicate profile id "${profile.id}".`);
+    ids.add(profile.id);
+    if (!owner && !profile.name) issue(`Profile "${profile.id}" needs a name.`);
+    if (owner && (profile.history || profile.address)) {
+      issue('The owner keeps its own history and has no address.');
+    }
+    if (profile.history === 'shared' && profile.trackers) {
+      issue(
+        `${profile.name} shares the owner's history, so it uses the owner's trackers.`
+      );
+    }
+    if (profile.address) {
+      if (addresses.has(profile.address)) {
+        issue('Two profiles have the same sign-in address.');
+      }
+      addresses.add(profile.address);
+    }
+    if (!profile.name) continue;
+    const name = profile.name.trim().toLowerCase();
+    if (names.has(name)) {
+      issue(`Two profiles are called "${profile.name}".`);
+    }
+    names.add(name);
+    // It would shadow the configuration's own sign-in.
+    if (CONFIG_UUID_SHAPE.test(profile.name)) {
+      issue(`Profile name "${profile.name}" looks like a configuration id.`);
+    }
+  }
+});
 
 /** No secret is stored: a key's token carries the credential itself. */
 const JellyfinApiKeySchema = z.object({
@@ -168,7 +219,7 @@ export type JellyfinApiKey = z.infer<typeof JellyfinApiKeySchema>;
 
 const MAX_JELLYFIN_API_KEYS = 10;
 
-const JellyfinSettingsFields = z.object({
+const JellyfinSettings = z.object({
   /** Resolve streams when an item is opened so clients can offer a version picker. Default on. */
   resolveOnOpen: z.boolean().optional(),
   /** Versions offered per item; the instance setting caps it. */
@@ -181,73 +232,6 @@ const JellyfinSettingsFields = z.object({
   markUnaired: z.boolean().optional(),
   /** Seconds a play waits for its version's tracks; absent uses the instance's. */
   playWait: z.number().int().min(0).max(30).optional(),
-  /** The configuration's own user: the history its trackers sync with. */
-  primary: z
-    .object({
-      name: z.string().min(1).max(32).optional(),
-      avatar: z.string().url().max(2048).optional(),
-      /** Variants applied while the primary user is signed in, in this order. */
-      variants: z
-        .array(z.string().regex(/^[a-z0-9][a-z0-9_-]{0,31}$/))
-        .optional(),
-      /** Preset ids of the trackers it syncs with; absent means all. */
-      trackers: z.array(z.string().min(1)).max(50).optional(),
-      /** Kept out of the picker; still signs in by name. */
-      hidden: z.boolean().optional(),
-      lock: UserLockSchema,
-    })
-    .optional(),
-  personas: z
-    .array(JellyfinPersonaSchema)
-    .superRefine((personas, ctx) => {
-      const max = config.jellyfin.maxPersonas;
-      if (personas.length > max) {
-        ctx.addIssue({
-          code: 'custom',
-          message:
-            max === 0
-              ? 'This instance does not allow extra Jellyfin users.'
-              : `At most ${max} Jellyfin users per configuration.`,
-        });
-      }
-      const ids = new Set<string>();
-      const names = new Set<string>();
-      const addresses = new Set<string>();
-      for (const persona of personas) {
-        if (persona.address) {
-          if (addresses.has(persona.address)) {
-            ctx.addIssue({
-              code: 'custom',
-              message: 'Two users have the same sign-in address.',
-            });
-          }
-          addresses.add(persona.address);
-        }
-        if (ids.has(persona.id)) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `Duplicate persona id "${persona.id}".`,
-          });
-        }
-        ids.add(persona.id);
-        const name = persona.name.trim().toLowerCase();
-        if (names.has(name)) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `Duplicate persona name "${persona.name}".`,
-          });
-        }
-        names.add(name);
-        // A uuid-shaped name would shadow the configuration's own sign-in.
-        if (CONFIG_UUID_SHAPE.test(persona.name)) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `Persona name "${persona.name}" looks like a configuration id.`,
-          });
-        }
-      }
-    })
-    .optional(),
   apiKeys: z
     .array(JellyfinApiKeySchema)
     .max(
@@ -267,18 +251,6 @@ const JellyfinSettingsFields = z.object({
       }
     })
     .optional(),
-});
-
-/** Per-configuration settings for the Jellyfin-compatible API. */
-const JellyfinSettings = JellyfinSettingsFields.superRefine((settings, ctx) => {
-  for (const persona of settings.personas ?? []) {
-    if (persona.history === 'shared' && persona.trackers) {
-      ctx.addIssue({
-        code: 'custom',
-        message: `${persona.name} shares the primary user's history, so it uses the primary user's trackers.`,
-      });
-    }
-  }
 });
 
 export type JellyfinSettings = z.infer<typeof JellyfinSettings>;
@@ -474,6 +446,7 @@ const OptionDefinition = z.looseObject({
     'subsection',
     'custom-nntp-servers',
     'nab-endpoint',
+    'endpoint',
   ]),
   nab: z
     .object({
@@ -481,6 +454,8 @@ const OptionDefinition = z.looseObject({
       preset: z.string().min(1),
     })
     .optional(),
+  /** For 'endpoint': the builtin whose `/test` checks the sub-options' values. */
+  test: z.object({ builtin: z.string().min(1) }).optional(),
   oauth: z
     .object({
       authorisationUrl: z.string().url(),
@@ -1190,6 +1165,7 @@ export const UserDataSchema = z.object({
     })
     .optional(),
   jellyfin: JellyfinSettings.optional(),
+  profiles: ProfilesSchema.optional(),
   remuxDb: z
     .object({
       enabled: z.boolean().optional(),
@@ -1396,6 +1372,15 @@ export type Stream = z.infer<typeof StreamSchema>;
 /** Best-to-worst provenance tiers for ParsedFile.mediaInfoQuality. */
 export const MEDIA_INFO_QUALITY_TIERS = ['probe', 'indexer', 'addon'] as const;
 
+export const MEDIA_INFO_SOURCES = [
+  'local',
+  ...MEDIA_INFO_BACKFILL_SOURCES,
+  'remote',
+  'stremthru-addon',
+] as const;
+
+export type MediaInfoSource = (typeof MEDIA_INFO_SOURCES)[number];
+
 /** One probed audio or subtitle track; see ParsedMediaTrack in utils/media-info. */
 export const MediaTrackSchema = z.object({
   index: z.number().int().nonnegative().optional(),
@@ -1406,6 +1391,8 @@ export const MediaTrackSchema = z.object({
   tag: z.string().optional(),
   tags: z.array(z.string()).optional(),
   channels: z.string().optional(),
+  bitrate: z.number().optional(),
+  sampleRate: z.number().optional(),
   default: z.boolean().optional(),
   forced: z.boolean().optional(),
   commentary: z.boolean().optional(),
@@ -1425,6 +1412,7 @@ export const ParsedFileSchema = z.object({
   visualTags: z.array(z.string()),
   audioTags: z.array(z.string()),
   mediaInfoQuality: z.enum(MEDIA_INFO_QUALITY_TIERS).optional(),
+  mediaInfoSource: z.enum(MEDIA_INFO_SOURCES).optional(),
   languages: z.array(z.string()),
   subtitles: z.array(z.string()).optional(),
   audioTracks: z.array(MediaTrackSchema).optional(),
@@ -1639,9 +1627,14 @@ const CollectionSchema = z.object({
         type: z.string(),
         catalogId: z.string(),
         genre: z.string().nullish(),
+        name: z.string().nullish(),
       })
     )
     .nullish(),
+  layout: z.string().nullish(),
+  showAll: z.boolean().nullish(),
+  merge: z.string().nullish(),
+  shuffle: z.boolean().nullish(),
 });
 
 /** Documented in `reference/addon-protocol/metadata`. */
@@ -1651,6 +1644,7 @@ const metaExtensionFields = {
   tagline: z.string().nullish(),
   landscapePoster: z.string().nullish(),
   animatedPoster: z.string().nullish(),
+  backgroundVideo: z.string().nullish(),
   people: z.array(MetaPersonSchema).nullish(),
   certification: z.string().nullish(),
   certificationLocal: z.string().nullish(),
@@ -1940,8 +1934,8 @@ const StatusResponseSchema = z.object({
         maxCatalogItems: z.number(),
         /** Catalogs shown as libraries, in the configuration's order. 0 = uncapped. */
         maxLibraries: z.number(),
-        /** Extra users a configuration may add beyond its primary user. */
-        maxPersonas: z.number(),
+        /** Profiles a configuration may add beyond its owner. */
+        maxProfiles: z.number(),
         /** Whether a user's PIN alone signs it in on a picker address. */
         pinSignIn: z.boolean().optional(),
         /** Trackers one user syncs with at most. */

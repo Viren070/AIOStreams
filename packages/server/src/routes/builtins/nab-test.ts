@@ -75,7 +75,7 @@ export function attachNabTestRoute(
 
         const result = await testNabEndpoint({ namespace, ...target });
         logger.debug(
-          { namespace, ok: result.ok, stage: result.stage },
+          { namespace, ok: result.ok },
           'completed nab endpoint test'
         );
         res.json(createResponse({ success: true, data: result }));

@@ -43,7 +43,7 @@ export interface WatchIdentity {
 
 export interface WatchStateRow extends WatchIdentity {
   uuid: string;
-  persona: string;
+  profile: string;
   positionMs: number;
   durationMs: number;
   played: boolean;
@@ -127,6 +127,11 @@ interface DbRow {
 
 const CHUNK = 200;
 
+/** Postgres refuses an upsert that writes one row twice; the last copy wins, as on SQLite. */
+function onePerItem<T extends { identity: WatchIdentity }>(rows: T[]): T[] {
+  return [...new Map(rows.map((row) => [row.identity.itemKey, row])).values()];
+}
+
 function optionalNumber(v: number | string | null): number | null {
   return v == null ? null : Number(v);
 }
@@ -142,7 +147,7 @@ function toRow(r: DbRow): WatchStateRow {
   }
   return {
     uuid: r.uuid,
-    persona: r.persona,
+    profile: r.persona,
     itemKey: r.item_key,
     kind: r.kind as WatchKind,
     mediaType: r.media_type,
@@ -180,15 +185,15 @@ export function watchKindOf(row: Pick<WatchIdentity, 'kind'>): WatchKind {
   return row.kind;
 }
 
-/** Where a history page ended; rows sort on `sort_at`, then persona, then key. */
+/** Where a history page ended; rows sort on `sort_at`, then profile, then key. */
 export interface WatchHistoryCursor {
   sortAt: number;
-  persona: string;
+  profile: string;
   itemKey: string;
 }
 
 export interface WatchHistoryCounts {
-  persona: string;
+  profile: string;
   played: number;
   movies: number;
   episodes: number;
@@ -235,7 +240,7 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow | null> {
     const row = await getDb().maybeOne<DbRow>(
       sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND item_key = ${itemKey}`
     );
     return row ? toRow(row) : null;
@@ -251,7 +256,7 @@ export class WatchStateRepository {
       const slice = wanted.slice(i, i + CHUNK);
       const rows = await db.query<DbRow>(
         sql`SELECT * FROM watch_state
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND item_key IN (${join(slice.map((k) => sql`${k}`))})`
       );
       for (const r of rows) out.set(r.item_key, toRow(r));
@@ -267,7 +272,7 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const out = new Map<string, WatchStateRow>();
     const wanted = [...new Set(keys.filter(Boolean))];
-    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}`;
+    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}`;
     for (let i = 0; i < wanted.length; i += CHUNK) {
       const list = join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`));
       // Two branches, not an OR: SQLite only uses both indexes this way.
@@ -297,7 +302,7 @@ export class WatchStateRepository {
       snapshot?: WatchSnapshot | null;
     }
   ) {
-    return sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+    return sql`(${scope.uuid}, ${scope.profile}, ${identity.itemKey},
       ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
       ${identity.season ?? null}, ${identity.episode ?? null},
       ${identity.videoId ?? null}, ${identity.seriesKey ?? null},
@@ -317,9 +322,10 @@ export class WatchStateRepository {
    */
   static async upsertImports(
     scope: WatchScope,
-    rows: { identity: WatchIdentity; values: SqlFragment }[],
+    imports: { identity: WatchIdentity; values: SqlFragment }[],
     db: DbDriver = getDb()
   ): Promise<void> {
+    const rows = onePerItem(imports);
     for (let i = 0; i < rows.length; i += CHUNK) {
       const slice = rows.slice(i, i + CHUNK);
       await db.exec(
@@ -369,7 +375,7 @@ export class WatchStateRepository {
       );
       await db.exec(
         sql`UPDATE watch_state SET match_key = CASE item_key ${join(cases, ' ')} END
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND item_key IN (${join(slice.map(([key]) => sql`${key}`))})`
       );
     }
@@ -423,7 +429,7 @@ export class WatchStateRepository {
              favorite, favorite_at, dropped, dropped_at, rating, rating_at,
              likes, last_played_at, updated_at, origin, sink_id, external_at,
              snapshot, sort_at, match_key)
-          VALUES (${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+          VALUES (${scope.uuid}, ${scope.profile}, ${identity.itemKey},
                   ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
                   ${season}, ${episode}, ${videoId}, ${seriesKey},
                   COALESCE(${pos}, 0), COALESCE(${dur}, 0), COALESCE(${played}, 0),
@@ -478,7 +484,7 @@ export class WatchStateRepository {
     if (guarded) return null;
     return {
       uuid: scope.uuid,
-      persona: scope.persona,
+      profile: scope.profile,
       ...identity,
       season,
       episode,
@@ -511,7 +517,7 @@ export class WatchStateRepository {
   static async delete(scope: WatchScope, itemKey: string): Promise<void> {
     await getDb().exec(
       sql`DELETE FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND item_key = ${itemKey}`
     );
   }
@@ -524,7 +530,7 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND position_ms > 0
            ORDER BY sort_at DESC
            LIMIT ${Math.max(limit * 3, 30)}`
@@ -548,7 +554,7 @@ export class WatchStateRepository {
     scope: WatchScope,
     page: number
   ): AsyncGenerator<WatchStateRow> {
-    const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+    const where = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}
       AND series_key IS NOT NULL AND episode IS NOT NULL AND ${WATCHED}`;
     const shown = new Set<string>();
     for (let offset = 0; ; offset += page) {
@@ -569,7 +575,7 @@ export class WatchStateRepository {
                         ) AS series_rank
                    FROM latest l
                    JOIN watch_state w
-                     ON w.uuid = ${scope.uuid} AND w.persona = ${scope.persona}
+                     ON w.uuid = ${scope.uuid} AND w.persona = ${scope.profile}
                     AND w.series_key = l.series_key AND w.sort_at = l.at
                   WHERE w.episode IS NOT NULL AND ${WATCHED}
                ) ranked
@@ -624,7 +630,7 @@ export class WatchStateRepository {
     const out = new Map<string, number>();
     if (!keys.length) return out;
     const list = join(keys.map((key) => sql`${key}`));
-    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}`;
+    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}`;
     // Two branches, not an OR: SQLite only uses both indexes this way.
     const drops = await getDb().query<{
       item_key: string;
@@ -653,7 +659,7 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND favorite = 1
            ORDER BY COALESCE(favorite_at, updated_at) DESC
            LIMIT 500`
@@ -674,7 +680,7 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND played = 1
            ORDER BY sort_at DESC
            LIMIT 500`
@@ -688,26 +694,26 @@ export class WatchStateRepository {
   ): Promise<WatchStateRow[]> {
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND series_key = ${seriesKey}`
     );
     return rows.map(toRow).filter((r) => r.episode != null);
   }
 
   /**
-   * One page of the histories of `personas`, newest first. An item held under
+   * One page of the histories of `profiles`, newest first. An item held under
    * several spellings is listed once, by its newest row; on a tie a local one,
    * then the one under its preferred id.
    */
   static async listHistory(
     uuid: string,
-    personas: string[],
+    profiles: string[],
     opts: { limit: number; after?: WatchHistoryCursor; localOnly?: boolean }
   ): Promise<WatchStateRow[]> {
-    if (!personas.length) return [];
+    if (!profiles.length) return [];
     const c = opts.after;
     const after = c
-      ? sql`AND (w.sort_at < ${c.sortAt} OR (w.sort_at = ${c.sortAt} AND (w.persona > ${c.persona} OR (w.persona = ${c.persona} AND w.item_key < ${c.itemKey}))))`
+      ? sql`AND (w.sort_at < ${c.sortAt} OR (w.sort_at = ${c.sortAt} AND (w.persona > ${c.profile} OR (w.persona = ${c.profile} AND w.item_key < ${c.itemKey}))))`
       : raw('');
     const listed = (t: string) =>
       raw(
@@ -726,7 +732,7 @@ export class WatchStateRepository {
     const rows = await getDb().query<DbRow>(
       sql`SELECT w.* FROM watch_state w
            WHERE w.uuid = ${uuid}
-             AND w.persona IN (${join(personas.map((p) => sql`${p}`))})
+             AND w.persona IN (${join(profiles.map((p) => sql`${p}`))})
              AND ${listed('w')}
              ${after}
              AND NOT EXISTS (
@@ -743,21 +749,21 @@ export class WatchStateRepository {
     return rows.map(toRow);
   }
 
-  /** One page of every row `personas` hold, in key order. */
+  /** One page of every row `profiles` hold, in key order. */
   static async listPage(
     uuid: string,
-    personas: string[],
-    opts: { limit: number; after?: { persona: string; itemKey: string } }
+    profiles: string[],
+    opts: { limit: number; after?: { profile: string; itemKey: string } }
   ): Promise<WatchStateRow[]> {
-    if (!personas.length) return [];
+    if (!profiles.length) return [];
     const c = opts.after;
     const after = c
-      ? sql`AND (persona > ${c.persona} OR (persona = ${c.persona} AND item_key > ${c.itemKey}))`
+      ? sql`AND (persona > ${c.profile} OR (persona = ${c.profile} AND item_key > ${c.itemKey}))`
       : raw('');
     const rows = await getDb().query<DbRow>(
       sql`SELECT * FROM watch_state
            WHERE uuid = ${uuid}
-             AND persona IN (${join(personas.map((p) => sql`${p}`))})
+             AND persona IN (${join(profiles.map((p) => sql`${p}`))})
              ${after}
            ORDER BY persona ASC, item_key ASC
            LIMIT ${opts.limit}`
@@ -787,7 +793,7 @@ export class WatchStateRepository {
            GROUP BY persona`
     );
     return rows.map((r) => ({
-      persona: r.persona,
+      profile: r.persona,
       played: Number(r.played ?? 0),
       movies: Number(r.movies ?? 0),
       episodes: Number(r.episodes ?? 0),
@@ -804,7 +810,7 @@ export class WatchStateRepository {
   ): Promise<string[]> {
     const out = new Set(itemKeys);
     const wanted = [...out].filter(Boolean);
-    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}`;
+    const owner = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}`;
     for (let i = 0; i < wanted.length; i += CHUNK) {
       const list = join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`));
       const items = await getDb().query<{ item: string }>(
@@ -841,7 +847,7 @@ export class WatchStateRepository {
     const cleared: WatchStateRow[] = [];
     await getDb().tx(async (db) => {
       for (const only of slices) {
-        const where = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+        const where = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND (${WATCHED} OR play_count > 0) ${only}`;
         const rows = await db.query<DbRow>(
           sql`SELECT * FROM watch_state WHERE ${where}`
@@ -866,14 +872,15 @@ export class WatchStateRepository {
   static async upsertWatchlist(
     scope: WatchScope,
     sinkId: string,
-    rows: { identity: WatchIdentity; at: number }[],
+    entries: { identity: WatchIdentity; at: number }[],
     now: number,
     db: DbDriver = getDb()
   ): Promise<void> {
+    const rows = onePerItem(entries);
     for (let i = 0; i < rows.length; i += CHUNK) {
       const values = rows.slice(i, i + CHUNK).map(
         ({ identity, at }) =>
-          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+          sql`(${scope.uuid}, ${scope.profile}, ${identity.itemKey},
             ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
             ${identity.videoId ?? null}, ${identity.seriesKey ?? null}, 1,
             ${sinkId}, ${at}, ${now},
@@ -907,7 +914,7 @@ export class WatchStateRepository {
     for (let i = 0; i < wanted.length; i += CHUNK) {
       await db.exec(
         sql`UPDATE watch_state SET favorite_seen_at = ${at}
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND favorite_sink_id = ${sinkId}
                AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
       );
@@ -925,7 +932,7 @@ export class WatchStateRepository {
     for (let i = 0; i < identities.length; i += CHUNK) {
       const values = identities.slice(i, i + CHUNK).map(
         (identity) =>
-          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+          sql`(${scope.uuid}, ${scope.profile}, ${identity.itemKey},
             ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
             ${identity.seriesKey ?? null}, 1, ${sinkId}, ${now}, ${now},
             ${now}, ${now}, 'import', ${sinkId}, 0)`
@@ -956,7 +963,7 @@ export class WatchStateRepository {
     for (let i = 0; i < wanted.length; i += CHUNK) {
       await db.exec(
         sql`UPDATE watch_state SET dropped_seen_at = ${at}
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND dropped_sink_id = ${sinkId}
                AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
       );
@@ -973,7 +980,7 @@ export class WatchStateRepository {
     const res = await db.exec(
       sql`UPDATE watch_state
              SET dropped = 0, dropped_sink_id = NULL, dropped_at = NULL
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND dropped = 1 AND dropped_sink_id = ${sinkId}
              AND COALESCE(dropped_seen_at, 0) < ${before}`
     );
@@ -991,7 +998,7 @@ export class WatchStateRepository {
       await getDb().exec(
         sql`UPDATE watch_state
                SET dropped = 0, dropped_sink_id = NULL, dropped_at = ${now}
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND ${column} IN (${keys}) AND dropped = 1`
       );
     }
@@ -1008,7 +1015,7 @@ export class WatchStateRepository {
     for (let i = 0; i < rows.length; i += CHUNK) {
       const values = rows.slice(i, i + CHUNK).map(
         ({ identity, rating, at }) =>
-          sql`(${scope.uuid}, ${scope.persona}, ${identity.itemKey},
+          sql`(${scope.uuid}, ${scope.profile}, ${identity.itemKey},
             ${identity.kind}, ${identity.mediaType}, ${identity.baseId},
             ${identity.season ?? null}, ${identity.episode ?? null},
             ${identity.videoId ?? null}, ${identity.seriesKey ?? null},
@@ -1043,7 +1050,7 @@ export class WatchStateRepository {
     for (let i = 0; i < wanted.length; i += CHUNK) {
       await db.exec(
         sql`UPDATE watch_state SET rating_seen_at = ${at}
-             WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+             WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
                AND rating_sink_id = ${sinkId}
                AND item_key IN (${join(wanted.slice(i, i + CHUNK).map((k) => sql`${k}`))})`
       );
@@ -1060,7 +1067,7 @@ export class WatchStateRepository {
     const res = await db.exec(
       sql`UPDATE watch_state
              SET rating = NULL, rating_sink_id = NULL, rating_at = NULL
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND rating IS NOT NULL AND rating_sink_id = ${sinkId}
              AND COALESCE(rating_seen_at, 0) < ${before}`
     );
@@ -1077,7 +1084,7 @@ export class WatchStateRepository {
     const res = await db.exec(
       sql`UPDATE watch_state
              SET favorite = 0, favorite_sink_id = NULL, favorite_at = NULL
-           WHERE uuid = ${scope.uuid} AND persona = ${scope.persona}
+           WHERE uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND favorite = 1 AND favorite_sink_id = ${sinkId}
              AND COALESCE(favorite_seen_at, 0) < ${before}`
     );
@@ -1098,7 +1105,7 @@ export class WatchStateRepository {
     db: DbDriver = getDb()
   ): Promise<number> {
     const playedValue = half === 'watched' ? 1 : 0;
-    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND origin = 'import' AND sink_id = ${sinkId}
              AND COALESCE(seen_at, updated_at) < ${before}
              AND played = ${playedValue}
@@ -1127,7 +1134,7 @@ export class WatchStateRepository {
     listed: ReadonlySet<string>,
     db: DbDriver = getDb()
   ): Promise<number> {
-    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.persona}
+    const candidates = sql`uuid = ${scope.uuid} AND persona = ${scope.profile}
              AND origin = 'import' AND sink_id = ${sinkId}
              AND COALESCE(seen_at, updated_at) < ${before}
              AND played = 1 AND position_ms > 0`;

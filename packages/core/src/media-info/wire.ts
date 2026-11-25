@@ -44,6 +44,8 @@ export function toWireMediaInfo(record: MediaInfoRecord): MediaInfo {
       title: t.title,
       ch_layout: t.channelLayout,
       ch: t.channels,
+      br: t.bitrate,
+      sample_rate: t.sampleRate,
       default: t.default,
       commentary: t.commentary,
       dub: t.dub,

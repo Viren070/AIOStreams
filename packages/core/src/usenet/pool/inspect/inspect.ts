@@ -5,7 +5,7 @@ import { detectFileType } from '../file-type.js';
 import { Nzb } from '../../nzb/model.js';
 import { InspectOptions, InspectResult, NzbContent } from './types.js';
 import { buildProbePlan, DYNAMIC_REGROUP_PROBES } from './probe-plan.js';
-import { inspectFile } from './probe.js';
+import { inspectFile, probeTail } from './probe.js';
 import { applyPar2Names } from './par2-names.js';
 
 const logger = createLogger('usenet/inspect');
@@ -169,6 +169,22 @@ export async function inspectNzb(
     // probe propagates a provider-unavailable error (retryable inspect failure).
     clearInterval(watchdog);
     if (opts.signal) opts.signal.removeEventListener('abort', onExternalAbort);
+  }
+
+  // Only a post with readable archive volumes has a set to keep a place in.
+  if (
+    !deadAbort &&
+    results.some((r) => r.file.category === 'archive' && !r.file.error)
+  ) {
+    await Promise.all(
+      results
+        .filter((r) => r.file.error === 'article_not_found')
+        .map((r) =>
+          limit(() =>
+            probeTail(nzb.files[r.file.index], r, pool, nzb.hash, fileOpts)
+          )
+        )
+    );
   }
 
   // Skip PAR2 filename recovery on a dead post (its par2 is missing too) and

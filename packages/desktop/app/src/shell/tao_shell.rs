@@ -185,6 +185,13 @@ pub fn run(app: App) {
         .build(&event_loop)
         .unwrap_or_else(|e| platform::fatal(&format!("could not open a window: {e}")));
     let size = window.inner_size();
+    #[cfg(target_os = "macos")]
+    let _fullscreen_left = platform::on_fullscreen_left(&window, {
+        let proxy = proxy.clone();
+        move || {
+            let _ = proxy.send_event(UserEvent::FullscreenLeft);
+        }
+    });
 
     let video = platform::VideoSurface::new(&window).unwrap_or_else(|e| platform::fatal(&e));
     let started = start_player(&video, &paths, {
@@ -336,8 +343,8 @@ pub fn run(app: App) {
     event_loop.run(move |event, _, flow| {
         if save_at.is_some_and(|at| Instant::now() >= at) {
             save_at = None;
-            match pip {
-                Some(_) => Pip::record(&window, &mut placement),
+            match &pip {
+                Some(small) => small.record(&window, &mut placement),
                 None => record(&window, &mut placement),
             }
             placement::save(&data_dir, &placement);
@@ -405,8 +412,8 @@ pub fn run(app: App) {
                     return;
                 }
                 log::info!("closing");
-                match pip {
-                    Some(_) => Pip::record(&window, &mut placement),
+                match &pip {
+                    Some(small) => small.record(&window, &mut placement),
                     None => record(&window, &mut placement),
                 }
                 placement::save(&data_dir, &placement);
@@ -460,9 +467,22 @@ pub fn run(app: App) {
                     value: pip.is_some(),
                 });
             }
+            #[cfg(target_os = "macos")]
+            Event::UserEvent(UserEvent::FullscreenLeft) => {
+                if pip
+                    .as_mut()
+                    .is_some_and(|small| small.shrink(&window, &mut placement))
+                {
+                    placement::save(&data_dir, &placement);
+                }
+            }
             Event::UserEvent(UserEvent::Minimize) => window.set_minimized(true),
             Event::UserEvent(UserEvent::VideoFrame(frame)) => {
-                video.frame(frame, window.scale_factor());
+                #[cfg(windows)]
+                let scale = platform::page_scale(&webview).unwrap_or(window.scale_factor());
+                #[cfg(not(windows))]
+                let scale = window.scale_factor();
+                video.frame(frame, scale);
             }
             Event::UserEvent(UserEvent::Drag) => {
                 let _ = window.drag_window();
@@ -480,7 +500,9 @@ pub fn run(app: App) {
             }),
             #[cfg(target_os = "macos")]
             Event::UserEvent(UserEvent::WindowButtons(visible)) => {
-                platform::set_window_buttons(&window, visible)
+                if pip.is_none() {
+                    platform::set_window_buttons(&window, visible)
+                }
             }
             #[cfg(target_os = "macos")]
             Event::Opened { urls } => {

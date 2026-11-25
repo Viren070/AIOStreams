@@ -128,12 +128,12 @@ export const jellyfinSchema = {
     secret: false,
     ui: { min: 1, max: 10_000 },
   },
-  maxPersonas: {
+  maxProfiles: {
     schema: z.number().int().min(0).max(100),
     default: 20,
-    label: 'Max users per configuration',
+    label: 'Max profiles per configuration',
     description:
-      'How many extra users a configuration may offer its Jellyfin clients, on top of its own primary user. Each one is a name a client can sign in as, with its own watch history and variants, and all of them share the configuration password, so they separate households rather than secure them. 0 leaves only the primary user.',
+      'How many profiles a configuration may have on top of its owner. Each one is someone who signs in to the apps, with its own watch history and variants, and all of them share the configuration password, so they separate households rather than secure them. 0 leaves only the owner.',
     env: 'JELLYFIN_MAX_PERSONAS',
     requiresRestart: false,
     secret: false,
@@ -144,7 +144,7 @@ export const jellyfinSchema = {
     default: false,
     label: 'Sign in with a PIN alone',
     description:
-      "Lets a user with a PIN of 6 or more digits sign in on a configuration's /jellyfin/<uuid>/<encryptedPassword> address with that PIN instead of the configuration password, so its owner can hand each person their own user without sharing the password. That address holds the same credential as the configuration's Stremio manifest URL, so anyone with that URL who learns or guesses a PIN can use that user. The primary user and users without a PIN still need the password. Leave this off on a public instance.",
+      "Lets a profile with a PIN of 6 or more digits sign in on a configuration's /jellyfin/<uuid>/<encryptedPassword> address with that PIN instead of the configuration password, so its owner can hand each person their own profile without sharing the password. That address holds the same credential as the configuration's Stremio manifest URL, so anyone with that URL who learns or guesses a PIN can use that profile. The owner and profiles without a PIN still need the password. Leave this off on a public instance.",
     env: 'JELLYFIN_PIN_SIGN_IN',
     requiresRestart: false,
     secret: false,

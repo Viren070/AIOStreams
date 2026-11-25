@@ -11,6 +11,7 @@ import { useGenres, useKey, useLiveTvView } from '@/lib/jellyfin/queries';
 import { storage, storedMap } from '@/lib/storage';
 import type { BaseItemDto, BaseItemDtoQueryResult } from '@/lib/jellyfin/types';
 import { createLive, useLive } from '@/lib/live-value';
+import { settings, useSetting } from '@/lib/settings';
 import { lacksDetails } from '@/lib/format';
 
 /** Groups of the app's own, before the server's. */
@@ -25,6 +26,13 @@ export interface ChannelGroup {
 
 const CHANNEL_PAGE = 100;
 const RECENT_MAX = 30;
+
+/** The server has channels, and the user keeps them in the navigation or, with `home`, on home too. */
+export function useLiveTvShown(home = false): boolean {
+  const view = useLiveTvView();
+  const [place] = useSetting(settings.interface.liveTv);
+  return !!view.data && (place === 'home' || (!home && place === 'nav'));
+}
 
 /** Channels played on this device, newest first, by user. */
 const recents = storedMap<string[]>('aiostreams-web-recent-channels', 20);

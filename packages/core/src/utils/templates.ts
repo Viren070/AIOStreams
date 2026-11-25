@@ -9,7 +9,7 @@ import { RegexAccess } from './regex-access.js';
 import { createLogger } from '../logging/logger.js';
 import { SelAccess } from './sel-access.js';
 import { config as appConfig } from '../config/index.js';
-import { makeRequest } from './http.js';
+import { makeRequest } from './http/index.js';
 import { TaskManager } from '../tasks/index.js';
 import { subscribeToConfig } from '../config/index.js';
 import { collectTrustedStrings } from './template-sanitise.js';

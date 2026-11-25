@@ -12,21 +12,20 @@ import {
   useConfirmationDialog,
 } from '@aiostreams/ui/shared/confirmation-dialog';
 import { useSession } from '@/lib/jellyfin/session';
-import { useOwnAvatar, usePickableUsers } from '@/lib/jellyfin/history';
+import { useOwnAvatar } from '@/lib/jellyfin/history';
+import { useCanSwitch } from '@/lib/profiles';
 import { configureUrl } from '@/lib/paths';
 import { serverAddress } from '@/lib/jellyfin/servers';
 import { settings, useSetting } from '@/lib/settings';
 import { useServerInfo } from '@/lib/jellyfin/server-info';
 import { UserAvatar } from '@/components/user-avatar';
 import { SettingsCard, SettingsRow } from './_components/settings-card';
-import { onDevice } from './_components/common';
 
 export function AccountSection() {
   const { client, user, switchUser, signOut, changeServer } = useSession();
   const info = useServerInfo();
-  const users = usePickableUsers();
   const avatar = useOwnAvatar();
-  const several = (users.data?.length ?? 0) > 1;
+  const several = useCanSwitch();
   const [askWho, setAskWho] = useSetting(settings.account.askWho);
   const configure = configureUrl(client.base, info);
   const confirmSignOut = useConfirmationDialog({
@@ -72,8 +71,8 @@ export function AccountSection() {
         </SettingsRow>
         {several && (
           <SettingsRow
-            label={t`Switch user`}
-            help={t`Watch as someone else on this configuration. A user with a PIN needs it again after switching away.`}
+            label={t`Switch profile`}
+            help={t`Watch as someone else on this configuration. A profile with a PIN needs it again after switching away.`}
           >
             <Button
               intent="gray-outline"
@@ -112,7 +111,7 @@ export function AccountSection() {
         {configure && (
           <SettingsRow
             label={t`Configuration`}
-            help={t`Addons, catalogs and users are set up on the configuration page.`}
+            help={t`Addons, catalogs and profiles are set up on the configuration page.`}
           >
             <Button
               intent="gray-outline"
@@ -128,7 +127,7 @@ export function AccountSection() {
         <SettingsCard
           name="who-s-watching"
           title={t`Who's watching`}
-          description={onDevice()}
+          holds="device"
         >
           <Switch
             side="right"
