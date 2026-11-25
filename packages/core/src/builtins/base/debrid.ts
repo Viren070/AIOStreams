@@ -179,6 +179,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     };
   }
 
+  /**
+   * Search and resolve this addon's releases, carrying request metadata through
+   * validation, stream construction and deferred playback file selection.
+   */
   public async getStreams(type: string, id: string): Promise<Stream[]> {
     const parsedId = IdParser.parse(id, type);
     const errorStreams: Stream[] = [];
@@ -395,6 +399,8 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
       {} as Record<BuiltinServiceId, string | string[]>
     );
     const titleMetadata: TitleMetadata = {
+      mediaType: parsedId.mediaType === 'movie' ? 'movie' : undefined,
+      isAnime: searchMetadata.isAnime,
       titles: searchMetadata.titles,
       year: searchMetadata.year,
       seasonYear: searchMetadata.seasonYear,
@@ -683,6 +689,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   ): Promise<UnprocessedTorrent[]>;
   protected abstract _searchNzbs(parsedId: ParsedId): Promise<NZB[]>;
 
+  /**
+   * Resolve aliases, media identity and episode coordinates for search and
+   * release validation, explicitly identifying movie requests for recovery.
+   */
   protected async _getSearchMetadata(
     parsedId: ParsedId,
     type: string
@@ -823,6 +833,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     //     : (animeEntry?.mappings?.thetvdbId?.toString() ?? null);
 
     const searchMetadata: SearchMetadata = {
+      mediaType: parsedId.mediaType === 'movie' ? 'movie' : undefined,
       primaryTitle: metadata.title,
       titles: metadata.titles?.map((t) => t.title) ?? [],
       titlesWithLang: metadata.titles ?? [],
