@@ -103,6 +103,17 @@ describe('LinkedAccountService.pushIfChanged', () => {
     assert.equal(reinstalls, 0);
   });
 
+  it('still stamps a skipped push as checked, so capped runs move on', async () => {
+    await getDb().exec(
+      sql`UPDATE linked_accounts SET last_checked_at = NULL WHERE id = ${linkId}`
+    );
+    assert.equal(await LinkedAccountService.pushIfChanged(UUID, linkId), null);
+    const row = await getDb().one<{ checked: unknown }>(
+      sql`SELECT last_checked_at AS checked FROM linked_accounts WHERE id = ${linkId}`
+    );
+    assert.notEqual(row.checked, null);
+  });
+
   it('pushes again once the manifest changes', async () => {
     catalogs = [{ type: 'movie', id: 'two' }];
     assert.notEqual(
