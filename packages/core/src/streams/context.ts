@@ -405,11 +405,28 @@ export class StreamContext {
         let seasonNumber = originalSeason;
         let episodeNumber = Number(this.parsedId.episode);
         if (this.isAnime && this.animeEntry) {
-          ({ seasonNumber, episodeNumber } = getTmdbEpisode(
-            this.parsedId,
-            this.animeEntry,
-            metadata.seasons ?? []
-          ));
+          // Enrichment can replace the entry-local episode with an IMDb
+          // coordinate. Apply the TMDB offset to the original local episode.
+          const requestParsedId = IdParser.parse(this.id, this.type);
+          if (
+            requestParsedId &&
+            !requestParsedId.season &&
+            requestParsedId.episode &&
+            ['kitsuId', 'malId'].includes(requestParsedId.type) &&
+            this.animeEntry.tmdb?.fromEpisode
+          ) {
+            seasonNumber = this.animeEntry.tmdb.seasonNumber ?? originalSeason;
+            episodeNumber =
+              Number(this.animeEntry.tmdb.fromEpisode) +
+              Number(requestParsedId.episode) -
+              1;
+          } else {
+            ({ seasonNumber, episodeNumber } = getTmdbEpisode(
+              this.parsedId,
+              this.animeEntry,
+              metadata.seasons ?? []
+            ));
+          }
           logger.debug(
             {
               originalSeason,
