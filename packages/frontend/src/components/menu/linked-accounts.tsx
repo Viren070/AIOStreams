@@ -628,10 +628,16 @@ function ManageAccountModal({
           {hasParent && (
             <div className="flex items-center justify-between rounded-lg bg-gray-800/50 p-3">
               <div className="flex-1 pr-3">
-                <div className="text-sm font-medium text-white">
+                <div
+                  id="linked-account-push-on-parent-change-label"
+                  className="text-sm font-medium text-white"
+                >
                   Push when a parent configuration changes
                 </div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div
+                  id="linked-account-push-on-parent-change-description"
+                  className="mt-1 text-xs text-gray-400"
+                >
                   When a configuration this one inherits from is saved, the
                   server pushes this link for you, but only if your addon
                   changed.
@@ -639,6 +645,8 @@ function ManageAccountModal({
               </div>
               <Switch
                 id="linked-account-push-on-parent-change"
+                aria-labelledby="linked-account-push-on-parent-change-label"
+                aria-describedby="linked-account-push-on-parent-change-description"
                 value={pushOnParentChange}
                 onValueChange={setPushOnParentChange}
               />
