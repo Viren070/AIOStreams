@@ -68,6 +68,24 @@ describe('ParentChangePusher', () => {
     assert.deepEqual(pushed, SPACED);
   });
 
+  it('queues one more run however often a parent is saved during a run', async () => {
+    let resume!: () => void;
+    const paused = new Promise<void>((resolve) => (resume = resolve));
+    const { pusher, pushed } = setup({ sleep: () => paused });
+    pusher.saved('p');
+    mock.timers.tick(DELAY);
+    // Let the run start; it waits in its first pause.
+    await new Promise((resolve) => setImmediate(resolve));
+    for (let i = 0; i < 3; i++) {
+      pusher.saved('p');
+      mock.timers.tick(DELAY);
+    }
+    resume();
+    await pusher.idle();
+    const run = ['a/a1', 'b/b1', 'b/b2'];
+    assert.deepEqual(pushed, [...run, ...run]);
+  });
+
   it('does nothing for a configuration nobody inherits from', async () => {
     const { pusher, pushed } = setup();
     pusher.saved('q');

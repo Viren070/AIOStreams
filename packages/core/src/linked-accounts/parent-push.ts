@@ -60,6 +60,8 @@ const defaultDeps: ParentPushDeps = {
  */
 export class ParentChangePusher {
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  /** Parents with a run in the queue that has not started yet. */
+  private readonly queued = new Set<string>();
   private queue: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: ParentPushDeps = defaultDeps) {}
@@ -69,10 +71,17 @@ export class ParentChangePusher {
     clearTimeout(this.timers.get(parentUuid));
     const timer = setTimeout(() => {
       this.timers.delete(parentUuid);
+      // A run that has not started reads the latest links and manifests when
+      // it does, so a second one would only repeat it.
+      if (this.queued.has(parentUuid)) return;
+      this.queued.add(parentUuid);
       // Caught so one failure cannot leave the chain rejected, which would
       // skip every later run.
       this.queue = this.queue
-        .then(() => this.run(parentUuid))
+        .then(() => {
+          this.queued.delete(parentUuid);
+          return this.run(parentUuid);
+        })
         .catch((error) =>
           logger.error(
             { parent: parentUuid, error: String(error) },
