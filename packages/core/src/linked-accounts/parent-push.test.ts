@@ -164,4 +164,15 @@ describe('ParentChangePusher', () => {
     await elapse(pusher, DELAY);
     assert.deepEqual(pushed, []);
   });
+
+  it('waits rather than pushing at once when the delay is too long for a timer', async () => {
+    // Real timers: Node runs a longer timeout after 1ms, which the mock does not.
+    mock.timers.reset();
+    const { pusher, pushed } = setup({ delayMs: () => 2 ** 31 });
+    pusher.saved('p');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await pusher.idle();
+    pusher.stop();
+    assert.deepEqual(pushed, []);
+  });
 });

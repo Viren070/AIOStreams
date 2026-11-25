@@ -15,6 +15,9 @@ const logger = createLogger('linked-accounts');
  */
 const MAX_PARENT_DEPTH = 5;
 
+// setTimeout runs anything longer than 2^31-1 ms after 1 ms instead.
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
 export interface ParentPushDeps {
   enabled(): boolean;
   delayMs(): number;
@@ -69,6 +72,7 @@ export class ParentChangePusher {
   saved(parentUuid: string): void {
     if (!this.deps.enabled()) return;
     clearTimeout(this.timers.get(parentUuid));
+    const delay = Math.min(this.deps.delayMs(), MAX_TIMEOUT_MS);
     const timer = setTimeout(() => {
       this.timers.delete(parentUuid);
       // A run that has not started reads the latest links and manifests when
@@ -88,7 +92,7 @@ export class ParentChangePusher {
             'push after a parent change failed'
           )
         );
-    }, this.deps.delayMs());
+    }, delay);
     timer.unref?.();
     this.timers.set(parentUuid, timer);
   }
