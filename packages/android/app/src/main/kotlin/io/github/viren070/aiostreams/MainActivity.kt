@@ -206,7 +206,13 @@ class MainActivity : ComponentActivity() {
         // A recreated activity has handled the link it was started with.
         if (savedInstanceState == null) receiveLink(intent)
         getSystemService(NotificationManager::class.java).cancel(UpdatedReceiver.NOTIFICATION)
-        web.loadUrl(app.startUrl)
+        // Straight to the player's own loading screen, never the start page first. Android brings the
+        // activity back with its saved state after closing the app for memory, so that state says nothing;
+        // each kill is put back once, and a link the app was opened with goes first.
+        val restoring = runCatching { Crashes.restoreAfterMemoryKill(this) }.getOrDefault(false) && links.isEmpty()
+        if (restoring) AppLog.i("app", "Android closed the app for memory with a file open; putting it back")
+        // The restore route takes the place of any fragment the start address has.
+        web.loadUrl(if (restoring) app.startUrl.substringBefore('#') + RESTORE_ROUTE else app.startUrl)
 
         // The page's own Back closes what is open, leaves the player and goes back, and
         // says `exit` on its first page.
@@ -459,12 +465,12 @@ class MainActivity : ComponentActivity() {
         val shown = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         val what = when {
             session.playbackState == Player.STATE_IDLE -> if (shown) "browsing" else "nothing playing"
-            session.playWhenReady -> "playing"
-            else -> "paused"
+            session.playWhenReady -> Crashes.PLAYING
+            else -> Crashes.PAUSED
         }
         val where = when {
             isInPictureInPictureMode -> " in picture-in-picture"
-            !shown -> " in the background"
+            !shown -> Crashes.IN_BACKGROUND
             else -> ""
         }
         Crashes.doing(this, what + where)
@@ -642,6 +648,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        /** The page puts back the file it noted, as it was. */
+        const val RESTORE_ROUTE = "#/restore"
         const val MAX_PAGE_TEXT = 4000
     }
 }

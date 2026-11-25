@@ -6,6 +6,7 @@ import { itemPath, navigate, to } from '@/lib/paths';
 import type { PlayerController } from '@/lib/playback/controller';
 import { useFetchItem } from '@/lib/jellyfin/queries';
 import {
+  holdPaused,
   holdTracks,
   takeTracks,
   useRemoteHandler,
@@ -22,7 +23,10 @@ export function useOpenRemote(opts: { replace?: boolean } = {}) {
   const picker = useVersionPicker();
   const fetchItem = useFetchItem();
   return (command: Extract<RemoteCommand, { kind: 'show' | 'play' }>) => {
-    if (command.kind === 'play') holdTracks(command);
+    if (command.kind === 'play') {
+      holdTracks(command);
+      holdPaused(command);
+    }
     fetchItem(command.itemId).then(
       (item) => {
         if (command.kind === 'show')
@@ -86,8 +90,8 @@ export function useRemotePlayer(
   const { loaded } = player.state;
   React.useEffect(() => {
     if (!loaded) return;
-    const held = takeTracks(item.Id!);
+    const held = takeTracks(item.Id!, source.Id);
     if (held?.audio != null) setTrack.current('audio', held.audio);
     if (held?.subtitle != null) setTrack.current('subtitle', held.subtitle);
-  }, [loaded, item.Id, setTrack]);
+  }, [loaded, item.Id, source.Id, setTrack]);
 }
