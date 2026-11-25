@@ -109,6 +109,10 @@ class MainActivity : ComponentActivity() {
     }
     private val voice = Voice(this) { bridge.send(it) }
     private lateinit var frameRates: FrameRateMatch
+
+    // Paused for being out of sight: the player waits for coming back before it starts its sound or picks tracks again.
+    @Volatile
+    private var away = false
     /** False when onCreate only showed the outdated WebView message. */
     private val started get() = ::bridge.isInitialized
     /** The page's renderer ended, leaving a web view that can't be used. */
@@ -160,7 +164,17 @@ class MainActivity : ComponentActivity() {
             resume = { player.change(Change(paused = false)) },
             hasFile = { player.hasFile },
         )
-        passthrough = Passthrough(this) { player.outputChanged() }
+        playback.outputSettling = frameRates::settling
+        playback.outputBroke = { frameRates.relinkStarted("the audio track broke") }
+        // Dropped is told on Passthrough's own thread; relinkStarted takes any.
+        passthrough = Passthrough(this, dropped = { frameRates.relinkStarted("the audio output lost formats") }) {
+            player.outputChanged()
+            playback.outputChanged()
+        }
+        frameRates.formatsBack = passthrough::back
+        frameRates.formatsSettled = passthrough::settle
+        playback.away = { away }
+        playback.outputFormats = { passthrough.supported(Passthrough.ALL) }
         player = PlayerChannel(
             playback.engine,
             send = { bridge.send(it) },
@@ -583,11 +597,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        away = false
         if (pageGone) recreate()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Leaving, even for a moment, Android puts the display back in its own mode, and HDMI links again.
+        if (started && player.hasFile && frameRates.hdmiAudio()) frameRates.relinkStarted("the app left")
     }
 
     override fun onResume() {
         super.onResume()
+        // Coming back, Android puts the display in the app's mode again, and HDMI links again.
+        if (started && player.hasFile && frameRates.hdmiAudio()) frameRates.relinkStarted("the app came back")
         if (started) updater.onResume()
         // Not in onStart, which runs before the lifecycle reaches STARTED.
         noteDoing()
@@ -595,6 +618,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        // Left on purpose (Home, Recents), not covered by an overlay: paused at once, as Android takes its picture of the
+        // screen, which it shows again on coming back. The file stops on that frame, not half a second later as the app
+        // is out of sight.
+        if (started && player.hasFile && leavesPlayback() && !pip.entersOnLeave) player.change(Change(paused = true))
         if (started) pip.onUserLeaveHint()
     }
 
@@ -614,6 +641,7 @@ class MainActivity : ComponentActivity() {
         // Closing the window, rather than opening it full size, stops playback.
         if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
             player.change(Change(paused = true))
+            away = true
         }
         noteDoing()
     }
@@ -621,12 +649,19 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         if (!started) return
-        val background = player.session.item?.background == true
-        if (!isChangingConfigurations && !isInPictureInPictureMode && !background) player.change(Change(paused = true))
+        if (leavesPlayback()) {
+            player.change(Change(paused = true))
+            away = true
+        }
         noteDoing()
     }
 
+    /** Leaving stops what plays: no change of configuration, no small window, nothing meant to play in the background. */
+    private fun leavesPlayback() =
+        !isChangingConfigurations && !isInPictureInPictureMode && player.session.item?.background != true
+
     override fun onDestroy() {
+        if (::frameRates.isInitialized) frameRates.release()
         if (!started) return super.onDestroy()
         updater.release()
         voice.release()
