@@ -4,6 +4,8 @@ import type { ParsedStream } from '../db/schemas.js';
 import {
   extractNzbGuid,
   matchEntry,
+  nzbIndexerGuid,
+  remuxDbHostMap,
   resolveRemuxDbIndexer,
   toWireMediaInfo,
 } from './adapter.js';
@@ -141,6 +143,47 @@ describe('extractNzbGuid', () => {
   test('bare guid (not a URL)', () => {
     assert.equal(extractNzbGuid('raw-guid'), 'raw-guid');
   });
+
+  test('details path keeps its hex when a guid query is also present', () => {
+    const guid = '24967ef4c2e26296c65d3bbfa97aa8fe';
+    assert.equal(
+      extractNzbGuid(
+        `https://nzb.su/details/${guid}?guid=not-the-release#comments`
+      ),
+      guid
+    );
+  });
+
+  test('an empty id is kept, so a path hash is not read instead', () => {
+    const guid = '24967ef4c2e26296c65d3bbfa97aa8fe';
+    assert.equal(
+      extractNzbGuid(`https://indexer.example/details/${guid}?id=`),
+      ''
+    );
+  });
+
+  test('guid query, when the path has no release id', () => {
+    const guid = '0123456789abcdef0123456789abcdef';
+    assert.equal(
+      extractNzbGuid(`https://nzbgeek.info/geekseek.php?guid=${guid}`),
+      guid
+    );
+  });
+
+  test('guid query keeps the indexer casing', () => {
+    assert.equal(
+      extractNzbGuid('https://nzbgeek.info/geekseek.php?guid=AbC'),
+      'AbC'
+    );
+  });
+
+  test('comments fragment does not hide the guid query', () => {
+    const guid = '0123456789abcdef0123456789abcdef';
+    assert.equal(
+      extractNzbGuid(`https://nzbgeek.info/geekseek.php?guid=${guid}#comments`),
+      guid
+    );
+  });
 });
 
 describe('resolveRemuxDbIndexer', () => {
@@ -167,6 +210,171 @@ describe('resolveRemuxDbIndexer', () => {
 
   test('not a URL resolves to undefined', () => {
     assert.equal(resolveRemuxDbIndexer('raw-guid'), undefined);
+  });
+
+  test('resolves NZBgeek from its website, not only the API host', () => {
+    assert.equal(
+      resolveRemuxDbIndexer(
+        'https://nzbgeek.info/geekseek.php?guid=0123456789abcdef0123456789abcdef'
+      ),
+      'nzbgeek'
+    );
+    assert.equal(
+      resolveRemuxDbIndexer(
+        'https://api.nzbgeek.info/api?t=get&id=0123456789abcdef0123456789abcdef'
+      ),
+      'nzbgeek'
+    );
+  });
+});
+
+/** The host the map used before profile hosts existed. */
+function legacyApiHost(value: string): string {
+  return new URL(value).hostname.replace(/^www\./, '');
+}
+
+describe('remuxDbHostMap', () => {
+  // Loaded after adapter. A static import here evaluates the preset first,
+  // and the preset's graph reaches this module before NEWZNAB_INDEXERS exists.
+  const indexers = async () =>
+    (await import('../presets/newznab.js')).NEWZNAB_INDEXERS;
+
+  test('every API host still resolves to the same indexer', async () => {
+    const NEWZNAB_INDEXERS = await indexers();
+    const map = remuxDbHostMap(NEWZNAB_INDEXERS);
+    for (const indexer of NEWZNAB_INDEXERS) {
+      if (!indexer.remuxDbIndexer) continue;
+      assert.equal(map[legacyApiHost(indexer.value)], indexer.remuxDbIndexer);
+    }
+  });
+
+  test('a profile host is mapped only when it is the API host without api.', async () => {
+    const NEWZNAB_INDEXERS = await indexers();
+    const map = remuxDbHostMap(NEWZNAB_INDEXERS);
+    const extras: string[] = [];
+    for (const indexer of NEWZNAB_INDEXERS) {
+      if (!indexer.remuxDbIndexer || !indexer.apiKeyUrl) continue;
+      const api = legacyApiHost(indexer.value);
+      const profile = new URL(indexer.apiKeyUrl).hostname
+        .toLowerCase()
+        .replace(/^www\./, '');
+      const website = api.startsWith('api.') ? api.slice(4) : undefined;
+      if (website && profile === website) {
+        assert.equal(map[profile], indexer.remuxDbIndexer);
+        extras.push(profile);
+      }
+    }
+    // A new indexer that fits the rule shows up here. Add it on purpose.
+    assert.deepEqual(extras.sort(), [
+      'althub.co.za',
+      'nzb.life',
+      'nzbgeek.info',
+      'nzbplanet.net',
+    ]);
+  });
+
+  test('a profile URL on a different site is not claimed', async () => {
+    const map = remuxDbHostMap(await indexers());
+    assert.equal(map['torbox.app'], undefined);
+    assert.equal(map['search-api.torbox.app'], 'torbox');
+    assert.equal(map['searchnzb.com'], undefined);
+    assert.equal(map['api.searchnzb.com'], undefined);
+  });
+
+  test('an indexer without a RemuxDB id contributes no hosts', () => {
+    const map = remuxDbHostMap([
+      { value: 'https://api.example.test/api', remuxDbIndexer: 'kept' },
+      {
+        value: 'not a url',
+        apiKeyUrl: 'also not a url',
+      },
+    ]);
+    assert.deepEqual(map, { 'api.example.test': 'kept' });
+  });
+
+  test('remuxDbHosts names a site that is neither the API nor the profile', () => {
+    const map = remuxDbHostMap([
+      {
+        value: 'https://feed.example.test/api',
+        apiKeyUrl: 'https://feed.example.test/profile',
+        remuxDbIndexer: 'example',
+        remuxDbHosts: ['details.example.test'],
+      },
+    ]);
+    assert.equal(map['feed.example.test'], 'example');
+    assert.equal(map['details.example.test'], 'example');
+  });
+
+  test('one host claimed by two indexers is refused', () => {
+    assert.throws(
+      () =>
+        remuxDbHostMap([
+          { value: 'https://shared.example/api', remuxDbIndexer: 'first' },
+          { value: 'https://shared.example/api', remuxDbIndexer: 'second' },
+        ]),
+      /claimed by first and second/
+    );
+  });
+
+  test('the same indexer may have two hosts', () => {
+    const map = remuxDbHostMap([
+      { value: 'https://feed.example.org/api', remuxDbIndexer: 'animetosho' },
+      { value: 'https://feed.example.net/api', remuxDbIndexer: 'animetosho' },
+    ]);
+    assert.equal(map['feed.example.org'], 'animetosho');
+    assert.equal(map['feed.example.net'], 'animetosho');
+  });
+});
+
+const GEEK_GUID = '0123456789abcdef0123456789abcdef';
+const GEEK_INFO = `https://nzbgeek.info/geekseek.php?guid=${GEEK_GUID}`;
+
+describe('nzbIndexerGuid', () => {
+  test('NZBgeek info page, with the download URL pointing at Prowlarr', () => {
+    assert.deepEqual(
+      nzbIndexerGuid(
+        'http://prowlarr.local:9696/1/download?apikey=x&link=y',
+        GEEK_INFO
+      ),
+      { indexer: 'nzbgeek', guid: GEEK_GUID }
+    );
+  });
+
+  test('an empty id on the download URL does not hide the info page', () => {
+    assert.deepEqual(
+      nzbIndexerGuid('https://api.nzbgeek.info/api?t=get&id=', GEEK_INFO),
+      { indexer: 'nzbgeek', guid: GEEK_GUID }
+    );
+  });
+
+  test('a direct download URL wins over a different id on the info page', () => {
+    assert.deepEqual(
+      nzbIndexerGuid(
+        `https://api.nzbgeek.info/api?t=get&id=from-download&apikey=x`,
+        GEEK_INFO
+      ),
+      { indexer: 'nzbgeek', guid: 'from-download' }
+    );
+  });
+
+  test('a details path still matches, including the comments fragment', () => {
+    const guid = '24967ef4c2e26296c65d3bbfa97aa8fe';
+    assert.deepEqual(
+      nzbIndexerGuid(undefined, `https://nzbnest.com/details/${guid}#comments`),
+      { indexer: 'nzbnest', guid }
+    );
+  });
+
+  test('info page matches the release inside matchEntry', () => {
+    const v = version({
+      sources: [{ kind: 'nzb', indexer: 'nzbgeek', indexer_guid: GEEK_GUID }],
+    });
+    const s = stream({
+      type: 'usenet',
+      nzbUrl: 'http://prowlarr.local:9696/1/download?link=y',
+      infoUrl: GEEK_INFO,
+    });
+    assert.equal(matchEntry([v], s), v);
   });
 });
 
