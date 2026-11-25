@@ -6,7 +6,14 @@ import { ParentChangePusher, type ParentPushDeps } from './parent-push.js';
 
 const DELAY = 30_000;
 // a1 fetches three manifests, so the pause after it is three times as long.
-const SPACED = ['a/a1', 'sleep 6000', 'b/b1', 'sleep 2000', 'b/b2'];
+const SPACED = [
+  'a/a1',
+  'sleep 6000',
+  'b/b1',
+  'sleep 2000',
+  'b/b2',
+  'sleep 2000',
+];
 
 function setup(overrides: Partial<ParentPushDeps> = {}) {
   const pushed: string[] = [];
@@ -97,7 +104,20 @@ describe('ParentChangePusher', () => {
     const { pusher, pushed } = setup({ maxLinks: () => 2 });
     pusher.saved('p');
     await elapse(pusher, DELAY);
-    assert.deepEqual(pushed, ['a/a1', 'sleep 6000', 'b/b1']);
+    assert.deepEqual(pushed, ['a/a1', 'sleep 6000', 'b/b1', 'sleep 2000']);
+  });
+
+  it('spaces the first push of a run from the last push of the one before', async () => {
+    const { pusher, pushed } = setup({
+      targets: async (parent) =>
+        parent === 'p'
+          ? [{ uuid: 'a', id: 'a1', urls: 3 }]
+          : [{ uuid: 'c', id: 'c1', urls: 1 }],
+    });
+    pusher.saved('p');
+    pusher.saved('q');
+    await elapse(pusher, DELAY);
+    assert.deepEqual(pushed, ['a/a1', 'sleep 6000', 'c/c1', 'sleep 2000']);
   });
 
   it('carries on past a link that fails', async () => {

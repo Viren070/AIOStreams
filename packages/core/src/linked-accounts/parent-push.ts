@@ -19,7 +19,7 @@ export interface ParentPushDeps {
   enabled(): boolean;
   delayMs(): number;
   maxLinks(): number;
-  /** Pause after each manifest a push fetched, before the next link. */
+  /** Pause per manifest a push fetched, before the next link of any run. */
   spacingMs(): number;
   sleep(ms: number): Promise<void>;
   targets(
@@ -125,11 +125,7 @@ export class ParentChangePusher {
       targets = targets.slice(0, max);
     }
 
-    for (const [index, { uuid, id }] of targets.entries()) {
-      if (index > 0) {
-        const previous = Math.max(1, targets[index - 1].urls);
-        await this.deps.sleep(this.deps.spacingMs() * previous);
-      }
+    for (const { uuid, id, urls } of targets) {
       if (!this.deps.enabled()) return;
       try {
         const result = await this.deps.pushIfChanged(uuid, id);
@@ -142,6 +138,8 @@ export class ParentChangePusher {
       } catch {
         // The service records and logs the failure on the link itself.
       }
+      // After the last link too: the next run in the queue starts right away.
+      await this.deps.sleep(this.deps.spacingMs() * Math.max(1, urls));
     }
   }
 }
