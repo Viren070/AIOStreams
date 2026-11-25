@@ -14,6 +14,8 @@ export type RemoteCommand =
       sourceId?: string;
       audio?: number;
       subtitle?: number;
+      /** Opens paused, as a file put back after Android closed the app was. */
+      paused?: boolean;
     }
   /** Adds to what plays next: right after what plays now, or at the end. */
   | { kind: 'queue'; itemIds: string[]; soon: boolean }
@@ -118,8 +120,12 @@ const handlers: Handler[] = [];
 /** A show or play that came before anything could take it, such as the link that started the app. */
 let waiting: { command: RemoteCommand; server?: string } | null = null;
 /** Tracks a play asked for, picked once its file has loaded. */
-let heldTracks: { itemId: string; audio?: number; subtitle?: number } | null =
-  null;
+let heldTracks: {
+  itemId: string;
+  sourceId?: string;
+  audio?: number;
+  subtitle?: number;
+} | null = null;
 
 export function sendRemote(command: RemoteCommand): void {
   for (let i = handlers.length - 1; i >= 0; i--)
@@ -152,19 +158,54 @@ export function useRemoteHandler(handle: Handler, base?: string): void {
   }, [latest, base]);
 }
 
-export function holdTracks(command: RemoteCommand): void {
-  heldTracks =
-    command.kind === 'play' &&
-    (command.audio != null || command.subtitle != null)
-      ? command
+let heldPaused: string | null = null;
+/** Counts every new hold, so a page can drop only the ones it was opened for. */
+let holds = 0;
+
+/** The hold a page opening now was opened for. */
+export function currentHold(): number {
+  return holds;
+}
+
+/** Notes that the player `command` opens starts paused, for the player to take as it opens. */
+export function holdPaused(command: RemoteCommand): void {
+  holds++;
+  heldPaused =
+    command.kind === 'play' && command.paused
+      ? (plainId(command.itemId) ?? null)
       : null;
 }
 
+/** Whether the player opening `itemId` starts paused, in any version of it; what was held goes either way. */
+export function takePaused(itemId: string): boolean {
+  const held = heldPaused;
+  heldPaused = null;
+  return !!held && held === plainId(itemId);
+}
+
+/** The play route was left without a player: nothing held is for a later one, unless it came after `hold`. */
+export function dropHeld(hold?: number): void {
+  if (hold !== undefined && hold !== holds) return;
+  heldPaused = null;
+  heldTracks = null;
+}
+
+export function holdTracks(command: RemoteCommand): void {
+  holds++;
+  heldTracks =
+    command.kind === 'play' &&
+    (command.audio != null || command.subtitle != null)
+      ? { ...command, itemId: plainId(command.itemId) ?? command.itemId }
+      : null;
+}
+
+/** Stream indexes name tracks in one version's list: another version, a stand-in, doesn't get them. */
 export function takeTracks(
-  itemId: string
+  itemId: string,
+  sourceId?: string | null
 ): { audio?: number; subtitle?: number } | null {
   const held = heldTracks;
   if (held?.itemId !== plainId(itemId)) return null;
   heldTracks = null;
-  return held;
+  return !held.sourceId || held.sourceId === plainId(sourceId) ? held : null;
 }

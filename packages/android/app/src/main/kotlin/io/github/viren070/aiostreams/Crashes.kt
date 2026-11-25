@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Debug
 import android.os.Process
 import android.os.SystemClock
+import android.system.OsConstants
 import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewCompat
 import io.github.viren070.aiostreams.exoplayer.video.mediaCapsLine
@@ -39,12 +40,20 @@ object Crashes {
     private const val JAVA_DOING = "javaDoing"
     private const val DOING = "doing"
     private const val DOING_BEFORE = "doingBefore"
+    private const val RESTORED = "restored"
+    /** A kill older than this isn't followed by putting the file back. */
+    private const val RESTORE_MS = 12 * 60 * 60 * 1000L
     /** The WebView ends its renderers to update, so an update this close explains an end. */
     private const val WEBVIEW_UPDATE_MS = 2 * 60_000L
     private const val WEEK_MS = 7 * 24 * 60 * 60 * 1000L
     private const val SUMMARY_FRAMES = 12
     private const val TRACE_LIMIT = 200_000
     const val LOG_LINES = 300
+
+    // What the activity notes it does, which a memory kill's check reads back.
+    const val PLAYING = "playing"
+    const val PAUSED = "paused"
+    const val IN_BACKGROUND = " in the background"
 
     private fun prefs(context: Context) = context.getSharedPreferences("crashes", Context.MODE_PRIVATE)
 
@@ -91,7 +100,7 @@ object Crashes {
         val page = pageReport(context, since)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val exit = exits(context)
-                .firstOrNull { it.processName == context.packageName && it.timestamp > since && unexpected(it) }
+                .firstOrNull { it.processName == context.packageName && it.timestamp > since && unexpected(context, it) }
             if (exit != null && (page == null || exit.timestamp > page.at)) {
                 return report(context, exit, java?.takeIf { it.at in exit.timestamp - 60_000..exit.timestamp })
             }
@@ -132,14 +141,54 @@ object Crashes {
         JavaCrash(at.toLong(), thread, stack, prefs(context).getString(JAVA_DOING, null))
     }.getOrNull()
 
+    /**
+     * Android ended the last run for memory while a file it played or held paused waited in the
+     * background: no crash, but the point to put back as it was.
+     */
+    fun restoreAfterMemoryKill(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+        val prefs = prefs(context)
+        val decided = prefs.getLong(RESTORED, 0)
+        val newer = exits(context)
+            .filter { it.processName == context.packageName && it.timestamp > decided }
+            .sortedByDescending { it.timestamp }
+        if (newer.isEmpty()) return false
+        // Android starts the playback service again after a kill, with no screen, and may end that run too:
+        // the run the person left is the first that noted what it did.
+        val exit = newer.firstOrNull { !(headless(context, it) && memoryKill(it)) } ?: return false
+        // Decided now, while the note of what the run did is still there: the next runs write over it.
+        val restore = backgroundKill(context, exit) && System.currentTimeMillis() - exit.timestamp <= RESTORE_MS
+        prefs.edit().putLong(RESTORED, newer.first().timestamp).apply()
+        return restore
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun unexpected(exit: ApplicationExitInfo) = when (exit.reason) {
+    private fun headless(context: Context, exit: ApplicationExitInfo) = doingOf(context, exit.pid, exit.timestamp) == null
+
+    /** Low memory, or a SIGKILL, which is how Android ends an app for memory; other signals are crashes. */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun memoryKill(exit: ApplicationExitInfo) = exit.reason == ApplicationExitInfo.REASON_LOW_MEMORY ||
+        (exit.reason == ApplicationExitInfo.REASON_SIGNALED && exit.status == OsConstants.SIGKILL)
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun backgroundKill(context: Context, exit: ApplicationExitInfo): Boolean {
+        if (!memoryKill(exit)) return false
+        val doing = doingOf(context, exit.pid, exit.timestamp) ?: return false
+        return IN_BACKGROUND in doing && (doing.startsWith(PAUSED) || doing.startsWith(PLAYING))
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun unexpected(context: Context, exit: ApplicationExitInfo) = when (exit.reason) {
         ApplicationExitInfo.REASON_CRASH, ApplicationExitInfo.REASON_CRASH_NATIVE, ApplicationExitInfo.REASON_ANR,
         ApplicationExitInfo.REASON_INITIALIZATION_FAILURE, ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE,
         -> true
         // Android ends apps in the background like this all the time; it only matters while one is in use.
+        // Kept alive by the playback service, a file out of sight (or the service started again with no screen):
+        // put back as it was instead. A download in the background still counts.
         ApplicationExitInfo.REASON_LOW_MEMORY, ApplicationExitInfo.REASON_SIGNALED ->
-            exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_PERCEPTIBLE
+            exit.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_PERCEPTIBLE &&
+                !(exit.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE &&
+                    (backgroundKill(context, exit) || memoryKill(exit) && headless(context, exit)))
         else -> false
     }
 

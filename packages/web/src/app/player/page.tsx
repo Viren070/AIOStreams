@@ -140,6 +140,7 @@ import { usePartyPlayer } from '@/lib/party/playback';
 import { PartyLayer } from '@/features/party/party-layer';
 import { useRemotePlayer } from '@/features/remote/remote-target';
 import { indexForTrack } from '@/lib/remote/tracks';
+import { currentHold, dropHeld, takePaused } from '@/lib/remote/commands';
 import { useLatest } from '@/hooks/use-latest';
 import { openPartySheet } from '@/features/party/sheet-state';
 import { usePlaylistEdits, usePlaylistName } from '@/lib/playlists';
@@ -194,6 +195,9 @@ function pageEngines(
   return playsWithWebGpu() ? [webGpuEngine(video), own] : [own];
 }
 
+// How many player pages are open: one left just before another opens keeps what is held for it.
+let openPages = 0;
+
 export function PlayerPage({
   itemId,
   sourceId,
@@ -239,6 +243,22 @@ export function PlayerPage({
     'startMs' | 'onCovered' | 'playlist' | 'mini' | 'onQuality'
   > | null>(null);
   const [restart, setRestart] = React.useState<{ at: number; n: number }>();
+  // Left before a player opened (a cancelled restore, an error page): what a remote or a restore held is for no later one.
+  const opened = React.useRef(false);
+  const hold = React.useRef(currentHold());
+  React.useEffect(() => {
+    if (playing) opened.current = true;
+  }, [playing]);
+  React.useEffect(() => {
+    openPages++;
+    return () => {
+      openPages--;
+      // A page opened again at once (React's development check, a new file) still takes it.
+      setTimeout(() => {
+        if (openPages === 0 && !opened.current) dropHeld(hold.current);
+      });
+    };
+  }, []);
   const changeQuality = React.useCallback((bitrate: number, at: number) => {
     settings.player.quality.write(bitrate);
     setRestart((r) => ({ at, n: (r?.n ?? 0) + 1 }));
@@ -271,6 +291,8 @@ export function PlayerPage({
   React.useEffect(() => {
     if (!missing || !item.data) return;
     lastVersions.set(itemId, undefined);
+    // No player opens for what a remote or a restore held: a later one doesn't get it.
+    dropHeld();
     // In the mini player, a title moved on to has no page to list its versions on.
     if (miniNow.current) {
       closePlayback();
@@ -818,7 +840,10 @@ function Player({
   const { connect } = ended;
   const playlistItemId = usePartyBinding(item.Id!);
   // What the party plays opens paused, until the party starts it.
-  const [startPaused] = React.useState(() => !!playlistItemId);
+  // As a file put back after Android closed the app was, too.
+  const [startPaused] = React.useState(
+    () => takePaused(item.Id!) || !!playlistItemId
+  );
   const inParty = !!useParty();
   const playForParty = usePlayForParty();
   const queued = usePartyNeighbours(playlistItemId);

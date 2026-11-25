@@ -5,6 +5,7 @@ import { TICKS_PER_MS } from '@/lib/format';
 import { useRefreshWatchState } from '@/lib/jellyfin/watch-state';
 import { useSession } from '@/lib/jellyfin/session';
 import { storage } from '@/lib/storage';
+import { restorePoint } from './restore';
 
 const PROGRESS_EVERY_MS = 10_000;
 const PENDING_KEY = 'aiostreams-web-pending-progress';
@@ -72,7 +73,25 @@ export class PlaybackReporter {
     };
   }
 
+  /** Where the file stands, for putting it back after Android ends the app for memory. */
+  private note(): void {
+    // Live has no point to put back, and an older file's isn't this one.
+    if (this.info.live) return restorePoint.clear();
+    const { ms, paused, audio, subtitle } = this.position();
+    restorePoint.note({
+      base: this.client.base,
+      userId: this.info.userId,
+      itemId: this.info.itemId,
+      sourceId: this.info.mediaSourceId,
+      positionMs: ms,
+      paused,
+      audio,
+      subtitle,
+    });
+  }
+
   start(): void {
+    this.note();
     void this.client.post('/Sessions/Playing', this.body()).catch(() => {});
     this.timer = setInterval(
       () => this.progress('TimeUpdate'),
@@ -89,6 +108,7 @@ export class PlaybackReporter {
       | 'SubtitleTrackChange'
   ): void {
     if (this.stopped) return;
+    this.note();
     void this.client
       .post('/Sessions/Playing/Progress', this.body({ EventName: event }))
       .catch(() => {});
@@ -98,6 +118,8 @@ export class PlaybackReporter {
     if (this.stopped) return Promise.resolve();
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
+    // Closed as usual: nothing to put back.
+    restorePoint.clear();
     // keepalive lets the report leave while the page is closing.
     return this.client
       .request('POST', '/Sessions/Playing/Stopped', {
