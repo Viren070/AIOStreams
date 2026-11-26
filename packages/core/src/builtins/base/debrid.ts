@@ -92,6 +92,39 @@ export const BaseDebridConfigSchema = z.object({
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
 
+/**
+ * Clean a title for use as a search query while preserving Unicode letters
+ * (e.g. å, ø, æ). Unlike cleanTitle(title, language), this does not apply
+ * language-specific transliteration (å -> aa, etc.), so sources that index the
+ * original Unicode spelling can still match.
+ */
+function cleanTitlePreserveUnicode(title: string): string {
+  return title
+    .normalize('NFC')
+    .replace(/[♪♫★☆♡♥\-;:/\\_|~·–—]/g, ' ')
+    .replace(/&/g, 'and')
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, '') // keep Unicode letters/numbers/marks
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Clean a title for querying, returning the transliterated form plus the
+ * original Unicode form when it differs meaningfully. The transliterated form
+ * preserves existing behaviour; the Unicode form lets sources that index the
+ * un-transliterated spelling match.
+ */
+export function cleanTitleVariants(title: string, language?: string): string[] {
+  const transliterated = cleanTitle(title, language);
+  const unicode = cleanTitlePreserveUnicode(title);
+  const variants = [transliterated];
+  if (unicode && unicode !== transliterated) {
+    variants.push(unicode);
+  }
+  return variants;
+}
+
 export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   abstract readonly id: string;
   abstract readonly name: string;
@@ -507,16 +540,25 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     // select titles based on options
     const titleLangs = options?.titleLanguages;
     let titles: string[];
+    let yearTagTitles: string[] | undefined;
 
     if (titleLangs && titleLangs.length > 0) {
       const selected = new Set<string>();
+      const yearTagSelected = new Set<string>();
+      const addTitle = (title: string, language?: string) => {
+        cleanTitleVariants(title, language).forEach((variant) =>
+          selected.add(variant)
+        );
+        yearTagSelected.add(cleanTitle(title, language));
+      };
       for (const spec of titleLangs) {
         if (spec === 'default') {
           selected.add(metadata.primaryTitle);
+          yearTagSelected.add(metadata.primaryTitle);
         } else if (spec === 'all') {
           metadata.titlesWithLang
             ?.slice(0, appConfig.builtins.scrape.titleLimit)
-            .forEach((t) => selected.add(cleanTitle(t.title, t.language)));
+            .forEach((t) => addTitle(t.title, t.language));
           break; // no need to process further specs
         } else if (spec === 'original') {
           // First title in the content's original language (from TMDB).
@@ -525,23 +567,25 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
                 (t) => t.language === metadata.originalLanguage
               )
             : undefined;
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          if (match) addTitle(match.title, match.language);
         } else if (spec === 'scene') {
           metadata.sceneTitles
             ?.slice(0, appConfig.builtins.scrape.titleLimit)
-            .forEach((title) => selected.add(cleanTitle(title)));
+            .forEach((title) => addTitle(title));
         } else {
           // take only the first matching title.
           const match = metadata.titlesWithLang?.find(
             (t) => t.language === spec
           );
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          if (match) addTitle(match.title, match.language);
         }
       }
       titles = [...selected];
+      yearTagTitles = [...yearTagSelected];
       // Always fall back to primary title if nothing matched
       if (titles.length === 0) {
         titles = [metadata.primaryTitle];
+        yearTagTitles = [metadata.primaryTitle];
       }
     } else if (options?.useAllTitles) {
       titles = (
@@ -558,6 +602,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     if (appConfig.builtins.scrape.latinQueriesOnly) {
       const latin = titles.filter(isPredominantlyLatin);
       if (latin.length > 0) titles = latin;
+      if (yearTagTitles) {
+        const latinYearTagTitles = yearTagTitles.filter(isPredominantlyLatin);
+        if (latinYearTagTitles.length > 0) yearTagTitles = latinYearTagTitles;
+      }
     }
 
     const titlePlaceholder = '<___title___>';
@@ -595,7 +643,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
             metadata.titleConflicts.some((c) => c.year && c.year < year)
           ) {
             // year tagging is language-agnostic
-            for (const title of titles.slice(0, 2)) {
+            for (const title of (yearTagTitles ?? titles).slice(0, 2)) {
               addVariant(`${title} ${year}`);
             }
           }
@@ -675,6 +723,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else {
       addQuery(titlePlaceholder);
     }
+
     return queries;
   }
 
