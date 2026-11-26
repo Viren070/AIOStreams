@@ -170,11 +170,11 @@ msgstr "{n, plural, one {לאחר פרק אחד} two {לאחר # פרקים} oth
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr "{name} ישודר ביום {day} ({until}). להוריד בכל זאת?"
+msgstr "{name} ישודר ב{day} ({until}). להוריד בכל זאת?"
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr "{name} ישודר ביום {day} ({until}). להפעיל בכל זאת?"
+msgstr "{name} ישודר ב{day} ({until}). להפעיל בכל זאת?"
 
 #: src/features/party/party-host.tsx
 msgid "{name} joined the party"
@@ -514,7 +514,7 @@ msgstr "מועד שידור"
 
 #: src/lib/format.ts
 msgid "Airs {day} · {until}"
-msgstr "ישודר ביום {day} · {until}"
+msgstr "ישודר ב{day} · {until}"
 
 #: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
