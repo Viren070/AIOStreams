@@ -85,6 +85,14 @@ describe('cleanTitleVariants', () => {
     assert.deepEqual(cleanTitleVariants('Årsted', 'no'), ['aarsted', 'årsted']);
   });
 
+  it('preserves combining marks in the Unicode form', () => {
+    assert.deepEqual(cleanTitleVariants('हिन्दी'), ['हनद', 'हिन्दी']);
+  });
+
+  it('normalises the Unicode form to NFC', () => {
+    assert.deepEqual(cleanTitleVariants('Årsted', 'no'), ['arsted', 'årsted']);
+  });
+
   it('does not duplicate a title when both cleaned forms match', () => {
     assert.deepEqual(cleanTitleVariants('Test', 'en'), ['test']);
   });
