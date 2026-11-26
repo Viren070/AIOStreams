@@ -86,8 +86,15 @@ const router: Router = Router({ mergeParams: true });
 const withoutRequiredGenre = (views: ViewEntry[]) =>
   views.filter((v) => !requiresGenre(v.catalog));
 
-function isKodi(ctx: JellyfinRequestContext): boolean {
-  return /kodi/i.test(ctx.client.name);
+/**
+ * Kodi and Infuse size a library from the first page's total and never read
+ * it again, so an estimate that grows with the walk cuts the library short.
+ * Infuse can name itself only in its user-agent, so that is checked too.
+ */
+function readsTotalOnce(req: Request, ctx: JellyfinRequestContext): boolean {
+  return /kodi|infuse/i.test(
+    `${ctx.client.name} ${req.get('user-agent') ?? ''}`
+  );
 }
 
 function typeFilter(req: Request): Set<string> | null {
@@ -611,7 +618,7 @@ async function handleItems(
         {
           startIndex,
           limit,
-          exactTotal: isKodi(ctx) && wantsTotal(req),
+          exactTotal: readsTotalOnce(req, ctx) && wantsTotal(req),
           cursorKey: `${ctx.scope()}|${filterShape(req, types)}|${canonicalDescriptor(pd)}`,
           select: pageFilter(req, ctx, types, { parentId }),
           kinds: searchKindsFor(types),
@@ -802,7 +809,7 @@ async function handleItems(
       limit,
       genre: genreFromId,
       search: searchTerm,
-      exactTotal: isKodi(ctx) && wantsTotal(req),
+      exactTotal: readsTotalOnce(req, ctx) && wantsTotal(req),
       cursorKey: `${ctx.scope()}|${filterShape(req, types)}`,
       select: pageFilter(req, ctx, types, { parentId, catalog }),
       signal: untilClosed(res),
