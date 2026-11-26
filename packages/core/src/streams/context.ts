@@ -222,16 +222,18 @@ export class StreamContext {
           this.parsedId!.episode &&
           metadata.seasons
         ) {
-          absoluteEpisode = Number(
-            calculateAbsoluteEpisode(
-              this.parsedId!.season,
-              this.parsedId!.episode,
-              metadata.seasons.map(({ season_number, episode_count }) => ({
-                number: season_number.toString(),
-                episodes: episode_count,
-              }))
-            )
+          const calculatedAbsolute = calculateAbsoluteEpisode(
+            this.parsedId!.season,
+            this.parsedId!.episode,
+            metadata.seasons.map(({ season_number, episode_count }) => ({
+              number: season_number.toString(),
+              episodes: episode_count,
+            }))
           );
+          absoluteEpisode =
+            calculatedAbsolute !== undefined
+              ? Number(calculatedAbsolute)
+              : undefined;
         }
         if (
           this.isAnime &&
@@ -245,13 +247,17 @@ export class StreamContext {
               episodes: episode_count,
             })
           );
-          absoluteEpisode = Number(
-            calculateAbsoluteEpisode(
-              this.parsedId!.season,
-              this.parsedId!.episode,
-              seasons
-            )
+          const nonSpecialSeasons = seasons.filter((s) => s.number !== '0');
+          const calculatedAbsolute = calculateAbsoluteEpisode(
+            this.parsedId!.season,
+            this.parsedId!.episode,
+            seasons,
+            this.animeEntry
           );
+          absoluteEpisode =
+            calculatedAbsolute !== undefined
+              ? Number(calculatedAbsolute)
+              : undefined;
 
           // Calculate relative absolute episode (within current AniDB entry)
           const startingSeason =
@@ -260,12 +266,15 @@ export class StreamContext {
             this.animeEntry?.trakt?.seasonNumber ??
             this.animeEntry?.tmdb?.seasonNumber;
 
-          if (startingSeason) {
+          if (
+            startingSeason &&
+            nonSpecialSeasons.some((s) => s.number === this.parsedId!.season)
+          ) {
             // Calculate absolute episode from the starting season (AniDB episode number)
             const episodeNum = Number(this.parsedId!.episode);
             let totalEpisodesBeforeCurrentSeason = 0;
 
-            for (const s of seasons.filter((s) => s.number !== '0')) {
+            for (const s of nonSpecialSeasons) {
               const seasonNum = Number(s.number);
               if (seasonNum < startingSeason) continue; // Skip seasons before this AniDB entry
               if (s.number === this.parsedId!.season) break;
