@@ -1,0 +1,550 @@
+{
+  "id": "tt0111987",
+  "type": "series",
+  "name": "Goosebumps",
+  "releaseInfo": "1995\u20131998",
+  "status": "Ended",
+  "released": "1995-10-27T00:00:00.000Z",
+  "genres": ["Adventure", "Comedy", "Drama"],
+  "videos": [
+    {
+      "id": "tt0111987:1:1",
+      "season": 1,
+      "episode": 1,
+      "number": 1,
+      "released": "1995-10-27T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:2",
+      "season": 1,
+      "episode": 2,
+      "number": 2,
+      "released": "1995-10-27T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:3",
+      "season": 1,
+      "episode": 3,
+      "number": 3,
+      "released": "1995-11-03T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:4",
+      "season": 1,
+      "episode": 4,
+      "number": 4,
+      "released": "1995-11-10T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:5",
+      "season": 1,
+      "episode": 5,
+      "number": 5,
+      "released": "1995-11-17T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:6",
+      "season": 1,
+      "episode": 6,
+      "number": 6,
+      "released": "1995-11-24T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:7",
+      "season": 1,
+      "episode": 7,
+      "number": 7,
+      "released": "1995-12-01T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:8",
+      "season": 1,
+      "episode": 8,
+      "number": 8,
+      "released": "1995-12-08T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:9",
+      "season": 1,
+      "episode": 9,
+      "number": 9,
+      "released": "1995-12-22T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:10",
+      "season": 1,
+      "episode": 10,
+      "number": 10,
+      "released": "1996-01-12T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:11",
+      "season": 1,
+      "episode": 11,
+      "number": 11,
+      "released": "1996-01-19T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:12",
+      "season": 1,
+      "episode": 12,
+      "number": 12,
+      "released": "1996-01-27T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:13",
+      "season": 1,
+      "episode": 13,
+      "number": 13,
+      "released": "1996-01-27T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:14",
+      "season": 1,
+      "episode": 14,
+      "number": 14,
+      "released": "1996-02-02T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:15",
+      "season": 1,
+      "episode": 15,
+      "number": 15,
+      "released": "1996-02-09T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:16",
+      "season": 1,
+      "episode": 16,
+      "number": 16,
+      "released": "1996-02-25T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:17",
+      "season": 1,
+      "episode": 17,
+      "number": 17,
+      "released": "1996-02-25T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:18",
+      "season": 1,
+      "episode": 18,
+      "number": 18,
+      "released": "1996-05-17T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:1:19",
+      "season": 1,
+      "episode": 19,
+      "number": 19,
+      "released": "1996-05-17T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:1",
+      "season": 2,
+      "episode": 1,
+      "number": 1,
+      "released": "1996-08-10T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:2",
+      "season": 2,
+      "episode": 2,
+      "number": 2,
+      "released": "1996-09-07T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:3",
+      "season": 2,
+      "episode": 3,
+      "number": 3,
+      "released": "1996-09-07T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:4",
+      "season": 2,
+      "episode": 4,
+      "number": 4,
+      "released": "1996-09-14T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:5",
+      "season": 2,
+      "episode": 5,
+      "number": 5,
+      "released": "1996-09-21T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:6",
+      "season": 2,
+      "episode": 6,
+      "number": 6,
+      "released": "1996-09-28T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:7",
+      "season": 2,
+      "episode": 7,
+      "number": 7,
+      "released": "1996-10-05T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:8",
+      "season": 2,
+      "episode": 8,
+      "number": 8,
+      "released": "1996-10-12T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:9",
+      "season": 2,
+      "episode": 9,
+      "number": 9,
+      "released": "1996-10-19T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:10",
+      "season": 2,
+      "episode": 10,
+      "number": 10,
+      "released": "1996-10-26T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:11",
+      "season": 2,
+      "episode": 11,
+      "number": 11,
+      "released": "1996-10-29T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:12",
+      "season": 2,
+      "episode": 12,
+      "number": 12,
+      "released": "1996-10-29T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:13",
+      "season": 2,
+      "episode": 13,
+      "number": 13,
+      "released": "1996-11-02T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:14",
+      "season": 2,
+      "episode": 14,
+      "number": 14,
+      "released": "1996-11-09T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:15",
+      "season": 2,
+      "episode": 15,
+      "number": 15,
+      "released": "1996-11-16T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:16",
+      "season": 2,
+      "episode": 16,
+      "number": 16,
+      "released": "1996-11-16T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:17",
+      "season": 2,
+      "episode": 17,
+      "number": 17,
+      "released": "1996-11-23T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:18",
+      "season": 2,
+      "episode": 18,
+      "number": 18,
+      "released": "1997-02-01T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:19",
+      "season": 2,
+      "episode": 19,
+      "number": 19,
+      "released": "1997-02-15T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:20",
+      "season": 2,
+      "episode": 20,
+      "number": 20,
+      "released": "1997-06-29T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:21",
+      "season": 2,
+      "episode": 21,
+      "number": 21,
+      "released": "1997-06-29T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:22",
+      "season": 2,
+      "episode": 22,
+      "number": 22,
+      "released": "1997-07-12T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:23",
+      "season": 2,
+      "episode": 23,
+      "number": 23,
+      "released": "1997-07-19T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:24",
+      "season": 2,
+      "episode": 24,
+      "number": 24,
+      "released": "1997-07-20T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:2:25",
+      "season": 2,
+      "episode": 25,
+      "number": 25,
+      "released": "1997-07-20T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:1",
+      "season": 3,
+      "episode": 1,
+      "number": 1,
+      "released": "1997-09-06T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:2",
+      "season": 3,
+      "episode": 2,
+      "number": 2,
+      "released": "1997-09-08T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:3",
+      "season": 3,
+      "episode": 3,
+      "number": 3,
+      "released": "1997-09-13T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:4",
+      "season": 3,
+      "episode": 4,
+      "number": 4,
+      "released": "1997-09-20T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:5",
+      "season": 3,
+      "episode": 5,
+      "number": 5,
+      "released": "1997-09-27T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:6",
+      "season": 3,
+      "episode": 6,
+      "number": 6,
+      "released": "1997-10-04T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:7",
+      "season": 3,
+      "episode": 7,
+      "number": 7,
+      "released": "1997-10-11T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:8",
+      "season": 3,
+      "episode": 8,
+      "number": 8,
+      "released": "1997-10-25T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:9",
+      "season": 3,
+      "episode": 9,
+      "number": 9,
+      "released": "1997-11-01T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:10",
+      "season": 3,
+      "episode": 10,
+      "number": 10,
+      "released": "1997-11-08T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:11",
+      "season": 3,
+      "episode": 11,
+      "number": 11,
+      "released": "1997-11-15T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:12",
+      "season": 3,
+      "episode": 12,
+      "number": 12,
+      "released": "1997-11-15T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:13",
+      "season": 3,
+      "episode": 13,
+      "number": 13,
+      "released": "1997-11-22T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:14",
+      "season": 3,
+      "episode": 14,
+      "number": 14,
+      "released": "1997-11-22T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:15",
+      "season": 3,
+      "episode": 15,
+      "number": 15,
+      "released": "1998-02-07T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:16",
+      "season": 3,
+      "episode": 16,
+      "number": 16,
+      "released": "1998-02-14T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:17",
+      "season": 3,
+      "episode": 17,
+      "number": 17,
+      "released": "1998-02-21T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:18",
+      "season": 3,
+      "episode": 18,
+      "number": 18,
+      "released": "1998-02-28T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:19",
+      "season": 3,
+      "episode": 19,
+      "number": 19,
+      "released": "1998-04-25T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:20",
+      "season": 3,
+      "episode": 20,
+      "number": 20,
+      "released": "1998-05-02T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:21",
+      "season": 3,
+      "episode": 21,
+      "number": 21,
+      "released": "1998-05-09T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:3:22",
+      "season": 3,
+      "episode": 22,
+      "number": 22,
+      "released": "1998-05-16T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:1",
+      "season": 4,
+      "episode": 1,
+      "number": 1,
+      "released": "1998-09-14T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:2",
+      "season": 4,
+      "episode": 2,
+      "number": 2,
+      "released": "1998-09-14T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:3",
+      "season": 4,
+      "episode": 3,
+      "number": 3,
+      "released": "1998-09-28T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:4",
+      "season": 4,
+      "episode": 4,
+      "number": 4,
+      "released": "1998-09-28T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:5",
+      "season": 4,
+      "episode": 5,
+      "number": 5,
+      "released": "1998-10-31T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:6",
+      "season": 4,
+      "episode": 6,
+      "number": 6,
+      "released": "1998-10-31T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:7",
+      "season": 4,
+      "episode": 7,
+      "number": 7,
+      "released": "1998-11-16T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:4:8",
+      "season": 4,
+      "episode": 8,
+      "number": 8,
+      "released": "1998-11-16T08:00:00.000Z"
+    },
+    {
+      "id": "tt0111987:0:1",
+      "season": 0,
+      "episode": 1,
+      "number": 1,
+      "released": null
+    },
+    {
+      "id": "tt0111987:0:2",
+      "season": 0,
+      "episode": 2,
+      "number": 2,
+      "released": null
+    },
+    {
+      "id": "tt0111987:0:3",
+      "season": 0,
+      "episode": 3,
+      "number": 3,
+      "released": null
+    }
+  ]
+}

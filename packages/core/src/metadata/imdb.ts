@@ -2,6 +2,44 @@
 import { Cache, makeRequest, TYPES } from '../utils/index.js';
 import { Metadata } from './utils.js';
 import { Meta, MetaSchema } from '../db/schemas.js';
+import {
+  CinemetaCache,
+  CinemetaEntry,
+  CinemetaEpisode,
+} from './cinemeta-cache.js';
+import { createLogger } from '../logging/logger.js';
+
+const cinemeta = new CinemetaCache({
+  store: Cache.getInstance<string, CinemetaEntry>(
+    'cinemeta:v2',
+    undefined,
+    'sql'
+  ),
+  load: async (id, type) => {
+    const response = await makeRequest(
+      `https://v3-cinemeta.strem.io/meta/${type}/${id}.json`,
+      {
+        timeout: 5000,
+      }
+    );
+    if (!response.ok) {
+      // Release the connection even when a gateway supplies an error body.
+      await response.body?.cancel();
+      throw new Error(`Cinemeta returned HTTP ${response.status}`);
+    }
+    const meta = MetaSchema.parse(((await response.json()) as any).meta);
+    if (meta.id !== id || meta.type !== type)
+      throw new Error('Cinemeta returned mismatched metadata');
+    if (!meta.name?.trim())
+      throw new Error('Cinemeta returned metadata without a title');
+    return meta;
+  },
+  onError: (error) =>
+    createLogger('cinemeta').debug(
+      { err: String(error) },
+      'cache or background refresh failed'
+    ),
+});
 
 const IMDBSuggestionSchema = z.object({
   d: z.array(
@@ -29,15 +67,11 @@ const IMDBSuggestionSchema = z.object({
 
 export class IMDBMetadata {
   private readonly titleCache: Cache<string, Metadata>;
-  private readonly cinemetaCache: Cache<string, Meta>;
   private readonly titleCacheTTL = 7 * 24 * 60 * 60;
-  private readonly cinemetaCacheTTL = 7 * 24 * 60 * 60;
   private readonly IMDB_SUGGESTION_API =
     'https://v3.sg.media-imdb.com/suggestion/a/';
-  private readonly CINEMETA_URL = 'https://v3-cinemeta.strem.io';
   public constructor() {
     this.titleCache = Cache.getInstance('imdb-title');
-    this.cinemetaCache = Cache.getInstance('cinemeta');
   }
 
   public async getTitleAndYear(id: string, type: string): Promise<Metadata> {
@@ -121,17 +155,11 @@ export class IMDBMetadata {
     return { title, year, yearEnd };
   }
 
-  public async getCinemetaData(id: string, type: string) {
-    const url = `${this.CINEMETA_URL}/meta/${type}/${id}.json`;
-    const cached = await this.cinemetaCache.get(url);
-    if (cached) {
-      return cached;
-    }
-    const response = await makeRequest(url, {
-      timeout: 5000,
-    });
-    const meta = MetaSchema.parse(((await response.json()) as any).meta);
-    this.cinemetaCache.set(url, meta, this.cinemetaCacheTTL);
-    return meta;
+  public async getCinemetaData(
+    id: string,
+    type: string,
+    episode?: CinemetaEpisode
+  ): Promise<Meta> {
+    return cinemeta.get(id, type, episode);
   }
 }
