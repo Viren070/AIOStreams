@@ -136,6 +136,7 @@ msgid "{key} is taken by {taken}"
 msgstr "המקש {key} כבר משמש עבור {taken}"
 
 #: src/app/downloads/page.tsx
+#: src/app/home/page.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/card-preview.tsx
 #: src/components/media/episodes.tsx
@@ -169,11 +170,11 @@ msgstr "{n, plural, one {לאחר פרק אחד} two {לאחר # פרקים} oth
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Download it anyway?"
-msgstr "{name} ישודר ביום {day} ({until}). להוריד בכל זאת?"
+msgstr "{name} ישודר ב{day} ({until}). להוריד בכל זאת?"
 
 #: src/features/versions/unaired-question.tsx
 msgid "{name} airs {day} ({until}). Play it anyway?"
-msgstr "{name} ישודר ביום {day} ({until}). להפעיל בכל זאת?"
+msgstr "{name} ישודר ב{day} ({until}). להפעיל בכל זאת?"
 
 #: src/features/party/party-host.tsx
 msgid "{name} joined the party"
@@ -513,7 +514,7 @@ msgstr "מועד שידור"
 
 #: src/lib/format.ts
 msgid "Airs {day} · {until}"
-msgstr "ישודר ביום {day} · {until}"
+msgstr "ישודר ב{day} · {until}"
 
 #: src/app/discover/page.tsx
 #: src/app/favourites/page.tsx
@@ -1683,6 +1684,7 @@ msgstr "יש להזין את הסיסמה שלך."
 
 #: src/components/media/episodes.tsx
 #: src/features/player/pause-screen.tsx
+#: src/lib/format.ts
 msgid "Episode {number}"
 msgstr "פרק {number}"
 
@@ -4875,6 +4877,11 @@ msgstr "הקשה לביטול הנעילה"
 #: src/features/player/subtitle-sync.tsx
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
 msgstr "יש להקיש כשהשורה נשמעת וכשהכתובית שלה מופיעה, בכל סדר."
+
+#. Placeholder for an episode whose title has not yet been announced
+#: src/lib/format.ts
+msgid "TBA"
+msgstr "טרם פורסם"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
