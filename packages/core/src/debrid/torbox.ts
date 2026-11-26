@@ -28,6 +28,7 @@ import {
   UsenetDebridService,
   DebridFailureCache,
   convertStatusCodeToError,
+  resolveCapabilities,
 } from './base.js';
 
 const logger = createLogger('debrid:torbox');
@@ -163,12 +164,13 @@ export class TorboxDebridService
     DebridDownload
   >('tb:instant-availability');
   readonly serviceName: ServiceId = 'torbox';
-  readonly capabilities = { torrents: true, usenet: true };
+  readonly capabilities: { torrents: boolean; usenet: boolean };
 
   constructor(
     private readonly config: DebridServiceConfig,
     options?: { pollInterval?: number; maxWaitTime?: number }
   ) {
+    this.capabilities = resolveCapabilities(config.disabledCapabilities);
     this.pollInterval = options?.pollInterval ?? Time.Second * 10;
     this.maxWaitTime = options?.maxWaitTime ?? Time.Minute * 2;
     this.torboxApi = new TorboxApi({
