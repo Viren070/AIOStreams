@@ -54,14 +54,24 @@ function springEncode(value: string): string {
   return out;
 }
 
-/** Every caps category under the parent, children first. */
+/** Advertised categories for the media type, children first within each group. */
 function prowlarrCategories(
   type: NabMediaType,
   caps: readonly NabCapsCategory[]
 ): number[] | undefined {
   const parent = type === 'movie' ? 2000 : 5000;
   const category = caps.find((c) => c.id === parent);
-  return category ? [...category.subcats, category.id] : undefined;
+  if (!category) return undefined;
+
+  const categories = [...category.subcats, category.id];
+  if (type === 'movie') return categories;
+
+  // Indexers can advertise extra TV groups alongside 5000 in the TV ID range.
+  const additionalCategories = caps
+    .filter(({ id }) => id > parent && id < parent + 1000)
+    .flatMap(({ id, subcats }) => [...subcats, id]);
+
+  return [...new Set([...categories, ...additionalCategories])];
 }
 
 function servarr(categories: number[], type: string): NabQueryStyle {
