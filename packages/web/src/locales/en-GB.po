@@ -132,6 +132,7 @@ msgid "{key} is taken by {taken}"
 msgstr "{key} is taken by {taken}"
 
 #: src/app/downloads/page.tsx
+#: src/app/home/page.tsx
 #: src/app/live-tv/_components/channel-details.tsx
 #: src/components/media/card-preview.tsx
 #: src/components/media/episodes.tsx
@@ -1679,6 +1680,7 @@ msgstr "Enter your password."
 
 #: src/components/media/episodes.tsx
 #: src/features/player/pause-screen.tsx
+#: src/lib/format.ts
 msgid "Episode {number}"
 msgstr "Episode {number}"
 
@@ -4871,6 +4873,11 @@ msgstr "Tap to unlock"
 #: src/features/player/subtitle-sync.tsx
 msgid "Tap when you hear a line and when its subtitle shows, in either order."
 msgstr "Tap when you hear a line and when its subtitle shows, in either order."
+
+#. Placeholder for an episode whose title has not yet been announced
+#: src/lib/format.ts
+msgid "TBA"
+msgstr "TBA"
 
 #: src/app/settings/_components/version-settings.tsx
 #: src/app/settings/subtitles.tsx
