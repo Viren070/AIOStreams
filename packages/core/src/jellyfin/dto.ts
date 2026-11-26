@@ -366,15 +366,13 @@ export function buildView(
   };
 }
 
+/**
+ * A user view, as Jellyfin lists its playlists folder; apps such as Infuse
+ * never open a library of another type.
+ */
 export function buildPlaylistsFolder(ctx: ItemBuildContext): JellyfinItem {
   return {
-    ...baseItem(
-      ctx,
-      PLAYLISTS_FOLDER_ID,
-      'Playlists',
-      'ManualPlaylistsFolder',
-      true
-    ),
+    ...baseItem(ctx, PLAYLISTS_FOLDER_ID, 'Playlists', 'UserView', true),
     CollectionType: 'playlists',
     DisplayPreferencesId: PLAYLISTS_FOLDER_ID,
     Path: '/aiostreams/playlists',
