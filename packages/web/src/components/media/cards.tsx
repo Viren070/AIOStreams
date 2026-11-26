@@ -468,7 +468,7 @@ export function PosterCard(props: PosterCardProps) {
               className="truncate text-sm font-medium"
               title={title}
             >
-              {title}
+              <bdi>{title}</bdi>
             </p>
           )}
           {showSubtitle && (
