@@ -92,7 +92,14 @@ export function itemSubtitle(item: BaseItemDto): string {
   }
   if (item.Type === 'Episode') {
     const code = episodeCode(item.ParentIndexNumber, item.IndexNumber);
-    return [code, item.Name].filter(Boolean).join(' · ');
+    const name = item.Name;
+    // Providers and the server use "Episode N" when there is no episode title.
+    const number = /^Episode\s+(\d+)$/i.exec(name?.trim() ?? '')?.[1];
+    const label =
+      number != null && Number(number) === item.IndexNumber
+        ? t`Episode ${number}`
+        : name;
+    return [code, label].filter(Boolean).join(' · ');
   }
   return item.ProductionYear ? String(item.ProductionYear) : '';
 }
