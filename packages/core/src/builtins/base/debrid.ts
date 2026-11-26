@@ -92,6 +92,38 @@ export const BaseDebridConfigSchema = z.object({
 });
 export type BaseDebridConfig = z.infer<typeof BaseDebridConfigSchema>;
 
+/**
+ * Clean a title for use as a search query while preserving Unicode letters
+ * (e.g. å, ø, æ). Unlike cleanTitle(title, language), this does not apply
+ * language-specific transliteration (å -> aa, etc.), so sources that index the
+ * original Unicode spelling can still match.
+ */
+function cleanTitlePreserveUnicode(title: string): string {
+  return title
+    .replace(/[♪♫★☆♡♥\-;:/\\_|~·–—]/g, ' ')
+    .replace(/&/g, 'and')
+    .replace(/[^\p{L}\p{N}\s]/gu, '') // keep Unicode letters/numbers
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Clean a title for querying, returning the transliterated form plus the
+ * original Unicode form when it differs meaningfully. The transliterated form
+ * preserves existing behaviour; the Unicode form lets sources that index the
+ * un-transliterated spelling match.
+ */
+export function cleanTitleVariants(title: string, language?: string): string[] {
+  const transliterated = cleanTitle(title, language);
+  const unicode = cleanTitlePreserveUnicode(title);
+  const variants = [transliterated];
+  if (unicode && unicode !== transliterated) {
+    variants.push(unicode);
+  }
+  return variants;
+}
+
 export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
   abstract readonly id: string;
   abstract readonly name: string;
@@ -516,7 +548,11 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
         } else if (spec === 'all') {
           metadata.titlesWithLang
             ?.slice(0, appConfig.builtins.scrape.titleLimit)
-            .forEach((t) => selected.add(cleanTitle(t.title, t.language)));
+            .forEach((t) =>
+              cleanTitleVariants(t.title, t.language).forEach((v) =>
+                selected.add(v)
+              )
+            );
           break; // no need to process further specs
         } else if (spec === 'original') {
           // First title in the content's original language (from TMDB).
@@ -525,7 +561,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
                 (t) => t.language === metadata.originalLanguage
               )
             : undefined;
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          if (match)
+            cleanTitleVariants(match.title, match.language).forEach((v) =>
+              selected.add(v)
+            );
         } else if (spec === 'scene') {
           metadata.sceneTitles
             ?.slice(0, appConfig.builtins.scrape.titleLimit)
@@ -535,7 +574,10 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
           const match = metadata.titlesWithLang?.find(
             (t) => t.language === spec
           );
-          if (match) selected.add(cleanTitle(match.title, match.language));
+          if (match)
+            cleanTitleVariants(match.title, match.language).forEach((v) =>
+              selected.add(v)
+            );
         }
       }
       titles = [...selected];
@@ -675,6 +717,7 @@ export abstract class BaseDebridAddon<T extends BaseDebridConfig> {
     } else {
       addQuery(titlePlaceholder);
     }
+
     return queries;
   }
 

@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 // Use the normal core entry point to initialise the builtins' dependency graph.
 import '../../index.js';
-import { BaseDebridAddon } from './debrid.js';
+import { BaseDebridAddon, cleanTitleVariants } from './debrid.js';
 import StreamParser from '../../parser/streams.js';
 import type { Stream, ParsedStream } from '../../db/schemas.js';
 import type {
@@ -77,5 +77,15 @@ describe('BaseDebridAddon seeder metadata', () => {
       },
       undefined
     );
+  });
+});
+
+describe('cleanTitleVariants', () => {
+  it('includes both transliterated and original Unicode forms for a Norwegian title', () => {
+    assert.deepEqual(cleanTitleVariants('Årsted', 'no'), ['aarsted', 'årsted']);
+  });
+
+  it('does not duplicate a title when both cleaned forms match', () => {
+    assert.deepEqual(cleanTitleVariants('Test', 'en'), ['test']);
   });
 });
