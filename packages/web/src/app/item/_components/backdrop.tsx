@@ -1,8 +1,11 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@aiostreams/ui/core/styling';
 import { BackdropFrame } from '@/components/media/hero';
 import { useTrailersOn } from '@/features/trailers/preview';
 import { CachedImage } from '@/components/cached-image';
+import { currentHost } from '@/lib/hosts';
+import { usePageShown } from '@/lib/page-shown';
 
 /** Art that arrives within this was never seen missing, so it just appears. */
 const UNSEEN_MS = 250;
@@ -27,6 +30,7 @@ export function Backdrop({
   onBare?: () => void;
 }) {
   const playable = useTrailersOn('item');
+  const shown = usePageShown();
   const [playing, setPlaying] = React.useState<string>();
   const [videoFailed, setVideoFailed] = React.useState<string>();
   const usable = video !== videoFailed ? video : undefined;
@@ -107,11 +111,14 @@ export function Backdrop({
   React.useEffect(() => {
     if (bare) onBare?.();
   }, [bare, onBare]);
-  return (
+  const tv = currentHost().tv;
+  const art = (
     <div
       aria-hidden
       data-ui="item-backdrop"
       data-band={band || undefined}
+      // Held outside its page on a TV, so hidden itself while that page is kept behind another.
+      hidden={tv && !shown}
       // Fades out at its edge, where some GPUs draw the art's last row past the shade.
       className={cn(
         'pointer-events-none absolute inset-x-0 top-[calc(var(--top-bar,0px)*-1)] h-[calc(55vh+var(--top-bar,0px))] overflow-hidden transition-opacity duration-500 [mask-image:linear-gradient(to_top,transparent,black_2px)]',
@@ -135,6 +142,22 @@ export function Backdrop({
           {moving}
         </BackdropFrame>
       )}
+      {tv && (
+        <>
+          {/* Dimmed as a TV hero is, so the logo and text over it stand out. */}
+          <div
+            data-ui="item-backdrop-shade"
+            data-name="dim"
+            className="absolute inset-0 bg-black/70"
+          />
+          {/* Darker still from the corner under the text. */}
+          <div
+            data-ui="item-backdrop-shade"
+            data-name="text"
+            className="absolute inset-0 bg-gradient-to-tr from-black/60 to-transparent to-60% rtl:bg-gradient-to-tl"
+          />
+        </>
+      )}
       <div
         data-ui="item-backdrop-shade"
         data-name="side"
@@ -147,4 +170,9 @@ export function Backdrop({
       />
     </div>
   );
+  // On a TV it stays still behind the page as it scrolls, in a layer of its own.
+  const still = tv
+    ? document.querySelector<HTMLElement>("[data-ui='title-art']")
+    : null;
+  return still ? createPortal(art, still) : art;
 }

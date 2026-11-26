@@ -89,7 +89,7 @@ function settle(
   return next;
 }
 
-const pageName = (pathname: string) => pathname.split('/')[1] || 'home';
+export const pageName = (pathname: string) => pathname.split('/')[1] || 'home';
 
 const StackPage = React.memo(function StackPage({
   entry,

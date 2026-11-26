@@ -157,6 +157,260 @@ html.see-through[data-host='android-app']:not(.playing):not([data-video-hole]) {
   background-color: var(--background) !important;
 }
 
+/*
+ * On a TV a title's backdrop fills the screen, under the rail, as the player's
+ * cover does, so the picture is the same when the player opens over it; its
+ * edges still fade into the artwork behind. It's held behind the page, so it
+ * stays still as the page scrolls.
+ */
+:root[data-tv] [data-ui='item-backdrop'] {
+  width: 100vw;
+  height: 100vh;
+  inset-inline-end: auto;
+}
+/*
+ * Home's hero, too, fills the screen under the rail, the same picture in the
+ * same place as the title's page it opens, its rows over its foot.
+ */
+:root[data-tv] [data-ui='hero'] {
+  overflow: visible;
+}
+:root[data-tv]
+  [data-ui='hero']
+  > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+  inset: 0 auto auto 0;
+  width: 100vw;
+  height: 100vh;
+}
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-shade'][data-name='bottom'] {
+  top: 34vh;
+  height: 66vh;
+}
+/*
+ * Back over the gutter a wide page leaves for the nav: a docked rail's column,
+ * or the 2.5rem the top tabs and the corner button leave in its place. The
+ * hero already reaches under a floating rail.
+ */
+@media (min-width: 1024px) {
+  :root[data-tv]
+    .with-sidebar.sidebar-slim
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -5rem;
+  }
+  :root[data-tv]
+    .with-sidebar.sidebar-sm
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -12rem;
+  }
+  :root[data-tv][data-nav='tv-top']
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']),
+  :root[data-tv]
+    [data-ui='corner-menu']
+    ~ *
+    [data-ui='hero']
+    > :is([data-ui='hero-art'], [data-ui='hero-shade']) {
+    inset-inline-start: -2.5rem;
+  }
+}
+/*
+ * Nothing may reach past a TV's screen: a web view zooms the whole page out
+ * to fit what does, and back in as it goes, which a turn's slide set off.
+ */
+:root[data-tv],
+:root[data-tv] body {
+  overflow-x: clip;
+}
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-art'] {
+  overflow: clip;
+}
+/*
+ * Turned with no side to come from, a TV hero's picture fades out, quickening,
+ * as the next fades in a beat later, slowing, in place: neither moves, and
+ * they barely overlap.
+ */
+@keyframes hero-art-out {
+  to {
+    opacity: 0;
+  }
+}
+:root[data-tv] [data-ui='hero-backdrop'] {
+  animation-duration: 400ms !important;
+  animation-delay: 250ms;
+  animation-timing-function: cubic-bezier(0, 0, 0.2, 1) !important;
+  animation-fill-mode: both;
+}
+:root[data-tv] [data-ui='hero-backdrop']:has(~ [data-ui='hero-backdrop']) {
+  animation: hero-art-out 300ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+}
+/*
+ * Turned left or right, the last picture slides a little the other way as it
+ * goes, and the next slides in from the side it comes from a beat later; at
+ * the size the title's page shows it, so it stays put as that opens.
+ */
+@keyframes hero-art-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(1.5%);
+  }
+}
+@keyframes hero-art-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-1.5%);
+  }
+}
+@keyframes hero-art-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-1.5%);
+  }
+}
+@keyframes hero-art-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(1.5%);
+  }
+}
+/* Asked for less motion, a turn only fades, as above. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-tv] [data-ui='hero-backdrop'][data-from='right'] {
+    animation: hero-art-in-right 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
+  }
+  :root[data-tv] [data-ui='hero-backdrop'][data-from='left'] {
+    animation: hero-art-in-left 380ms cubic-bezier(0.2, 0, 0, 1) 120ms both !important;
+  }
+  :root[data-tv]
+    [data-ui='hero-backdrop']:has(
+      ~ [data-ui='hero-backdrop'][data-from='right']
+    ) {
+    animation: hero-art-out-left 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  }
+  :root[data-tv]
+    [data-ui='hero-backdrop']:has(
+      ~ [data-ui='hero-backdrop'][data-from='left']
+    ) {
+    animation: hero-art-out-right 280ms cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  }
+}
+/*
+ * Dimmed in itself as a title's backdrop is, all over and more towards the
+ * corner under the text, fading with the picture at its edges, so the two
+ * match as the page opens. A trailer playing in its place shows undimmed.
+ */
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-art']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top right, rgb(0 0 0 / 0.6), transparent 60%),
+    rgb(0 0 0 / 0.7);
+  transition: opacity 700ms;
+}
+:root[data-tv][dir='rtl'] [data-ui='hero'] > [data-ui='hero-art']::after {
+  background:
+    linear-gradient(to top left, rgb(0 0 0 / 0.6), transparent 60%),
+    rgb(0 0 0 / 0.7);
+}
+:root[data-tv] [data-ui='hero'] > [data-ui='hero-art'][data-trailer]::after {
+  opacity: 0;
+}
+/*
+ * On a TV's home and title pages the wash keeps to the back: a glow up behind
+ * the picture that darkens nearly to black towards the rows and the text's side.
+ * Over the wash's canvases, which stack themselves above their box.
+ */
+:root[data-tv]
+  [data-ui='page-background']:is([data-on='home'], [data-on='item'])
+  > [data-ui='art-wash']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse 85% 120% at 78% 20%,
+    rgb(7 7 7 / 0.65),
+    rgb(7 7 7 / 0.8) 60%,
+    rgb(7 7 7 / 0.97) 100%
+  );
+}
+:root[data-tv][dir='rtl']
+  [data-ui='page-background']:is([data-on='home'], [data-on='item'])
+  > [data-ui='art-wash']::after {
+  background: radial-gradient(
+    ellipse 85% 120% at 22% 20%,
+    rgb(7 7 7 / 0.65),
+    rgb(7 7 7 / 0.8) 60%,
+    rgb(7 7 7 / 0.97) 100%
+  );
+}
+/* On a TV the picture stays sharp to near its foot, fading into the wash only there. */
+:root[data-tv][data-art-wash] [data-ui='item-backdrop'],
+:root[data-tv][data-art-wash] [data-ui='hero-art'] {
+  --fade-down: linear-gradient(to top, transparent, #000 22%);
+}
+/* Shaded as a title's page is, dark at its side and foot. */
+:root[data-tv][data-art-wash]
+  [data-ui='hero']
+  > [data-ui='hero-shade'][data-name='side'] {
+  /* It scrolls with the page, so its foot fades rather than ending in a line. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 55%,
+    transparent
+  ) !important;
+  mask-image: linear-gradient(to bottom, black 55%, transparent) !important;
+  background:
+    linear-gradient(to top right, rgb(0 0 0 / 0.7), transparent 55%),
+    linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
+}
+:root[data-tv][dir='rtl'][data-art-wash]
+  [data-ui='hero']
+  > [data-ui='hero-shade'][data-name='side'] {
+  background:
+    linear-gradient(to top left, rgb(0 0 0 / 0.7), transparent 55%),
+    linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
+}
+:root[data-tv][data-art-wash]
+  [data-ui='hero']
+  > [data-ui='hero-shade'][data-name='bottom'] {
+  display: none;
+}
+:root[data-tv] [data-ui='hero'] [data-ui='backdrop-frame'] {
+  max-width: none;
+}
+:root[data-tv] [data-ui='hero'] [data-ui='backdrop-frame'] img {
+  object-position: center;
+}
+
+/* Where the picture fades into the wash, at its side and foot, it's darker. */
+:root[data-tv][data-art-wash]
+  [data-ui='title-art']:has(> [data-ui='item-backdrop']:not([hidden]))::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top right, rgb(0 0 0 / 0.7), transparent 55%),
+    linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
+}
+:root[data-tv][dir='rtl'][data-art-wash]
+  [data-ui='title-art']:has(> [data-ui='item-backdrop']:not([hidden]))::after {
+  background:
+    linear-gradient(to top left, rgb(0 0 0 / 0.7), transparent 55%),
+    linear-gradient(to top, rgb(0 0 0 / 0.5), transparent 30%);
+}
+:root[data-tv] [data-ui='item-backdrop'] [data-ui='backdrop-frame'] {
+  max-width: none;
+}
+/* A collection's video is placed as the picture it fades in over. */
+:root[data-tv]
+  [data-ui='item-backdrop']
+  :is([data-ui='item-backdrop-image'], [data-ui='item-backdrop-video']) {
+  object-position: center;
+}
+
 /* Important so custom CSS can't cover the video beneath the page. */
 html.playing .page-background {
   display: none !important;

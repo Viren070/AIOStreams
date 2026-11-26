@@ -66,7 +66,7 @@ import { openPartySheet } from '@/features/party/sheet-state';
 import { openPlaylists, PlaylistsHost } from '@/features/playlists/playlists';
 import { useParty } from '@/lib/party/party';
 import { useTrailerCovers } from '@/features/trailers/preview';
-import { PageStack } from './page-stack';
+import { PageStack, pageName } from './page-stack';
 import { ArtWash } from './art-wash';
 import {
   artPageOf,
@@ -95,7 +95,11 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     router,
     select: (s) => s.location.pathname,
   });
-  const shown = pages.includes(artPageOf(pathname));
+  // A TV's home shows its hero over the wash as a title's page shows its
+  // backdrop, so the two look alike as one opens the other.
+  const shown =
+    pages.includes(artPageOf(pathname)) ||
+    (pages.length > 0 && !!currentHost().tv && pageName(pathname) === 'home');
   const playing = !!usePlayback();
   React.useEffect(() => setWashPaused(playing), [playing]);
   React.useLayoutEffect(() => setWashVisible(shown), [shown]);
@@ -108,10 +112,15 @@ export function PageBackground({ router }: { router: AnyRouter }) {
     <div
       aria-hidden
       data-ui="page-background"
+      data-on={pageName(pathname)}
       // The tallest the viewport gets: a browser's bars slide away mid-scroll before it grows to match.
       className="page-background pointer-events-none fixed inset-x-0 top-0 -z-10 h-screen bg-[--background]"
     >
       {pages.length > 0 && <ArtWash className={cn(!shown && 'hidden')} />}
+      {/* A TV title's backdrop, held still here as its page scrolls, over the wash's layers. */}
+      {currentHost().tv && (
+        <div data-ui="title-art" className="absolute inset-0 z-[2]" />
+      )}
     </div>
   );
 }
