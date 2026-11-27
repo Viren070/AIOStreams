@@ -87,7 +87,7 @@ const stoppedLoading = () =>
   });
 
 /** How long a file may take to start before the page gives up on it. */
-const STALL_MS = 10_000;
+const STALL_MS = 30_000;
 
 const HLS = 'application/vnd.apple.mpegurl';
 
