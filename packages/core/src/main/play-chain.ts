@@ -25,6 +25,8 @@ export interface PlayChainItem {
   url: string;
   type: FailoverContentType;
   serviceId?: string;
+  /** Preset type of the addon that listed it; variants do not record one. */
+  addon?: string;
   filename?: string;
   /** Whether a URL resolved from this item should be proxied. */
   proxied?: boolean;
@@ -190,6 +192,7 @@ export async function buildPlayChain(
       url: s.url!,
       type: (s.type === 'usenet' ? 'usenet' : 'debrid') as FailoverContentType,
       serviceId: s.service?.id,
+      addon: s.addon.preset.type,
       filename: s.filename,
       proxied: shouldProxyStream(s, opts.proxyConfig),
       kind: isOwnedPlayback(s) ? 'owned' : 'external',

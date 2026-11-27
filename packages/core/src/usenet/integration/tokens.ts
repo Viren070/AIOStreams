@@ -36,6 +36,8 @@ export interface UsenetStreamToken {
   tvdbId?: number;
   season?: number;
   episode?: number;
+  /** Preset type of the addon that listed the release, when known. */
+  sourceAddon?: string;
 }
 
 /**
@@ -69,6 +71,22 @@ export function decodeUsenetStreamToken(
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Name the addon behind a native usenet stream URL. Any other URL, or one that
+ * does not decode, is returned unchanged.
+ */
+export function withUsenetStreamSource(url: string, addon: string): string {
+  const match = /(\/api\/v1\/usenet\/stream\/)([^/?#]+)/.exec(url);
+  const token = match ? decodeUsenetStreamToken(match[2]) : undefined;
+  if (!match || !token) return url;
+  const start = match.index + match[1].length;
+  return (
+    url.slice(0, start) +
+    encodeUsenetStreamToken({ ...token, sourceAddon: addon }) +
+    url.slice(start + match[2].length)
+  );
 }
 
 /**

@@ -7,7 +7,8 @@
     "test": "tsx --test --test-force-exit --import ./test/setup.ts \"src/**/*.test.ts\"",
     "test:watch": "tsx --test --watch --import ./test/setup.ts \"src/**/*.test.ts\"",
     "build": "tsc",
-    "dev": "tsc -w --preserveWatchOutput"
+    "dev": "tsc -w --preserveWatchOutput",
+    "test:admission-logging": "vitest run src/stream-sessions/admission-logging.spec.ts src/stream-sessions/user-agent.spec.ts src/stream-sessions/transport-telemetry.spec.ts src/stream-sessions/source-attribution.spec.ts"
   },
   "description": "Combine all your streams into one addon and display them with consistent formatting, sorting, and filtering.",
   "dependencies": {

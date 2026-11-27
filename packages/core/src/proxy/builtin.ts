@@ -116,6 +116,7 @@ export class BuiltinProxy extends BaseProxy {
         responseHeaders: stream.headers?.response,
         type: stream.type ?? 'stream',
         mediaInfo: encrypt ? stream.mediaInfo : undefined,
+        source: encrypt ? stream.source : undefined,
       });
 
       if (encrypt) {

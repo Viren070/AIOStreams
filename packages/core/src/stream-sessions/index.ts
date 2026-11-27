@@ -45,3 +45,9 @@ export {
 } from './service.js';
 export { proxyTargetKey, usenetTargetKey } from './target-key.js';
 export { instanceId } from './instance-id.js';
+export {
+  STREAM_SOURCE_HEADER,
+  formatStreamSource,
+  parseStreamSource,
+  type StreamSource,
+} from './source.js';

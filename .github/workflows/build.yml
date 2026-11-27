@@ -37,5 +37,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Test Core
         run: pnpm -F core test
+      - name: Test Playback Admission Logging
+        run: pnpm -F core run test:admission-logging
       - name: Build Addon
         run: pnpm run build

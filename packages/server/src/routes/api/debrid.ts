@@ -21,6 +21,9 @@ import {
   type PlaybackTarget,
   maskSensitiveInfo,
   onPlay,
+  STREAM_SOURCE_HEADER,
+  formatStreamSource,
+  withUsenetStreamSource,
 } from '@aiostreams/core';
 import { ZodError } from 'zod';
 import {
@@ -109,7 +112,8 @@ router.get(
       // proxied and we didn't arrive via our proxy. Fail-open to the raw URL.
       const maybeProxy = async (
         resolvedUrl: string | undefined,
-        itemProxied: boolean | undefined
+        itemProxied: boolean | undefined,
+        item?: PlayChainItem
       ): Promise<string | undefined> => {
         if (!resolvedUrl) return resolvedUrl; // still downloading
         if (arrivedViaOurProxy || !itemProxied || !proxyConfig?.enabled) {
@@ -120,7 +124,12 @@ router.get(
         }
         try {
           const out = await createProxy(proxyConfig).generateUrls([
-            { url: resolvedUrl, filename, type: 'stream' },
+            {
+              url: resolvedUrl,
+              filename,
+              type: 'stream',
+              source: item && { addon: item.addon, service: item.serviceId },
+            },
           ]);
           if (Array.isArray(out) && out[0]) return out[0];
           logger.warn(
@@ -144,10 +153,11 @@ router.get(
       const resolveOwned = async (
         target: PlaybackTarget,
         proxied: boolean | undefined,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        item?: PlayChainItem
       ): Promise<string | undefined> => {
         const url = await resolvePlaybackTarget(target, { clientIp }, signal);
-        const served = await maybeProxy(url, proxied);
+        const served = await maybeProxy(url, proxied, item);
         if (url && served) resolvedFrom.set(served, { target, url });
         return served;
       };
@@ -159,13 +169,26 @@ router.get(
         async (signal?: AbortSignal): Promise<string | undefined> => {
           if (item.kind === 'external') {
             return resolveExternalTarget(item.url, { clientIp }, signal).then(
-              (url) => maybeProxy(url, item.proxied)
+              (url) => maybeProxy(url, item.proxied, item)
             );
           }
           const target = parsePlaybackUrl(item.url);
           return target
-            ? resolveOwned(target, item.proxied, signal)
+            ? resolveOwned(target, item.proxied, signal, item)
             : Promise.reject(new Error('unparseable fallback url'));
+        };
+
+      // The chain item a served URL came from, to attribute its session.
+      const servedBy = new Map<string, PlayChainItem>();
+      const attributed =
+        (
+          item: PlayChainItem | undefined,
+          resolve: FailoverAttempt['resolve']
+        ): FailoverAttempt['resolve'] =>
+        async (signal) => {
+          const url = await resolve(signal);
+          if (url && item) servedBy.set(url, item);
+          return url;
         };
 
       const attempts: FailoverAttempt[] = [
@@ -174,18 +197,20 @@ router.get(
             ? describeChainItem(chain.clicked, 'clicked')
             : describeChainItem({ type: clickedType, filename }, 'clicked'),
           rank: 0,
-          resolve: (signal) =>
+          resolve: attributed(chain?.clicked, (signal) =>
             resolveOwned(
               { encryptedStoreAuth, fileInfoRaw, metadataId, filename },
               chain?.clickedProxied,
-              signal
-            ),
+              signal,
+              chain?.clicked
+            )
+          ),
         },
         ...fallbacks.map(
           (f): FailoverAttempt => ({
             label: describeChainItem(f),
             rank: f.rank,
-            resolve: resolveTarget(f),
+            resolve: attributed(f, resolveTarget(f)),
           })
         ),
       ];
@@ -281,8 +306,20 @@ router.get(
         'Debrid resolve succeeded, redirecting'
       );
 
+      const winner = servedBy.get(result.url);
+      if (winner && arrivedViaOurProxy) {
+        res.setHeader(
+          STREAM_SOURCE_HEADER,
+          formatStreamSource({ addon: winner.addon, service: winner.serviceId })
+        );
+      }
       res.setHeader('Cache-Control', 'no-store');
-      res.redirect(307, result.url);
+      res.redirect(
+        307,
+        winner?.addon
+          ? withUsenetStreamSource(result.url, winner.addon)
+          : result.url
+      );
 
       const played = resolvedFrom.get(result.url);
       if (played) {

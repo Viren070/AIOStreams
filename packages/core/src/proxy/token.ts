@@ -15,6 +15,11 @@ export const ProxyDataSchema = z.object({
       file: z.string().max(1024).optional(),
     })
     .optional(),
+  /** Addon and service of the proxied stream, for session attribution. */
+  source: z
+    .object({ addon: z.string().optional(), service: z.string().optional() })
+    .optional()
+    .catch(undefined),
 });
 export type ProxyData = z.infer<typeof ProxyDataSchema>;
 

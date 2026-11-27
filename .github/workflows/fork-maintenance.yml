@@ -1,0 +1,145 @@
+name: JJstreams upstream and logging checks
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jjstreams-fork-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'jjstreams/AIOStreams'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      changed: ${{ steps.merge.outputs.changed }}
+      candidate: ${{ steps.merge.outputs.candidate }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || 'main' }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Merge upstream without overwriting fork changes
+        id: merge
+        if: github.event_name != 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name jjstreams
+          git config user.email 339098993+jjstreams@users.noreply.github.com
+          git fetch --no-tags https://github.com/Viren070/AIOStreams.git main
+          upstream=$(git rev-parse FETCH_HEAD)
+          if git merge-base --is-ancestor "$upstream" HEAD; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'The fork already contains upstream main.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! git merge --no-ff -m "Merge upstream main ${upstream:0:12}" "$upstream"; then
+            echo '::error::Upstream conflicts with the JJstreams fork. No update was pushed.'
+            {
+              echo '### Upstream merge conflict'
+              echo 'The remote fork was left unchanged. Resolve these files manually:'
+              git diff --name-only --diff-filter=U
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+          echo "candidate=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Use Node.js
+        if: github.event_name != 'schedule' || steps.merge.outputs.changed == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        if: github.event_name != 'schedule' || steps.merge.outputs.changed == 'true'
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Check the JJstreams admission logging
+        if: github.event_name != 'schedule' || steps.merge.outputs.changed == 'true'
+        run: pnpm -F core run test:admission-logging
+
+      - name: Build the addon
+        if: github.event_name != 'schedule' || steps.merge.outputs.changed == 'true'
+        run: pnpm run build
+
+      - name: Bundle the validated merge
+        if: steps.merge.outputs.changed == 'true'
+        run: git bundle create "$RUNNER_TEMP/upstream.bundle" HEAD
+
+      - uses: actions/upload-artifact@v7
+        if: steps.merge.outputs.changed == 'true'
+        with:
+          name: validated-upstream
+          path: ${{ runner.temp }}/upstream.bundle
+          retention-days: 1
+
+  publish:
+    needs: validate
+    if: needs.validate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: validated-upstream
+          path: ${{ runner.temp }}/validated
+
+      - name: Keep upstream publication workflows disabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/workflows" --paginate --jq '.workflows[] | select(.path != ".github/workflows/fork-maintenance.yml" and .path != ".github/workflows/build.yml") | select(.state == "active") | .id' |
+            while read -r id; do
+              gh api --method PUT "repos/$GH_REPO/actions/workflows/$id/disable"
+            done
+
+      - name: Publish the validated merge as jjstreams
+        env:
+          GH_TOKEN: ${{ secrets.JJSTREAMS_UPSTREAM_SYNC_TOKEN }}
+          CANDIDATE: ${{ needs.validate.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          test "$(gh api user --jq .login)" = jjstreams
+          git bundle verify "$RUNNER_TEMP/validated/upstream.bundle"
+          git fetch "$RUNNER_TEMP/validated/upstream.bundle" HEAD
+          test "$(git rev-parse FETCH_HEAD)" = "$CANDIDATE"
+          gh auth setup-git --hostname github.com
+          # A normal push refuses to overwrite a concurrent update to main.
+          git push origin "$CANDIDATE:refs/heads/main"
+          echo "Validated upstream merge published: $CANDIDATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Disable any newly inherited publication workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/workflows" --paginate --jq '.workflows[] | select(.path != ".github/workflows/fork-maintenance.yml" and .path != ".github/workflows/build.yml") | select(.state == "active") | .id' |
+            while read -r id; do
+              gh api --method PUT "repos/$GH_REPO/actions/workflows/$id/disable"
+            done

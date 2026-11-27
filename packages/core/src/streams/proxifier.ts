@@ -181,6 +181,10 @@ class Proxifier {
                     file: identity.file,
                   }
                 : undefined,
+              source: {
+                addon: stream.addon.preset.type,
+                service: stream.service?.id,
+              },
             };
           })
         )

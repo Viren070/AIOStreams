@@ -26,6 +26,8 @@ import {
   PLAYBACK_PATH_PREFIX,
   withPlayPath,
   onProxiedPlay,
+  STREAM_SOURCE_HEADER,
+  parseStreamSource,
 } from '@aiostreams/core';
 import { z } from 'zod';
 import { request, Dispatcher } from 'undici';
@@ -95,6 +97,21 @@ function totalFromContentRange(header: string | string[] | undefined): number {
   const value = Array.isArray(header) ? header[0] : header;
   const match = /\/(\d+)\s*$/.exec(value ?? '');
   return match ? Number(match[1]) : 0;
+}
+
+/** Our own playback route, the only upstream trusted to name a source. */
+function isOwnPlaybackUrl(url: string): boolean {
+  try {
+    const { host, pathname } = new URL(url);
+    return (
+      pathname.includes(PLAYBACK_PATH_PREFIX) &&
+      [appConfig.bootstrap.baseUrl, appConfig.bootstrap.internalUrl].some(
+        (own) => new URL(own).host === host
+      )
+    );
+  } catch {
+    return false;
+  }
 }
 
 function copyHeaders(headers: Record<string, string | string[] | undefined>) {
@@ -339,6 +356,9 @@ router.all(
     let data: z.infer<typeof ProxyDataSchema> | undefined;
     let clientIp: string | undefined;
     let session: ReturnType<typeof streamRegistry.open> | undefined;
+    let playbackBytes = 0;
+    let playbackOutcome = 'completed';
+    let playbackErrorCode: string | undefined;
 
     try {
       const {
@@ -384,6 +404,9 @@ router.all(
           transport: 'proxy',
           username: auth.username,
           clientIp,
+          userAgent: req.headers['user-agent'],
+          sourceAddon: encrypted ? data.source?.addon : undefined,
+          sourceService: encrypted ? data.source?.service : undefined,
           targetKey: proxyTargetKey(data.url),
           filename,
           displayUrl: makeUrlLogSafe(data.url),
@@ -392,11 +415,18 @@ router.all(
           start: rangeStart(req.headers.range),
         });
         if (!session.ok) {
-          logger.warn(`[${requestId}] Proxy stream refused`, {
-            username: auth.username,
-            clientIp,
-            reason: session.verdict.reason,
-          });
+          logger.warn(
+            {
+              event: 'playback_proxy_refused',
+              request_id: requestId,
+              instance_id: streamRegistry.instanceId,
+              username: auth.username,
+              transport: 'proxy',
+              reason: session.verdict.reason,
+              status: 302,
+            },
+            'playback proxy refused'
+          );
           res
             .status(302)
             .redirect(`/static/${StaticFiles.CONTENT_PROXY_LIMIT_REACHED}`);
@@ -407,6 +437,7 @@ router.all(
           upstreamResponse?.body?.destroy();
           if (!req.socket.destroyed) req.socket.resetAndDestroy();
         });
+        session.handle.trackDownstream(res);
       }
 
       const upstreamStartTime = Date.now();
@@ -470,6 +501,14 @@ router.all(
           headersTimeout: 0,
         });
 
+        // Failover may have played another stream than the one listed.
+        const source = parseStreamSource(
+          upstreamResponse.headers[STREAM_SOURCE_HEADER]
+        );
+        if (source && session?.ok && isOwnPlaybackUrl(currentUrl)) {
+          session.handle.setSource(source);
+        }
+
         const hop = getRedirectHop(
           upstreamResponse.statusCode,
           upstreamResponse.headers['location'],
@@ -503,6 +542,22 @@ router.all(
         return;
       }
       const upstreamDuration = getTimeTakenSincePoint(upstreamStartTime);
+      if (session?.ok) {
+        logger.info(
+          {
+            event: 'playback_upstream_response',
+            session_id: session.handle.sessionId,
+            request_id: requestId,
+            username: auth.username,
+            transport: 'proxy',
+            upstream_host: new URL(currentUrl).hostname,
+            upstream_status: upstreamResponse.statusCode,
+            upstream_duration_ms: Date.now() - upstreamStartTime,
+            range_start: rangeStart(req.headers.range),
+          },
+          'playback upstream response'
+        );
+      }
 
       // forward upstream response to client
       res.set(sanitiseHeaders(upstreamResponse.headers));
@@ -510,6 +565,9 @@ router.all(
         res.set(data.responseHeaders);
       }
       res.status(upstreamResponse.statusCode);
+      if (session?.ok) {
+        res.setHeader('X-JJstreams-Playback-Session', session.handle.sessionId);
+      }
 
       logger.debug(`[${requestId}] Serving upstream response`, {
         username: auth.username,
@@ -568,7 +626,8 @@ router.all(
           const handle = session.handle;
           const counter = new Transform({
             transform(chunk, _enc, cb) {
-              handle.addBytes(chunk.length);
+              playbackBytes += chunk.length;
+              handle.addUpstreamBytes(chunk.length);
               cb(null, chunk);
             },
           });
@@ -582,6 +641,8 @@ router.all(
         username: auth.username,
       });
     } catch (error) {
+      playbackOutcome = 'request_failed';
+      playbackErrorCode = (error as NodeJS.ErrnoException)?.code;
       if (error instanceof APIError) {
         if (!res.headersSent) {
           next(error);
@@ -613,6 +674,9 @@ router.all(
         (error as Error)?.message?.includes('aborted') ||
         (error as Error)?.message?.includes('destroyed');
 
+      playbackOutcome = isClientDisconnect
+        ? 'connection_closed'
+        : 'upstream_error';
       if (!isClientDisconnect) {
         logger.error(`[${requestId}] Proxy request failed`, {
           error: error instanceof Error ? error.message : String(error),
@@ -637,6 +701,23 @@ router.all(
         });
       }
     } finally {
+      if (session?.ok) {
+        logger.info(
+          {
+            event: 'playback_request_end',
+            session_id: session.handle.sessionId,
+            request_id: requestId,
+            username: auth?.username,
+            transport: 'proxy',
+            outcome: playbackOutcome,
+            error_code: playbackErrorCode,
+            duration_ms: Date.now() - startTime,
+            bytes_served: playbackBytes,
+            upstream_status: upstreamResponse?.statusCode,
+          },
+          'playback request ended'
+        );
+      }
       // Ends this request only; the session idles out on its own.
       if (session?.ok) session.handle.close();
     }

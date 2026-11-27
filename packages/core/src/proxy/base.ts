@@ -24,6 +24,8 @@ export interface ProxyStream {
   };
   /** Only our own proxy carries it, in its encrypted token. */
   mediaInfo?: ProxyData['mediaInfo'];
+  /** Only our own proxy carries it, in its encrypted token. */
+  source?: ProxyData['source'];
 }
 
 type ValidatedStreamProxyConfig = StreamProxyConfig & {
