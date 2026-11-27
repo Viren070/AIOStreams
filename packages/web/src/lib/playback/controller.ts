@@ -163,6 +163,8 @@ export interface PlayerController {
   fit?: boolean;
   /** Plays the file again after it failed, from where it stopped or on another engine. */
   retry?: { label: string; run(): void };
+  /** Clears a failure and shows loading again; the file itself is not reloaded. */
+  restart(): void;
   /** Joins a live source at its edge again, after a pause left it behind. */
   goLive?: () => void;
   /** Others watch along, so nothing acts on its own, like skipping or speeding up. */

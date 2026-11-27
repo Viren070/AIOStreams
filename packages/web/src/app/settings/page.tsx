@@ -440,7 +440,7 @@ function NarrowSettings({
         <div data-ui="settings-tabs" data-nav-start className="space-y-4">
           {grouped(all).map(([group, items]) => (
             <div key={group} className="space-y-2">
-              <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
+              <p className="px-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[--muted]">
                 {groupLabel(group)}
               </p>
               <Card
@@ -540,7 +540,7 @@ function WideSettings({
                 data-name={group}
                 className="border border-white/10 bg-gray-950/70 p-2"
               >
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
+                <p className="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-[--muted]">
                   {groupLabel(group)}
                 </p>
                 {items.map((s) => (

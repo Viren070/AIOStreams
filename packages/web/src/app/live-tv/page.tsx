@@ -589,7 +589,7 @@ export function LiveTvPage({
   const list = loading ? (
     <div className="space-y-2 p-1">
       {Array.from({ length: 8 }, (_, i) => (
-        <Skeleton key={i} className="h-[68px] w-full rounded-xl" />
+        <Skeleton key={i} className="h-[4.25rem] w-full rounded-xl" />
       ))}
     </div>
   ) : (

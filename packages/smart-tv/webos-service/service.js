@@ -1,10 +1,13 @@
-// Fetches for the page what CORS keeps from it. It only moves bytes; the page
-// decides what an answer means. Written for the Node a webOS 23 TV runs.
+// Fetches for the page what CORS keeps from it, and serves what the page
+// made to a player, which reads an address but not the page's own memory.
+// It only moves bytes; the page decides what an answer means. Written for
+// the Node a webOS 23 TV runs.
 'use strict';
 
 const Service = require('webos-service');
 const http = require('http');
 const https = require('https');
+const crypto = require('crypto');
 const { URL } = require('url');
 
 const service = new Service('io.github.viren070.aiostreams.service');
@@ -167,3 +170,90 @@ service.register(
     if (request) request.destroy();
   }
 );
+
+// The page keeps one of these open, which holds the service up: an idle
+// one is killed, and with it the loopback its served playlists read from.
+service.register('hold', (message) => {
+  message.respond({ returnValue: true, held: true });
+});
+
+// What the page made, kept to be read by a player that reads an address but
+// not the page's own memory. The oldest goes when the cap is hit; a playlist
+// is small, and its links expire in hours anyway.
+const SERVED_MAX = 64;
+const served = new Map();
+// The loopback server, once bound; the asks waiting for it to bind.
+let listener = null;
+let binding = null;
+
+// Binds the loopback the made playlists are read from, on the TV itself so
+// nothing else can, and answers every waiting ask from it.
+function startBinding() {
+  const waiting = [];
+  const server = http.createServer(function (ask, reply) {
+    const held = served.get(ask.url.split('?')[0]);
+    if (!held) {
+      reply.writeHead(404);
+      return reply.end();
+    }
+    reply.writeHead(200, {
+      'Content-Type': held.type,
+      'Content-Length': Buffer.byteLength(held.text),
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-store',
+    });
+    reply.end(held.text);
+  });
+  let settled = false;
+  server.on('error', function (error) {
+    if (!settled) {
+      // A bind that failed leaves its asks to the page's own fallback.
+      settled = true;
+      binding = null;
+      for (let i = 0; i < waiting.length; i++) waiting[i].fail(error);
+      return;
+    }
+    // A server that died after it bound kills the addresses it gave out,
+    // which the page falls back from too.
+    if (listener === server) listener = null;
+  });
+  server.listen(0, '127.0.0.1', function () {
+    if (settled) return;
+    settled = true;
+    listener = server;
+    binding = null;
+    for (let i = 0; i < waiting.length; i++)
+      waiting[i].give(server.address().port);
+  });
+  binding = waiting;
+}
+
+// Takes { text, type }, what the page made and the type to serve it as, and
+// answers with the address a player reads it from.
+service.register('serve', (message) => {
+  const { text, type } = message.payload || {};
+  let settled = false;
+  const respond = (answer) => {
+    if (settled) return;
+    settled = true;
+    message.respond(answer);
+  };
+  const fail = (error) =>
+    respond({ returnValue: false, errorText: error.message });
+  if (typeof text !== 'string' || typeof type !== 'string')
+    return fail(new Error('Text and a type are needed'));
+  const give = (port) => {
+    if (served.size >= SERVED_MAX)
+      served.delete(served.keys().next().value);
+    // A name no one can guess, ending in the playlist's own ending.
+    const token = crypto.randomBytes(16).toString('hex');
+    served.set('/t/' + token + '.m3u8', { text: text, type: type });
+    respond({
+      returnValue: true,
+      url: 'http://127.0.0.1:' + port + '/t/' + token + '.m3u8',
+    });
+  };
+  if (listener) return give(listener.address().port);
+  if (!binding) startBinding();
+  binding.push({ give: give, fail: fail });
+});

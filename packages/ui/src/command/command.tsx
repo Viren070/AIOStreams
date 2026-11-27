@@ -22,7 +22,7 @@ export const CommandAnatomy = defineStyleAnatomy({
   inputIcon: cva(['UI-Command__inputIcon', 'me-2 h-5 w-5 shrink-0 opacity-50']),
   list: cva([
     'UI-Command__list',
-    'max-h-[300px] overflow-y-auto overflow-x-hidden',
+    'max-h-[18.75rem] overflow-y-auto overflow-x-hidden',
   ]),
   empty: cva([
     'UI-Command__empty',

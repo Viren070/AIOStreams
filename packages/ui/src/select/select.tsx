@@ -34,7 +34,7 @@ export const SelectAnatomy = defineStyleAnatomy({
   ]),
   scrollButton: cva([
     'UI-Select__scrollButton',
-    'flex items-center justify-center h-[25px] bg-[--paper] text-base cursor-default',
+    'flex items-center justify-center h-[1.5625rem] bg-[--paper] text-base cursor-default',
   ]),
   content: cva([
     'UI-Select__content',

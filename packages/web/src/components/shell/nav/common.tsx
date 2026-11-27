@@ -9,7 +9,7 @@ export function Logo() {
       data-ui="sidebar-logo"
       className="mb-4 flex w-full justify-center p-4 pb-0"
     >
-      <BrandLogo className="max-h-[60px] max-w-[90px] object-contain p-4" />
+      <BrandLogo className="max-h-[3.75rem] max-w-[5.625rem] object-contain p-4" />
     </div>
   );
 }

@@ -11,3 +11,12 @@ metadata.json
 data/
 testing/
 build/
+
+# OS junk
+.DS_Store
+._*
+.AppleDouble/
+.Spotlight-V100/
+.Trashes/
+Thumbs.db
+Desktop.ini

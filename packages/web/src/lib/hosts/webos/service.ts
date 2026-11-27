@@ -1,5 +1,9 @@
+import { appLog } from '../shell/bridge';
+
 /** Packaged from `packages/smart-tv/webos-service`. */
 const SERVICE = 'luna://io.github.viren070.aiostreams.service/fetch';
+const SERVE = 'luna://io.github.viren070.aiostreams.service/serve';
+const HOLD = 'luna://io.github.viren070.aiostreams.service/hold';
 
 interface PalmServiceBridge {
   onservicecallback: ((message: string) => void) | null;
@@ -40,6 +44,39 @@ function bytesOf(base64: string): Uint8Array {
 
 // Without the service, reads use the page's own fetch.
 let missing = false;
+// Without the service, what the page made plays from its own memory instead.
+let unserved = false;
+// The service is held once, for the addresses it serves outlive the ask
+// that made them, and an idle service is killed with its loopback.
+let holding = false;
+
+/** Keeps the TV's service up for the app's session, by holding one open. */
+function hold(): void {
+  if (holding) return;
+  holding = true;
+  const Bridge = window.PalmServiceBridge;
+  if (!Bridge) return;
+  const bridge = new Bridge();
+  bridge.onservicecallback = (message) => {
+    bridge.onservicecallback = null;
+    let answer: Answer;
+    try {
+      answer = JSON.parse(message) as Answer;
+    } catch {
+      return;
+    }
+    if (!answer.returnValue) {
+      bridge.cancel();
+      appLog(
+        'warn',
+        `service: would not hold: ${answer.errorText ?? 'silent'}`
+      );
+      return;
+    }
+    appLog('info', 'service: held for the app');
+  };
+  bridge.call(HOLD, JSON.stringify({ subscribe: true }));
+}
 
 /** Sends headers a page can't. The body streams in as the service reads it. */
 export function serviceFetch(
@@ -113,5 +150,37 @@ export function serviceFetch(
       }
     };
     bridge.call(SERVICE, JSON.stringify({ url, ...init, subscribe: true }));
+  });
+}
+
+/**
+ * Holds `text` in the TV's service, and answers the address a player reads
+ * it from — or null when there is no service to hold it, so the caller
+ * serves the text from the page's own memory instead.
+ */
+export function serveText(text: string, type: string): Promise<string | null> {
+  const Bridge = window.PalmServiceBridge;
+  if (unserved || !Bridge) return Promise.resolve(null);
+  // What serving hands out has to outlive the ask, so the service stays held.
+  hold();
+  return new Promise((resolve) => {
+    const bridge = new Bridge();
+    bridge.onservicecallback = (message) => {
+      bridge.onservicecallback = null;
+      bridge.cancel();
+      let answer: Answer;
+      try {
+        answer = JSON.parse(message) as Answer;
+      } catch {
+        return resolve(null);
+      }
+      // A service without a `serve`, or none at all, will never have one.
+      if (!answer.returnValue) {
+        unserved = true;
+        return resolve(null);
+      }
+      resolve(answer.url ?? null);
+    };
+    bridge.call(SERVE, JSON.stringify({ text, type }));
   });
 }

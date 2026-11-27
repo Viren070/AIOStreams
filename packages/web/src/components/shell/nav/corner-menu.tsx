@@ -107,7 +107,7 @@ export function CornerMenu({
         )}
       />
       <GlassSurface
-        className="relative overflow-hidden rounded-[31px] transition-[width,height] duration-300 ease-out"
+        className="relative overflow-hidden rounded-[1.9375rem] transition-[width,height] duration-300 ease-out"
         style={{
           width: open ? size.width : CORNER_SHUT,
           height: open ? size.height : CORNER_SHUT,

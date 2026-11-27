@@ -10,8 +10,9 @@ import { airedShare, airingAt, startOf, useSchedules } from './live-tv';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
 import { useOpenItemMenu } from '@/components/media/item-menu';
+import { tvScale } from '@/lib/tv';
 
-export const ROW_HEIGHT = 76;
+export const ROW_HEIGHT = 76 * tvScale();
 /** Rows drawn past each edge, so a quick scroll shows no gap. */
 export const OVERSCAN = 6;
 /** Rows of programmes asked for together. */

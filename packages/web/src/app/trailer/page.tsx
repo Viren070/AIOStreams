@@ -26,6 +26,7 @@ import {
   youTubeId,
   type Trailer,
 } from '@/lib/playback/trailers';
+import { useTrailerFallback } from '@/lib/playback/trailer-fallback';
 import type { PlayerController } from '@/lib/playback/controller';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PlayerControls } from '@/features/player/controls';
@@ -94,6 +95,7 @@ export function TrailerPage({
     <PlayedTrailer
       {...props}
       url={found.url}
+      fallbackUrl={found.fallbackUrl}
       originalLanguage={found.originalLanguage}
       prefs={prefs.prefs}
     />
@@ -104,13 +106,17 @@ function Controls({
   item,
   trailer,
   player,
+  failure,
   onBack,
   onPrevious,
   onNext,
   several,
-}: TrailerProps & { player: PlayerController }) {
-  const failure = player.state.error ?? '';
-  return player.state.error ? (
+}: TrailerProps & {
+  player: PlayerController;
+  /** The error that stands, which the fallback's swap cleared from the player. */
+  failure: string | null;
+}) {
+  return failure ? (
     <TrailerFailure
       message={t`This trailer didn't play: ${failure}`}
       external={youTubeId(trailer.url) ? trailer.url : undefined}
@@ -131,11 +137,14 @@ function Controls({
 
 function PlayedTrailer({
   url,
+  fallbackUrl,
   originalLanguage,
   prefs,
   ...props
 }: TrailerProps & {
   url: string;
+  /** The resolver's fallback, played before the failure stands. */
+  fallbackUrl?: () => Promise<string | null>;
   originalLanguage: string | undefined;
   prefs: PlaybackPrefs;
 }) {
@@ -144,20 +153,24 @@ function PlayedTrailer({
   const [hostPlayer] = React.useState(() => currentHost().player);
   const [fit] = useSetting(settings.video.fit);
   const [subtitleStyle] = useSetting(settings.subtitle.style);
+  const [playing, setPlaying] = React.useState(url);
   const source = React.useMemo(
-    () => trailerSource(url, originalLanguage),
-    [url, originalLanguage]
+    () => trailerSource(playing, originalLanguage),
+    [playing, originalLanguage]
   );
   const player = usePlayer([hostPlayer ?? videoEngine(video)], {
     client,
     item: props.item,
-    url,
+    url: playing,
     source,
     startMs: 0,
     onEnded: props.onBack,
     prefs,
     subtitleStyle,
   });
+  // The error that stands, which the fallback's swap cleared from the player.
+  const [failure, setFailure] = React.useState<string | null>(null);
+  useTrailerFallback(player, setPlaying, fallbackUrl, setFailure);
   return (
     <div
       data-page="player"
@@ -175,7 +188,7 @@ function PlayedTrailer({
           playsInline
         />
       )}
-      <Controls {...props} player={player} />
+      <Controls {...props} player={player} failure={failure} />
     </div>
   );
 }

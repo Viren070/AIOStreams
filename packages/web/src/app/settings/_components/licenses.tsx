@@ -152,7 +152,7 @@ function LibraryList({
             data-focus="own"
             data-nav-start={i === 0 || undefined}
             onClick={() => onOpen(library)}
-            className="block w-full rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
+            className="block w-full rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[0.1875rem]"
           >
             <span className="block truncate text-sm font-semibold">
               {library.name}

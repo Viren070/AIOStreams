@@ -21,6 +21,7 @@ import {
   useTrailerPlayback,
   type Trailer,
 } from '@/lib/playback/trailers';
+import { useTrailerFallback } from '@/lib/playback/trailer-fallback';
 import type { EngineFactory, VideoFrame } from '@/lib/playback/engine';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { useLatest } from '@/hooks/use-latest';
@@ -362,6 +363,7 @@ export function TrailerPreview(props: TrailerPreviewProps) {
       item={item}
       trailer={trailer}
       url={found.url}
+      fallbackUrl={found.fallbackUrl}
       originalLanguage={found.originalLanguage}
       host={currentHost().player}
       full={full}
@@ -400,6 +402,7 @@ function PlayedPreview({
   item,
   trailer,
   url,
+  fallbackUrl,
   originalLanguage,
   host,
   frame,
@@ -420,6 +423,8 @@ function PlayedPreview({
   item: BaseItemDto;
   trailer: Trailer;
   url: string;
+  /** The resolver's fallback, played before the trailer after this one. */
+  fallbackUrl?: () => Promise<string | null>;
   originalLanguage: string | undefined;
   host: EngineFactory | undefined;
   full: boolean;
@@ -431,9 +436,10 @@ function PlayedPreview({
   const { client } = useSession();
   const video = React.useRef<HTMLVideoElement>(null);
   const [engines] = React.useState(() => [host ?? videoEngine(video)]);
+  const [playing, setPlaying] = React.useState(url);
   const source = React.useMemo(
-    () => trailerSource(url, originalLanguage),
-    [url, originalLanguage]
+    () => trailerSource(playing, originalLanguage),
+    [playing, originalLanguage]
   );
   const [fit] = useSetting(settings.video.fit);
   // Without it, the app's player keeps the last style it was sent.
@@ -441,7 +447,7 @@ function PlayedPreview({
   const player = usePlayer(engines, {
     client,
     item,
-    url,
+    url: playing,
     source,
     subtitleStyle,
     startMs: 0,
@@ -458,9 +464,8 @@ function PlayedPreview({
   const shown = started && flowing && !error;
   useShown(shown, onShown);
   const failed = useLatest(onFailed);
-  React.useEffect(() => {
-    if (error) failed.current();
-  }, [error, failed]);
+  // The resolver's own fallback plays before the trailer after this one.
+  useTrailerFallback(player, setPlaying, fallbackUrl, () => failed.current());
 
   // Drawn a pixel past the hole, so rounding never leaves a seam.
   const placed = React.useMemo<VideoFrame | null>(

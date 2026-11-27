@@ -22,15 +22,19 @@ import type { EngineTrack, ServerSubtitle } from './engine';
 
 /**
  * The user's audio languages. Original language takes the language of the
- * server's default audio track, as only the server knows it.
+ * server's default audio track, as only the server knows it. A user without
+ * a language of their own still hears the file's own, not whichever track
+ * listed first.
  */
 export function audioCodes(prefs: PlaybackPrefs, source: SourceInfo): string[] {
   const original = source.MediaStreams?.find(
     (s) => s.Type === 'Audio' && s.Index === source.DefaultAudioStreamIndex
   )?.Language;
-  return audioLanguages(prefs)
+  const codes = audioLanguages(prefs)
     .map((l) => (l === ORIGINAL_LANGUAGE ? original : l))
     .filter((l): l is string => !!l);
+  if (codes.length) return codes;
+  return original ? [original] : [];
 }
 
 export const trackFacts = (t: EngineTrack): SubtitleFacts => ({

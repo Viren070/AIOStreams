@@ -11,18 +11,20 @@ import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
 import { OVERSCAN, useKeyFocus } from '@/features/live-tv/channel-list';
 import { useOpenItemMenu } from '@/components/media/item-menu';
+import { tvScale } from '@/lib/tv';
 
-const ROW = 64;
-const RULER = 32;
-const CHANNEL_COLUMN = 264;
-const PX_PER_MINUTE = 5;
+const scale = tvScale();
+const ROW = 64 * scale;
+const RULER = 32 * scale;
+const CHANNEL_COLUMN = 264 * scale;
+const PX_PER_MINUTE = 5 * scale;
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 const HALF_HOUR = 30 * MINUTE;
 /** Programmes are drawn a chunk at a time, so a scroll redraws rows only now and then. */
-const CHUNK_PX = 600;
+const CHUNK_PX = 600 * scale;
 /** Room kept between the active programme and the edges as keys move it. */
-const EDGE_PX = 80;
+const EDGE_PX = 80 * scale;
 const EDGE_ROWS = 2;
 
 const xOf = (at: number, dayStart: number) =>

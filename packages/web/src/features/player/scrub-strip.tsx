@@ -85,7 +85,7 @@ export function ScrubStrip({
                   'aspect-video w-full overflow-hidden rounded-md bg-white/10',
                   // As a focused card's.
                   picked &&
-                    'outline outline-[3px] outline-offset-2 [outline-color:var(--ring)]'
+                    'outline outline-[0.1875rem] outline-offset-2 [outline-color:var(--ring)]'
                 )}
               >
                 {picture && (

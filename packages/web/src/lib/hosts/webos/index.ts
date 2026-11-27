@@ -1,5 +1,5 @@
 import type { Host } from '..';
-import { serviceFetch } from './service';
+import { serviceFetch, serveText } from './service';
 import { youTubeResolver } from '@/lib/hosts/youtube';
 
 interface WebOSSystem {
@@ -48,7 +48,12 @@ const host: Host = {
   keepAwake: (on) =>
     system()?.setWindowProperty?.('blockScreenSaver', String(on)),
   fetchFile: serviceFetch,
-  resolveYouTube: youTubeResolver(serviceFetch),
+  // The TV starts a playlist at its smallest variant, so the page picks one
+  // and the TV's service holds it, where a player reads an address.
+  resolveYouTube: youTubeResolver(serviceFetch, {
+    variant: true,
+    serve: serveText,
+  }),
 };
 
 export function webosHost(): Host | null {

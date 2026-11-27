@@ -610,6 +610,7 @@ export function usePlayer(
     sound: engine.sound,
     fit: engine.fits,
     retry,
+    restart,
     goLive: liveSource ? reopen : undefined,
   };
 }

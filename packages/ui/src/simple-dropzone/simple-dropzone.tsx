@@ -39,7 +39,7 @@ export const SimpleDropzoneAnatomy = defineStyleAnatomy({
   ]),
   listItemTitle: cva([
     'UI-SimpleDropzone__listItemTitle',
-    'truncate max-w-[180px] text-[.9rem]',
+    'truncate max-w-[11.25rem] text-[.9rem]',
   ]),
   listItemSize: cva([
     'UI-SimpleDropzone__listItemSize',

@@ -53,6 +53,7 @@ jobs:
     timeout-minutes: 10
     env:
       IPK: aiostreams-webos-${{ needs.web.outputs.version }}.ipk
+      IPK_720P: aiostreams-webos-${{ needs.web.outputs.version }}-720p.ipk
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -66,19 +67,22 @@ jobs:
           name: smart-tv-web
           path: packages/web/dist-standalone
       - working-directory: packages/smart-tv
-        run: |
-          node scripts/build.mjs webos
-          mv out/*.ipk "out/$IPK"
+        run: node scripts/build.mjs webos
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.IPK }}
           path: packages/smart-tv/out/${{ env.IPK }}
           compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.IPK_720P }}
+          path: packages/smart-tv/out/${{ env.IPK_720P }}
+          compression-level: 0
       - if: inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE: ${{ inputs.release }}
-        run: gh release upload "$RELEASE" "packages/smart-tv/out/$IPK" --clobber
+        run: gh release upload "$RELEASE" "packages/smart-tv/out/$IPK" "packages/smart-tv/out/$IPK_720P" --clobber
 
   tizen:
     needs: web
@@ -140,6 +144,7 @@ jobs:
           repo="https://github.com/${{ github.repository }}"
           raw="https://raw.githubusercontent.com/${{ github.repository }}"
           cp "feed/aiostreams-webos-$VERSION.ipk" feed/aiostreams-webos.ipk
+          cp "feed/aiostreams-webos-$VERSION-720p.ipk" feed/aiostreams-webos-720p.ipk
           cp "feed/aiostreams-tizen-$VERSION.wgt" feed/aiostreams-tizen.wgt
           # The repository points at this release's own copy, which never changes under its hash.
           jq -n \
@@ -171,4 +176,4 @@ jobs:
           else
             gh release create smart-tv --latest=false --title "TV apps" --notes-file notes.md
           fi
-          gh release upload smart-tv feed/aiostreams-webos.ipk feed/aiostreams-tizen.wgt --clobber
+          gh release upload smart-tv feed/aiostreams-webos.ipk feed/aiostreams-webos-720p.ipk feed/aiostreams-tizen.wgt --clobber

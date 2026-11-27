@@ -19,6 +19,7 @@ import {
 import { useDock } from '@/lib/playback/dock';
 import { useDocumentPip } from '@/lib/playback/document-pip';
 import { settings, useSetting, type MiniCorner } from '@/lib/settings';
+import { tvScale } from '@/lib/tv';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { CachedImage } from '@/components/cached-image';
 
@@ -27,14 +28,15 @@ export const MINI_MOVE_MS = 220;
 const MINI_MOVE_EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 // eslint-disable-next-line lingui/no-unlocalized-strings -- a CSS value
 const FADE = 'opacity 150ms ease-out';
-const STRIP = 56;
-const BAR = 64;
-const BAR_INSET = 6;
-const GAP = 8;
-/** As `rounded-2xl` and `rounded-[10px]`, which the app's video follows. */
-const CARD_RADIUS = 16;
-const BAR_RADIUS = 10;
-const MARGIN = 16;
+const scale = tvScale();
+const STRIP = 56 * scale;
+const BAR = 64 * scale;
+const BAR_INSET = 6 * scale;
+const GAP = 8 * scale;
+/** As `rounded-2xl` and `rounded-[0.625rem]`, which the app's video follows. */
+const CARD_RADIUS = 16 * scale;
+const BAR_RADIUS = 10 * scale;
+const MARGIN = 16 * scale;
 const SLOP = 8;
 const SWIPE = 40;
 
@@ -522,7 +524,7 @@ function CornerPlayer({ item, player, error, onVideoPlace }: MiniPlayerProps) {
         data-ui="mini-player-video"
         className={cn(
           'relative flex-none overflow-hidden bg-black',
-          mode === 'bar' && 'ms-1.5 rounded-[10px]'
+          mode === 'bar' && 'ms-1.5 rounded-[0.625rem]'
         )}
         style={{ width: room.width, height: room.height }}
       >

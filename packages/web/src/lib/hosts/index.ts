@@ -49,6 +49,8 @@ export interface Hearing {
 export interface YouTubeStream {
   url: string;
   originalLanguage?: string;
+  /** The muxed stream's address, asked for only once `url` fails to play. */
+  fallbackUrl?: () => Promise<string | null>;
 }
 
 /**

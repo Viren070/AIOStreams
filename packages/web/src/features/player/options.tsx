@@ -783,7 +783,7 @@ export function OptionButtons({
           {unread > 0 && (
             <span
               data-ui="party-unread"
-              className="absolute end-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[10px] font-semibold leading-4 text-white"
+              className="absolute end-0.5 top-0.5 min-w-4 rounded-full bg-brand-500 px-1 text-[0.625rem] font-semibold leading-4 text-white"
             >
               {unread > 9 ? '9+' : unread}
             </span>
