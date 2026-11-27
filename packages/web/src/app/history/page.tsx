@@ -43,6 +43,7 @@ import {
 } from '@/lib/format';
 import { href, itemPath, navigate, to } from '@/lib/paths';
 import { currentHost } from '@/lib/hosts';
+import { tvClasses } from '@/lib/tv';
 import { PageBody, PageHeader } from '@/components/shell/page';
 import { SessionsRow } from './_components/sessions';
 import { PillTabs } from '@/components/pill-tabs';
@@ -256,7 +257,7 @@ function UserChips({
               <UserAvatar
                 name={owner.user.Name}
                 src={owner.avatar}
-                className="size-5 text-[10px]"
+                className="size-5 text-[0.625rem]"
               />
             }
             onClick={() => onSelect(owner.user.Id!)}
@@ -345,7 +346,10 @@ function Days({
           </div>
           <div
             data-ui="history-tiles"
-            className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3"
+            className={cn(
+              'grid grid-cols-1 gap-3 md:grid-cols-2',
+              tvClasses('2xl:grid-cols-3')
+            )}
           >
             {day.tiles.map((tile) => (
               <DayTile key={tile.key} tile={tile} names={names} />
@@ -396,7 +400,8 @@ function DayTile({
       data-open={open || undefined}
       className={cn(
         'rounded-xl border border-white/5 bg-gray-950/60',
-        open && 'md:col-span-2 2xl:col-span-3'
+        open && 'md:col-span-2',
+        open && tvClasses('2xl:col-span-3')
       )}
     >
       <div className="flex gap-3 p-3">

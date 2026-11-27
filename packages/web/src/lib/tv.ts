@@ -1,6 +1,38 @@
 import { currentHost } from './hosts';
 import { isTextField } from './input/focus';
 
+const DESIGN_WIDTH = 1280;
+const DESIGN_FONT = 16;
+
+/**
+ * webOS gives a page a layout viewport the size in appinfo.json: 1280 x 720
+ * for the 720p package, 1920 x 1080 for the 1080p one. The TV layout is drawn
+ * for 1280, so a wider page grows the root font by the same factor: every rem
+ * length scales, while viewport lengths already scale with the viewport.
+ */
+export function tvScale(): number {
+  return currentHost().name === 'webos'
+    ? Math.max(1, window.innerWidth / DESIGN_WIDTH)
+    : 1;
+}
+
+/** Whether the TV layout is being scaled up from its 1280 design. */
+export const tvScaled = (): boolean => tvScale() > 1;
+
+/**
+ * Drops the breakpoints a 1280 layout never reaches, so a scaled 1080p TV
+ * keeps the 720p column counts and card widths.
+ */
+export function tvClasses(classes: string): string {
+  if (!tvScaled()) return classes;
+  return classes
+    .split(/\s+/)
+    .filter(
+      (name) => !/^(?:2xl|3xl|4xl|5xl|6xl|7xl|min-\[1800px\]):/.test(name)
+    )
+    .join(' ');
+}
+
 /**
  * A TV lays the page out at 1280 x 720 whatever its resolution, a size read
  * from across a room, which also gives it the wide layout.
@@ -8,6 +40,9 @@ import { isTextField } from './input/focus';
 export function setupTv(): void {
   if (!currentHost().tv) return;
   document.documentElement.dataset.tv = '';
+  const scale = tvScale();
+  if (scale > 1)
+    document.documentElement.style.fontSize = `${DESIGN_FONT * scale}px`;
   document
     .querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=1280, viewport-fit=cover');

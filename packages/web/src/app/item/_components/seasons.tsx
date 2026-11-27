@@ -7,6 +7,7 @@ import { Modal } from '@aiostreams/ui/modal';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
+import { tvClasses } from '@/lib/tv';
 import { useSession } from '@/lib/jellyfin/session';
 import { useEpisodes, useSeasons, openingSeason } from '@/lib/jellyfin/queries';
 import { posterUrl } from '@/lib/artwork/urls';
@@ -123,7 +124,7 @@ export function Seasons({
             <MediaRow
               key="loading"
               shape="wide"
-              itemClass={ROW_WIDTH}
+              itemClass={tvClasses(ROW_WIDTH)}
               loading
             />
           </div>
@@ -133,7 +134,7 @@ export function Seasons({
               key={seasonId}
               id={`episodes:${seasonId}`}
               shape="wide"
-              itemClass={ROW_WIDTH}
+              itemClass={tvClasses(ROW_WIDTH)}
               startIndex={focusIndex >= 0 ? focusIndex : upToIndex(items)}
               header={summaryLine}
               action={

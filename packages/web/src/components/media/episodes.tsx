@@ -11,6 +11,7 @@ import { IconButton } from '@aiostreams/ui/button';
 import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { currentHost } from '@/lib/hosts';
+import { tvClasses } from '@/lib/tv';
 import { useSession } from '@/lib/jellyfin/session';
 import { landscapeUrls } from '@/lib/artwork/urls';
 import {
@@ -323,7 +324,7 @@ function Head({
             className={cn(
               "min-w-0 flex-1 text-start text-sm font-semibold after:absolute after:inset-0 after:rounded-xl after:content-[''] sm:text-base",
               thumbRing &&
-                "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[3px]"
+                "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-[1] before:aspect-video before:rounded-xl before:content-[''] focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-[--ring] [[data-tv]_&]:focus-visible:before:ring-[0.1875rem]"
             )}
           >
             <span className={clamp} title={oneLine ? title : undefined}>
@@ -545,7 +546,8 @@ export function EpisodeList({
         data-nav-group
         className={cn(
           '-mx-2 grid gap-x-6 gap-y-1',
-          columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'
+          columns && 'xl:grid-cols-2',
+          columns && tvClasses('min-[1800px]:grid-cols-3')
         )}
       >
         {episodes.map((episode, i) => {
@@ -587,7 +589,8 @@ export function EpisodeListSkeleton({ columns }: { columns?: boolean }) {
     <div
       className={cn(
         '-mx-2 grid gap-x-6 gap-y-1',
-        columns && 'xl:grid-cols-2 min-[1800px]:grid-cols-3'
+        columns && 'xl:grid-cols-2',
+        columns && tvClasses('min-[1800px]:grid-cols-3')
       )}
     >
       {Array.from({ length: 6 }, (_, i) => (

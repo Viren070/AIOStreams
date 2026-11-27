@@ -165,7 +165,7 @@ function EpisodeRow({
       disabled={unavailable}
       onClick={onPick}
       className={cn(
-        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]',
+        'group/episode flex w-full items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[0.1875rem]',
         current && 'bg-white/10'
       )}
     >

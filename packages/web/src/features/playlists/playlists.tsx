@@ -369,7 +369,7 @@ function PlaylistIndex({
                 data-ui="playlists-entry"
                 data-focus="own"
                 onClick={() => onOpen(playlist.Id!)}
-                className="flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]"
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[0.1875rem]"
               >
                 <span className="relative flex aspect-[2/3] w-12 flex-none items-center justify-center overflow-hidden rounded-md bg-gray-900 ring-1 ring-white/5">
                   {cover ? (
@@ -656,7 +656,7 @@ function PlaylistView({
 }
 
 const ROW =
-  'flex w-full min-w-0 flex-1 items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[3px]';
+  'flex w-full min-w-0 flex-1 items-start gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:pointer-events-none [[data-tv]_&]:focus-visible:ring-[0.1875rem]';
 
 function EntryRow({
   entry,
@@ -913,7 +913,7 @@ function AddToPlaylist({
                   data-nav-start={i === 0 || undefined}
                   disabled={!!busy}
                   onClick={() => addTo(playlist)}
-                  className="flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:opacity-60 [[data-tv]_&]:focus-visible:ring-[3px]"
+                  className="flex w-full items-center gap-3 rounded-xl p-2 text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] disabled:opacity-60 [[data-tv]_&]:focus-visible:ring-[0.1875rem]"
                 >
                   <span className="relative flex aspect-[2/3] w-9 flex-none items-center justify-center overflow-hidden rounded bg-gray-900 ring-1 ring-white/5">
                     {cover ? (

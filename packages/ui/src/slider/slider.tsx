@@ -87,7 +87,7 @@ export const SliderAnatomy = defineStyleAnatomy({
   ]),
   markIndicator: cva([
     'UI-Slider__markIndicator',
-    'absolute top-[7px] h-1 w-0.5 -translate-x-1/2 bg-gray-300 dark:bg-gray-600',
+    'absolute top-[0.4375rem] h-1 w-0.5 -translate-x-1/2 bg-gray-300 dark:bg-gray-600',
   ]),
   label: cva([
     'UI-Slider__label',

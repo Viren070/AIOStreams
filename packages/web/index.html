@@ -124,12 +124,17 @@
     </div>
     <script>
       (function () {
-        // In vmin, which keeps its size through a TV's later 1280 px layout.
+        // webOS draws its 1080p layout at 1.5x the 720p one, so the splash
+        // keeps the same share of the screen; elsewhere it stays 288px.
         var side = Math.min(innerWidth, innerHeight);
+        var webos = !!(window.webOSSystem || window.PalmSystem);
         if (side)
           document
             .getElementById('splash')
-            .style.setProperty('--splash-size', 28800 / side + 'vmin');
+            .style.setProperty(
+              '--splash-size',
+              webos ? '40vmin' : 28800 / side + 'vmin'
+            );
         // The Android app covers the page until this shows.
         var app = window.aiostreamsApp;
         if (app && app.platform === 'android')

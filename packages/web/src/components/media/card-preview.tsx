@@ -555,7 +555,7 @@ function Preview({
         !at.past &&
           'duration-200 ease-out animate-in fade-in-0 zoom-in-90 motion-reduce:animate-none',
         target.byFocus &&
-          'outline outline-[3px] outline-offset-2 outline-[var(--ring)]',
+          'outline outline-[0.1875rem] outline-offset-2 outline-[var(--ring)]',
         tv && 'pointer-events-none',
         !opened && 'invisible'
       )}

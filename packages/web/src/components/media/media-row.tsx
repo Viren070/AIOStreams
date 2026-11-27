@@ -12,6 +12,7 @@ import { Skeleton } from '@aiostreams/ui/skeleton';
 import { cn } from '@aiostreams/ui/core/styling';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { currentHost } from '@/lib/hosts';
+import { tvClasses } from '@/lib/tv';
 import { scrolled, scrollToStart, startOf } from '@/lib/direction';
 import {
   settings,
@@ -429,7 +430,7 @@ export function MediaRow({
   const restoreKey = useEntryKey(id);
   const [start] = React.useState(startIndex ?? 0);
   const [lines] = useSetting(settings.interface.posterLines);
-  const width = itemClass ?? ITEM_WIDTH[shape];
+  const width = itemClass ?? tvClasses(ITEM_WIDTH[shape]);
   const items = React.useMemo(
     () => React.Children.toArray(children),
     [children]
@@ -580,7 +581,9 @@ export function CardGrid({
       data-nav-wrap
       className={cn(
         'grid gap-4',
-        shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster
+        tvClasses(
+          shape === 'wide' ? GRID_COLUMNS[size].wide : GRID_COLUMNS[size].poster
+        )
       )}
     >
       {children}

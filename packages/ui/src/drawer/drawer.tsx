@@ -218,7 +218,7 @@ export function Drawer(props: DrawerProps) {
               size,
               side: mangaReader ? 'mangaReader' : side,
             }),
-            !mangaReader && 'lg:m-[10px] rounded-[--radius]',
+            !mangaReader && 'lg:m-[0.625rem] rounded-[--radius]',
             contentClass
           )}
           onOpenAutoFocus={onOpenAutoFocus}

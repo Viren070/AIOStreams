@@ -153,7 +153,7 @@ function useChapterPictures(player: PlayerController, open: boolean) {
 }
 
 const ITEM =
-  'rounded-xl text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[3px]';
+  'rounded-xl text-start outline-none transition-colors hover:bg-white/5 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[--ring] [[data-tv]_&]:focus-visible:ring-[0.1875rem]';
 
 const ChapterCard = React.memo(function ChapterCard({
   index,
