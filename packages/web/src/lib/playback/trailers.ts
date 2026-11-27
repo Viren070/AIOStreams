@@ -44,7 +44,13 @@ export function youTubeId(url: string): string | null {
 }
 
 export type TrailerPlayback =
-  | { kind: 'video'; url: string; originalLanguage?: string }
+  | {
+      kind: 'video';
+      url: string;
+      originalLanguage?: string;
+      /** The muxed stream's address, asked for only once `url` fails to play. */
+      fallbackUrl?: () => Promise<string | null>;
+    }
   | { kind: 'embed'; id: string }
   | { kind: 'external'; url: string };
 

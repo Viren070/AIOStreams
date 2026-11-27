@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import type React from 'react';
 import { currentHost } from '@/lib/hosts';
+import { appLog } from '@/lib/hosts/shell/bridge';
 import type { VideoFit } from '@/lib/settings';
 import {
   embeddedSubtitles,
@@ -56,13 +57,7 @@ async function openHls(
     startPosition: file.source.IsInfiniteStream ? -1 : file.startMs / 1000,
   });
   hls.on(Hls.Events.ERROR, (_, data) => {
-    if (data.fatal)
-      failed(
-        t({
-          comment: 'Follows "Playback failed:"',
-          message: 'the stream stopped loading',
-        })
-      );
+    if (data.fatal) failed(stoppedLoading());
   });
   hls.loadSource(file.url);
   hls.attachMedia(el);
@@ -84,6 +79,15 @@ const browserCannot = () =>
     message:
       'this browser cannot play this version. Nothing is converted on the server, so try another version, an external player or the desktop app.',
   });
+
+const stoppedLoading = () =>
+  t({
+    comment: 'Follows "Playback failed:"',
+    message: 'the stream stopped loading',
+  });
+
+/** How long a file may take to start before the page gives up on it. */
+const STALL_MS = 10_000;
 
 const HLS = 'application/vnd.apple.mpegurl';
 
@@ -170,6 +174,26 @@ export function videoEngine(
       hls?.destroy();
       hls = null;
     };
+    // A browser can wait on a file that never starts, without failing it.
+    let stall: ReturnType<typeof setTimeout> | null = null;
+    let started = false;
+    const dropStall = () => {
+      if (stall) clearTimeout(stall);
+      stall = null;
+    };
+    const armStall = () => {
+      // A live stream recovers its own start; one loaded paused arms on play.
+      if (stall || started || file?.source.IsInfiniteStream) return;
+      stall = setTimeout(() => {
+        stall = null;
+        emit({
+          type: 'failed',
+          error: stoppedLoading(),
+          // One that never loaded, as from a site without CORS, is the link's fault.
+          unsupported: !video.current?.readyState,
+        });
+      }, STALL_MS);
+    };
     // A text track's cues load late, so each one remembers the shift it has.
     const shifted = new WeakMap<TextTrack, number>();
     // Browsers disagree on where a cue the file leaves unplaced goes.
@@ -246,15 +270,29 @@ export function videoEngine(
       track.mode = 'showing';
       return true;
     };
+    // A file's sound can arrive after its metadata: a loaded with no track
+    // behind it makes the pick run before any exists, so it runs again once
+    // one does.
+    let loadedWithoutTracks = false;
     const listTracks = () => {
       const audio = video.current && audioTracksOf(video.current);
       const audioTracks = audio ? listed(audio) : [];
+      const streams = file?.source.MediaStreams;
+      const index = file?.source.DefaultAudioStreamIndex;
+      // A TV reads a track's language from its stream's own address, which a
+      // region in the language leaves unreadable; the file's only sound still
+      // has a language the server knows.
+      const only = audioTracks.length === 1 && !audioTracks[0].language;
+      const named = only
+        ? (streams?.find((s) => s.Type === 'Audio' && s.Index === index)
+            ?.Language ?? undefined)
+        : undefined;
       const tracks: EngineTrack[] = [
         ...audioTracks.map((t, i) => ({
           id: String(i),
           type: 'audio' as const,
-          label: ownTrackLabel(t.label, t.language, i + 1),
-          lang: t.language,
+          label: ownTrackLabel(t.label, t.language || named, i + 1),
+          lang: t.language || named,
           title: t.label,
         })),
         ...ownTracks.map(ownSubtitleTrack),
@@ -268,6 +306,19 @@ export function videoEngine(
       emit({ type: 'tracks', tracks });
       const on = audioTracks.findIndex((t) => t.enabled);
       set({ audio: on < 0 ? null : String(on) });
+      if (audioTracks.length > 1 || only)
+        appLog(
+          'info',
+          `audio tracks: ${audioTracks
+            .map(
+              (t, i) => `${i}:${t.language || 'none'}${t.enabled ? '*' : ''}`
+            )
+            .join(' ')}`
+        );
+      if (loadedWithoutTracks && audioTracks.length) {
+        loadedWithoutTracks = false;
+        emit({ type: 'loaded' });
+      }
     };
     const onTrackLoad = () => {
       placeCues();
@@ -331,6 +382,9 @@ export function videoEngine(
         if (!el) return;
         detach();
         dropHls();
+        dropStall();
+        started = false;
+        loadedWithoutTracks = false;
         removeElements();
         file = next;
         subtitles = next.subtitles;
@@ -354,10 +408,15 @@ export function videoEngine(
           });
         }
         const loaded = () => {
+          const done = () => {
+            const audio = audioTracksOf(el);
+            loadedWithoutTracks = !audio || !audio.length;
+            emit({ type: 'loaded' });
+          };
           const reading = embedded;
-          if (!reading) return emit({ type: 'loaded' });
+          if (!reading) return done();
           void reading.listed().then(() => {
-            if (embedded === reading) emit({ type: 'loaded' });
+            if (embedded === reading) done();
           });
         };
         // Each read is a new snapshot, whose ranges may have merged since the last.
@@ -378,10 +437,18 @@ export function videoEngine(
           durationchange: () => set({ durationMs: el.duration * 1000 || 0 }),
           playing: () => {
             embedded?.setPlaying(true);
+            started = true;
+            dropStall();
             set({ started: true, paused: false, waiting: false });
           },
-          pause: () => set({ paused: true }),
-          play: () => set({ paused: false }),
+          pause: () => {
+            dropStall();
+            set({ paused: true });
+          },
+          play: () => {
+            armStall();
+            set({ paused: false });
+          },
           waiting: () => set({ waiting: true }),
           canplay: () => set({ waiting: false }),
           timeupdate: () => {
@@ -395,8 +462,12 @@ export function videoEngine(
           progress: () => emit({ type: 'position', buffered: buffered() }),
           volumechange: () => set({ volume: el.volume, muted: el.muted }),
           ratechange: () => set({ rate: el.playbackRate }),
-          ended: () => emit({ type: 'ended' }),
+          ended: () => {
+            dropStall();
+            emit({ type: 'ended' });
+          },
           error: () => {
+            dropStall();
             // A file the browser can't read may still play as the server converts it.
             if (
               !next.source.IsInfiniteStream &&
@@ -440,19 +511,29 @@ export function videoEngine(
             next,
             () => file === next,
             // One that never loaded, as from a site without CORS, is the link's fault.
-            (error) =>
-              emit({ type: 'failed', error, unsupported: !el.readyState })
-          ).then((opened) => {
-            if (file === next) hls = opened;
-            else opened?.destroy();
-          });
+            (error) => {
+              dropStall();
+              emit({ type: 'failed', error, unsupported: !el.readyState });
+            }
+          )
+            .then((opened) => {
+              if (file === next) hls = opened;
+              else opened?.destroy();
+            })
+            // A loader that never came leaves the video empty and silent.
+            .catch(() => {
+              dropStall();
+              emit({ type: 'failed', error: browserCannot() });
+            });
         else el.src = next.url;
+        if (!next.paused) armStall();
       },
       // Browsers keep a closed player in their media controls until its video drops the stream.
       close() {
         detach();
         detach = () => {};
         dropHls();
+        dropStall();
         removeElements();
         file = null;
         const el = video.current;
@@ -464,8 +545,13 @@ export function videoEngine(
       setPaused(paused) {
         const el = video.current;
         if (!el) return;
-        if (paused) el.pause();
-        else void el.play().catch(() => {});
+        if (paused) {
+          dropStall();
+          el.pause();
+        } else {
+          armStall();
+          void el.play().catch(() => {});
+        }
       },
       seek(ms) {
         if (video.current) video.current.currentTime = ms / 1000;
