@@ -2,8 +2,10 @@
 import { spawnSync } from 'node:child_process';
 import {
   cpSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -71,7 +73,22 @@ function writeUnsigned(stage, file) {
   writeFileSync(file, zipSync(files));
 }
 
+// Both variants hold the same app, so only the resolution in the manifest
+// differs.
+const WEBOS_VARIANTS = [
+  { resolution: '1920x1080', suffix: '' },
+  { resolution: '1280x720', suffix: '-720p' },
+];
+
 if (platform === 'webos') {
+  const requested = process.argv[3];
+  const variants = requested
+    ? WEBOS_VARIANTS.filter(({ resolution }) => resolution === requested)
+    : WEBOS_VARIANTS;
+  if (variants.length === 0) {
+    console.error('Usage: node scripts/build.mjs webos [1920x1080|1280x720]');
+    process.exit(1);
+  }
   const stage = stageApp('appinfo.json', (text) => {
     const { id, ...rest } = JSON.parse(text);
     return JSON.stringify({ id, version, ...rest }, null, 2);
@@ -79,14 +96,30 @@ if (platform === 'webos') {
   const cli = dirname(
     createRequire(import.meta.url).resolve('@webos-tools/cli/package.json')
   );
-  run(process.execPath, [
-    join(cli, 'bin/ares-package.js'),
-    stage,
-    join(root, 'webos-service'),
-    '--outdir',
-    out,
-    '--no-minify',
-  ]);
+  const manifest = join(stage, 'appinfo.json');
+  for (const { resolution, suffix } of variants) {
+    const info = JSON.parse(readFileSync(manifest, 'utf8'));
+    writeFileSync(manifest, JSON.stringify({ ...info, resolution }, null, 2));
+    // ares-package names the file after the app id and version, so each variant
+    // is packaged into its own folder and then renamed.
+    const destination = join(out, `webos-package${suffix}`);
+    rmSync(destination, { recursive: true, force: true });
+    mkdirSync(destination, { recursive: true });
+    run(process.execPath, [
+      join(cli, 'bin/ares-package.js'),
+      stage,
+      join(root, 'webos-service'),
+      '--outdir',
+      destination,
+      '--no-minify',
+    ]);
+    const ipk = readdirSync(destination).find((name) => name.endsWith('.ipk'));
+    if (!ipk) throw new Error(`No .ipk produced in ${destination}`);
+    const file = join(out, `aiostreams-webos-${version}${suffix}.ipk`);
+    rmSync(file, { force: true });
+    renameSync(join(destination, ipk), file);
+    rmSync(destination, { recursive: true, force: true });
+  }
 } else if (platform === 'tizen') {
   const stage = stageApp(
     'config.xml',

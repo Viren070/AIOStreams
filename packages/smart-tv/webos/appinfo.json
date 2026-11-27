@@ -6,7 +6,7 @@
   "title": "AIOStreams",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
-  "resolution": "1280x720",
+  "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
   "requiredACG": []
 }
