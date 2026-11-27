@@ -1,4 +1,4 @@
-﻿import { Addon, ParsedStream, UserData } from '../db/schemas.js';
+import { Addon, ParsedStream, UserData } from '../db/schemas.js';
 import {
   constants,
   createLogger,
@@ -596,10 +596,9 @@ export function getServiceCredential(service: {
     case constants.SEEDR_SERVICE:
       return creds.encodedToken;
     case constants.PIKPAK_SERVICE:
-      return JSON.stringify({
-        email: creds.email,
-        password: creds.password,
-      });
+      return creds.email && creds.password
+        ? `${creds.email}:${creds.password}`
+        : undefined;
     default:
       return creds.apiKey;
   }
