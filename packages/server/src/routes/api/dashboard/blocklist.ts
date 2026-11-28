@@ -282,6 +282,9 @@ async function snapshot() {
       backboneScope: settings.backboneScope,
       backboneGrouping: settings.backboneGrouping,
       trustedBackbones: settings.trustedBackbones,
+      repeatFailures: settings.repeatFailures,
+      groupDemotionThreshold: settings.groupDemotionThreshold,
+      groupDemotionWindowDays: settings.groupDemotionWindowDays,
       publicExport: settings.publicExport,
       publicExportScope: settings.publicExportScope,
       // The publishing page both edits this and builds the ?key= subscribe
