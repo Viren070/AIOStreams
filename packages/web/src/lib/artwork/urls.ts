@@ -1,3 +1,4 @@
+import React from 'react';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import { currentHost } from '@/lib/hosts';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
@@ -125,6 +126,21 @@ export function cardImages(
   ].filter((url): url is string => !!url);
 }
 
+/**
+ * A wide card's art as the hero, its page and the player's cover show the
+ * title: its backdrop first, an episode's its show's, the same picture
+ * throughout.
+ */
+export function wideCardUrls(
+  client: JellyfinClient,
+  item: BaseItemDto,
+  size?: Size
+): string[] {
+  const all = landscapeUrls(client, item, size);
+  const backdrop = backdropUrl(client, item, size);
+  return backdrop ? [backdrop, ...all.filter((url) => url !== backdrop)] : all;
+}
+
 /** A landscape still: an episode's own, else a thumb or backdrop. */
 export function landscapeUrl(
   client: JellyfinClient,
@@ -161,21 +177,107 @@ export function landscapeUrls(
   return candidates.filter((url): url is string => !!url);
 }
 
+/**
+ * One backdrop per title wherever it shows. The server tags each list's
+ * items with the art of whichever source the list came from, some of it
+ * small, so one title can carry a different backdrop in each. The finest
+ * source's holds: the hero's, then the title's own details', then any
+ * list's; one that turns up finer than what's drawn redraws it.
+ */
+export const BACKDROP_RANK = { list: 1, details: 2, hero: 3 } as const;
+type BackdropRank = keyof typeof BACKDROP_RANK;
+
+const backdropOf = new Map<string, { tag: string; rank: number }>();
+let backdropsVersion = 0;
+let notifying = false;
+const backdropListeners = new Set<() => void>();
+/** Titles drawn without a backdrop, redrawn once one is settled. */
+const drawnBare = new Set<string>();
+
+function settle(
+  id: string | null | undefined,
+  tag: string | null | undefined,
+  rank: BackdropRank
+): void {
+  if (!id || !tag) return;
+  const was = backdropOf.get(id);
+  // A list's first holds; a newer fetch of the hero or the details replaces its own.
+  const strength = BACKDROP_RANK[rank];
+  if (
+    was &&
+    (was.rank > strength || (was.rank === strength && rank === 'list'))
+  )
+    return;
+  backdropOf.set(id, { tag, rank: BACKDROP_RANK[rank] });
+  const bare = drawnBare.delete(id);
+  if ((!was && !bare) || was?.tag === tag || notifying) return;
+  // Often while drawing, so after it.
+  notifying = true;
+  queueMicrotask(() => {
+    notifying = false;
+    backdropsVersion++;
+    for (const listener of backdropListeners) listener();
+  });
+}
+
+/** Settles `item`'s backdrop, and its show's, at `rank`'s strength. */
+export function settleBackdrop(
+  item: BaseItemDto,
+  rank: BackdropRank = 'list'
+): void {
+  settle(item.Id, item.BackdropImageTags?.[0], rank);
+  settle(item.ParentBackdropItemId, item.ParentBackdropImageTags?.[0], rank);
+}
+
+/** Redraws the caller when a title's backdrop is settled on a finer one. */
+const subscribeBackdrops = (listener: () => void) => {
+  backdropListeners.add(listener);
+  return () => void backdropListeners.delete(listener);
+};
+const backdropsNow = () => backdropsVersion;
+
+export function useBackdropsSettled(): number {
+  return React.useSyncExternalStore(subscribeBackdrops, backdropsNow);
+}
+
+const settledTag = (id: string | null | undefined) =>
+  id ? backdropOf.get(id)?.tag : undefined;
+
 export function backdropUrl(
   client: JellyfinClient,
   item: BaseItemDto,
   size?: Size
 ): string | null {
-  return (
-    image(client, item.Id, 'Backdrop', item.BackdropImageTags?.[0], size) ??
-    image(
-      client,
-      item.ParentBackdropItemId,
-      'Backdrop',
-      item.ParentBackdropImageTags?.[0],
-      size
-    )
-  );
+  settleBackdrop(item);
+  // One settled elsewhere still holds where this copy of the title has none.
+  const own = settledTag(item.Id) ?? item.BackdropImageTags?.[0];
+  if (own) return image(client, item.Id, 'Backdrop', own, size);
+  if (item.Id) drawnBare.add(item.Id);
+  // An episode's is its show's, the same as the show's own wherever it shows.
+  const show = item.ParentBackdropItemId;
+  const shows = settledTag(show) ?? item.ParentBackdropImageTags?.[0];
+  if (show && !shows) drawnBare.add(show);
+  return image(client, show, 'Backdrop', shows, size);
+}
+
+/**
+ * The backdrop each title was last shown with, as a list's details can lead
+ * with another picture than its page's, often a poorer one; its page then
+ * opens on the same.
+ */
+const shownBackdrops = new Map<string, string>();
+
+export function noteShownBackdrop(
+  id: string | null | undefined,
+  src: string | null | undefined
+): void {
+  if (id && src) shownBackdrops.set(id, src);
+}
+
+/** `urls` led by the backdrop `id` was last shown with, where there's one. */
+export function shownFirst(id: string | undefined, urls: string[]): string[] {
+  const shown = id ? shownBackdrops.get(id) : undefined;
+  return shown ? [shown, ...urls.filter((url) => url !== shown)] : urls;
 }
 
 export function backdropUrls(

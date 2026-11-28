@@ -18,7 +18,7 @@ import {
   useUpcoming,
   useViews,
 } from '@/lib/jellyfin/queries';
-import { landscapeUrls } from '@/lib/artwork/urls';
+import { landscapeUrls, wideCardUrls } from '@/lib/artwork/urls';
 import {
   dayLabel,
   libraryLabel,
@@ -257,9 +257,7 @@ function EpisodeRow({
                 if (straight(item, startMs)) picker.play(item, { startMs });
                 else navigate(versionsPath(item));
               }}
-              image={(width) =>
-                landscapeUrls(client, item, { maxWidth: width })
-              }
+              image={(width) => wideCardUrls(client, item, { maxWidth: width })}
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
               meta={

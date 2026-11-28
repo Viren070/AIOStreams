@@ -15,7 +15,14 @@ import { usePageShown } from '@/lib/page-shown';
 import { useFetchNextUp, useItem } from '@/lib/jellyfin/queries';
 import { focusOn, keyboardFocus, useAction } from '@/lib/input';
 import { ScrollRoot, watch } from '@/hooks/use-in-view';
-import { backdropUrl, landscapeUrl, logoUrl } from '@/lib/artwork/urls';
+import {
+  backdropUrl,
+  landscapeUrl,
+  logoUrl,
+  noteShownBackdrop,
+  settleBackdrop,
+  useBackdropsSettled,
+} from '@/lib/artwork/urls';
 import { itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
 import { useVersionPicker } from '@/features/versions/version-picker';
@@ -661,6 +668,12 @@ export function Hero({
   const { client } = useSession();
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
+  // Its titles show one art wherever they appear, whichever place came first.
+  for (const each of featured) settleBackdrop(each, 'hero');
+  const showing = featured[index];
+  React.useEffect(() => {
+    if (showing) noteShownBackdrop(showing.Id, backdropSrc(client, showing));
+  }, [client, showing]);
   useArtBackground(featured[index]);
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
@@ -906,7 +919,11 @@ function FollowBackdrop({
   trailer: { box: React.ReactNode; shown: boolean };
 }) {
   const { client } = useSession();
+  // Kept behind a title's page, which settles its backdrop on its details.
+  useBackdropsSettled();
   const src = item && backdropSrc(client, item);
+  // Its page opens on the picture shown here, as the hero's does.
+  React.useEffect(() => noteShownBackdrop(item?.Id, src), [item?.Id, src]);
   const fade = cn(
     'transition-opacity duration-700',
     trailer.shown && 'opacity-0'
