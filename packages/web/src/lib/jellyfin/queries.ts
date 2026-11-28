@@ -124,10 +124,14 @@ export function useNoteResumed() {
   ) => {
     const finished =
       durationMs > 0 && positionMs / durationMs >= FINISHED_SHARE;
+    // The player pinned its copy as playback started; a favourite or rating
+    // set from the mini player since is only in the cached one.
+    const current =
+      queryClient.getQueryData<BaseItemDto>([...key, 'item', item.Id]) ?? item;
     const moved = {
-      ...item,
+      ...current,
       UserData: {
-        ...item.UserData,
+        ...current.UserData,
         PlaybackPositionTicks: finished ? 0 : Math.round(positionMs * 10_000),
         // Progress bars read this before the position, so it can't be left
         // showing the last time's.
@@ -135,7 +139,7 @@ export function useNoteResumed() {
           !finished && durationMs > 0
             ? (positionMs / durationMs) * 100
             : undefined,
-        Played: finished || !!item.UserData?.Played,
+        Played: finished || !!current.UserData?.Played,
         LastPlayedDate: new Date().toISOString(),
       },
     } as BaseItemDto;
