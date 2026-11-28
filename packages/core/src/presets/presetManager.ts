@@ -88,6 +88,7 @@ import { DavexPreset } from './davex.js';
 import { HdHubPreset } from './hdhub.js';
 import { PenguPlayPreset } from './penguplay.js';
 import { BaguettioPreset } from './baguettio.js';
+import { SubtitleSyncPreset } from './subtitleSync.js';
 import { Preset } from './index.js';
 
 let PRESET_LIST: string[] = [
@@ -172,6 +173,7 @@ let PRESET_LIST: string[] = [
   'opensubtitles-v3-plus',
   'subsource',
   'subdl',
+  'subtitle-sync',
   'subhero',
   'aiosubtitle',
   'ai-companion',
@@ -301,6 +303,8 @@ export class PresetManager {
         return SubSourcePreset;
       case 'subdl':
         return SubDLPreset;
+      case 'subtitle-sync':
+        return SubtitleSyncPreset;
       case 'ai-search':
         return AISearchPreset;
       case 'aiosubtitle':
