@@ -11,11 +11,13 @@ import { appBridge } from '@/lib/hosts/shell/bridge';
 import { settings, useSetting } from '@/lib/settings';
 import { pageRtl } from '@/lib/direction';
 import { easeLayers, GLIDE_MS } from '@/lib/input/glide';
+import { inOverlay } from '@/lib/input/focus';
 import {
   backdropUrls,
   cardImages,
   landscapeUrls,
   logoUrl,
+  WIDE_ART_WIDTH,
 } from '@/lib/artwork/urls';
 import {
   airedLabel,
@@ -62,7 +64,8 @@ interface Previews {
   rest(target: Target): void;
   /** Cancels only a waiting preview: an open one covers its card, so leaving the card enters it. */
   leave(): void;
-  blur(): void;
+  /** `to` is where focus went, if known. */
+  blur(to: EventTarget | null): void;
 }
 
 const PreviewContext = React.createContext<Previews | null>(null);
@@ -81,7 +84,8 @@ export function useCardPreview(item: BaseItemDto) {
       if ((e.target as Element).matches(':focus-visible'))
         previews.rest({ item, card: e.currentTarget, byFocus: true });
     },
-    onBlur: previews.blur,
+    onBlur: (e: React.FocusEvent<HTMLElement>) =>
+      previews.blur(e.relatedTarget),
   };
 }
 
@@ -263,7 +267,27 @@ export function CardPreviewHost({ children }: { children: React.ReactNode }) {
         );
       },
       leave: cancel,
-      blur: shut,
+      // Focus gone into a menu the card opened, such as a held OK's, comes back
+      // to it, so it stays open meanwhile. Gone to another card, it closes at
+      // once, before the row moves to that card by its width.
+      blur(to) {
+        if (to instanceof Element) {
+          if (!inOverlay(to)) shut();
+          // Kept open for a menu over it, but not opened under one.
+          else if (!shownRef.current) cancel();
+          return;
+        }
+        // Not opened under a menu that takes focus late, nor after focus left.
+        cancel();
+        // A menu can take focus a frame after the card loses it.
+        const was = shownRef.current;
+        requestAnimationFrame(() => {
+          if (pending.current || shownRef.current !== was) return;
+          const active = document.activeElement;
+          if (active instanceof HTMLElement && inOverlay(active)) return;
+          shut();
+        });
+      },
     };
   }, []);
   React.useEffect(
@@ -649,7 +673,14 @@ function OpenCard({
         !open && 'invisible'
       )}
     >
-      <PreviewBody listed={item} trailer={trailer.playing} fill />
+      <PreviewBody
+        listed={item}
+        trailer={trailer.playing}
+        fill
+        // A wide card's own art is a film's or show's picture already: it
+        // stays and opens with the card. An episode turns to its own still.
+        ownArt={grows || item.Type === 'Episode'}
+      />
       {grows && (
         <div
           data-ui="open-card-poster"
@@ -681,16 +712,21 @@ function PreviewBody({
   listed,
   trailer = false,
   fill = false,
+  ownArt = true,
 }: {
   listed: BaseItemDto;
   /** Its trailer plays beneath: the art gives way, and the details soon after. */
   trailer?: boolean;
   fill?: boolean;
+  /** Without it, the card's own art shows through where its art would be. */
+  ownArt?: boolean;
 }) {
   const { client } = useSession();
   // A row's items leave out the overview and genres, but hold the latest watch state.
+  const query = useItem(listed.Id ?? '');
+  const details = query.data;
   const item = {
-    ...(useItem(listed.Id ?? '').data ?? listed),
+    ...(details ?? listed),
     UserData: listed.UserData,
   };
   const [quiet, setQuiet] = React.useState(false);
@@ -701,6 +737,12 @@ function PreviewBody({
   }, [trailer]);
   const logo = logoUrl(client, item, { maxWidth: 480 });
   const [failedLogo, setFailedLogo] = React.useState<string>();
+  const [loadedLogo, setLoadedLogo] = React.useState<string>();
+  // Its words show together, once its details and logo are in, rather than
+  // each as it comes.
+  const ready =
+    (!!details || query.isError) &&
+    (!logo || loadedLogo === logo || failedLogo === logo);
   const episode = item.Type === 'Episode';
   // A show's progress and running time aren't one video's.
   const series = item.Type === 'Series';
@@ -718,29 +760,57 @@ function PreviewBody({
   const meta = parts.filter(([, part]) => part);
   const genres = episode ? '' : (item.Genres ?? []).slice(0, 3).join(' · ');
   const fade = 'transition-opacity duration-500';
+  // The row's own art where it has some, so the details coming don't swap it.
+  const artOf = (episode ? landscapeUrls : backdropUrls)(client, listed, {
+    maxWidth: 1,
+  }).length
+    ? listed
+    : item;
 
   return (
-    <div className={cn('relative', fill ? 'h-full' : 'aspect-video')}>
-      <div className={cn('absolute inset-0', fade, trailer && 'opacity-0')}>
-        <Artwork
-          // A thumb usually has the title in it, which the logo would repeat.
-          src={(width) =>
-            (episode ? landscapeUrls : backdropUrls)(client, item, {
-              maxWidth: width,
-            })
-          }
-          alt=""
-        />
+    <div
+      data-art={ownArt ? 'own' : 'card'}
+      className={cn('relative', fill ? 'h-full' : 'aspect-video')}
+    >
+      <div
+        className={cn(
+          'absolute inset-0',
+          fade,
+          (trailer || !ownArt) && 'opacity-0'
+        )}
+      >
+        {/* Never shown without its own art, so not fetched either. */}
+        {ownArt && (
+          <Artwork
+            // A thumb usually has the title in it, which the logo would repeat.
+            src={(width) =>
+              episode
+                ? landscapeUrls(client, artOf, { maxWidth: width })
+                : // As its card drew it, so it opens on that same picture.
+                  backdropUrls(client, artOf, { maxWidth: WIDE_ART_WIDTH })
+            }
+            alt=""
+          />
+        )}
       </div>
       <div className={cn('absolute -inset-px', fade, quiet && 'opacity-0')}>
         {/* Past the box's clip: at a fractional size the shade can stop a row short. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/0" />
-        <div className="absolute inset-x-0 bottom-0 space-y-1.5 px-4 pb-4">
+        <div
+          data-ui="card-preview-shade"
+          className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/0"
+        />
+        <div
+          className={cn(
+            'absolute inset-x-0 bottom-0 space-y-1.5 px-4 pb-4 transition-opacity duration-200',
+            !ready && 'opacity-0'
+          )}
+        >
           {logo && failedLogo !== logo ? (
             <CachedImage
               data-ui="card-preview-logo"
               src={logo}
               alt={itemTitle(item)}
+              onLoad={() => setLoadedLogo(logo)}
               onError={() => setFailedLogo(logo)}
               className="max-h-10 w-auto max-w-[60%] object-contain object-left rtl:object-right"
             />

@@ -18,7 +18,7 @@ import {
   useUpcoming,
   useViews,
 } from '@/lib/jellyfin/queries';
-import { landscapeUrls } from '@/lib/artwork/urls';
+import { landscapeUrls, WIDE_ART_WIDTH } from '@/lib/artwork/urls';
 import {
   dayLabel,
   libraryLabel,
@@ -258,7 +258,10 @@ function EpisodeRow({
                 else navigate(versionsPath(item));
               }}
               image={(width) =>
-                landscapeUrls(client, item, { maxWidth: width })
+                landscapeUrls(client, item, {
+                  // An episode's preview shows its own still instead.
+                  maxWidth: item.Type === 'Episode' ? width : WIDE_ART_WIDTH,
+                })
               }
               title={itemTitle(item)}
               subtitle={itemSubtitle(item)}
