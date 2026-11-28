@@ -36,6 +36,7 @@ import {
   progressOf,
 } from '@/lib/format';
 import { Overview } from '@/components/media/overview';
+import { episodeLine, seasonEpisodeTitle } from '@/components/media/episodes';
 import { PlayProgress } from '@/components/media/play-progress';
 import { ScoreRefresh, Scores, scoresOf } from '@/components/media/scores';
 import { SeasonCount } from '@/components/media/season-count';
@@ -140,6 +141,7 @@ const MetaRow = React.memo(function MetaRow({
 
 /** The episode a show goes on with: its number, title and overview. */
 function NextEpisode({ episode }: { episode: BaseItemDto }) {
+  const { client } = useSession();
   return (
     <div data-ui="item-next-episode" className="space-y-1.5">
       <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold text-white max-sm:justify-center">
@@ -153,11 +155,15 @@ function NextEpisode({ episode }: { episode: BaseItemDto }) {
           </>
         )}
       </p>
-      {episode.Overview && (
-        <p className="line-clamp-4 max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base">
-          {episode.Overview}
-        </p>
-      )}
+      {/* As the show's own overview, so a long one still opens in full. */}
+      <Overview
+        title={seasonEpisodeTitle(episode)}
+        line={episodeLine(episode)}
+        overview={episode.Overview}
+        image={landscapeUrls(client, episode, { maxWidth: 480 })}
+        clampClass="max-h-[4lh]"
+        className="max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base"
+      />
     </div>
   );
 }
