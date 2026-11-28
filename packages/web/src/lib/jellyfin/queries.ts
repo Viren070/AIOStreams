@@ -466,6 +466,14 @@ function listedItem(
   return undefined;
 }
 
+/** A title's details as fetched before, if they still are, without fetching them. */
+export function useCachedItem() {
+  const queryClient = useQueryClient();
+  const options = useItemOptions();
+  return (itemId: string) =>
+    queryClient.getQueryData<BaseItemDto>(options(itemId).queryKey);
+}
+
 /**
  * With `page`, for the title's page: a list already loaded that shows the item
  * stands in until it arrives, and it is asked for as the page starts to draw.
