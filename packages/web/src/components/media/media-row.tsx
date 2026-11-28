@@ -245,6 +245,57 @@ const ROOM = 16;
 /** Keys, a remote or a gamepad keep focus where a row's first card starts, until its end. */
 const anchored = () => !!keyboardFocus();
 
+/** Where a box starts from the screen's start edge, as laid out, not as a page slides in. */
+function layoutStart(box: HTMLElement, rtl: boolean): number {
+  let left = 0;
+  for (
+    let el: HTMLElement | null = box;
+    el;
+    el = el.offsetParent as HTMLElement | null
+  )
+    left += el.offsetLeft;
+  return rtl ? window.innerWidth - left - box.offsetWidth : left;
+}
+
+/** How dim the cards a TV row has passed show, at the screen's edge and at the row's start. */
+const PASSED_EDGE = 0.12;
+const PASSED_NEAR = 0.3;
+/** The fade from the passed cards to the row's own. */
+const PASSED_FADE = 16;
+
+/**
+ * On a TV, the room from the screen's edge to the row's start, under the rail
+ * or the page's margin, where the cards it has passed stay in sight, dimmed,
+ * so it shows there is more back that way.
+ */
+function usePassed(ref: React.RefObject<HTMLElement | null>, on: boolean) {
+  const [passed, setPassed] = React.useState({ room: 0, rtl: false });
+  React.useLayoutEffect(() => {
+    const box = ref.current?.parentElement;
+    if (!on || !box) return;
+    const measure = () => {
+      const rtl = getComputedStyle(box).direction === 'rtl';
+      const room = Math.max(0, Math.round(layoutStart(box, rtl)));
+      setPassed((was) =>
+        was.room === room && was.rtl === rtl ? was : { room, rtl }
+      );
+    };
+    measure();
+    // The rail opening or the window changing size moves the row's start.
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    // A language read after start can flip the page's direction, which moves
+    // the passed cards to the other side without resizing the row.
+    const flip = new MutationObserver(measure);
+    flip.observe(document.documentElement, { attributeFilter: ['dir'] });
+    return () => {
+      observer.disconnect();
+      flip.disconnect();
+    };
+  }, [ref, on]);
+  return passed;
+}
+
 /**
  * A TV's or touch screen's row: a plain scroller, as Embla's measuring and
  * scripted easing are too much for a TV's CPU and stutter a swipe. Focus jumps
@@ -270,16 +321,20 @@ function NativeRow({
   const ref = React.useRef<HTMLDivElement>(null);
   const content = React.useRef<HTMLDivElement>(null);
   const layer = React.useRef<HTMLDivElement>(null);
+  const tv = !!currentHost().tv;
+  const { room, rtl } = usePassed(ref, tv);
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const saved = restoreKey ? savedScroll.get(restoreKey) : undefined;
-    const card = content.current?.children[start];
+    const row = content.current;
+    const card = row?.children[start];
     if (saved !== undefined) el.scrollLeft = saved;
-    else if (start && card instanceof HTMLElement && content.current)
+    // Where the first card starts, as focus puts a card, whatever room is before it.
+    else if (start && card instanceof HTMLElement && row)
       scrollToStart(
         el,
-        startOf(content.current, el) + startOf(card, content.current)
+        startOf(card, row) - startOf(row.firstElementChild as HTMLElement, row)
       );
     // Once, as the carousel reads its start once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -350,7 +405,21 @@ function NativeRow({
       el.removeEventListener('scroll', check);
     };
   }, [restoreKey, onEnd, onView, count]);
-  useMarkOutOfView(content, count, ref, undefined, !!currentHost().tv);
+  // The passed cards, dimmed in the room before the row, are not where arrows go.
+  useMarkOutOfView(
+    content,
+    count,
+    ref,
+    room
+      ? rtl
+        ? `0px -${room}px 0px 0px`
+        : `0px 0px 0px -${room}px`
+      : undefined,
+    tv
+  );
+  const dim = room
+    ? `linear-gradient(to ${rtl ? 'left' : 'right'}, rgb(0 0 0 / ${PASSED_EDGE}), rgb(0 0 0 / ${PASSED_NEAR}) ${Math.max(0, room - PASSED_FADE)}px, #000 ${room}px)`
+    : undefined;
   return (
     <div
       ref={ref}
@@ -361,9 +430,18 @@ function NativeRow({
         'relative -mb-1.5 -me-4 -ms-1.5 pb-1.5 lg:-me-10',
         // TV rows move only with focus, so they just clip: a scroller is a
         // layer of its own, rebuilt with every frame's layers.
-        !currentHost().tv &&
+        !tv &&
           'overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
       )}
+      style={
+        room
+          ? {
+              marginInlineStart: `calc(-0.375rem - ${room}px)`,
+              maskImage: dim,
+              WebkitMaskImage: dim,
+            }
+          : undefined
+      }
     >
       {Array.from({ length: GLIDE_LAYERS }).reduceRight<React.ReactNode>(
         (inside, _, i) => (
@@ -384,6 +462,11 @@ function NativeRow({
             // A scroller leaves the last card's margin out of its end.
             "relative mt-3 ps-1.5 after:shrink-0 after:basis-4 after:content-['']"
           )}
+          style={
+            room
+              ? { paddingInlineStart: `calc(0.375rem + ${room}px)` }
+              : undefined
+          }
         >
           <RowScroller.Provider value={ref}>{children}</RowScroller.Provider>
         </div>
