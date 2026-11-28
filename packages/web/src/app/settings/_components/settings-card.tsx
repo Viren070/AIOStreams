@@ -129,13 +129,13 @@ export function SettingsCard({
       )}
       <Card
         data-ui="settings-card-body"
-        className="divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
+        className="art-glass divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
       >
         {React.Children.map(children, (child) =>
           child ? (
             <div
               data-ui="settings-card-item"
-              className="p-3 transition-colors hover:bg-gray-900 empty:hidden"
+              className="over-art p-3 transition-colors hover:bg-gray-900 empty:hidden"
             >
               {child}
             </div>

@@ -56,12 +56,12 @@ function Shade() {
       <div
         data-ui="hero-shade"
         data-name="side"
-        className="absolute inset-0 bg-[--background] [mask-image:linear-gradient(to_right,black,rgb(0_0_0/0.7)_35%,transparent)] max-sm:hidden rtl:[mask-image:linear-gradient(to_left,black,rgb(0_0_0/0.7)_35%,transparent)]"
+        className="over-art absolute inset-0 bg-[--background] [mask-image:linear-gradient(to_right,black,rgb(0_0_0/0.7)_35%,transparent)] max-sm:hidden rtl:[mask-image:linear-gradient(to_left,black,rgb(0_0_0/0.7)_35%,transparent)]"
       />
       <div
         data-ui="hero-shade"
         data-name="bottom"
-        className="absolute inset-x-0 bottom-0 h-2/3 bg-[--background] [mask-image:linear-gradient(to_top,black,rgb(0_0_0/0.6),transparent)] max-sm:h-1/2"
+        className="over-art absolute inset-x-0 bottom-0 h-2/3 bg-[--background] [mask-image:linear-gradient(to_top,black,rgb(0_0_0/0.6),transparent)] max-sm:h-1/2"
       />
     </>
   );
@@ -109,7 +109,12 @@ function HeroTextSkeleton() {
 /** The hero's own box and shading, with its text and buttons blocked out. */
 function HeroSkeleton() {
   return (
-    <section aria-hidden data-ui="hero" data-loading className={HERO_BOX}>
+    <section
+      aria-hidden
+      data-ui="hero"
+      data-loading
+      className={cn('over-art', HERO_BOX)}
+    >
       <div className="absolute inset-0 animate-pulse bg-[--subtle]" />
       <Shade />
       <div className={HERO_CONTENT}>
@@ -621,7 +626,7 @@ function HeroTrailer({
       ref={setSpot}
       data-ui="hero-trailer"
       // Wide, so a trailer's own bars are cropped away, even where that runs past the hero's start.
-      className="pointer-events-none absolute end-0 top-0 aspect-[2.39/1] h-full"
+      className="over-art pointer-events-none absolute end-0 top-0 aspect-[2.39/1] h-full"
     >
       <div className="absolute -inset-px">
         {fades && (
@@ -778,7 +783,7 @@ export function Hero({
       ref={section}
       data-ui="hero"
       data-nav-top
-      className={cn(HERO_BOX, 'touch-pan-y touch-pinch-zoom')}
+      className={cn('over-art', HERO_BOX, 'touch-pan-y touch-pinch-zoom')}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => {
         setPaused(false);
@@ -804,7 +809,7 @@ export function Hero({
         data-ui="hero-art"
         // Fades out at its edge, where some GPUs draw the art's last row past
         // the shade. Not on the art's own box, which moves as the page scrolls.
-        className="absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_2px)]"
+        className="over-art absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_2px)]"
       >
         <div
           data-ui="hero-backdrops"
@@ -944,7 +949,7 @@ function FollowBackdrop({
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
       {box}
-      <div data-ui="hero-art" className="absolute inset-0">
+      <div data-ui="hero-art" className="over-art absolute inset-0">
         <BackdropFrame className={cn('max-w-[calc(100vh*2.6)]', fade)}>
           <Backdrops current={src} />
         </BackdropFrame>
@@ -1065,7 +1070,7 @@ export function FollowHero({
         <section
           data-ui="hero"
           data-follow
-          className="flex h-[var(--hero-h)] flex-none flex-col justify-end"
+          className="over-art flex h-[var(--hero-h)] flex-none flex-col justify-end"
         >
           <div
             data-ui="hero-content"

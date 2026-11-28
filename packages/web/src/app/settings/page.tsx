@@ -342,7 +342,7 @@ function SearchResults({
             key={s.id}
             data-ui="settings-panel"
             data-name={s.id}
-            className="space-y-6"
+            className="over-art space-y-6"
           >
             <SettingsPageHeader
               title={s.label}
@@ -412,7 +412,7 @@ function NarrowSettings({
           data-ui="settings-panel"
           data-name={picked.id}
           className={cn(
-            'space-y-6',
+            'over-art space-y-6',
             !slidIn &&
               'duration-300 animate-in fade-in-0 slide-in-from-bottom-2'
           )}
@@ -446,7 +446,7 @@ function NarrowSettings({
               <Card
                 data-ui="settings-tab-group"
                 data-name={group}
-                className="divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
+                className="art-glass divide-y-2 divide-gray-700/40 overflow-clip rounded-xl border-white/10 bg-gray-950/70"
               >
                 {items.map((s) => (
                   <button
@@ -454,7 +454,7 @@ function NarrowSettings({
                     type="button"
                     data-ui="settings-tab"
                     data-name={s.id}
-                    className="flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
+                    className="over-art flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
                     onClick={() =>
                       navigate(to.settings(s.id, who), { over: true })
                     }
@@ -538,7 +538,7 @@ function WideSettings({
                 key={group}
                 data-ui="settings-tab-group"
                 data-name={group}
-                className="border border-white/10 bg-gray-950/70 p-2"
+                className="art-glass border border-white/10 bg-gray-950/70 p-2"
               >
                 <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--muted]">
                   {groupLabel(group)}
@@ -553,7 +553,7 @@ function WideSettings({
                       (!searching && s.id === active.id) || undefined
                     }
                     data-focus={still && !currentHost().tv ? undefined : 'own'}
-                    className="group"
+                    className="over-art group"
                     onFocus={() => {
                       setFocused(s.id);
                       // Results stay up while focus passes the tabs to reach them.
@@ -581,7 +581,7 @@ function WideSettings({
                 tabIndex={-1}
                 data-ui="settings-panel"
                 data-name={s.id}
-                className="space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
+                className="over-art space-y-6 duration-300 animate-in fade-in-0 slide-in-from-bottom-2"
               >
                 {s.id === shown && <SectionPanel section={s} />}
               </TabsContent>

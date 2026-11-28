@@ -163,7 +163,7 @@ export function useItemTrailer(item: BaseItemDto | undefined) {
           ref={setSpot}
           data-ui="item-trailer"
           aria-hidden
-          className="pointer-events-none fixed inset-0 -z-[4]"
+          className="over-art pointer-events-none fixed inset-0 -z-[4]"
         >
           <div
             className={cn(
