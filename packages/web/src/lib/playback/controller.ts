@@ -110,6 +110,8 @@ export interface PlayerController {
   /** Missing where the player cannot shift subtitles. */
   setSubtitleDelay?: (ms: number) => void;
   skipAhead?: (skips: PlannedSkip[]) => void;
+  /** Missing where the player can't fetch a seek's place early. */
+  prepareSeek?: (ms: number | null) => void;
   /** Keeps the subtitles above this share of the height, which the controls cover; 0 when they hide. */
   liftSubtitles?: (share: number) => void;
   /** The shown subtitle's lines, or null when the player cannot read them. */

@@ -25,6 +25,9 @@ interface Engine {
 
     fun setStyle(style: Style)
 
+    /** Where the page is about to seek, which an engine fetching ahead can fetch early; null once it won't. */
+    fun prepareSeek(positionMs: Double?) {}
+
     /** Stretches the page skips or offers to, which an engine fetching ahead can leave out or fetch past early. */
     fun setSkips(skips: List<Skip>) {}
 

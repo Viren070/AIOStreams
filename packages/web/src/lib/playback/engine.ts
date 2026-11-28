@@ -174,6 +174,8 @@ export interface PlayerEngine {
   /** The server's subtitles once more arrive, those it opened with first. */
   setSubtitles(subtitles: ServerSubtitle[]): void;
   setSubtitleDelay?(ms: number): void;
+  /** Where a seek is about to go, which a player fetching ahead can fetch early; null once it won't. */
+  prepareSeek?(ms: number | null): void;
   /** Stretches the page skips, which a player fetching ahead can leave out, or offers to, which it can fetch past early. */
   skipAhead?(skips: PlannedSkip[]): void;
   setStyle?(style: EngineStyle): void;

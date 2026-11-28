@@ -51,14 +51,36 @@ export function ChaptersSheet({
     open
   );
   const latest = useLatest(player);
+  const currentStartMs = React.useRef<number | undefined>(undefined);
+  currentStartMs.current = chapters[current]?.startMs;
+  const picked = React.useRef(false);
   const onPick = React.useCallback(
     (startMs: number) => {
       const { seek, thumbnails } = latest.current;
+      picked.current = true;
       seek(chapterSeekMs(startMs, thumbnails));
       onClose();
     },
     [latest, onClose]
   );
+  // The player can fetch the chapter in focus before it's picked.
+  const onAim = React.useCallback(
+    (startMs: number) => {
+      const { prepareSeek, thumbnails } = latest.current;
+      // The chapter playing, focused as the list opens, lies behind the playhead; back on it, the one aimed before is let go.
+      if (startMs === currentStartMs.current) return prepareSeek?.(null);
+      prepareSeek?.(chapterSeekMs(startMs, thumbnails));
+    },
+    [latest]
+  );
+  // Let go of an aimed chapter once the list shuts, not as the list first mounts.
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => {
+    if (open) picked.current = false;
+    else if (wasOpen.current && !picked.current)
+      latest.current.prepareSeek?.(null);
+    wasOpen.current = open;
+  }, [open, latest]);
   const list = React.useRef<HTMLDivElement>(null);
   const restoreFocus = useRestoreFocus(open);
 
@@ -117,6 +139,7 @@ export function ChaptersSheet({
             picture={pictures?.get(chapter.startMs)?.src}
             current={i === current}
             onPick={onPick}
+            onAim={onAim}
           />
         ))}
       </div>
@@ -162,6 +185,7 @@ const ChapterCard = React.memo(function ChapterCard({
   picture,
   current,
   onPick,
+  onAim,
 }: {
   index: number;
   chapter: Chapter;
@@ -169,6 +193,7 @@ const ChapterCard = React.memo(function ChapterCard({
   picture?: string;
   current: boolean;
   onPick(startMs: number): void;
+  onAim(startMs: number): void;
 }) {
   const number = index + 1;
   const title = chapter.title || t`Chapter ${number}`;
@@ -184,6 +209,7 @@ const ChapterCard = React.memo(function ChapterCard({
     'data-focus': 'own',
     'aria-current': current || undefined,
     onClick: () => onPick(chapter.startMs),
+    onFocus: () => onAim(chapter.startMs),
   };
   if (!pictured)
     return (
