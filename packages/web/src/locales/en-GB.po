@@ -35,6 +35,10 @@ msgstr "{count, plural, one {# badge} other {# badges}}"
 msgid "{count, plural, one {# minute} other {# minutes}}"
 msgstr "{count, plural, one {# minute} other {# minutes}}"
 
+#: src/components/media/season-count.tsx
+msgid "{count, plural, one {# season} other {# seasons}}"
+msgstr "{count, plural, one {# season} other {# seasons}}"
+
 #: src/app/settings/_components/common.tsx
 msgid "{count, plural, one {# second} other {# seconds}}"
 msgstr "{count, plural, one {# second} other {# seconds}}"
@@ -705,6 +709,10 @@ msgstr "Automatic"
 #: src/app/settings/browsing.tsx
 msgid "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
 msgstr "Automatic lists episodes on narrow screens and puts them in a row on wide ones."
+
+#: src/app/settings/browsing.tsx
+msgid "Automatic shows it beside the title's details, except on a TV, where the title's picture fills the screen behind them."
+msgstr "Automatic shows it beside the title's details, except on a TV, where the title's picture fills the screen behind them."
 
 #: src/app/player/page.tsx
 #: src/app/servers/page.tsx
@@ -2032,6 +2040,7 @@ msgstr "Hidden"
 msgid "Hidden, channels also leave search and favourites."
 msgstr "Hidden, channels also leave search and favourites."
 
+#: src/app/settings/browsing.tsx
 #: src/features/player/next-episode.tsx
 msgid "Hide"
 msgstr "Hide"
@@ -3601,6 +3610,10 @@ msgid "Position"
 msgstr "Position"
 
 #: src/app/settings/browsing.tsx
+msgid "Poster on a title's page"
+msgstr "Poster on a title's page"
+
+#: src/app/settings/browsing.tsx
 msgid "Poster size"
 msgstr "Poster size"
 
@@ -4293,6 +4306,10 @@ msgstr "Shift"
 #: src/app/settings/page.tsx
 msgid "Shortcuts"
 msgstr "Shortcuts"
+
+#: src/app/settings/browsing.tsx
+msgid "Show"
+msgstr "Show"
 
 #. A dot under the banner that brings this title up
 #: src/components/media/hero.tsx

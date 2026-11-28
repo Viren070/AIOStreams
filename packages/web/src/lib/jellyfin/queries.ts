@@ -539,6 +539,9 @@ function useShowOptions() {
             userId: user.Id,
             SeriesId: seriesId,
             Limit: 1,
+            // A title's header shows the episode's overview, which stock
+            // Jellyfin sends in a list only when asked.
+            Fields: 'Overview',
           }),
       }),
   };

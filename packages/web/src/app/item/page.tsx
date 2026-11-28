@@ -15,7 +15,7 @@ import { lacksDetails } from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
 import { PAGE_TOP, PageMessage } from '@/components/shell/page';
 import { NoDetails } from './_components/no-details';
-import { CastAndCrew } from '@/components/media/people';
+import { CastAndCrew, PeopleRowSkeleton } from '@/components/media/people';
 import { PickOnArrival } from '@/features/versions/version-picker';
 import { useTrailersAllowed } from '@/features/trailers/preview';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
@@ -46,6 +46,8 @@ export function ItemPage({
   const { client } = useSession();
   const item = useItem(itemId, { page: true });
   const data = item.data;
+  // What the list it was opened from knew, until its own details come.
+  const early = item.isPlaceholderData;
   useShowAhead(itemId, data?.Type === 'Series', seasonId);
   useArtBackground(data);
   const [season, setSeason] = React.useState<BaseItemDto>();
@@ -129,7 +131,15 @@ export function ItemPage({
           <HeaderSkeleton />
         ) : (
           <ItemTrailerContext.Provider value={trailer.context}>
-            <Header item={data} season={season} hero={hero} />
+            <Header
+              // Its pictures and wait start anew for each title.
+              key={data.Id}
+              item={data}
+              season={season}
+              hero={hero}
+              pending={early}
+              refreshing={item.isFetching}
+            />
             {data.Type === 'Series' && (
               <Seasons
                 series={data}
@@ -139,8 +149,14 @@ export function ItemPage({
               />
             )}
             {data.Type === 'BoxSet' && <Collection parent={data} />}
-            <CastAndCrew people={data.People} />
-            <Details item={data} />
+            {early ? (
+              <PeopleRowSkeleton />
+            ) : (
+              <>
+                <CastAndCrew people={data.People} />
+                <Details item={data} />
+              </>
+            )}
             {(data.Type === 'Movie' || data.Type === 'Series') && (
               <Similar itemId={data.Id!} />
             )}

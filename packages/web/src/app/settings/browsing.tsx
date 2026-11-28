@@ -16,6 +16,7 @@ import {
   type LiveTvPlace,
   type PosterLine,
   type PosterSize,
+  type TitlePoster,
 } from '@/lib/settings';
 import { SettingsCard } from './_components/settings-card';
 import { seconds, deviceOnly, DeviceOnly } from './_components/common';
@@ -144,6 +145,9 @@ export function BrowsingSection() {
   const [episodeLayout, setEpisodeLayout] = useSetting(
     settings.interface.episodeLayout
   );
+  const [titlePoster, setTitlePoster] = useSetting(
+    settings.interface.titlePoster
+  );
   const [cardPreview, setCardPreview] = useSetting(
     settings.interface.cardPreview
   );
@@ -250,6 +254,21 @@ export function BrowsingSection() {
             ]}
             value={episodeLayout}
             onValueChange={(value) => setEpisodeLayout(value as EpisodeLayout)}
+          />
+        </DeviceOnly>
+        <DeviceOnly>
+          <Select
+            label={t`Poster on a title's page`}
+            help={deviceOnly(
+              t`Automatic shows it beside the title's details, except on a TV, where the title's picture fills the screen behind them.`
+            )}
+            options={[
+              { value: 'auto', label: t`Automatic` },
+              { value: 'show', label: t`Show` },
+              { value: 'hide', label: t`Hide` },
+            ]}
+            value={titlePoster}
+            onValueChange={(value) => setTitlePoster(value as TitlePoster)}
           />
         </DeviceOnly>
         <Switch

@@ -46,6 +46,10 @@ export type PosterLine = 'title' | 'year';
 export const EPISODE_LAYOUTS = ['auto', 'row', 'list'] as const;
 export type EpisodeLayout = (typeof EPISODE_LAYOUTS)[number];
 
+/** Whether a title's page shows its poster: automatically, all but on a TV, where its backdrop fills the screen. */
+export const TITLE_POSTERS = ['auto', 'show', 'hide'] as const;
+export type TitlePoster = (typeof TITLE_POSTERS)[number];
+
 export const HERO_MODES = ['rotate', 'follow', 'corner'] as const;
 export type HeroMode = (typeof HERO_MODES)[number];
 export const HERO_SECONDS = [5, 7, 9, 12, 15, 20, 30] as const;
@@ -420,6 +424,11 @@ export const settings = {
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
     heroSeconds: syncedChoice<number>('heroSeconds', HERO_SECONDS, 9),
     liveTv: syncedChoice<LiveTvPlace>('liveTv', LIVE_TV_PLACES, 'home'),
+    titlePoster: device<TitlePoster>(
+      'aiostreams-web-interface-title-poster',
+      'auto',
+      TITLE_POSTERS
+    ),
     episodeLayout: device<EpisodeLayout>(
       'aiostreams-web-interface-episode-layout',
       'auto',
