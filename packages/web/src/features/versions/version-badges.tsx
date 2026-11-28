@@ -52,6 +52,37 @@ export function useBadges(): CompiledBadge[] {
   );
 }
 
+/** Badge pictures loaded ahead, held so the browser keeps them decoded. */
+const warmed = new Map<string, HTMLImageElement>();
+/** After the first screen's own pictures. */
+const WARM_DELAY_MS = 2000;
+
+/**
+ * Loads every badge's picture once the badges are known, so a version list
+ * shows them at once instead of as empty chips that fill in one by one.
+ */
+export function WarmBadges() {
+  const compiled = useBadges();
+  React.useEffect(() => {
+    const images = compiled
+      .map(({ badge }) => badge.image)
+      .filter((src): src is string => !!src && !warmed.has(src));
+    if (!images.length) return;
+    const timer = setTimeout(() => {
+      for (const src of images) {
+        if (warmed.has(src)) continue;
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.src = src;
+        warmed.set(src, img);
+        img.decode().catch(() => undefined);
+      }
+    }, WARM_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [compiled]);
+  return null;
+}
+
 export function BadgeChip({
   badge,
   className,
@@ -61,12 +92,24 @@ export function BadgeChip({
 }) {
   const [broken, setBroken] = React.useState(false);
   const image = broken ? undefined : badge.image;
+  // Its label stands in until the picture can be drawn, rather than an empty chip.
+  // It holds the address that loaded, so a changed picture waits for its own.
+  const [loaded, setLoaded] = React.useState<string>();
+  // Runs before the first paint, so a picture the warm-up left ready shows
+  // straight away; whether it is ready is asked of this chip's own image.
+  const ready = React.useCallback(
+    (el: HTMLImageElement | null) => {
+      if (el?.complete && el.naturalWidth) setLoaded(image);
+    },
+    [image]
+  );
+  const pictured = !!image && loaded === image;
   return (
     <span
       data-ui="version-badge"
       className={cn(
-        'inline-flex h-[1.375rem] flex-none items-center rounded-md border px-1.5 text-[0.6875rem] font-semibold leading-none',
-        image ? 'border-transparent' : 'border-white/60 text-white',
+        'inline-flex h-[1.125rem] flex-none items-center rounded-md border px-1.5 text-[0.6875rem] font-semibold leading-none',
+        pictured ? 'border-transparent' : 'border-white/60 text-white',
         className
       )}
       style={{
@@ -75,19 +118,21 @@ export function BadgeChip({
         borderColor: badge.border,
       }}
     >
-      {image ? (
+      {image && (
         <img
+          ref={ready}
           src={image}
           alt={badge.label}
-          loading="lazy"
-          decoding="async"
           referrerPolicy="no-referrer"
+          onLoad={() => setLoaded(image)}
           onError={() => setBroken(true)}
-          className="block max-h-4 w-auto max-w-[5.5rem] object-contain"
+          className={cn(
+            'block max-h-3.5 w-auto max-w-[5.5rem] object-contain',
+            !pictured && 'hidden'
+          )}
         />
-      ) : (
-        badge.label
       )}
+      {!pictured && badge.label}
     </span>
   );
 }

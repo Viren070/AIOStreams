@@ -51,6 +51,7 @@ import { ServerStyles, ThemeStyles } from './components/shell/theme-styles';
 import { WindowControls } from './components/shell/window-controls';
 import { InputSetup } from './components/shell/input-setup';
 import { CrashReportDialog } from './components/shell/crash-report';
+import { WarmBadges } from './features/versions/version-badges';
 import { SplashEnd } from './lib/splash';
 
 /** The web app served at the Jellyfin API's `/web`. */
@@ -380,6 +381,7 @@ function Session({
           changeServer={changeServer}
         >
           <RouterProvider router={webRouter} />
+          <WarmBadges />
           {/* Inside a session, which its report is sent through. */}
           {shellHost() && <CrashReportDialog />}
         </SessionProvider>
