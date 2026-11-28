@@ -17,7 +17,10 @@ import {
   TitleMetadata,
   FileInfo,
 } from '../debrid/index.js';
-import { processTorrents } from '../builtins/utils/debrid.js';
+import {
+  processTorrents,
+  type RejectedTorrent,
+} from '../builtins/utils/debrid.js';
 import { StreamContext } from '../streams/context.js';
 import { isServiceWrapEligibleP2PStream } from '../streams/utils.js';
 import { parseTorrentTitleCached } from '../parser/title.js';
@@ -28,6 +31,7 @@ const logger = createLogger('serviceWrapper');
 export interface ServiceWrapResult {
   streams: ParsedStream[];
   errors: ServiceWrapError[];
+  rejected?: RejectedTorrent[];
   hasNewStreams: boolean;
   serviceTimings?: Record<string, ServiceWrapServiceTiming>;
 }
@@ -191,11 +195,20 @@ export async function resolveServiceWrappedStreams(
   }
 
   const serviceTimings = processedTorrents.serviceTimings;
+  // One entry per wrapped stream; reconfigured streams keep their original
+  const rejectedByHash = new Map(
+    processedTorrents.rejected.map((r) => [r.hash, r])
+  );
+  const rejected = wrappedP2PStreams.flatMap((s) => {
+    const r = rejectedByHash.get(s.torrent?.infoHash ?? '');
+    return r ? [r] : [];
+  });
 
   if (processedTorrents.results.length === 0) {
     return {
       streams: otherStreams,
       errors,
+      rejected,
       hasNewStreams: false,
       serviceTimings,
     };
@@ -246,6 +259,7 @@ export async function resolveServiceWrappedStreams(
   return {
     streams: [...debridStreams, ...otherStreams],
     errors,
+    rejected,
     hasNewStreams: debridStreams.length > 0,
     serviceTimings,
   };

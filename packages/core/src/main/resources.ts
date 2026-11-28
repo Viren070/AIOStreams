@@ -330,6 +330,7 @@ export async function processStreams(
   serviceWrapMs = Date.now() - serviceWrapStart;
   processedStreams = resolvedResults.streams;
   errors.push(...resolvedResults.errors);
+  ctx.filterer.recordServiceWrapRejections(resolvedResults.rejected ?? []);
   if (resolvedResults.serviceTimings) {
     serviceWrapTimings = resolvedResults.serviceTimings;
   }
