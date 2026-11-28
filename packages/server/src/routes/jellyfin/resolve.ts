@@ -22,6 +22,7 @@ import {
   requestTitleMetadata,
   labelFrom,
   isMemoFresh,
+  metaHintFromMeta,
   resolveByItem,
   sourceIdentities,
   sourceRecordFrom,
@@ -30,6 +31,7 @@ import {
   writePlaybackMemo,
   type ContentDescriptor,
   type MediaSourceRecord,
+  type MetaHint,
   type ParsedMeta,
   type ParsedStream,
   type PlaybackMemo,
@@ -84,6 +86,7 @@ export interface PlayTarget {
   videoId: string;
   runtimeMs?: number;
   streams?: ParsedStream[];
+  metaHint?: MetaHint;
 }
 
 type MetaVideo = NonNullable<ParsedMeta['videos']>[number] &
@@ -111,6 +114,7 @@ export async function playTargetFor(
         parseRuntimeMs(video?.runtime) ??
         (aired > 0 ? aired : parseRuntimeMs(meta?.runtime)),
       streams: video?.streams ?? undefined,
+      metaHint: metaHintFromMeta(meta, video),
     };
   }
   if (d.k === 'movie') {
@@ -281,7 +285,12 @@ async function resolveUncached(
   const ownPlayable = inline.filter((s) => isPlayable(s, FULL_SUPPORT));
   const streamsRes = ownPlayable.length
     ? undefined
-    : await engine.getStreams(target.videoId, target.type);
+    : await engine.getStreams(
+        target.videoId,
+        target.type,
+        false,
+        target.metaHint
+      );
   const all = (
     ownPlayable.length ? inline : (streamsRes?.data?.streams ?? [])
   ) as ParsedStream[];
