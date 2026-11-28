@@ -37,6 +37,7 @@ import {
   progressOf,
 } from '@/lib/format';
 import { Overview } from '@/components/media/overview';
+import { episodeLine, seasonEpisodeTitle } from '@/components/media/episodes';
 import { TitleAbout } from './about';
 import { PlayProgress } from '@/components/media/play-progress';
 import { ScoreRefresh, Scores, scoresOf } from '@/components/media/scores';
@@ -158,6 +159,7 @@ function NextEpisode({
   /** Opens all about the episode, as a title's overview opens all about it. */
   onPress: () => void;
 }) {
+  const { client } = useSession();
   return (
     <div data-ui="item-next-episode" className="space-y-1.5">
       <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold text-white max-sm:justify-center">
@@ -171,16 +173,16 @@ function NextEpisode({
           </>
         )}
       </p>
-      {episode.Overview && (
-        <Overview
-          title={episode.Name ?? ''}
-          overview={episode.Overview}
-          image={[]}
-          clampClass="max-h-[4lh]"
-          onPress={onPress}
-          className="max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base [[data-tv]_&]:max-w-[50vw] [[data-tv]_&]:text-base"
-        />
-      )}
+      {/* As the show's own overview, so a long one still opens in full. */}
+      <Overview
+        title={seasonEpisodeTitle(episode)}
+        line={episodeLine(episode)}
+        overview={episode.Overview}
+        image={landscapeUrls(client, episode, { maxWidth: 480 })}
+        clampClass="max-h-[4lh]"
+        onPress={onPress}
+        className="max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base [[data-tv]_&]:max-w-[50vw] [[data-tv]_&]:text-base"
+      />
     </div>
   );
 }
