@@ -169,8 +169,14 @@ html.playing .page-background {
  * or more over.
  */
 /* Over the artwork, a row's hover lifts it rather than painting it over. */
-html[data-art-wash] .over-art[data-ui='settings-card-item']:hover {
+html[data-art-wash] .over-art[data-ui='settings-card-item']:hover,
+html[data-art-wash] .over-art[data-ui='settings-tab']:active {
   background-color: var(--subtle);
+}
+@media (hover: hover) {
+  html[data-art-wash] .over-art[data-ui='settings-tab']:hover {
+    background-color: var(--subtle);
+  }
 }
 /* A fading ancestor cuts glass off from what's behind it, so the tab only rises. */
 html[data-art-wash][data-art-glass]:not(.playing)

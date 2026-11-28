@@ -446,27 +446,30 @@ watch-history services you connect, and brings what they know you watched elsewh
 AIOStreams' **Continue Watching** and **Next Up**. Skip this step if you don't use one. It needs
 AIOMetadata inside AIOStreams, as in the **AIOStreams app** tab of step 7.
 
+In AIOMetadata's configuration, open the **Watch Tracking** tab and work down its three steps.
+
 <Steps>
   <Step>
-    In AIOMetadata's configuration, go to **Integrations** and connect the services you use.
-    Watch tracking works with Simkl, MDBList, AniList, MyAnimeList and PublicMetaDB.
+    **You watch on**: turn on **Jellyfin apps**. These are apps signed in to AIOMetadata's own
+    Jellyfin server or to AIOStreams, so the AIOStreams app is one of them.
+
+    Using Stremio too, with AIOMetadata installed there on its own as in step 7? Turn on **Addon
+    apps** as well, then install AIOMetadata in Stremio again when it asks you to, so Stremio
+    reports what you watch to it.
+
   </Step>
   <Step>
-    Go to **General → Watch Tracking** and turn on each service your plays should be recorded
-    to. The button beside each switch picks what it records, such as films, shows or anime.
+    **It counts as watched**: leave it on **When it's finished**, which the switches above pick
+    for you. A title you stop partway through then stays a resume point instead of being marked
+    watched. **When it's opened** marks a title watched as soon as you open it, but AIOStreams then
+    gets nothing from AIOMetadata.
   </Step>
   <Step>
-    Set **When to record** to **When playback starts and stops**.
-
-    AIOMetadata marks this **Jellyfin only**, as its pages are written for its own Jellyfin
-    server. Here, read Jellyfin as AIOStreams: the AIOStreams app reports playback the way
-    Jellyfin apps do. A title you stop partway through stays a resume point instead of being
-    marked watched, and what you watched on other devices shows in Continue Watching.
-
-    As AIOMetadata warns, watching anywhere else, Stremio included, then records nothing. If you
-    mostly watch in Stremio, leave it on **When a title is opened**, which records a title as
-    watched as soon as you open it, in any app; AIOStreams then gets nothing from AIOMetadata.
-
+    **And it's sent to**: click each service you use under **Not connected** to connect it.
+    Simkl, AniList and MyAnimeList open their sign-in, and MDBList and PublicMetaDB ask for an
+    API key. Then come back to **Watch Tracking** and turn on each service your plays should be
+    recorded to. Its buttons, such as **Movies** and **TV Shows**, pick what it records: tap one
+    to leave it out.
   </Step>
   <Step>
     Save AIOMetadata's configuration. Then in AIOStreams, click **Save changes**, so it reads
@@ -474,22 +477,30 @@ AIOMetadata inside AIOStreams, as in the **AIOStreams app** tab of step 7.
   </Step>
 </Steps>
 
-### AIOMetadata's Jellyfin button
+### Several people
 
-Once its configuration is saved, AIOMetadata may show a **Jellyfin** button next to **Install**.
-It's for AIOMetadata's own Jellyfin server, which you don't need: the AIOStreams app signs in to
-AIOStreams. So leave the dialog's server address, Quick Connect, client password and stream addon
-alone.
+If several people use your AIOStreams, each with their own watch-history accounts, add them on
+AIOMetadata's **People** tab:
 
-One part of it matters if several people use your AIOStreams, each with their own watch-history
-accounts: **users**. Add a user for each person, with **Same person as you** off, and connect
-their own accounts on their card. Under **Also known as (AIOStreams)**, put their name on
-AIOStreams, and the **tracker id** that **AIOStreams app → Profiles** shows for them.
-Then pick AIOMetadata as their tracker there: see
-[trackers for each user](/apps/media-server#trackers-for-each-profile).
+<Steps>
+  <Step>Click **Add person** and enter their name.</Step>
+  <Step>
+    Under **Who is this**, leave **Someone else** picked, and connect their own accounts under
+    **Trackers**.
+  </Step>
+  <Step>
+    Under **Also known as**, put their name on AIOStreams, and the **tracker id** if
+    **AIOStreams app → Profiles** shows one for them, separated by commas.
+  </Step>
+  <Step>
+    Save AIOMetadata's configuration, then pick AIOMetadata as their tracker in AIOStreams: see
+    [trackers for each profile](/apps/media-server#trackers-for-each-profile).
+  </Step>
+</Steps>
 
-No **Jellyfin** button means whoever runs that AIOMetadata instance hasn't turned its Jellyfin
-server on. Tracking still works for you, as above, but not for each person separately.
+AIOMetadata's **Jellyfin** tab, and the **Jellyfin** part of each person's card, are for
+AIOMetadata's own Jellyfin server, which you don't need: the AIOStreams app signs in to
+AIOStreams. Leave them alone. They only show on AIOMetadata instances that run that server.
 
 <Callout type="tip">
   Coming from Stremio or Nuvio? [Watch Import](https://watch-import.viren070.me) is a tracker

@@ -303,6 +303,8 @@ fn main() {
     };
     platform::check_super_resolution();
     #[cfg(target_os = "linux")]
+    platform::check_web_sandbox();
+    #[cfg(target_os = "linux")]
     if let Some(port) = args.debug_port {
         // SAFETY: set before the web view starts, which is what reads it.
         unsafe { std::env::set_var("WEBKIT_INSPECTOR_HTTP_SERVER", format!("127.0.0.1:{port}")) };

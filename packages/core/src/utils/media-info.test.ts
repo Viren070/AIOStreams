@@ -37,6 +37,19 @@ describe('parseMediaInfo', () => {
     const result = parseMediaInfo({ video: { codec: 'hevc', bit_depth: 10 } });
     assert.deepEqual(result?.visualTags, ['10bit']);
   });
+
+  it('keeps the bitrate and sample rate a probe measured for each audio track', () => {
+    const result = parseMediaInfo({
+      audio: [
+        { codec: 'truehd', ch: 8, br: 4_500_000, sample_rate: 48_000 },
+        { codec: 'aac', ch: 2, br: 0 },
+      ],
+    });
+    assert.equal(result?.audioTracks?.[0].bitrate, 4_500_000);
+    assert.equal(result?.audioTracks?.[0].sampleRate, 48_000);
+    assert.equal(result?.audioTracks?.[1].bitrate, undefined);
+    assert.equal(result?.audioTracks?.[1].sampleRate, undefined);
+  });
 });
 
 describe('normaliseParsedMediaInfo', () => {

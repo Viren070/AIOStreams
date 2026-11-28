@@ -468,15 +468,3 @@ export function CacheAndPlayCard() {
     </SettingsCard>
   );
 }
-
-export function BuiltinSettings() {
-  return (
-    <>
-      <ServiceWrapCard />
-      <FailoverCard />
-      <AutoRemoveDownloadsCard />
-      <CheckLibraryCard />
-      <CacheAndPlayCard />
-    </>
-  );
-}

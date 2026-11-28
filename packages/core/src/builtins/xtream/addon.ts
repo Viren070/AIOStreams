@@ -14,15 +14,14 @@ import {
   nameOf,
   searchLineup,
 } from './lineup.js';
+import { cachedTable, soonOf, tableOf } from './guide.js';
 import {
   EMPTY,
   type Schedule,
-  cachedTable,
-  firstOnAt,
   onAt,
-  soonOf,
-  tableOf,
-} from './guide.js';
+  parseExtras,
+  programmesOf,
+} from '../livetv/index.js';
 
 export const XtreamConfigSchema = z.object({
   server: z.string().min(1),
@@ -39,34 +38,6 @@ const DAY = 86_400;
 const SOON = 6 * 3600;
 /** How long a table near now may take before what's on soon is asked for too. */
 const TABLE_HEAD_START_MS = 800;
-
-type Video = NonNullable<Meta['videos']>[number];
-
-/** Programmes mostly start and end on the same few times of day. */
-const isoTimes = new Map<number, string>();
-
-function isoTime(seconds: number): string {
-  let iso = isoTimes.get(seconds);
-  if (iso === undefined) {
-    if (isoTimes.size >= 20_000) isoTimes.clear();
-    iso = new Date(seconds * 1000).toISOString();
-    isoTimes.set(seconds, iso);
-  }
-  return iso;
-}
-
-function parseExtras(extras?: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const part of extras?.split('&') ?? []) {
-    const [key, ...rest] = part.split('=');
-    try {
-      out[key] = decodeURIComponent(rest.join('='));
-    } catch {
-      out[key] = rest.join('=');
-    }
-  }
-  return out;
-}
 
 export class XtreamAddon {
   private readonly client: XtreamClient;
@@ -324,26 +295,12 @@ export class XtreamAddon {
     guides: Map<number, Schedule>,
     from: number,
     to: number
-  ): Video[] {
-    const schedule = guides.get(lineup.epgOf[i]);
-    if (!schedule) return [];
-    const channel = `${this.prefix}${lineup.streamIds[i]}`;
-    const videos: Video[] = [];
-    for (
-      let at = firstOnAt(schedule, from);
-      at < schedule.starts.length && schedule.starts[at] < to;
-      at++
-    ) {
-      const start = schedule.starts[at];
-      const end = schedule.ends[at];
-      videos.push({
-        id: `${channel}:${start}:${end}`,
-        title: schedule.titles[at],
-        startTime: isoTime(start),
-        endTime: isoTime(end),
-        overview: schedule.overviews[at] || undefined,
-      });
-    }
-    return videos;
+  ) {
+    return programmesOf(
+      guides.get(lineup.epgOf[i]),
+      `${this.prefix}${lineup.streamIds[i]}`,
+      from,
+      to
+    );
   }
 }

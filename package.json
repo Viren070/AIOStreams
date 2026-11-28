@@ -35,7 +35,7 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "packageManager": "pnpm@11.0.8+sha512.4c4097e1dd2d42372c4e7fa5a791ff28fc75a484c7ac192e64b1df0fdef17594ba982f9b4fed9adfb3c757846f565b799b2763fb3733d1de1bcb82cf46684912",
+  "packageManager": "pnpm@11.28.13+sha512.d5caa9cdcd6067ac2902f9f44daa00b1288a73babf1e98f4f375b3a7583b1894b4d49f7527da8f5e1530198bb10e03adba321a1f015429dc2946ce8a7a9a8c65",
   "engines": {
     "pnpm": ">=11.0.0",
     "node": ">=24.0.0"

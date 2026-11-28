@@ -54,6 +54,7 @@ import {
   knaben,
   eztv,
   xtream,
+  m3u,
   therarbg,
   thePirateBay,
   tsukihime,
@@ -249,6 +250,7 @@ builtinsRouter.use('/seadex', seadex);
 builtinsRouter.use('/easynews', easynews);
 builtinsRouter.use('/library', library);
 builtinsRouter.use('/xtream', xtream);
+builtinsRouter.use('/m3u', m3u);
 app.use('/builtins', builtinsRouter);
 
 app.use('/blocklist', publicBlocklistRouter);

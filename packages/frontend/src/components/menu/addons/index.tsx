@@ -6,24 +6,17 @@ import React, {
   useRef,
 } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { CatalogModification, UserData } from '@aiostreams/core';
-import { PageWrapper } from '../../shared/page-wrapper';
+import { UserData } from '@aiostreams/core';
 import { useStatus } from '@/context/status';
-import { useUserData, useParentInheritance } from '@/context/userData';
-import { InheritedBadge } from '../../shared/inherited-badge';
+import { useUserData } from '@/context/userData';
 import { Button } from '@aiostreams/ui/button';
 import { Card } from '@aiostreams/ui/card';
 import { TextInput } from '@aiostreams/ui/text-input';
 import { SearchIcon } from 'lucide-react';
 import { StaticTabs } from '@aiostreams/ui/tabs';
-import { LuDownload, LuGlobe, LuSettings } from 'react-icons/lu';
-import { AnimatePresence } from 'framer-motion';
-import { PageControls } from '../../shared/page-controls';
+import { LuSettings } from 'react-icons/lu';
 import { Select } from '@aiostreams/ui/select';
-import { MenuTabs } from '../../shared/menu-tabs';
 import { useMode } from '@/context/mode';
-import { useSubTab } from '@/context/sub-tab';
-import { IoExtensionPuzzle } from 'react-icons/io5';
 import { MdOutlineDataset, MdSubtitles } from 'react-icons/md';
 import { RiFolderDownloadFill } from 'react-icons/ri';
 import { APIError, fetchCatalogs } from '@/lib/api';
@@ -43,18 +36,10 @@ import {
   withUpstreamOrder,
 } from './_components/catalog-order';
 import {
-  MergedCatalogsCard,
+  MergedCatalogEditor,
   type MergeRequest,
 } from './_components/merged-catalogs';
 import { MyAddons } from './_components/my-addons';
-
-export function AddonsMenu() {
-  return (
-    <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <Content />
-    </PageWrapper>
-  );
-}
 
 /** Changes whenever the catalogs the addons offer could. */
 function addonSetKey(presets: UserData['presets'] | undefined): string {
@@ -63,13 +48,11 @@ function addonSetKey(presets: UserData['presets'] | undefined): string {
   );
 }
 
-export function useAddonsSections(options: { catalogsShown?: boolean } = {}) {
+/** Fetches the catalogs when `catalogsShown`. */
+export function useAddonsSections({ catalogsShown = false } = {}) {
   const { status } = useStatus();
   const { mode } = useMode();
   const { userData, setUserData } = useUserData();
-  const { isInherited, hasParent } = useParentInheritance();
-  const [page, setPage] = useState<'installed' | 'marketplace'>('installed');
-  const { tab: installedTab, setTab: setInstalledTab } = useSubTab('addons');
   const [newCatalogs, setNewCatalogs] = useState<ReadonlySet<string>>(
     () => new Set()
   );
@@ -203,9 +186,6 @@ export function useAddonsSections(options: { catalogsShown?: boolean } = {}) {
     [fetchCatalogsData, userData]
   );
 
-  const catalogsShown =
-    options.catalogsShown ??
-    (page === 'installed' && installedTab === 'catalogs');
   useEffect(() => {
     if (!catalogsShown || !userData.presets?.length) return;
     if (fetchedFor.current === addonsKey) return;
@@ -413,7 +393,7 @@ export function useAddonsSections(options: { catalogsShown?: boolean } = {}) {
           </Card>
         ) : (
           <>
-            <MergedCatalogsCard
+            <MergedCatalogEditor
               request={mergeRequest}
               onRequestHandled={clearMergeRequest}
             />
@@ -642,104 +622,7 @@ export function useAddonsSections(options: { catalogsShown?: boolean } = {}) {
       />
     </>
   );
-  const classic = (
-    <>
-      <div className="flex items-center justify-between gap-2">
-        <StaticTabs
-          className="w-fit max-w-full border rounded-full py-0"
-          triggerClass="px-4 py-1 text-md h-full rounded-full"
-          pillClass="rounded-full border-transparent"
-          items={[
-            {
-              name: 'Installed',
-              isCurrent: page === 'installed',
-              onClick: () => setPage('installed'),
-              iconType: LuDownload,
-            },
-            {
-              name: 'Marketplace',
-              isCurrent: page === 'marketplace',
-              onClick: () => setPage('marketplace'),
-              iconType: LuGlobe,
-            },
-          ]}
-        />
-
-        <div className="hidden lg:block lg:ml-auto">
-          <PageControls />
-        </div>
-      </div>
-
-      <AnimatePresence mode="wait">
-        {page === 'installed' && (
-          <PageWrapper
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.99 }}
-            transition={{
-              duration: 0.35,
-            }}
-            key="installed"
-            className="pt-0 space-y-6 relative z-[4]"
-          >
-            <>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2>Installed</h2>
-                  {hasParent && isInherited('presets') && (
-                    <InheritedBadge section="presets" />
-                  )}
-                </div>
-                <p className="text-[--muted] text-sm">
-                  Manage your installed addons and catalog settings.
-                </p>
-              </div>
-              <MenuTabs
-                activeTab={installedTab}
-                onTabChange={(v) => setInstalledTab(v)}
-                defaultMobileOpen="addons"
-                tabs={[
-                  {
-                    value: 'addons',
-                    label: 'Addons',
-                    icon: <IoExtensionPuzzle className="w-4 h-4" />,
-                    content: installed,
-                  },
-                  {
-                    value: 'catalogs',
-                    label: 'Catalogs',
-                    icon: <MdOutlineDataset className="w-4 h-4" />,
-                    content: catalogs,
-                  },
-                ]}
-              />
-            </>
-          </PageWrapper>
-        )}
-
-        {page === 'marketplace' && (
-          <PageWrapper
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.99 }}
-            transition={{
-              duration: 0.35,
-            }}
-            key="marketplace"
-            className="pt-0 space-y-6 relative z-[4]"
-          >
-            <>{marketplace}</>
-          </PageWrapper>
-        )}
-      </AnimatePresence>
-      {modals}
-    </>
-  );
-  return { installed, catalogs, marketplace, modals, classic };
-}
-
-function Content() {
-  return useAddonsSections().classic;
+  return { installed, catalogs, marketplace, modals };
 }
 
 function defaultOptions(preset: any): Record<string, any> {

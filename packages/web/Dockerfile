@@ -13,6 +13,8 @@ WORKDIR /build
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY patches ./patches
 COPY packages/core/package.json ./packages/core/
+# Core depends on crypto, and a frozen install checks that link.
+COPY packages/crypto/package.json ./packages/crypto/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/web/package.json ./packages/web/
 
@@ -30,10 +32,12 @@ COPY packages/frontend/public ./packages/frontend/public
 COPY resources ./resources
 ARG SOURCE_COMMIT
 
-RUN PAGE_ICONS=true pnpm -F @aiostreams/web build:standalone
+# Otherwise pnpm installs core's dependencies before it runs the script.
+RUN PAGE_ICONS=true pnpm --config.verify-deps-before-run=false \
+  -F @aiostreams/web build:standalone
 
 
-FROM nginxinc/nginx-unprivileged:alpine-slim
+FROM nginx/nginx-unprivileged:alpine-slim
 
 LABEL org.opencontainers.image.title="AIOStreams app"
 LABEL org.opencontainers.image.source="https://github.com/Viren070/AIOStreams"
@@ -42,5 +46,11 @@ LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
 COPY packages/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /build/packages/web/dist-standalone /usr/share/nginx/html
+
+# The base image lags behind Alpine's security fixes, so this picks them up.
+# It sits after the copy so that every new build runs it again.
+USER root
+RUN apk upgrade --no-cache
+USER 101
 
 EXPOSE 8080

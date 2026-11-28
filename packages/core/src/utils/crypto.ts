@@ -141,9 +141,10 @@ export function decryptString(data: string, secretKey?: Buffer): Response {
     };
   } catch (error: any) {
     logger.error(`Failed to decrypt data: ${error.message}`);
+    // Callers show this; distinct messages per failure make a padding oracle.
     return {
       success: false,
-      error: error.message,
+      error: 'Failed to decrypt data',
       data: null,
     };
   }

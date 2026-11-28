@@ -9,6 +9,7 @@ import {
 import { useMode } from '@/context/mode';
 import { useStatus } from '@/context/status';
 import { useMenu } from '@/context/menu';
+import { InheritedBadge } from '@/components/shared/inherited-badge';
 import { DrillIn, RowList } from './rows';
 
 const GROUPS: { title: string; tabs: FilterTabId[] }[] = [
@@ -68,18 +69,21 @@ export function FiltersPage() {
           {sections[open]}
         </DrillIn>
       ) : (
-        groups.map((group) => (
-          <RowList
-            key={group.title}
-            title={group.title}
-            rows={group.tabs.map((tab) => ({
-              id: tab,
-              label: filterLabel(tab),
-              icon: FILTER_TAB_ICONS[tab],
-              onOpen: () => setPage('filters', tab),
-            }))}
-          />
-        ))
+        <>
+          <InheritedBadge section="filters" />
+          {groups.map((group) => (
+            <RowList
+              key={group.title}
+              title={group.title}
+              rows={group.tabs.map((tab) => ({
+                id: tab,
+                label: filterLabel(tab),
+                icon: FILTER_TAB_ICONS[tab],
+                onOpen: () => setPage('filters', tab),
+              }))}
+            />
+          ))}
+        </>
       )}
       {modals}
     </>

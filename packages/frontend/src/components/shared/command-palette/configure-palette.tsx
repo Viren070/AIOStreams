@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   CommandGroup,
   CommandItem,
@@ -6,57 +6,17 @@ import {
 } from '@aiostreams/ui/command';
 import { useCommandPalette } from '@/context/command-palette';
 import { useMenu } from '@/context/menu';
-import { PAGES, pageOf } from '@/lib/configure-pages';
+import { PAGES, filterTabPage } from '@/lib/configure-pages';
 import { useQuickActions } from '@/context/quick-actions';
-import { useMode } from '@/context/mode';
-import { useStatus } from '@/context/status';
-import { useUserData } from '@/context/userData';
 import {
   FIELD_META,
-  type MenuId,
+  type FilterTabId,
 } from '../../../../../core/src/utils/fieldMeta';
 import { buildHaystack, parseQuery, scoreItem } from './scoring';
 import { CommandPaletteShell, type CommandPaletteResult } from './shell';
-import {
-  BiInfoCircle,
-  BiCloud,
-  BiExtension,
-  BiFilterAlt,
-  BiSort,
-  BiPen,
-  BiServer,
-  BiCog,
-  BiSave,
-  BiBarChartAlt2,
-} from 'react-icons/bi';
+import { BiFilterAlt } from 'react-icons/bi';
 
-const MENU_ITEMS: Array<{
-  id: MenuId;
-  label: string;
-  icon: React.ReactNode;
-  proOnly?: boolean;
-  /** When true, the entry is only shown if (a) the instance owner has
-   *  per-user analytics on, and (b) the user is signed in. */
-  requiresStats?: boolean;
-}> = [
-  { id: 'about', label: 'About', icon: <BiInfoCircle /> },
-  { id: 'services', label: 'Services', icon: <BiCloud /> },
-  { id: 'addons', label: 'Addons', icon: <BiExtension /> },
-  { id: 'filters', label: 'Filters', icon: <BiFilterAlt /> },
-  { id: 'sorting', label: 'Sorting', icon: <BiSort />, proOnly: true },
-  { id: 'formatter', label: 'Formatter', icon: <BiPen /> },
-  { id: 'proxy', label: 'Proxy', icon: <BiServer /> },
-  { id: 'miscellaneous', label: 'Miscellaneous', icon: <BiCog /> },
-  {
-    id: 'stats',
-    label: 'Stats',
-    icon: <BiBarChartAlt2 />,
-    requiresStats: true,
-  },
-  { id: 'save-install', label: 'Save & Install', icon: <BiSave /> },
-];
-
-const FILTER_TABS: Array<{ id: string; label: string }> = [
+const FILTER_TABS: Array<{ id: FilterTabId; label: string }> = [
   { id: 'cache', label: 'Cache' },
   { id: 'resolution', label: 'Resolution' },
   { id: 'quality', label: 'Quality' },
@@ -81,19 +41,6 @@ const FILTER_TABS: Array<{ id: string; label: string }> = [
   { id: 'miscellaneous', label: 'Miscellaneous (Filters)' },
 ];
 
-const MENU_LABELS: Record<MenuId, string> = {
-  about: 'About',
-  services: 'Services',
-  addons: 'Addons',
-  filters: 'Filters',
-  sorting: 'Sorting',
-  stats: 'Stats',
-  formatter: 'Formatter',
-  proxy: 'Proxy',
-  miscellaneous: 'Miscellaneous',
-  'save-install': 'Save & Install',
-};
-
 function humanize(value: string): string {
   return value.replace(/-/g, ' ');
 }
@@ -103,32 +50,25 @@ function humanize(value: string): string {
 const FIELD_ITEMS = Object.entries(FIELD_META)
   .filter(([, meta]) => !meta.ignoreForCommandPalette)
   .map(([key, meta]) => {
-    const trail =
-      meta.subTab !== undefined
-        ? `${humanize(meta.menu)} → ${humanize(meta.subTab)}`
-        : (MENU_LABELS[meta.menu] ?? humanize(meta.menu));
-    const fallbackSectionIds =
-      meta.menu === 'filters' && meta.subTab
-        ? [`filter-tab-${meta.subTab}`]
-        : undefined;
-    const page = PAGES[pageOf(meta.menu, meta.subTab, key)].title;
+    const page = PAGES[meta.page].title;
     return {
       key,
       label: meta.label,
-      trail,
-      pageTrail:
-        meta.menu === 'filters' && meta.subTab && page === 'Filters'
-          ? `Filters → ${humanize(meta.subTab)}`
+      trail:
+        meta.page === 'filters' && meta.filterTab
+          ? `${page} → ${humanize(meta.filterTab)}`
           : page,
+      page: meta.page,
+      tab: meta.filterTab,
       sectionId: meta.sectionId ?? key,
-      menu: meta.menu,
-      subTab: meta.subTab,
-      fallbackSectionIds,
+      fallbackSectionIds: meta.filterTab
+        ? [`filter-tab-${meta.filterTab}`]
+        : undefined,
       haystack: buildHaystack([
         meta.label,
         key,
-        meta.menu,
-        meta.subTab,
+        page,
+        meta.filterTab,
         ...(meta.keywords ?? []),
       ]),
     };
@@ -141,27 +81,13 @@ const FILTER_TAB_ITEMS = FILTER_TABS.map((tab) => ({
 
 export function CommandPalette() {
   const { isOpen, close, navigate } = useCommandPalette();
-  const { layout, pages, setPage } = useMenu();
+  const { pages, setPage } = useMenu();
   const { actions: quickActions } = useQuickActions();
-  const { mode } = useMode();
-  const { status } = useStatus();
-  const user = useUserData();
-  const statsAvailable =
-    status?.settings.userAnalyticsEnabled === true && Boolean(user.uuid);
   const [query, setQuery] = useState('');
   // Keeps typing responsive while the (much larger) result list renders at a
   // lower priority.
   const deferredQuery = useDeferredValue(query);
   const isIdle = deferredQuery.trim().length === 0;
-
-  const visibleMenus = useMemo(
-    () =>
-      MENU_ITEMS.filter(
-        (m) =>
-          (mode === 'pro' || !m.proOnly) && (!m.requiresStats || statsAvailable)
-      ).map((m) => ({ ...m, haystack: buildHaystack([m.label, m.id]) })),
-    [mode, statsAvailable]
-  );
 
   const quickActionItems = useMemo(
     () =>
@@ -199,7 +125,7 @@ export function CommandPalette() {
       }
     }
 
-    for (const page of layout === 'new' ? pages : []) {
+    for (const page of pages) {
       const { title } = PAGES[page];
       const score = scoreItem(buildHaystack([title, page]), q);
       if (score > 0) {
@@ -217,37 +143,20 @@ export function CommandPalette() {
       }
     }
 
-    for (const menu of layout === 'new' ? [] : visibleMenus) {
-      const score = scoreItem(menu.haystack, q);
-      if (score > 0) {
-        results.push({
-          id: `menu-${menu.id}`,
-          label: menu.label,
-          trail: 'Page',
-          icon: menu.icon,
-          score,
-          onSelect: () => {
-            setQuery('');
-            navigate({ menu: menu.id });
-          },
-        });
-      }
-    }
-
     for (const tab of FILTER_TAB_ITEMS) {
       const score = scoreItem(tab.haystack, q);
       if (score > 0) {
         results.push({
           id: `filter-tab-${tab.id}`,
-          label: `${layout === 'new' ? PAGES[pageOf('filters', tab.id)].title : 'Filters'} → ${tab.label}`,
+          label: `${PAGES[filterTabPage(tab.id)].title} → ${tab.label}`,
           trail: 'Filter Tab',
           icon: <BiFilterAlt />,
           score,
           onSelect: () => {
             setQuery('');
             navigate({
-              menu: 'filters',
-              subTab: tab.id,
+              page: filterTabPage(tab.id),
+              tab: tab.id,
               sectionId: `filter-tab-${tab.id}`,
             });
           },
@@ -261,14 +170,13 @@ export function CommandPalette() {
         results.push({
           id: field.key,
           label: field.label,
-          trail: layout === 'new' ? field.pageTrail : field.trail,
+          trail: field.trail,
           score,
           onSelect: () => {
             setQuery('');
             navigate({
-              menu: field.menu,
-              subTab: field.subTab,
-              field: field.key,
+              page: field.page,
+              tab: field.tab,
               sectionId: field.sectionId,
               fallbackSectionIds: field.fallbackSectionIds,
             });
@@ -282,10 +190,8 @@ export function CommandPalette() {
     deferredQuery,
     isIdle,
     quickActionItems,
-    visibleMenus,
     navigate,
     close,
-    layout,
     pages,
     setPage,
   ]);

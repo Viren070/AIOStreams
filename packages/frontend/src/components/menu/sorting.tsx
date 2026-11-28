@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { MenuHeader } from '../shared/menu-header';
-import { PageWrapper } from '../shared/page-wrapper';
 import { SettingsCard } from '../shared/settings-card';
 import { Combobox } from '@aiostreams/ui/combobox';
-import { useUserData, useParentInheritance } from '@/context/userData';
-import { InheritedBadge } from '../shared/inherited-badge';
+import { useUserData } from '@/context/userData';
 import { IconButton } from '@aiostreams/ui/button';
 import { MenuTabs } from '../shared/menu-tabs';
 import {
@@ -639,17 +636,8 @@ function SortTabContent({
   );
 }
 
-export function SortingMenu() {
-  return (
-    <PageWrapper className="space-y-4 p-4 sm:p-8">
-      <SortingContent />
-    </PageWrapper>
-  );
-}
-
 export function SortingContent() {
   const { userData, setUserData } = useUserData();
-  const { isInherited, hasParent } = useParentInheritance();
   const [activeTab, setActiveTab] = useState('global');
 
   useEffect(() => {
@@ -703,15 +691,6 @@ export function SortingContent() {
 
   return (
     <>
-      <MenuHeader
-        title="Sorting"
-        description="Configure how your streams are sorted and organised."
-        badge={
-          hasParent &&
-          isInherited('sorting') && <InheritedBadge section="sorting" />
-        }
-      />
-
       <SortPreviewCard />
 
       <MenuTabs

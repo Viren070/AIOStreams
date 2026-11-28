@@ -249,6 +249,7 @@ interface SearchWithBgRefreshOptions<T> {
   searchCacheKey: string;
   bgCacheKey: string;
   cacheTTL: number;
+  emptyResultTTL?: number;
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
@@ -263,7 +264,7 @@ interface SearchWithBgRefreshOptions<T> {
  *
  * When no cached result exists:
  * - Performs the search synchronously
- * - Caches the result (unless empty)
+ * - Caches the result (`emptyResultTTL` if empty, `cacheTTL` otherwise)
  * - Records the refresh timestamp
  *
  * @param options - Configuration options for the search
@@ -277,6 +278,7 @@ export async function searchWithBackgroundRefresh<T>(
     bgCacheKey,
     searchCache,
     cacheTTL,
+    emptyResultTTL,
     fetchFn,
     isEmptyResult,
     logger,
@@ -290,6 +292,7 @@ export async function searchWithBackgroundRefresh<T>(
       searchCacheKey,
       bgCacheKey,
       cacheTTL,
+      emptyResultTTL,
       fetchFn,
       isEmptyResult,
       logger,
@@ -299,9 +302,15 @@ export async function searchWithBackgroundRefresh<T>(
 
   const result = await fetchFn();
 
-  // Don't cache empty results
   if (!isEmptyResult(result)) {
     await searchCache.set(searchCacheKey, result, cacheTTL);
+    await bgRefreshCache.set(
+      bgCacheKey,
+      Date.now(),
+      appConfig.builtins.torrent.minimumBackgroundRefreshInterval
+    );
+  } else if (emptyResultTTL) {
+    await searchCache.set(searchCacheKey, result, emptyResultTTL);
     await bgRefreshCache.set(
       bgCacheKey,
       Date.now(),
@@ -321,6 +330,7 @@ function triggerBackgroundRefresh<T>(options: {
   searchCacheKey: string;
   bgCacheKey: string;
   cacheTTL: number;
+  emptyResultTTL?: number;
   fetchFn: () => Promise<T>;
   isEmptyResult: (result: T) => boolean;
   logger: Logger;
@@ -330,6 +340,7 @@ function triggerBackgroundRefresh<T>(options: {
     bgCacheKey,
     searchCache,
     cacheTTL,
+    emptyResultTTL,
     fetchFn,
     isEmptyResult,
     logger,
@@ -350,16 +361,29 @@ function triggerBackgroundRefresh<T>(options: {
       // Perform background refresh
       logger.debug(`Starting background refresh for: ${searchCacheKey}`);
       const freshResult = await fetchFn();
+      const refreshedAt = Date.now();
 
       // Update cache if result is not empty
       if (!isEmptyResult(freshResult)) {
         await searchCache.set(searchCacheKey, freshResult, cacheTTL, true);
         await bgRefreshCache.set(
           bgCacheKey,
-          now,
+          refreshedAt,
           appConfig.builtins.torrent.minimumBackgroundRefreshInterval
         );
         logger.info(`Background refreshed cache for: ${searchCacheKey}`);
+      } else if (emptyResultTTL) {
+        await searchCache.set(
+          searchCacheKey,
+          freshResult,
+          emptyResultTTL,
+          true
+        );
+        await bgRefreshCache.set(
+          bgCacheKey,
+          refreshedAt,
+          appConfig.builtins.torrent.minimumBackgroundRefreshInterval
+        );
       }
     } catch (error) {
       logger.error(

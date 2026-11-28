@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use aiostreams_desktop_core::bridge::{self, Outbound, origin};
+use aiostreams_desktop_core::bridge::{self, Inbound, Outbound, origin};
 use aiostreams_desktop_core::discord;
 use aiostreams_desktop_core::external::External;
 use aiostreams_desktop_core::player::Player;
@@ -295,9 +295,9 @@ pub fn run(app: App) {
     window.set_child(Some(video.widget()));
     let started = start_player(&video, &paths, |message| {
         if let Outbound::PlayerState { state, .. } = &message
-            && state.idle == Some(true)
+            && let Some(idle) = state.idle
         {
-            platform::clear_video();
+            platform::player_idle(idle);
         }
         post(UserEvent::Emit(receive_script(&message)))
     });
@@ -363,6 +363,12 @@ pub fn run(app: App) {
                 return log::warn!("ignored a message from {from}");
             }
             if let Some(message) = bridge::parse(&value.to_str()) {
+                if let Inbound::PlayerLoad {
+                    external: false, ..
+                } = &message
+                {
+                    platform::prepare_video();
+                }
                 handle(
                     message, &player, &external, &post, &paths, &updater, &downloads,
                 );

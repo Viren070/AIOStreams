@@ -51,7 +51,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       );
       return;
     }
-    next(new APIError(constants.ErrorCode.BAD_REQUEST, error.message));
+    next(new APIError(constants.ErrorCode.BAD_REQUEST, 400, error.message));
     return;
   }
   try {
@@ -69,7 +69,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   } catch (error: any) {
     logger.error(`Mapping check failed: ${error.message}`);
     next(
-      new APIError(constants.ErrorCode.INTERNAL_SERVER_ERROR, error.message)
+      new APIError(
+        constants.ErrorCode.INTERNAL_SERVER_ERROR,
+        undefined,
+        error.message
+      )
     );
   }
 });

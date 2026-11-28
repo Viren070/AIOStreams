@@ -83,14 +83,14 @@ The [desktop release](https://github.com/Viren070/AIOStreams/releases/tag/deskto
 | Windows on Arm, such as Snapdragon   | An installer, or a portable copy  |
 | Mac with Apple silicon (M1 or later) | An installer, or the app in a zip |
 | Intel Mac                            | An installer, or the app in a zip |
-| Linux, on most PCs (Intel or AMD)    | A Flatpak                         |
-| Linux on Arm                         | A Flatpak                         |
+| Linux, on most PCs (Intel or AMD)    | An AppImage, a .deb or a Flatpak  |
+| Linux on Arm                         | An AppImage, a .deb or a Flatpak  |
 
-It needs Windows 10 or 11, macOS 11 or later, or a Linux distribution with Flatpak, which most include.
+It needs Windows 10 or 11, macOS 11 or later, or Linux.
 
 - **The portable copy** runs without installing and keeps everything, including your sign-ins, in a `data` folder beside it.
 - **On a Mac**, the app is not signed by Apple yet, so macOS refuses to open it the first time. Open **System Settings → Privacy & Security** and press **Open Anyway**.
-- **On Linux**, open the Flatpak in your software centre, or run `flatpak install --user` with the file's name. The first install also fetches the runtime it needs from Flathub.
+- **On Linux**, the AppImage runs on any distribution and updates itself: make the file executable (`chmod +x` and its name, or its file properties), then open it. The .deb is for Ubuntu 24.04, Linux Mint 22, Debian 13 and later; install it with `sudo apt install ./` and the file's name. Open the Flatpak in your software centre, or run `flatpak install --user` with the file's name; the first install also fetches the runtime it needs from Flathub.
 
 ## Signing in
 
@@ -163,7 +163,7 @@ To play in your own mpv, in its own window with its settings and scripts, pick *
 
 For your mpv settings without a second window, put them in the app's own mpv folder instead (see [Settings](#settings)).
 
-Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` or the scroll wheel for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode. Press `?` anywhere for the full list, and change any of them under **Settings → Shortcuts**, which also takes a remote's or gamepad's buttons. The arrow keys, a remote or a gamepad move between everything on screen, and `Esc` goes back. On Linux, gamepads need Flatpak 1.15.6 or newer (see `flatpak --version`).
+Other keys: `Space` or `k` to play and pause, `←` `→` or `j` `l` to skip back and forward, `↑` `↓` or the scroll wheel for volume, `m` to mute, `f` for fullscreen, and `Shift+P` and `Shift+N` for the previous and next episode. Press `?` anywhere for the full list, and change any of them under **Settings → Shortcuts**, which also takes a remote's or gamepad's buttons. The arrow keys, a remote or a gamepad move between everything on screen, and `Esc` goes back. In the Linux Flatpak, gamepads need Flatpak 1.15.6 or newer (see `flatpak --version`).
 
 ## Downloads
 
@@ -187,7 +187,7 @@ Under **Settings → Audio**: how many channels your speakers take, and whether 
 
 Under **Settings → Desktop app**:
 
-- **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows and Mac only.
+- **Updates**: whether to follow releases or nightly builds, and whether an update is waiting. Windows, Mac and the Linux AppImage only.
 - **Logs** and **Report a problem**: open the log folder, or send the app's versions and recent log to your server, and to the developer if you choose, with a code to give whoever looks into it. **Copy** puts the same on the clipboard.
 
 ## Updates
@@ -196,19 +196,19 @@ The app checks for updates when it starts and every six hours, downloads them in
 
 Nightly builds come from every change, ahead of releases. They get fixes sooner but can break; switch back under **Settings → Desktop app → Updates**.
 
-The Linux Flatpak does not update itself yet. To update it, download the newer file and install it the same way; your sign-ins and settings stay. For nightly builds on Linux, take the Flatpak from the [nightly release](https://github.com/Viren070/AIOStreams/releases/tag/desktop-nightly).
+On Linux, the AppImage updates itself like the other downloads. The .deb and the Flatpak do not yet: download the newer file and install it the same way, and your sign-ins and settings stay. For their nightly builds, take them from the [nightly release](https://github.com/Viren070/AIOStreams/releases/tag/desktop-nightly).
 
 <Callout type="info">
   Something wrong? The logs are the first thing to share. **Settings → Desktop
   app → Report a problem** sends what is needed, or find them in `%LOCALAPPDATA%\AIOStreams Desktop\logs`
   on Windows (`data\logs` in a portable copy), `~/Library/Application Support/AIOStreams Desktop/logs`
-  on a Mac, and `~/.var/app/io.github.viren070.aiostreams/data/AIOStreams Desktop/logs` on Linux.
+  on a Mac, and `~/.local/share/AIOStreams Desktop/logs` on Linux (`~/.var/app/io.github.viren070.aiostreams/data/AIOStreams Desktop/logs` for the Flatpak).
 </Callout>
 
 ## Credits
 
 - **[Seanime](https://github.com/5rahim/seanime)** by 5rahim. The app's interface is built on its UI components.
-- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. On Windows and Mac the app ships libmpv from [AIOStreams/libs](https://github.com/AIOStreams/libs), whose mpv and FFmpeg carry [edde746's MPVKit](https://github.com/edde746/MPVKit) patches; the Flatpak builds its own.
+- **[mpv](https://mpv.io)** and **[FFmpeg](https://ffmpeg.org)** play the video. The app ships libmpv from [AIOStreams/libs](https://github.com/AIOStreams/libs), whose mpv and FFmpeg carry [edde746's MPVKit](https://github.com/edde746/MPVKit) patches; the Flatpak builds its own.
 - **[Jellyfin](https://jellyfin.org)**, whose API the app speaks.
 
 The app's **Settings → About** lists these too. The licences of everything it ships are in `third-party-licenses.html`, beside the app on Windows and in the app's `Contents/Resources` on a Mac.

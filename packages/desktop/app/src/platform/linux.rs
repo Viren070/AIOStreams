@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -77,6 +78,7 @@ type ProcFn = unsafe extern "C" fn(*const c_char) -> *mut c_void;
 struct Gl {
     egl_get_proc: Option<ProcFn>,
     egl_current: Option<unsafe extern "C" fn() -> *mut c_void>,
+    egl_display: Option<unsafe extern "C" fn() -> *mut c_void>,
     glx_get_proc: Option<ProcFn>,
     _libs: Vec<Library>,
 }
@@ -92,15 +94,17 @@ fn gl() -> &'static Gl {
             lib.as_ref()
                 .and_then(|l| l.get::<ProcFn>(name).ok().map(|s| *s))
         };
+        let current = |name: &[u8]| unsafe {
+            egl.as_ref().and_then(|l| {
+                l.get::<unsafe extern "C" fn() -> *mut c_void>(name)
+                    .ok()
+                    .map(|s| *s)
+            })
+        };
         Gl {
             egl_get_proc: sym(&egl, b"eglGetProcAddress\0"),
-            egl_current: unsafe {
-                egl.as_ref().and_then(|l| {
-                    l.get::<unsafe extern "C" fn() -> *mut c_void>(b"eglGetCurrentContext\0")
-                        .ok()
-                        .map(|s| *s)
-                })
-            },
+            egl_current: current(b"eglGetCurrentContext\0"),
+            egl_display: current(b"eglGetCurrentDisplay\0"),
             glx_get_proc: sym(&glx, b"glXGetProcAddressARB\0"),
             _libs: egl.into_iter().chain(glx).collect(),
         }
@@ -121,6 +125,49 @@ unsafe extern "C" fn get_proc_address(_ctx: *mut c_void, name: *const c_char) ->
     }
 }
 
+/// The render node of the GPU behind GTK's current EGL context, held open for the app's life.
+fn render_node() -> Option<c_int> {
+    static NODE: OnceLock<Option<std::fs::File>> = OnceLock::new();
+    const DEVICE_EXT: c_int = 0x322C;
+    const DRM_RENDER_NODE_FILE_EXT: c_int = 0x3377;
+    type QueryDisplay = unsafe extern "C" fn(*mut c_void, c_int, *mut isize) -> u32;
+    type QueryDevice = unsafe extern "C" fn(*mut c_void, c_int) -> *const c_char;
+    let node = NODE.get_or_init(|| {
+        let gl = gl();
+        let (get, display) = (gl.egl_get_proc?, gl.egl_display?);
+        // SAFETY: EGL's extension lookups with egl.h's types, on the current display.
+        let path = unsafe {
+            let query_display = get(c"eglQueryDisplayAttribEXT".as_ptr());
+            let query_device = get(c"eglQueryDeviceStringEXT".as_ptr());
+            let dpy = display();
+            if query_display.is_null() || query_device.is_null() || dpy.is_null() {
+                return None;
+            }
+            let query_display: QueryDisplay = std::mem::transmute(query_display);
+            let query_device: QueryDevice = std::mem::transmute(query_device);
+            let mut device = 0isize;
+            if query_display(dpy, DEVICE_EXT, &mut device) == 0 {
+                return None;
+            }
+            let name = query_device(device as *mut c_void, DRM_RENDER_NODE_FILE_EXT);
+            if name.is_null() {
+                return None;
+            }
+            std::ffi::CStr::from_ptr(name)
+                .to_string_lossy()
+                .into_owned()
+        };
+        log::info!("render node {path}");
+        std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+            .inspect_err(|e| log::warn!("render node {path}: {e}"))
+            .ok()
+    });
+    node.as_ref().map(std::os::fd::AsRawFd::as_raw_fd)
+}
+
 /// The framebuffer GTK bound for this frame; a GLArea draws into its own.
 fn current_fbo() -> i32 {
     const DRAW_FRAMEBUFFER_BINDING: u32 = 0x8CA6;
@@ -135,6 +182,23 @@ fn current_fbo() -> i32 {
         let mut fbo: c_int = 0;
         get(DRAW_FRAMEBUFFER_BINDING, &mut fbo);
         fbo
+    }
+}
+
+/// For a frame with no render context, whose buffer would show whatever was left in it.
+fn clear() {
+    const COLOR_BUFFER_BIT: u32 = 0x4000;
+    type ClearColor = unsafe extern "C" fn(f32, f32, f32, f32);
+    type Clear = unsafe extern "C" fn(u32);
+    // SAFETY: looked up for the current context, with gl.h's types.
+    unsafe {
+        let color = get_proc_address(std::ptr::null_mut(), c"glClearColor".as_ptr());
+        let clear = get_proc_address(std::ptr::null_mut(), c"glClear".as_ptr());
+        if color.is_null() || clear.is_null() {
+            return;
+        }
+        std::mem::transmute::<*mut c_void, ClearColor>(color)(0.0, 0.0, 0.0, 1.0);
+        std::mem::transmute::<*mut c_void, Clear>(clear)(COLOR_BUFFER_BIT);
     }
 }
 
@@ -166,7 +230,13 @@ type Render = Rc<RefCell<Option<RenderContext>>>;
 thread_local! {
     static AREA: RefCell<Option<gtk4::GLArea>> = const { RefCell::new(None) };
     static RENDER: RefCell<Option<Render>> = const { RefCell::new(None) };
+    static MPV: RefCell<Option<Arc<Mpv>>> = const { RefCell::new(None) };
 }
+
+/// Files loaded so far, so a release timed from an earlier stop leaves a later file's context.
+static LOADS: AtomicU64 = AtomicU64::new(0);
+static IDLE: AtomicBool = AtomicBool::new(true);
+const RELEASE_AFTER: Duration = Duration::from_secs(30);
 
 /// Draws the next frame when it is due, not in mpv's own wait, which would hold up the UI thread.
 fn update_video() {
@@ -327,14 +397,17 @@ impl VideoSurface {
         area.connect_render({
             let render = render.clone();
             move |area, _| {
-                if let Some(r) = render.borrow().as_ref() {
-                    let scale = area.scale_factor();
-                    r.draw(
-                        current_fbo(),
-                        area.width() * scale,
-                        area.height() * scale,
-                        true,
-                    );
+                match render.borrow().as_ref() {
+                    Some(r) => {
+                        let scale = area.scale_factor();
+                        r.draw(
+                            current_fbo(),
+                            area.width() * scale,
+                            area.height() * scale,
+                            true,
+                        );
+                    }
+                    None => clear(),
                 }
                 glib::Propagation::Stop
             }
@@ -405,43 +478,7 @@ impl VideoSurface {
     }
 
     pub fn attach(&self, mpv: Arc<Mpv>) {
-        let start = {
-            let render = self.render.clone();
-            move |area: &gtk4::GLArea| {
-                area.make_current();
-                if let Some(e) = area.error() {
-                    return log::error!("OpenGL context: {e}");
-                }
-                let display = native_display(&area.display());
-                let gl = area.context().map(|c| {
-                    let (major, minor) = c.version();
-                    format!("{:?} {major}.{minor}", c.api())
-                });
-                log::info!("mpv render context display={display:?} gl={gl:?}");
-                match RenderContext::new(
-                    mpv.clone(),
-                    get_proc_address,
-                    std::ptr::null_mut(),
-                    display,
-                    true, // advanced control
-                    8,    // a GtkGLArea's default framebuffer is 8 bits a channel
-                ) {
-                    Ok(mut ctx) => {
-                        ctx.on_update(|| {
-                            glib::idle_add_once(update_video);
-                        });
-                        *render.borrow_mut() = Some(ctx);
-                        area.queue_render();
-                    }
-                    Err(e) => log::error!("{e}"),
-                }
-            }
-        };
-        if self.area.is_realized() {
-            start(&self.area);
-        } else {
-            self.area.connect_realize(start);
-        }
+        MPV.with(|m| *m.borrow_mut() = Some(mpv));
         self.area.connect_unrealize({
             let render = self.render.clone();
             move |area| {
@@ -460,14 +497,78 @@ impl VideoSurface {
     pub fn resize(&self, _width: u32, _height: u32) {}
 }
 
-/// With no file mpv stops drawing, and the last frame would show where the page is see-through.
-pub fn clear_video() {
-    glib::idle_add_once(|| {
-        AREA.with(|a| {
-            if let Some(a) = a.borrow().as_ref() {
-                a.queue_render();
+fn make_render(area: &gtk4::GLArea, render: &Render, mpv: Arc<Mpv>) {
+    area.make_current();
+    if let Some(e) = area.error() {
+        return log::error!("OpenGL context: {e}");
+    }
+    let display = native_display(&area.display());
+    let gl = area.context().map(|c| {
+        let (major, minor) = c.version();
+        format!("{:?} {major}.{minor}", c.api())
+    });
+    log::info!("mpv render context display={display:?} gl={gl:?}");
+    match RenderContext::new(
+        mpv,
+        get_proc_address,
+        std::ptr::null_mut(),
+        display,
+        render_node(),
+        true, // advanced control
+        8,    // a GtkGLArea's default framebuffer is 8 bits a channel
+    ) {
+        Ok(mut ctx) => {
+            ctx.on_update(|| {
+                glib::idle_add_once(update_video);
+            });
+            *render.borrow_mut() = Some(ctx);
+            area.queue_render();
+        }
+        Err(e) => log::error!("{e}"),
+    }
+}
+
+/// Before a file loads, as mpv's video output needs a render context to start. None is kept
+/// while nothing plays: one sets up every hardware decoder mpv has, in video memory.
+pub fn prepare_video() {
+    LOADS.fetch_add(1, Ordering::SeqCst);
+    let area = AREA.with(|a| a.borrow().clone());
+    let render = RENDER.with(|r| r.borrow().clone());
+    let mpv = MPV.with(|m| m.borrow().clone());
+    if let (Some(area), Some(render), Some(mpv)) = (area, render, mpv)
+        && render.borrow().is_none()
+        && area.is_realized()
+    {
+        make_render(&area, &render, mpv);
+    }
+}
+
+/// Called on mpv's threads. With no file mpv stops drawing, and its last frame would show where
+/// the page is see-through.
+pub fn player_idle(idle: bool) {
+    IDLE.store(idle, Ordering::SeqCst);
+    if !idle {
+        return;
+    }
+    let loads = LOADS.load(Ordering::SeqCst);
+    glib::idle_add_once(move || {
+        let Some(area) = AREA.with(|a| a.borrow().clone()) else {
+            return;
+        };
+        area.queue_render();
+        glib::timeout_add_local_once(RELEASE_AFTER, move || {
+            if !IDLE.load(Ordering::SeqCst) || LOADS.load(Ordering::SeqCst) != loads {
+                return;
             }
-        })
+            let Some(render) = RENDER.with(|r| r.borrow().clone()) else {
+                return;
+            };
+            area.make_current();
+            if render.borrow_mut().take().is_some() {
+                log::info!("mpv render context released");
+                area.queue_render();
+            }
+        });
     });
 }
 
@@ -477,8 +578,29 @@ pub fn mpv_options(_video: &VideoSurface) -> Vec<(&'static str, String)> {
     // find the system's certificates there. The Flatpak runtime's does.
     if std::path::Path::new("/.flatpak-info").exists() {
         options.push(("tls-verify", "yes".into()));
+    } else if let Some(file) = ca_file() {
+        // The libs' FFmpeg uses Mbed TLS, which has no certificates of its own.
+        options.push(("tls-ca-file", file));
     }
     options
+}
+
+fn ca_file() -> Option<String> {
+    std::env::var("SSL_CERT_FILE")
+        .ok()
+        .into_iter()
+        .chain(
+            [
+                "/etc/ssl/certs/ca-certificates.crt",
+                "/etc/pki/tls/certs/ca-bundle.crt",
+                "/etc/ssl/ca-bundle.pem",
+                "/etc/pki/tls/cacert.pem",
+                "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+                "/etc/ssl/cert.pem",
+            ]
+            .map(String::from),
+        )
+        .find(|path| Path::new(path).is_file())
 }
 
 thread_local! {
@@ -639,6 +761,34 @@ pub fn os_version() -> String {
     }
 }
 
+/// WebKitGTK 6 aborts when bwrap can't start its sandbox, as where AppArmor blocks user namespaces.
+/// The Flatpak's WebKit sandboxes through flatpak-spawn instead.
+pub fn check_web_sandbox() {
+    const DISABLE: &str = "WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS";
+    if Path::new("/.flatpak-info").exists() || std::env::var_os(DISABLE).is_some() {
+        return;
+    }
+    let probe = std::process::Command::new("bwrap")
+        .args([
+            "--ro-bind",
+            "/",
+            "/",
+            "--unshare-pid",
+            "--unshare-uts",
+            "true",
+        ])
+        .stdin(std::process::Stdio::null())
+        .output();
+    let reason = match probe {
+        Ok(out) if out.status.success() => return,
+        Ok(out) => String::from_utf8_lossy(&out.stderr).trim().to_string(),
+        Err(e) => e.to_string(),
+    };
+    log::warn!("web sandbox off, bwrap failed: {reason}");
+    // SAFETY: set before the web view starts, which is what reads it.
+    unsafe { std::env::set_var(DISABLE, "1") };
+}
+
 pub fn libmpv_candidates() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(p) = std::env::var("AIOSTREAMS_LIBMPV") {
@@ -649,6 +799,14 @@ pub fn libmpv_candidates() -> Vec<PathBuf> {
         .and_then(|e| e.parent().map(PathBuf::from))
     {
         paths.push(dir.join("libmpv.so.2"));
+    }
+    if cfg!(debug_assertions) {
+        paths.push(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../vendor")
+                .join(format!("linux-{}", std::env::consts::ARCH))
+                .join("libmpv.so.2"),
+        );
     }
     for dir in [
         "/app/lib",

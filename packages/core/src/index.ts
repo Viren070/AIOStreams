@@ -75,6 +75,8 @@ export {
   XtreamAddon,
   XtreamError,
   testXtreamLogin,
+  M3uAddon,
+  M3uError,
   preWarmLibraryCaches,
   refreshLibraryCacheForService,
   testNabEndpoint,

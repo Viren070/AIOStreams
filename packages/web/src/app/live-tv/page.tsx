@@ -40,7 +40,15 @@ import {
   usePlayback,
 } from '@/lib/playback/session';
 import { navigate, to } from '@/lib/paths';
-import { focusOn, isTextField, pickOnFocus, useAction } from '@/lib/input';
+import {
+  focusOn,
+  isTextField,
+  moveTo,
+  navSide,
+  pickOnFocus,
+  useAction,
+  type Direction,
+} from '@/lib/input';
 import { NumberEntry, useNumberEntry } from '@/features/live-tv/channel-number';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { PAGE_TOP, PageHeader, PageMessage } from '@/components/shell/page';
@@ -225,10 +233,13 @@ export function LiveTvPage({
     }
     return index;
   };
+  // A page kept for Back can be another Live TV.
+  const root = React.useRef<HTMLDivElement>(null);
+  const find = (selector: string) =>
+    root.current?.querySelector<HTMLElement>(selector) ?? null;
+  const channelsBox = () => find('[data-ui=guide], [data-ui=channel-list]');
   const focusChannels = () => {
-    const grid = document.querySelector<HTMLElement>(
-      '[data-ui=guide], [data-ui=channel-list]'
-    );
+    const grid = channelsBox();
     if (grid) focusOn(grid);
   };
   // Back from the player, the page opens on the channel it was left on, loading
@@ -291,19 +302,46 @@ export function LiveTvPage({
   // focused on the way would pick instead.
   const leaveUp = () => {
     const target =
-      document.querySelector<HTMLElement>(
-        '[data-name=live-group] [aria-selected=true]'
-      ) ?? document.querySelector<HTMLElement>('[data-ui=live-group-picker]');
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-ui=live-group-picker]');
     if (target) focusOn(target);
   };
   // The guide has the programme's details above it, where the list has the groups.
   const leaveGuideUp = () => {
-    const target = document.querySelector<HTMLElement>(
-      '[data-ui=live-top] button'
-    );
+    const target = find('[data-ui=live-top] button');
     if (target) focusOn(target);
     else leaveUp();
   };
+  // Down from the picker skips the pills, which would pick another group.
+  useAction('nav.down', () => {
+    if (document.activeElement !== find('[data-ui=live-group-picker]'))
+      return false;
+    const grid = channelsBox();
+    if (grid) focusOn(grid);
+    else return pages.isLoading;
+  });
+  // Toward the pills, the picker goes to the app's own groups.
+  const pillsFrom = (side: Direction) => () => {
+    const picker = find('[data-ui=live-group-picker]');
+    if (
+      !picker ||
+      side !== navSide('start') ||
+      document.activeElement !== picker
+    )
+      return false;
+    const target =
+      find('[data-name=live-group] [aria-selected=true]') ??
+      find('[data-name=live-group] [data-ui=pill-tab]:last-child');
+    if (!target) return false;
+    // Narrow windows put the picker on its own line, at the start.
+    const at = target.getBoundingClientRect();
+    const from = picker.getBoundingClientRect();
+    if (side === 'left' ? at.right > from.left : at.left < from.right)
+      return false;
+    moveTo(target, side);
+  };
+  useAction('nav.left', pillsFrom('left'));
+  useAction('nav.right', pillsFrom('right'));
   // A remote's digits go to the channel with that number, loading on to it.
   // Numbers run through the whole lineup, so one outside the group opens All
   // channels on it.
@@ -486,6 +524,7 @@ export function LiveTvPage({
     const programme = programmeAt(shownProgrammes, at);
     return (
       <div
+        ref={root}
         data-ui="live-tv"
         data-view="guide"
         className={PAGE}
@@ -573,6 +612,7 @@ export function LiveTvPage({
 
   return (
     <div
+      ref={root}
       data-ui="live-tv"
       data-view="list"
       className={PAGE}

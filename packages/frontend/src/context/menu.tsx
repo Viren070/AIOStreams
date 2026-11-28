@@ -8,60 +8,23 @@ import React, {
 } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
-import { useMode } from './mode';
-import { MENU_IDS, type MenuId } from '../../../core/src/utils/fieldMeta';
 import { useStatus } from './status';
 import { useUserData } from './userData';
-import {
-  isPageId,
-  PAGE_GROUPS,
-  pageOf,
-  type PageId,
-} from '@/lib/configure-pages';
+import { isPageId, PAGE_GROUPS, type PageId } from '@/lib/configure-pages';
 import { slide } from '@/lib/slide';
-
-const VALID_MENUS = MENU_IDS;
-
-const PRO_ONLY_MENUS: MenuId[] = ['sorting'];
-
-export type { MenuId };
-
-export type ConfigureLayout = 'new' | 'classic';
-
-const LAYOUT_STORAGE_KEY = 'aiostreams:configure-layout';
 
 /** Has the sidebar; between this and a phone, the sidebar is a drawer. */
 export const WIDE_LAYOUT = '(min-width: 1024px)';
 /** Reaches pages through a page list of its own. */
 export const PHONE_LAYOUT = '(max-width: 767px)';
 
-function readLayout(): ConfigureLayout {
-  try {
-    return localStorage.getItem(LAYOUT_STORAGE_KEY) === 'classic'
-      ? 'classic'
-      : 'new';
-  } catch {
-    return 'new';
-  }
-}
-
 type MenuContextType = {
-  layout: ConfigureLayout;
-  setLayout: (layout: ConfigureLayout) => void;
-  selectedMenu: MenuId;
-  /** In the new layout, opens the page holding that menu. */
-  setSelectedMenu: (menu: MenuId) => void;
-  /** A sub-tab or field can decide the page. */
-  openMenu: (menu: MenuId, subTab?: string, field?: string) => void;
-  nextMenu: () => void;
-  previousMenu: () => void;
-  firstMenu: MenuId;
-  lastMenu: MenuId;
   page: PageId;
   /** What a page has open inside it, such as one filter. */
   pageTab: string | null;
   /** The page list, which on wider screens is the sidebar instead. */
   listed: boolean;
+  /** A tab only opens on a page that has tabs. */
   setPage: (page: PageId, tab?: string | null) => void;
   showPages: () => void;
   /** Up a level: out of what a page has open, to the page list, then Home. */
@@ -71,15 +34,6 @@ type MenuContextType = {
 };
 
 const MenuContext = createContext<MenuContextType>({
-  layout: 'new',
-  setLayout: () => {},
-  selectedMenu: 'about',
-  setSelectedMenu: () => {},
-  openMenu: () => {},
-  nextMenu: () => {},
-  previousMenu: () => {},
-  firstMenu: 'about',
-  lastMenu: 'save-install',
   page: 'home',
   pageTab: null,
   listed: false,
@@ -94,7 +48,20 @@ const PAGE_TAB_KEYS: Partial<Record<PageId, string>> = {
   filters: 'filter',
   addons: 'view',
 };
-const CLASSIC_TAB_KEYS = ['filter', 'misc-tab', 'service-tab', 'addons-tab'];
+/** Old addresses' menus and tab keys. */
+const LEGACY_MENU_PAGES = new Map<string, PageId>([
+  ['about', 'home'],
+  ['services', 'services'],
+  ['addons', 'addons'],
+  ['filters', 'filters'],
+  ['sorting', 'results'],
+  ['formatter', 'formatter'],
+  ['proxy', 'playback'],
+  ['miscellaneous', 'advanced'],
+  ['stats', 'stats'],
+  ['save-install', 'stremio'],
+]);
+const LEGACY_TAB_KEYS = ['filter', 'misc-tab', 'service-tab', 'addons-tab'];
 /** Set on an entry opened from its parent, so going up can step back to it. */
 const FROM_PARENT = 'configureFromParent';
 
@@ -116,9 +83,7 @@ function navOf(search: string, legacy = false): Nav {
   const page = homeless(
     isPageId(raw) || raw === PAGE_LIST
       ? raw
-      : legacy && menu && (MENU_IDS as readonly string[]).includes(menu)
-        ? pageOf(menu as MenuId)
-        : null
+      : (legacy && menu && LEGACY_MENU_PAGES.get(menu)) || null
   );
   const key = isPageId(page) && PAGE_TAB_KEYS[page];
   return { page, pageTab: key ? params.get(key) : null };
@@ -126,7 +91,7 @@ function navOf(search: string, legacy = false): Nav {
 
 function hrefOf(nav: Nav): string {
   const url = new URL(window.location.href);
-  for (const key of ['menu', 'page', 'view', ...CLASSIC_TAB_KEYS]) {
+  for (const key of ['menu', 'page', 'view', ...LEGACY_TAB_KEYS]) {
     url.searchParams.delete(key);
   }
   if (nav.page) url.searchParams.set('page', nav.page);
@@ -166,7 +131,6 @@ function moveOf(from: Nav, to: Nav, phone: boolean): Move {
 }
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
-  const { mode } = useMode();
   const router = useRouter();
   const phone = useMediaQuery(PHONE_LAYOUT);
 
@@ -174,19 +138,6 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   const user = useUserData();
   const statsAvailable =
     status?.settings.userAnalyticsEnabled === true && Boolean(user.uuid);
-
-  const menus = useMemo(() => {
-    let availableMenus = VALID_MENUS as readonly MenuId[];
-    if (mode === 'noob') {
-      availableMenus = availableMenus.filter(
-        (menu) => !PRO_ONLY_MENUS.includes(menu)
-      );
-    }
-    if (!statsAvailable) {
-      availableMenus = availableMenus.filter((menu) => menu !== 'stats');
-    }
-    return availableMenus;
-  }, [mode, statsAvailable]);
 
   // Without the media server, profiles only shape Stremio install links.
   const profilesAvailable =
@@ -201,15 +152,6 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       ),
     [statsAvailable, profilesAvailable]
   );
-
-  const [layout, setLayoutState] = useState<ConfigureLayout>(readLayout);
-
-  const [selectedMenu, setInternalSelectedMenu] = useState<MenuId>(() => {
-    const menu = new URL(window.location.href).searchParams.get('menu');
-    return menu && (menus as string[]).includes(menu)
-      ? (menu as MenuId)
-      : 'about';
-  });
 
   const [nav, setNav] = useState<Nav>(() =>
     navOf(window.location.search, true)
@@ -258,7 +200,6 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (layout !== 'new') return;
     const path = window.location.pathname;
     const restoration = window.history.scrollRestoration;
     window.history.scrollRestoration = 'manual';
@@ -291,29 +232,21 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       window.history.scrollRestoration = restoration;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, router]);
+  }, [router]);
 
-  // An address in the classic form is rewritten to the page it opens.
+  // An old address by menu is rewritten to the page it opens.
   useEffect(() => {
-    if (layout !== 'new') return;
     const href = hrefOf(current.current);
     if (href !== window.location.pathname + window.location.search)
       router.history.replace(href, router.history.location.state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout]);
-
-  useEffect(() => {
-    if (layout !== 'classic') return;
-    const url = new URL(window.location.href);
-    url.searchParams.delete('menu');
-    url.searchParams.delete('page');
-    url.searchParams.delete('view');
-    if (selectedMenu !== 'about') url.searchParams.set('menu', selectedMenu);
-    window.history.replaceState(window.history.state, '', url.toString());
-  }, [layout, selectedMenu]);
+  }, []);
 
   const setPage = (page: PageId, tab: string | null = null) =>
-    navigate({ page: homeless(page), pageTab: tab });
+    navigate({
+      page: homeless(page),
+      pageTab: PAGE_TAB_KEYS[page] ? tab : null,
+    });
 
   const showPages = () => navigate({ page: PAGE_LIST, pageTab: null });
 
@@ -325,63 +258,10 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     else navigate(parent, true);
   };
 
-  const setSelectedMenu = (menu: MenuId) => {
-    if (layout === 'new') {
-      setPage(pageOf(menu));
-      return;
-    }
-    window.scrollTo(0, 0);
-    setInternalSelectedMenu(menu);
-  };
-
-  const openMenu = (menu: MenuId, subTab?: string, field?: string) => {
-    if (layout === 'classic') {
-      if (selectedMenu !== menu) setSelectedMenu(menu);
-      return;
-    }
-    const target = pageOf(menu, subTab, field);
-    setPage(target, PAGE_TAB_KEYS[target] ? (subTab ?? null) : null);
-  };
-
-  const setLayout = (next: ConfigureLayout) => {
-    try {
-      localStorage.setItem(LAYOUT_STORAGE_KEY, next);
-    } catch {
-      /* the choice lasts this visit */
-    }
-    if (next === 'new')
-      setNav({ page: homeless(pageOf(selectedMenu)), pageTab: null });
-    setLayoutState(next);
-    window.scrollTo(0, 0);
-  };
-
-  const firstMenu = menus[0];
-  const lastMenu = menus[menus.length - 1];
-  const page = isPageId(nav.page) ? nav.page : 'home';
-
-  const step = (by: number) => {
-    if (layout === 'new') {
-      const index = pages.indexOf(page);
-      setPage(pages[(index + by + pages.length) % pages.length]);
-      return;
-    }
-    const currentIndex = menus.indexOf(selectedMenu);
-    setSelectedMenu(menus[(currentIndex + by + menus.length) % menus.length]);
-  };
-
   return (
     <MenuContext.Provider
       value={{
-        layout,
-        setLayout,
-        selectedMenu,
-        setSelectedMenu,
-        openMenu,
-        nextMenu: () => step(1),
-        previousMenu: () => step(-1),
-        firstMenu,
-        lastMenu,
-        page,
+        page: isPageId(nav.page) ? nav.page : 'home',
         pageTab: nav.pageTab,
         listed: nav.page === PAGE_LIST && phone,
         setPage,

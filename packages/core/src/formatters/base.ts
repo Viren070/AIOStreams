@@ -48,6 +48,8 @@ const TRACK_DEFAULTS: FormatterTrack = {
   tag: null,
   tags: null,
   channels: null,
+  bitrate: null,
+  sampleRate: null,
   title: null,
   default: false,
   forced: false,
@@ -81,11 +83,13 @@ export interface ParseValue {
     bitrate: number | null;
     folderSize: number | null;
     library: boolean;
+    failovers: number;
     quality: string | null;
     resolution: string | null;
     subbed: boolean;
     dubbed: boolean;
     mediaInfoQuality: string | null;
+    mediaInfoSource: string | null;
     languages: string[] | null;
     uLanguages: string[] | null;
     subtitles: string[] | null;
@@ -628,12 +632,14 @@ export abstract class BaseFormatter {
         size: stream.size || null,
         folderSize: stream.folderSize || null,
         library: stream.library ?? false,
+        failovers: stream.failoverVariants?.length ?? 0,
         quality: stream.parsedFile?.quality || null,
         resolution: stream.parsedFile?.resolution || null,
         subbed:
           stream.parsedFile?.subbed || !!stream.parsedFile?.subtitles?.length,
         dubbed: stream.parsedFile?.dubbed || false,
         mediaInfoQuality: stream.parsedFile?.mediaInfoQuality ?? null,
+        mediaInfoSource: stream.parsedFile?.mediaInfoSource ?? null,
         get languages() {
           return languageVariants().sortedValues;
         },

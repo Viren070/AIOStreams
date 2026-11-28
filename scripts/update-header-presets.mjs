@@ -113,6 +113,20 @@ async function chromeMajorVersion() {
   return version.split('.')[0];
 }
 
+/** The feed VLC itself polls for updates; its first line is the version. */
+async function vlcVersion() {
+  const status = await get('https://update.videolan.org/vlc/status-win-x64', {
+    target: 'vlc',
+    json: false,
+  });
+  const version = status?.split(/\r?\n/, 1)[0].trim();
+  if (!version || !/^\d+(?:\.\d+)+$/.test(version)) {
+    skip('vlc', 'update feed returned no plain version');
+    return null;
+  }
+  return version;
+}
+
 // Ported from Chromium `components/embedder_support/user_agent_utils.cc`
 const GREASE_CHARS = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
 const GREASE_VERSIONS = ['8', '99', '24'];
@@ -196,16 +210,18 @@ const ARR = {
 
 let content = readFileSync(PRESETS_PATH, 'utf8');
 
-const [sabnzbd, nzbget, nzbhydra2, chromeMajor, ...arr] = await Promise.all([
-  latestGithubRelease('sabnzbd/sabnzbd', 'sabnzbd'),
-  latestGithubRelease('nzbgetcom/nzbget', 'nzbget'),
-  latestGithubRelease('theotherp/nzbhydra2', 'nzbhydra2'),
-  chromeMajorVersion(),
-  ...Object.entries(ARR).flatMap(([app, spec]) => [
-    latestGithubRelease(spec.repo, app),
-    alpineVersionFor(app),
-  ]),
-]);
+const [sabnzbd, nzbget, nzbhydra2, vlc, chromeMajor, ...arr] =
+  await Promise.all([
+    latestGithubRelease('sabnzbd/sabnzbd', 'sabnzbd'),
+    latestGithubRelease('nzbgetcom/nzbget', 'nzbget'),
+    latestGithubRelease('theotherp/nzbhydra2', 'nzbhydra2'),
+    vlcVersion(),
+    chromeMajorVersion(),
+    ...Object.entries(ARR).flatMap(([app, spec]) => [
+      latestGithubRelease(spec.repo, app),
+      alpineVersionFor(app),
+    ]),
+  ]);
 
 content = edit(content, 'sabnzbd', 'version', /SABnzbd\/([\d.]+)/, sabnzbd);
 content = edit(content, 'nzbget', 'version', /nzbget\/([\d.]+)/, nzbget);
@@ -216,6 +232,9 @@ content = edit(
   /NZBHydra2 ([\d.]+)/,
   nzbhydra2
 );
+
+content = edit(content, 'vlc', 'version', /\bVLC\/([\d.]+)/, vlc);
+content = edit(content, 'vlc', 'libvlc', /LibVLC\/([\d.]+)/, vlc);
 
 Object.keys(ARR).forEach((app, index) => {
   content = edit(content, app, 'version', ARR[app].pattern, arr[index * 2]);

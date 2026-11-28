@@ -12,4 +12,5 @@ export * from './url.js';
 export * from './header-presets.js';
 export * from './url-safety.js';
 export * from './private-addresses.js';
+export { impersonationHost, ImpersonationError } from './impersonation.js';
 export { readBodyCapped, readBodyUpTo } from './safe-fetch.js';

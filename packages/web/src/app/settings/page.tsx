@@ -454,7 +454,7 @@ function NarrowSettings({
                     type="button"
                     data-ui="settings-tab"
                     data-name={s.id}
-                    className="flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
+                    className="over-art flex w-full items-center gap-3 p-3 text-start transition-colors active:bg-gray-900 focus-visible:!-outline-offset-2 [@media(hover:hover)]:hover:bg-gray-900"
                     onClick={() =>
                       navigate(to.settings(s.id, who), { over: true })
                     }
@@ -553,7 +553,7 @@ function WideSettings({
                       (!searching && s.id === active.id) || undefined
                     }
                     data-focus={still && !currentHost().tv ? undefined : 'own'}
-                    className="group"
+                    className="over-art group"
                     onFocus={() => {
                       setFocused(s.id);
                       // Results stay up while focus passes the tabs to reach them.

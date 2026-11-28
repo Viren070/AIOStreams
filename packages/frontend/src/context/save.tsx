@@ -102,7 +102,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     setBaseline,
   } = useUserData();
   const { status } = useStatus();
-  const { setSelectedMenu } = useMenu();
+  const { setPage } = useMenu();
 
   const baseUrl =
     status?.settings?.baseUrl ||
@@ -258,9 +258,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       const shouldSkipDiff = skipDiffHandler || pendingSkipDiffRef.current;
       pendingSkipDiffRef.current = false;
 
-      // navigate to save-install page if no uuid or password (should not happen since save button is hidden)
+      // navigate to the install page if no uuid or password (should not happen since save button is hidden)
       if (!uuid) {
-        setSelectedMenu('save-install');
+        setPage('stremio');
         toast.info('Please create a configuration first');
         return;
       }
@@ -321,7 +321,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       userData,
       status,
       checkManifestChange,
-      setSelectedMenu,
+      setPage,
       setUserData,
       setBaseline,
       queryClient,

@@ -1,4 +1,5 @@
 import type { HeadersInit } from 'undici';
+import { presetFor } from './header-presets.js';
 import { resolveHeaderOverride, type FetchContext } from './overrides.js';
 
 export interface HeaderReader {
@@ -58,12 +59,17 @@ const PRESET_OWNED_HEADERS = [
 ];
 const NO_USER_AGENT = ['none', 'false', '', 'undefined'];
 
+/** A preset's Host line stays, marking where its client writes it. */
 export function headersFor(
   base: RequestHeaders,
   url: URL,
-  context?: FetchContext
-): RequestHeaders {
-  const override = resolveHeaderOverride(url, context);
+  context?: FetchContext,
+  fallbackPreset?: string
+): { headers: RequestHeaders; preset?: string } {
+  let override = resolveHeaderOverride(url, context);
+  const fallback =
+    !override && fallbackPreset && presetFor(fallbackPreset, url);
+  if (fallback) override = { headers: fallback.headers, preset: fallback.name };
   let headers: RequestHeaders;
   if (override?.preset) {
     headers = new RequestHeaders(override.headers);
@@ -97,6 +103,6 @@ export function headersFor(
   ) {
     headers.delete('user-agent');
   }
-  headers.delete('host');
-  return headers;
+  if (!override?.preset) headers.delete('host');
+  return { headers, preset: override?.preset };
 }

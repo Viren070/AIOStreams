@@ -368,8 +368,8 @@ jobs:
         if: ${{ inputs.release != '' }}
         run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.pkg" "releases/aiostreams-desktop-$CHANNEL.zip" --clobber
 
-  linux:
-    name: Linux ${{ matrix.arch }}
+  flatpak:
+    name: Linux Flatpak ${{ matrix.arch }}
     needs: [web, feed, licences]
     if: inputs.platforms == 'all' || inputs.platforms == 'linux'
     runs-on: ${{ matrix.runner }}
@@ -446,3 +446,203 @@ jobs:
       - name: Attach to the release
         if: ${{ inputs.release != '' }}
         run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.flatpak" --clobber
+
+  # Everything the app loads bundled into one file, which updates itself through Velopack.
+  appimage:
+    name: Linux AppImage ${{ matrix.arch }}
+    needs: [web, feed, licences]
+    if: inputs.platforms == 'all' || inputs.platforms == 'linux'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            libs: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            libs: aarch64
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
+      CHANNEL: linux-${{ matrix.arch }}${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+          path: packages/web/dist-standalone
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: licences
+          path: packages/desktop/licences
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Fetch libmpv
+        run: ./packages/desktop/scripts/fetch-libs-linux.sh ${{ matrix.libs }}
+
+      - name: Build the AppImage folder
+        run: |
+          perl -0pi -e 's/^version = "[^"]*"/version = "$ENV{VERSION}"/m' packages/desktop/Cargo.toml
+          grep -q "^version = \"$VERSION\"" packages/desktop/Cargo.toml
+          docker run --rm -v "$PWD:/src" ghcr.io/pkgforge-dev/archlinux:latest \
+            /src/packages/desktop/scripts/make-appdir.sh /src/stage/AIOStreams.AppDir
+
+      - name: Pack
+        run: |
+          dotnet tool install -g vpk --version "$VPK_VERSION"
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          feed="https://github.com/${{ github.repository }}/releases/download/$FEED/"
+          # The last release, for a delta; the first build of a channel has none.
+          vpk download http --url "$feed" --channel "$CHANNEL" -o releases \
+            || echo 'No earlier release to build a delta from'
+          vpk pack --packId aiostreams-desktop --packVersion "$VERSION" \
+            --packDir stage/AIOStreams.AppDir --mainExe aiostreams-desktop --packTitle AIOStreams \
+            --packAuthors AIOStreams --channel "$CHANNEL" --runtime linux-${{ matrix.arch }} \
+            --outputDir releases
+          ls -l releases
+
+      - name: Smoke test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth
+          ./packages/desktop/scripts/smoke-linux.sh "releases/aiostreams-desktop-$CHANNEL.AppImage"
+
+      - name: Publish to the feed
+        run: |
+          files=()
+          for file in releases/*"$CHANNEL"*; do
+            case "$file" in
+              *.nupkg) [[ "$file" == *"-$VERSION-"* ]] || continue ;;
+            esac
+            files+=("$file")
+          done
+          gh release upload "$FEED" "${files[@]}" --clobber
+          # Only this channel's newest packages stay: an app further behind takes the full one.
+          gh release view "$FEED" --json assets --jq '.assets[].name' |
+            grep -E -- "-${CHANNEL}-(full|delta)\.nupkg$" | while read -r asset; do
+              keep=false
+              for file in "${files[@]}"; do [[ "$(basename "$file")" == "$asset" ]] && keep=true; done
+              $keep || gh release delete-asset "$FEED" "$asset" --yes
+            done
+
+      - name: Attach to the release
+        if: ${{ inputs.release != '' }}
+        run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.AppImage" --clobber
+
+  # For Ubuntu 24.04, Debian 13 and later, whose GTK and WebKitGTK it uses.
+  deb:
+    name: Linux .deb ${{ matrix.arch }}
+    needs: [web, feed, licences]
+    if: inputs.platforms == 'all' || inputs.platforms == 'linux'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            libs: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            libs: aarch64
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      FEED: ${{ inputs.channel == 'nightly' && 'desktop-nightly' || 'desktop' }}
+      CHANNEL: linux-${{ matrix.arch }}${{ inputs.channel == 'nightly' && '-nightly' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+          path: packages/web/dist-standalone
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: licences
+          path: packages/desktop/licences
+
+      - name: Install the build tools
+        run: |
+          sudo apt-get update
+          # libmpv's own libraries too, which dpkg-shlibdeps looks up.
+          sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev dpkg-dev \
+            libva2 libva-drm2 libdrm2 libegl1 libpulse0 libasound2t64 libfontconfig1 xvfb xauth
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop
+
+      - name: Fetch libmpv
+        run: ./packages/desktop/scripts/fetch-libs-linux.sh ${{ matrix.libs }}
+
+      - name: Build the app
+        working-directory: packages/desktop
+        run: |
+          perl -0pi -e 's/^version = "[^"]*"/version = "$ENV{VERSION}"/m' Cargo.toml
+          grep -q "^version = \"$VERSION\"" Cargo.toml
+          cargo build --release
+
+      - name: Pack
+        run: ./packages/desktop/scripts/make-deb.sh "releases/aiostreams-desktop-$CHANNEL.deb"
+
+      - name: Smoke test
+        run: |
+          sudo apt-get install -y "./releases/aiostreams-desktop-$CHANNEL.deb"
+          ./packages/desktop/scripts/smoke-linux.sh aiostreams-desktop
+
+      - name: Publish to the feed
+        run: gh release upload "$FEED" "releases/aiostreams-desktop-$CHANNEL.deb" --clobber
+
+      - name: Attach to the release
+        if: ${{ inputs.release != '' }}
+        run: gh release upload "${{ inputs.release }}" "releases/aiostreams-desktop-$CHANNEL.deb" --clobber
+
+  # Arch's recipe for this release's .debs, as the AUR would hold it.
+  pkgbuild:
+    needs: deb
+    if: inputs.release != '' && (inputs.platforms == 'all' || inputs.platforms == 'linux')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      RELEASE: ${{ inputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: packages/desktop/linux/aur
+          sparse-checkout-cone-mode: false
+
+      - name: Fill in the version and checksums
+        run: |
+          gh release download "$RELEASE" -p 'aiostreams-desktop-linux-*.deb' -D debs
+          x64=$(sha256sum debs/aiostreams-desktop-linux-x64.deb | cut -d' ' -f1)
+          arm64=$(sha256sum debs/aiostreams-desktop-linux-arm64.deb | cut -d' ' -f1)
+          mkdir -p aiostreams-desktop-bin
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256_X86_64@/$x64/" -e "s/@SHA256_AARCH64@/$arm64/" \
+            packages/desktop/linux/aur/PKGBUILD >aiostreams-desktop-bin/PKGBUILD
+          # makepkg also fetches the x64 .deb by the recipe's own URL and checks its sum.
+          docker run --rm -v "$PWD/aiostreams-desktop-bin:/pkg" archlinux:latest bash -c '
+            set -e
+            pacman -Sy --noconfirm --needed base-devel >/dev/null
+            useradd -m builder && cp /pkg/PKGBUILD /home/builder/ && chown builder /home/builder/PKGBUILD
+            su builder -c "cd && makepkg --verifysource >&2 && makepkg --printsrcinfo" >/pkg/.SRCINFO'
+          cat aiostreams-desktop-bin/PKGBUILD aiostreams-desktop-bin/.SRCINFO
+          tar -czf aiostreams-desktop-bin.tar.gz aiostreams-desktop-bin
+
+      - name: Attach to the release
+        run: gh release upload "$RELEASE" aiostreams-desktop-bin.tar.gz --clobber

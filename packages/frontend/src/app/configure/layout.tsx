@@ -26,6 +26,7 @@ import {
   LuUsers,
 } from 'react-icons/lu';
 import { SiStremio } from 'react-icons/si';
+import { BiCog, BiHeart, BiLogInCircle, BiLogOutCircle } from 'react-icons/bi';
 import { cn } from '@aiostreams/ui/core/styling';
 import { Button } from '@aiostreams/ui/button';
 import { Drawer } from '@aiostreams/ui/drawer';
@@ -34,10 +35,11 @@ import { useMediaQuery } from '@aiostreams/ui/hooks/media-query';
 import { DonationModal } from '@aiostreams/ui/shared/donation-modal';
 import { CommandPaletteTopBarButton } from '@/components/shared/command-palette/search-button';
 import { DraftRestoreBanner } from '@/components/shared/draft-restore-banner';
-import { PlainSections } from '@/components/shared/settings-card';
 import { useCommandPalette } from '@/context/command-palette';
 import { useConfigAuth } from '@/context/config-auth';
 import { PHONE_LAYOUT, useMenu, WIDE_LAYOUT } from '@/context/menu';
+import { useMode } from '@/context/mode';
+import { useRegisterQuickAction } from '@/context/quick-actions';
 import { PageWrapper } from '@/components/shared/page-wrapper';
 import { useSave } from '@/context/save';
 import { useSession } from '@/context/session';
@@ -51,7 +53,6 @@ import {
   type PageId,
 } from '@/lib/configure-pages';
 import { configProfilesQuery } from '@/lib/queries';
-import { useConfigureQuickActions } from './main-sidebar';
 import { PageActions, PageBody } from './pages';
 import { PageToc, useToc } from './page-toc';
 
@@ -72,6 +73,53 @@ const ICONS: Record<PageId, IconType> = {
   advanced: LuSlidersHorizontal,
   stats: LuChartBar,
 };
+
+function useConfigureQuickActions(onDonate: () => void) {
+  const { isSignedIn, openSignIn, openSignOut } = useConfigAuth();
+  const { mode, setMode } = useMode();
+
+  useRegisterQuickAction(
+    isSignedIn
+      ? {
+          id: 'sign-out',
+          label: 'Sign Out',
+          icon: <BiLogOutCircle />,
+          keywords: ['logout', 'log out'],
+          onSelect: openSignOut,
+        }
+      : {
+          id: 'sign-in',
+          label: 'Sign In',
+          icon: <BiLogInCircle />,
+          keywords: ['login', 'log in'],
+          onSelect: () => openSignIn(),
+        },
+    [isSignedIn, openSignIn, openSignOut]
+  );
+
+  useRegisterQuickAction(
+    {
+      id: 'donate',
+      label: 'Donate',
+      icon: <BiHeart />,
+      keywords: ['support', 'sponsor'],
+      onSelect: onDonate,
+    },
+    [onDonate]
+  );
+
+  useRegisterQuickAction(
+    {
+      id: 'toggle-mode',
+      label:
+        mode === 'pro' ? 'Switch to Simple mode' : 'Switch to Advanced mode',
+      icon: <BiCog />,
+      keywords: ['mode', 'pro', 'noob', 'beginner', 'advanced'],
+      onSelect: () => setMode(mode === 'pro' ? 'noob' : 'pro'),
+    },
+    [mode, setMode]
+  );
+}
 
 function useChangedPages(): ReadonlySet<PageId> {
   const { changedFields } = useUserData();
@@ -311,7 +359,7 @@ function SignInButton({ compact }: { compact: boolean }) {
   );
 }
 
-export function NewLayout() {
+export function ConfigureLayout() {
   const { page, pageTab, listed, setPage, showPages, back, fadeIn } = useMenu();
   const { uuid, unsaved } = useUserData();
   const { open: openSearch } = useCommandPalette();
@@ -476,15 +524,13 @@ export function NewLayout() {
         >
           <div ref={body} className="min-w-0 flex-1 space-y-6">
             <DraftRestoreBanner />
-            <PlainSections.Provider value={true}>
-              <PageWrapper
-                key={page}
-                className="space-y-6"
-                {...(fadeIn ? {} : { initial: false })}
-              >
-                <PageBody page={page} />
-              </PageWrapper>
-            </PlainSections.Provider>
+            <PageWrapper
+              key={page}
+              className="space-y-6"
+              {...(fadeIn ? {} : { initial: false })}
+            >
+              <PageBody page={page} />
+            </PageWrapper>
           </div>
           {contents && (
             <aside className="hidden w-48 shrink-0 xl:block">
