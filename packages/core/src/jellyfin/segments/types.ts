@@ -28,6 +28,8 @@ export interface SegmentLookup {
   episode?: number;
   /** Rejects and clamps entries that cannot fit this cut. Absent until an item has been resolved. */
   runtimeMs?: number;
+  /** The played file's length. Clamps in place of `runtimeMs`, and drops a provider whose credits end far from it. */
+  fileMs?: number;
   /** TMDB season/episode candidates, best first. Absent: `season`/`episode` already are; empty: none known. */
   tmdbEpisodes?: { season: number; episode: number }[];
 }
