@@ -35,14 +35,16 @@ function spotOf(el: HTMLElement): Spot {
 // Pages kept hidden behind this one can have the same rows and items.
 const shown = (el: Element) => !el.closest('[inert]');
 
-function find(spot: Spot): HTMLElement | null {
-  const row =
-    spot.row &&
+const rowOf = (spot: Spot) =>
+  (spot.row &&
     [...document.querySelectorAll(`[data-row="${CSS.escape(spot.row)}"]`)].find(
       shown
-    );
+    )) ||
+  null;
+
+function find(spot: Spot): HTMLElement | null {
   return (
-    [...(row || document).querySelectorAll<HTMLElement>(spot.tag)].find(
+    [...(rowOf(spot) ?? document).querySelectorAll<HTMLElement>(spot.tag)].find(
       (el) =>
         (spot.href
           ? addressOf(el) === spot.href
@@ -50,6 +52,15 @@ function find(spot: Spot): HTMLElement | null {
     ) ?? null
   );
 }
+
+/**
+ * The first card of the row a spot was in, for one gone from it, as a title
+ * watched to its end leaves Continue watching.
+ */
+const firstOfRow = (spot: Spot) =>
+  rowOf(spot)?.querySelector<HTMLElement>(
+    '[data-ui=media-row-item] [data-focus=own]'
+  ) ?? null;
 
 /**
  * Going back to a page puts the keyboard or remote back where it left it; a
@@ -92,9 +103,23 @@ export function returnFocus(router: AnyRouter): () => void {
         // Focus left on a page now kept hidden (inert) counts as none.
         if (active && active !== document.body && !active.closest('[inert]'))
           return;
-        const el = spot ? find(spot) : ((same && find(same)) ?? startOf());
-        if (el?.getClientRects().length) focusOn(el);
-        else if (performance.now() < until) frame = requestAnimationFrame(look);
+        const el = spot
+          ? (find(spot) ?? firstOfRow(spot))
+          : ((same && find(same)) ?? startOf());
+        if (el?.getClientRects().length) {
+          focusOn(el);
+          if (spot) frame = requestAnimationFrame(() => hold(el));
+        } else if (performance.now() < until)
+          frame = requestAnimationFrame(look);
+      };
+      // A card can still leave its row just after, as a title watched to its end
+      // leaves Continue watching, taking focus with it.
+      const hold = (el: HTMLElement) => {
+        if (performance.now() >= until) return;
+        if (el.isConnected) {
+          if (document.activeElement === el)
+            frame = requestAnimationFrame(() => hold(el));
+        } else look();
       };
       look();
     }
