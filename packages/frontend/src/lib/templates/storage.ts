@@ -73,3 +73,12 @@ export const compareVersions = (v1: string, v2: string): number => {
 
   return 0;
 };
+
+/** The template's config as applied, with service credentials emptied. */
+export function templateSnapshot(config: unknown): Record<string, unknown> {
+  const snapshot = JSON.parse(JSON.stringify(config ?? {}));
+  for (const service of (snapshot?.services ?? []) as any[]) {
+    if (service && typeof service === 'object') service.credentials = {};
+  }
+  return snapshot;
+}
