@@ -20,7 +20,8 @@ export function Similar({ itemId }: { itemId: string }) {
       hidden={!!similar.data && !similar.data.Items?.length}
       className="min-h-[2rem]"
     >
-      {near && (
+      {/* Already fetched, as coming back to the page, it's there at once. */}
+      {(near || !!similar.data) && (
         <MediaRow
           id="similar"
           title={t`More like this`}
