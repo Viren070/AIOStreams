@@ -191,6 +191,8 @@ const backdropOf = new Map<string, { tag: string; rank: number }>();
 let backdropsVersion = 0;
 let notifying = false;
 const backdropListeners = new Set<() => void>();
+/** Titles drawn without a backdrop, redrawn once one is settled. */
+const drawnBare = new Set<string>();
 
 function settle(
   id: string | null | undefined,
@@ -207,7 +209,8 @@ function settle(
   )
     return;
   backdropOf.set(id, { tag, rank: BACKDROP_RANK[rank] });
-  if (!was || was.tag === tag || notifying) return;
+  const bare = drawnBare.delete(id);
+  if ((!was && !bare) || was?.tag === tag || notifying) return;
   // Often while drawing, so after it.
   notifying = true;
   queueMicrotask(() => {
@@ -249,15 +252,12 @@ export function backdropUrl(
   // One settled elsewhere still holds where this copy of the title has none.
   const own = settledTag(item.Id) ?? item.BackdropImageTags?.[0];
   if (own) return image(client, item.Id, 'Backdrop', own, size);
+  if (item.Id) drawnBare.add(item.Id);
   // An episode's is its show's, the same as the show's own wherever it shows.
   const show = item.ParentBackdropItemId;
-  return image(
-    client,
-    show,
-    'Backdrop',
-    settledTag(show) ?? item.ParentBackdropImageTags?.[0],
-    size
-  );
+  const shows = settledTag(show) ?? item.ParentBackdropImageTags?.[0];
+  if (show && !shows) drawnBare.add(show);
+  return image(client, show, 'Backdrop', shows, size);
 }
 
 /**
