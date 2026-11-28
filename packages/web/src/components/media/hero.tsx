@@ -1326,8 +1326,10 @@ function FollowDetails({ item }: { item: BaseItemDto }) {
   return (
     <HeroDetails
       item={details.data ?? item}
-      // Three lines kept, so the title does not jump as details arrive.
-      overviewClass="line-clamp-3 h-[3lh] sm:text-base"
+      // Three lines kept, so the title does not jump as details arrive; at
+      // least, as a TV shows the overview in full and it mustn't spill over
+      // the rows.
+      overviewClass="line-clamp-3 min-h-[3lh] sm:text-base"
       // On a TV it shows the card with focus, which Select already opens.
       actions={!currentHost().tv}
       // Without its buttons it needn't find what they'd play for each card.
