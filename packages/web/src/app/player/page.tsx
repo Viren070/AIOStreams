@@ -337,6 +337,7 @@ export function PlayerPage({
           status={
             !sourceId && !playing && loading ? t`Finding a version…` : undefined
           }
+          done={!!sourceId || !!playing}
         />
       )}
       {playing ? (
