@@ -150,6 +150,16 @@ export const metadataSchema = {
       requiresRestart: true,
       secret: false,
     },
+    suppressSiblingAliases: {
+      schema: z.boolean(),
+      default: false,
+      label: 'Suppress cross-season anime aliases',
+      description:
+        'When multiple anime seasons/cours share an external ID, suppress broad show aliases from TMDB/TVDB/Trakt so they do not leak across seasons.',
+      env: 'ANIME_DB_SUPPRESS_SIBLING_ALIASES',
+      requiresRestart: false,
+      secret: false,
+    },
     refresh: {
       fribbMappings: {
         schema: seconds,
