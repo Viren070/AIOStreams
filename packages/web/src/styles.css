@@ -634,3 +634,13 @@ html[data-blur-spoilers]:not([data-tv])
     opacity: 0;
   }
 }
+
+/* A light running under a title's scores while fresh ones are fetched. */
+@keyframes score-refresh {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
