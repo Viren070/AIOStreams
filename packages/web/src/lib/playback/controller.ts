@@ -136,7 +136,12 @@ export interface PlayerController {
   toggleFullscreen?: () => void;
   togglePictureInPicture?: () => void;
   setPictureInPicture?: (open: boolean) => void;
-  setFrame?: (frame: VideoFrame | null) => void;
+  /**
+   * Where the page draws the video, or null for the whole screen. `keepMode`
+   * holds the display's mode as it fills the screen, as a trailer does, which
+   * isn't worth a TV blanking to switch its frame rate.
+   */
+  setFrame?: (frame: VideoFrame | null, keepMode?: boolean) => void;
   /** The file's chapters, where the player reads them. */
   chapters?: Chapter[];
   /** `rows` are the shown page's, for a player that doesn't draw its own. */

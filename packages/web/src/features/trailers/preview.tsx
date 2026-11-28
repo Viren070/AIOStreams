@@ -66,6 +66,8 @@ function overlap(a: Box, b: Box): Box {
 
 /** A position this far in, so frames are coming rather than the player only starting. */
 const FLOWING_MS = 400;
+/** Where a preview starts: past a trailer's studio cards and opening lines. */
+const PREVIEW_FROM_MS = 12_000;
 
 const moved = (a: Box, b: Box) =>
   Math.abs(a.x - b.x) > 1 ||
@@ -438,13 +440,16 @@ function PlayedPreview({
   const [fit] = useSetting(settings.video.fit);
   // Without it, the app's player keeps the last style it was sent.
   const [subtitleStyle] = useSetting(settings.subtitle.style);
+  // Opened whole, from the start; as a preview, past its opening. Fixed as it
+  // mounts: the same player goes on as it opens whole or comes back.
+  const [startMs] = React.useState(() => (full ? 0 : PREVIEW_FROM_MS));
   const player = usePlayer(engines, {
     client,
     item,
     url,
     source,
     subtitleStyle,
-    startMs: 0,
+    startMs,
     onEnded,
     fit: full ? undefined : 'crop',
     muted,
@@ -484,11 +489,12 @@ function PlayedPreview({
   );
   const setFrame = useLatest(player.setFrame);
   React.useEffect(() => {
-    if (host) setFrame.current?.(placed);
+    // Full screen, it's still a trailer, for which the display keeps its mode.
+    if (host) setFrame.current?.(placed, true);
   }, [host, placed, setFrame]);
   React.useEffect(
     () => () => {
-      if (host) setFrame.current?.(null);
+      if (host) setFrame.current?.(null, true);
     },
     [host, setFrame]
   );
@@ -620,6 +626,7 @@ function EmbeddedPreview({
   }, [latest]);
   const query = new URLSearchParams({
     autoplay: '1',
+    start: String(PREVIEW_FROM_MS / 1000),
     mute: muted ? '1' : '0',
     controls: '0',
     disablekb: '1',
