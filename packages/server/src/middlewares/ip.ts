@@ -37,12 +37,48 @@ export function isTrustedIp(addr: string | undefined): boolean {
   return compiledTrust(addr, 0);
 }
 
-const isPrivateIp = (ip?: string) => {
+/**
+ * Normalises hexadecimal or expanded IPv4-mapped IPv6 addresses
+ * (e.g. `::ffff:a00:5` or `0:0:0:0:0:ffff:a00:5`) to `::ffff:a.b.c.d`.
+ */
+function normaliseMappedIpv4(ip: string): string | undefined {
+  if (isIP(ip) !== 6) return undefined;
+  const hex = ip
+    .toLowerCase()
+    .replace(
+      /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+      (_, a: string, b: string, c: string, d: string) =>
+        `${((+a << 8) | +b).toString(16)}:${((+c << 8) | +d).toString(16)}`
+    );
+  const [front, back] = hex.split('::');
+  const head = front ? front.split(':') : [];
+  const tail = back ? back.split(':') : [];
+  const fill =
+    back === undefined ? 0 : Math.max(0, 8 - head.length - tail.length);
+  const groups = [...head, ...Array<string>(fill).fill('0'), ...tail].map((g) =>
+    parseInt(g, 16)
+  );
+  if (
+    groups.length !== 8 ||
+    groups.slice(0, 5).some((g) => g !== 0) ||
+    groups[5] !== 0xffff
+  ) {
+    return undefined;
+  }
+  return `::ffff:${groups[6] >> 8}.${groups[6] & 255}.${groups[7] >> 8}.${groups[7] & 255}`;
+}
+
+/**
+ * Checks whether an IPv4, IPv4-mapped IPv6, or IPv6 address belongs to a
+ * private, loopback, or link-local range.
+ */
+export const isPrivateIp = (ip?: string) => {
   if (!ip) {
     return false;
   }
-  return /^(10\.|(::ffff:)?127\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|::1)/.test(
-    ip
+  const candidate = normaliseMappedIpv4(ip) ?? ip;
+  return /^(?:(::ffff:)?(10\.|127\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)|::1$|f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)/i.test(
+    candidate
   );
 };
 
