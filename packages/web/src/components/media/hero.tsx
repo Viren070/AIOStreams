@@ -532,13 +532,15 @@ function HeroDetails({
           {itemTitle(item)}
         </h1>
       )}
-      {meta.length > 0 && (
+      {/* A film with no other facts can still have version badges; the row
+          hides while it's empty. */}
+      {(meta.length > 0 || (live && target)) && (
         <div
           key={`meta ${item.Id}`}
           data-ui="hero-meta"
           className={cn(
             // One height whether or not its badges have come.
-            'flex min-h-6 flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center',
+            'flex min-h-6 flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 empty:hidden max-sm:justify-center',
             glide(1)
           )}
         >
@@ -556,9 +558,11 @@ function HeroDetails({
             <TopVersionBadges
               item={target}
               separator={
-                <span data-ui="meta-separator" className="text-gray-500">
-                  •
-                </span>
+                meta.length > 0 ? (
+                  <span data-ui="meta-separator" className="text-gray-500">
+                    •
+                  </span>
+                ) : undefined
               }
             />
           )}
