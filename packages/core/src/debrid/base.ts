@@ -44,12 +44,14 @@ export class DebridError extends Error {
   statusText: string;
   cause?: unknown;
   type?: DebridErrorType = 'unknown_error';
+  /** One indexer refused (quota/auth), not the service: failover continues. */
+  indexerScoped?: boolean;
   constructor(
     message: string,
     options: Pick<
       DebridError,
       'body' | 'code' | 'headers' | 'statusCode' | 'statusText' | 'type'
-    > & { cause?: unknown }
+    > & { cause?: unknown; indexerScoped?: boolean }
   ) {
     super(message);
 
@@ -75,6 +77,9 @@ export class DebridError extends Error {
     }
     if (options.code) {
       this.code = options.code;
+    }
+    if (options.indexerScoped) {
+      this.indexerScoped = true;
     }
   }
 }

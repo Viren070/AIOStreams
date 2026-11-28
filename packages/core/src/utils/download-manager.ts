@@ -45,15 +45,32 @@ export class NzbTooLargeError extends Error {
   }
 }
 
+/** A newznab `<error code=".." description=".."/>` document. */
+export interface IndexerErrorDoc {
+  code?: string;
+  description?: string;
+}
+
+/** Why a grabbed payload is not an NZB. */
+export interface NotNzbReason {
+  detail: string;
+  /** Set when the payload is a newznab error document. */
+  indexerError?: IndexerErrorDoc;
+}
+
 /** The grab URL answered with something that is not an NZB document. */
 export class NotAnNzbError extends Error {
+  readonly detail: string;
+  readonly indexerError?: IndexerErrorDoc;
   constructor(
-    readonly detail: string,
+    reason: NotNzbReason,
     readonly status?: number,
     readonly contentType?: string
   ) {
-    super(`grab did not return an NZB: ${detail}`);
+    super(`grab did not return an NZB: ${reason.detail}`);
     this.name = 'NotAnNzbError';
+    this.detail = reason.detail;
+    this.indexerError = reason.indexerError;
   }
 }
 
@@ -81,10 +98,12 @@ function attrOf(tag: string, name: string): string | undefined {
  *
  * Prevents a non-nzb response (e.g. HTML error page) from being cached.
  */
-export function sniffNotNzb(buf: Buffer): string | undefined {
+export function sniffNotNzb(buf: Buffer): NotNzbReason | undefined {
   let head = buf.toString('utf8', 0, SNIFF_BYTES);
   if (head.charCodeAt(0) === 0xfeff) head = head.slice(1);
-  if (!head.trim()) return buf.length ? 'blank content' : 'empty response';
+  if (!head.trim()) {
+    return { detail: buf.length ? 'blank content' : 'empty response' };
+  }
 
   let rest = head;
   for (;;) {
@@ -97,24 +116,27 @@ export function sniffNotNzb(buf: Buffer): string | undefined {
   if (!root) {
     return rest.trimStart().startsWith('<')
       ? undefined
-      : `non-XML content: ${collapse(rest, 100)}`;
+      : { detail: `non-XML content: ${collapse(rest, 100)}` };
   }
   const [, name, attrs] = root;
   const local = name.slice(name.indexOf(':') + 1).toLowerCase();
   if (local === 'nzb') return undefined;
   if (local === 'html') {
     const title = collapse(/<title[^>]*>([^<]*)</i.exec(head)?.[1] ?? '', 80);
-    return title ? `HTML page ("${title}")` : 'HTML page';
+    return { detail: title ? `HTML page ("${title}")` : 'HTML page' };
   }
   if (local === 'error') {
     const description = attrOf(attrs, 'description');
     const code = attrOf(attrs, 'code');
     const suffix = code ? ` (code ${code})` : '';
-    return description
-      ? `indexer error: ${collapse(description, 100)}${suffix}`
-      : `indexer error${suffix}`;
+    return {
+      detail: description
+        ? `indexer error: ${collapse(description, 100)}${suffix}`
+        : `indexer error${suffix}`,
+      indexerError: { code, description },
+    };
   }
-  return `<${name}> document`;
+  return { detail: `<${name}> document` };
 }
 
 /**
@@ -198,7 +220,7 @@ class DownloadManager {
           status: response.status,
           contentType,
           bytes: buf.length,
-          reason: notNzb,
+          reason: notNzb.detail,
         },
         'grab did not return an nzb'
       );
