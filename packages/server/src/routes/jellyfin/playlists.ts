@@ -1,11 +1,17 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  contentDescriptor,
   decodeItemId,
+  encodeItemId,
+  fetchMdbList,
   hyphenless,
   isUnairedEpisode,
   JellyfinPlaylistRepository,
   listResult,
+  MdbListError,
+  mdbListName,
   newPlaylistId,
+  parseMdbListUrl,
   PLAYLIST_LIMITS,
   resolveByMediaSource,
   stripInternal,
@@ -64,14 +70,14 @@ function idsOf(req: Request, name: string): string[] {
  */
 async function playableIds(
   ctx: JellyfinRequestContext,
-  ids: string[]
+  ids: string[],
+  opts: { cap?: number } = {}
 ): Promise<string[]> {
-  const found = await mapLimited(
-    ids.slice(0, PLAYLIST_LIMITS.items),
-    ROW_CONCURRENCY,
-    (raw) => titlesOf(ctx, raw).catch(() => [])
+  const cap = opts.cap ?? PLAYLIST_LIMITS.items;
+  const found = await mapLimited(ids.slice(0, cap), ROW_CONCURRENCY, (raw) =>
+    titlesOf(ctx, raw).catch(() => [])
   );
-  return found.flat().slice(0, PLAYLIST_LIMITS.items);
+  return found.flat().slice(0, cap);
 }
 
 async function titlesOf(
@@ -186,6 +192,82 @@ router.post(
       return;
     }
     res.json({ Id: playlist.id });
+  })
+);
+
+/**
+ * A playlist made from a public MDBList list: its titles in the list's order,
+ * a show adding its aired episodes as anywhere else. A copy, not a link; the
+ * list is read once, from mdblist.com only.
+ */
+router.post(
+  '/AIOStreams/Playlists/FromMdbList',
+  jf(async (req, res, ctx) => {
+    const link = bodyField(req, 'Url') ?? qs(req, 'Url');
+    const list = typeof link === 'string' ? parseMdbListUrl(link) : null;
+    if (!list) {
+      res
+        .status(400)
+        .json({ Message: 'Paste the link of a public MDBList list' });
+      return;
+    }
+    const owner = playlistOwner(ctx);
+    if (
+      (await JellyfinPlaylistRepository.list(owner)).length >=
+      PLAYLIST_LIMITS.perUser
+    ) {
+      res.status(400).json({
+        Message: `You can have up to ${PLAYLIST_LIMITS.perUser} playlists`,
+      });
+      return;
+    }
+    let titles;
+    try {
+      titles = await fetchMdbList(list);
+    } catch (error) {
+      const missing =
+        error instanceof MdbListError && error.reason === 'not-found';
+      // Not 502, which a client reads as this server being down.
+      res.status(missing ? 404 : 424).json({
+        Message:
+          error instanceof Error ? error.message : 'MDBList could not be read',
+      });
+      return;
+    }
+    const ids = titles.map((title) =>
+      encodeItemId(contentDescriptor({ id: title.id, type: title.type }))
+    );
+    // A few titles at a time, stopping once the playlist is full: a long
+    // list of shows would otherwise load every show's episodes for nothing.
+    const found: string[] = [];
+    let next = 0;
+    while (next < ids.length && found.length < PLAYLIST_LIMITS.items) {
+      const chunk = ids.slice(next, (next += ROW_CONCURRENCY * 4));
+      // Uncapped, so a show longer than a playlist is seen to overflow it.
+      const playable = await playableIds(ctx, chunk, { cap: Infinity });
+      found.push(...withoutRepeats(playable, found));
+    }
+    const items = found.slice(0, PLAYLIST_LIMITS.items);
+    if (!items.length) {
+      res.status(422).json({ Message: 'Nothing in that list can be played' });
+      return;
+    }
+    const playlist = await JellyfinPlaylistRepository.create(owner, {
+      id: newPlaylistId(),
+      name: nameOf(bodyField(req, 'Name')) || mdbListName(list),
+      items,
+    });
+    if (!playlist) {
+      res.status(400).json({
+        Message: `You can have up to ${PLAYLIST_LIMITS.perUser} playlists`,
+      });
+      return;
+    }
+    res.json({
+      Id: playlist.id,
+      Count: items.length,
+      Truncated: found.length > items.length || next < ids.length,
+    });
   })
 );
 
