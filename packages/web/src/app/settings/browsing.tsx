@@ -38,6 +38,9 @@ function HomeCard() {
   const [mergeNextUp, setMergeNextUp] = useSetting(
     settings.interface.mergeNextUp
   );
+  const [rewatchNextUp, setRewatchNextUp] = useSetting(
+    settings.interface.rewatchNextUp
+  );
   const [liveTv, setLiveTv] = useSetting(settings.interface.liveTv);
   const hasLiveTv = !!useLiveTvView().data;
 
@@ -115,6 +118,13 @@ function HomeCard() {
         help={t`Shows next episodes in the continue watching row, after what you are partway through.`}
         value={mergeNextUp}
         onValueChange={setMergeNextUp}
+      />
+      <Switch
+        side="right"
+        label={t`Next up from the last episode played`}
+        help={t`Goes on from the episode you played last instead of the furthest one, when you watch a show again or go back to earlier episodes.`}
+        value={rewatchNextUp}
+        onValueChange={setRewatchNextUp}
       />
       {hasLiveTv && (
         <Select

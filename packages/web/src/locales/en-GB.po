@@ -1953,6 +1953,10 @@ msgstr "Go live"
 msgid "Go to show"
 msgstr "Go to show"
 
+#: src/app/settings/browsing.tsx
+msgid "Goes on from the episode you played last instead of the furthest one, when you watch a show again or go back to earlier episodes."
+msgstr "Goes on from the episode you played last instead of the furthest one, when you watch a show again or go back to earlier episodes."
+
 #: src/lib/i18n.ts
 msgid "Green"
 msgstr "Green"
@@ -2716,6 +2720,10 @@ msgstr "Next trailer"
 #: src/app/settings/browsing.tsx
 msgid "Next up"
 msgstr "Next up"
+
+#: src/app/settings/browsing.tsx
+msgid "Next up from the last episode played"
+msgstr "Next up from the last episode played"
 
 #: src/app/settings/audio.tsx
 #: src/features/player/options.tsx

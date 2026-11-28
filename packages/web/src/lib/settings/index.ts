@@ -415,6 +415,7 @@ export const settings = {
       }
     ),
     mergeNextUp: syncedFlag('mergeNextUp'),
+    rewatchNextUp: syncedFlag('rewatchNextUp'),
     combineSearch: syncedFlag('combineSearch'),
     blurSpoilers: syncedFlag('blurSpoilers'),
     heroMode: syncedChoice<HeroMode>('heroMode', HERO_MODES, 'rotate'),
