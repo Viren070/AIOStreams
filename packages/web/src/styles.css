@@ -379,6 +379,36 @@ html[data-pointer-focus] :focus-visible [data-focus-frame] {
 [data-previewed] [data-focus-frame] {
   outline-color: transparent !important;
 }
+/* A card being taken out waits, dimmed, under a spinner while the server answers. */
+@keyframes card-removing-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(1turn);
+  }
+}
+[data-focus='own'][data-removing] {
+  position: relative;
+}
+[data-focus='own'][data-removing]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background: rgb(0 0 0 / 0.55);
+}
+[data-focus='own'][data-removing]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgb(255 255 255 / 0.25);
+  border-top-color: #fff;
+  border-radius: 9999px;
+  animation: card-removing-spin 0.8s linear infinite;
+}
 
 /* Rows, the hero and scrolling menus clip anything past their edges. */
 .UI-Carousel__content :focus-visible:not([data-focus='own']):not(input),
