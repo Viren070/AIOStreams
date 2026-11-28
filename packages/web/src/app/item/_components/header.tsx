@@ -105,8 +105,10 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
   if (item.Type === 'Series' && item.Status) {
     parts.push(['status', item.Status]);
   }
-  // A film can still have version badges; the row hides while it's empty.
-  if (!parts.length && item.Type !== 'Movie') return null;
+  // A film or show can still have badges; the row hides while it's empty.
+  if (!parts.length && item.Type !== 'Movie' && item.Type !== 'Series') {
+    return null;
+  }
   return (
     <div
       data-ui="item-meta"
@@ -124,17 +126,28 @@ const MetaRow = React.memo(function MetaRow({ item }: { item: BaseItemDto }) {
           separator={parts.length ? <Dot /> : undefined}
         />
       )}
-      {item.Type === 'Series' && <NextUpBadges series={item} />}
+      {item.Type === 'Series' && (
+        <NextUpBadges
+          series={item}
+          separator={parts.length ? <Dot /> : undefined}
+        />
+      )}
     </div>
   );
 });
 
 /** A show's badges are its next episode's, the one Play plays. */
-function NextUpBadges({ series }: { series: BaseItemDto }) {
+function NextUpBadges({
+  series,
+  separator,
+}: {
+  series: BaseItemDto;
+  separator?: React.ReactNode;
+}) {
   const nextUp = useNextUpFor(series.Id!, true);
   const episode = nextUp.data?.Items?.[0];
   return episode ? (
-    <TopVersionBadges item={episode} separator={<Dot />} />
+    <TopVersionBadges item={episode} separator={separator} />
   ) : null;
 }
 
