@@ -32,3 +32,33 @@ export function CachedImage({
     />
   );
 }
+
+/**
+ * A CachedImage that keeps drawing its last picture while a changed `src`
+ * loads out of sight, then swaps at once, so an address that changes as a
+ * title's own details arrive never blanks it. Key it by the title it shows.
+ */
+export function SteadyImage({
+  src,
+  onError,
+  ...props
+}: React.ComponentProps<'img'>) {
+  const [shown, setShown] = React.useState(src);
+  const next = src !== shown ? src : undefined;
+  return (
+    <>
+      <CachedImage {...props} src={shown} onError={onError} />
+      {next && (
+        <CachedImage
+          key={next}
+          src={next}
+          alt=""
+          aria-hidden
+          className="hidden"
+          onLoad={() => setShown(next)}
+          onError={() => setShown(next)}
+        />
+      )}
+    </>
+  );
+}

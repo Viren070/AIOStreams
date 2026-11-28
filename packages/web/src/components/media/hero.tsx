@@ -12,20 +12,34 @@ import { useSession } from '@/lib/jellyfin/session';
 import { settings, useSetting } from '@/lib/settings';
 import { currentHost } from '@/lib/hosts';
 import { usePageShown } from '@/lib/page-shown';
-import { useFetchNextUp, useItem } from '@/lib/jellyfin/queries';
+import { useFetchNextUp, useItem, useNextUpFor } from '@/lib/jellyfin/queries';
 import { focusOn, keyboardFocus, useAction } from '@/lib/input';
 import { ScrollRoot, watch } from '@/hooks/use-in-view';
 import { backdropUrl, landscapeUrl, logoUrl } from '@/lib/artwork/urls';
-import { itemSubtitle, itemTitle, ticksToMs } from '@/lib/format';
+import {
+  clock,
+  episodeCode,
+  itemSubtitle,
+  itemTitle,
+  progressOf,
+  ticksToMs,
+} from '@/lib/format';
 import { itemPath, navigate } from '@/lib/paths';
-import { useVersionPicker } from '@/features/versions/version-picker';
-import { Scores, scoresOf } from './scores';
+import {
+  usePreloadVersions,
+  useVersionPicker,
+} from '@/features/versions/version-picker';
+import { TopVersionBadges } from '@/features/versions/top-version-badges';
+import { PlayProgress } from './play-progress';
+import { ScoreRefresh, Scores, scoresOf } from './scores';
+import { SeasonCount } from './season-count';
 import type { JellyfinClient } from '@/lib/jellyfin/client';
 import type { BaseItemDto } from '@/lib/jellyfin/types';
 import { pageRtl } from '@/lib/direction';
 import { useHold } from '@/hooks/use-hold';
 import { useLatest } from '@/hooks/use-latest';
-import { CachedImage } from '@/components/cached-image';
+import { CachedImage, SteadyImage } from '@/components/cached-image';
+import { useFetchPageAhead } from './page-ahead';
 import {
   releaseArtSelection,
   useArtBackground,
@@ -89,7 +103,9 @@ export function BackdropFrame({
   );
 }
 
-function HeroTextSkeleton() {
+function HeroTextSkeleton({ actions = true }: { actions?: boolean }) {
+  // As HeroDetails lays its buttons out: in a column on a TV.
+  const tv = currentHost().tv;
   return (
     <>
       <Skeleton className="h-12 w-64 max-sm:mx-auto lg:h-16 lg:w-96" />
@@ -98,10 +114,18 @@ function HeroTextSkeleton() {
         <Skeleton className="h-4 max-w-xl" />
         <Skeleton className="h-4 w-4/5 max-w-lg max-sm:mx-auto" />
       </div>
-      <div className="flex gap-2 max-sm:justify-center">
-        <Skeleton className="h-10 w-40 rounded-full sm:w-28" />
-        <Skeleton className="size-10 rounded-full sm:h-10 sm:w-32" />
-      </div>
+      {actions &&
+        (tv ? (
+          <div className="flex w-fit flex-col gap-2">
+            <Skeleton className="h-10 w-32 rounded-full" />
+            <Skeleton className="h-10 w-32 rounded-full" />
+          </div>
+        ) : (
+          <div className="flex gap-2 max-sm:justify-center">
+            <Skeleton className="h-10 w-40 rounded-full sm:w-28" />
+            <Skeleton className="size-10 rounded-full sm:h-10 sm:w-32" />
+          </div>
+        ))}
     </>
   );
 }
@@ -135,7 +159,25 @@ interface Layer {
   /** Shown at once, off screen. */
   still?: boolean;
   gone?: boolean;
+  /** The side it slides in from: 1 the right, -1 the left. */
+  from?: number;
 }
+
+/*
+ * A turn's slide, slowing as it lands. Written as properties, since
+ * `duration-[…]` and the like name a transition's as well and Tailwind makes
+ * neither.
+ */
+const GLIDE =
+  '[animation-duration:700ms] [animation-timing-function:cubic-bezier(0.22,1,0.36,1)]';
+const TEXT_GLIDE =
+  '[animation-duration:500ms] [animation-timing-function:cubic-bezier(0.22,1,0.36,1)]';
+/** The logo, then the facts, then the overview, a beat apart. */
+const TEXT_DELAYS = [
+  '',
+  'motion-safe:[animation-delay:70ms]',
+  'motion-safe:[animation-delay:140ms]',
+] as const;
 
 let nextLayer = 0;
 /** Fading layers kept at once, as each holds a whole decoded backdrop. */
@@ -153,12 +195,16 @@ const fadeAll = (all: Layer[]) =>
 function Backdrops({
   current,
   fade = true,
+  from = 0,
 }: {
   current: string | undefined;
   fade?: boolean;
+  /** The side a new backdrop glides in from, or 0 to only fade. */
+  from?: number;
 }) {
   const [loaded, setLoaded] = React.useState<ReadonlySet<string>>(new Set());
   const [layers, setLayers] = React.useState<Layer[]>([]);
+  const side = useLatest(from);
   React.useEffect(() => {
     if (!current) return setLayers(fadeAll);
     if (!loaded.has(current)) {
@@ -172,7 +218,12 @@ function Backdrops({
         return [{ src: current, id: nextLayer++, quick: false, still: true }];
       return [
         ...all.slice(1 - MAX_LAYERS),
-        { src: current, id: nextLayer++, quick: all.every((l) => l.gone) },
+        {
+          src: current,
+          id: nextLayer++,
+          quick: all.every((l) => l.gone),
+          from: side.current || undefined,
+        },
       ];
     });
   }, [current, loaded, fade]);
@@ -219,12 +270,23 @@ function Backdrops({
           className={cn(
             // A layer made as a fade starts or ends draws nothing for a frame.
             'absolute inset-0 h-full w-full object-cover object-top will-change-[opacity]',
+            layer.from && 'motion-safe:will-change-[opacity,transform]',
             layer.gone
               ? 'opacity-0 transition-opacity duration-700'
               : !layer.still &&
                   cn(
                     'animate-in fade-in-0',
-                    layer.quick ? '[animation-duration:400ms]' : 'duration-700'
+                    layer.from
+                      ? // Slides in from the side the title comes from, over the last.
+                        cn(
+                          layer.from > 0
+                            ? 'motion-safe:slide-in-from-right-[3%]'
+                            : 'motion-safe:slide-in-from-left-[3%]',
+                          GLIDE
+                        )
+                      : layer.quick
+                        ? '[animation-duration:400ms]'
+                        : 'duration-700'
                   )
           )}
         />
@@ -238,16 +300,59 @@ function HeroDetails({
   item,
   overviewClass,
   actions = true,
+  enter = 0,
+  live = true,
+  pending = false,
 }: {
   item: BaseItemDto;
   overviewClass: string;
   actions?: boolean;
+  /** The side a new title's text slides in from, or 0 to swap it at once. */
+  enter?: number;
+  /** On show, not a swipe's next or previous title waiting unseen. */
+  live?: boolean;
+  /** Off show, its own details are still to come. */
+  pending?: boolean;
 }) {
   const { client } = useSession();
   const picker = useVersionPicker();
   const fetchNextUp = useFetchNextUp();
+  // What Play plays, as on the title's page: a show's next episode, else itself.
+  const nextUp = useNextUpFor(item.Id!, live && item.Type === 'Series');
+  // The title's own details, fetched afresh and kept, for scores that match
+  // its page's; a list's rough score waits behind a spinner until they come.
+  const fresh = useItem(live ? (item.Id ?? '') : '');
+  // Its own details where they've come, as a list's watch state can be older.
+  const target =
+    item.Type === 'Series'
+      ? nextUp.data?.Items?.[0]
+      : item.Type === 'Movie' || item.Type === 'Episode'
+        ? (fresh.data ?? item)
+        : undefined;
+  usePreloadVersions(live ? target : undefined);
+  // Off show, the item as given: a follower hero passes its own details.
+  const rated = live ? fresh.data : item;
+  const scored = !!rated && scoresOf(rated).length > 0;
+  const refreshing = live && fresh.isFetching;
+  const resumeMs = ticksToMs(target?.UserData?.PlaybackPositionTicks);
+  const code =
+    target?.Type === 'Episode'
+      ? episodeCode(target.ParentIndexNumber, target.IndexNumber)
+      : '';
+  const resumeAt = clock(resumeMs);
+  const playLabel = resumeMs
+    ? code
+      ? t`Resume ${code}`
+      : t`Resume from ${resumeAt}`
+    : code
+      ? t`Play ${code}`
+      : t`Play`;
   // The size the title's page asks for, so it's in memory when that opens.
-  const logo = logoUrl(client, item, { maxWidth: 416 });
+  // A list often knows no logo; the title's own details do, so the name waits.
+  const pictured = live ? (fresh.data ?? item) : item;
+  // Only while they're on their way: if they fail, the list's name shows.
+  const waiting = live ? fresh.isPending : pending;
+  const logo = logoUrl(client, pictured, { maxWidth: 416 });
   // By address, since the hero swaps items under the same details.
   const [failedLogo, setFailedLogo] = React.useState<string>();
   // Jellyfin cannot play a virtual item, such as an episode not yet aired.
@@ -255,54 +360,110 @@ function HeroDetails({
     item.Type === 'Series' ||
     ((item.Type === 'Movie' || item.Type === 'Episode') &&
       item.LocationType !== 'Virtual');
+  // While a show's next episode is asked for again, as after watching one,
+  // Play waits for the answer rather than starting the episode just seen.
   const play = (held?: boolean) =>
-    item.Type === 'Series'
-      ? void fetchNextUp(item.Id!).then((episode) =>
-          episode
-            ? picker.play(episode, {
-                startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
-                held,
-              })
-            : navigate(itemPath(item))
-        )
-      : picker.play(item, {
-          startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
-          held,
-        });
+    target && !(item.Type === 'Series' && nextUp.isFetching)
+      ? picker.play(target, { startMs: resumeMs, held })
+      : item.Type === 'Series'
+        ? void fetchNextUp(item.Id!).then((episode) =>
+            episode
+              ? picker.play(episode, {
+                  startMs: ticksToMs(episode.UserData?.PlaybackPositionTicks),
+                  held,
+                })
+              : navigate(itemPath(item))
+          )
+        : picker.play(item, {
+            startMs: ticksToMs(item.UserData?.PlaybackPositionTicks),
+            held,
+          });
   const holdPlay = useHold(() => play(true));
   const phone = useMediaQuery('(max-width: 639px)');
+  // Seen from across a room, the button with focus lights up instead of taking a ring.
+  const tv = currentHost().tv;
+  // In a column, each button's icon and label line up at its start edge; it
+  // shows no fill or edge until focus lights it white with black text.
+  const lit =
+    tv &&
+    'justify-start border-transparent bg-opacity-0 focus-visible:bg-opacity-100 focus-visible:text-[#000]';
   const open = () => navigate(itemPath(item), { fromHero: phone });
   const parts: [string, React.ReactNode][] = [
     item.Type === 'Episode'
       ? ['episode', itemSubtitle(item)]
-      : ['year', item.ProductionYear],
-    ['score', scoresOf(item).length ? <Scores item={item} max={3} /> : null],
+      : item.Type === 'Series'
+        ? ['seasons', <SeasonCount series={item} enabled={live} />]
+        : ['year', item.ProductionYear],
+    [
+      'score',
+      scored ? (
+        <ScoreRefresh active={refreshing}>
+          <Scores item={rated} max={3} />
+        </ScoreRefresh>
+      ) : live && fresh.isPending ? (
+        // Its place held, so the line doesn't shift when they come.
+        <Skeleton className="inline-block h-4 w-20 align-middle" />
+      ) : null,
+    ],
     ['genres', item.Genres?.slice(0, 3).join(', ')],
   ];
   const meta = parts.filter(([, part]) => part);
+  // Keyed by title, so each part slides in anew; the buttons stay, keeping focus.
+  const glide = (step: 0 | 1 | 2) =>
+    enter
+      ? cn(
+          'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:fill-mode-both',
+          enter > 0
+            ? 'motion-safe:slide-in-from-right-6'
+            : 'motion-safe:slide-in-from-left-6',
+          TEXT_GLIDE,
+          TEXT_DELAYS[step]
+        )
+      : undefined;
 
   return (
     <>
       {logo && failedLogo !== logo ? (
-        <CachedImage
+        <SteadyImage
+          key={`logo ${item.Id}`}
           data-ui="hero-logo"
           src={logo}
           alt={item.Name ?? ''}
           onError={() => setFailedLogo(logo)}
-          className="max-h-20 max-w-[min(24rem,75%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-28"
+          className={cn(
+            'max-h-20 max-w-[min(24rem,75%)] object-contain object-left max-sm:mx-auto max-sm:object-center lg:max-h-28',
+            glide(0)
+          )}
+        />
+      ) : waiting ? (
+        <Skeleton
+          key={`logo-wait ${item.Id}`}
+          data-ui="hero-logo-placeholder"
+          className="h-20 w-72 max-w-full max-sm:mx-auto lg:h-28"
         />
       ) : (
         <h1
+          key={`title ${item.Id}`}
           data-ui="hero-title"
-          className="line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl"
+          className={cn(
+            'line-clamp-2 text-3xl font-bold leading-tight lg:text-5xl',
+            glide(0)
+          )}
         >
           {itemTitle(item)}
         </h1>
       )}
-      {meta.length > 0 && (
+      {/* A film with no other facts can still have version badges; the row
+          hides while it's empty. */}
+      {(meta.length > 0 || (live && target)) && (
         <div
+          key={`meta ${item.Id}`}
           data-ui="hero-meta"
-          className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 max-sm:justify-center"
+          className={cn(
+            // One height whether or not its badges have come.
+            'flex min-h-6 flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-200 empty:hidden max-sm:justify-center',
+            glide(1)
+          )}
         >
           {meta.map(([name, part], i) => (
             <React.Fragment key={name}>
@@ -314,12 +475,29 @@ function HeroDetails({
               <span data-name={name}>{part}</span>
             </React.Fragment>
           ))}
+          {live && target && (
+            <TopVersionBadges
+              item={target}
+              separator={
+                meta.length > 0 ? (
+                  <span data-ui="meta-separator" className="text-gray-500">
+                    •
+                  </span>
+                ) : undefined
+              }
+            />
+          )}
         </div>
       )}
       {item.Overview && (
         <p
+          key={`overview ${item.Id}`}
           data-ui="hero-overview"
-          className={cn('max-w-2xl text-sm text-gray-300', overviewClass)}
+          className={cn(
+            'max-w-xl text-sm text-gray-300',
+            overviewClass,
+            glide(2)
+          )}
         >
           {item.Overview}
         </p>
@@ -327,19 +505,29 @@ function HeroDetails({
       {actions && (
         <div
           data-ui="hero-actions"
-          className="flex flex-wrap gap-2 max-sm:justify-center"
+          className={cn(
+            'flex flex-wrap gap-2 max-sm:justify-center',
+            // One above the other, so Left and Right only turn the title;
+            // Play at the bottom, nearest the rows.
+            tv && 'w-fit flex-col-reverse flex-nowrap'
+          )}
         >
           {playable && (
             <Button
               data-ui="hero-action"
               data-name="play"
-              intent="white"
-              className="rounded-full max-sm:min-w-40"
+              data-focus={tv ? 'own' : undefined}
+              intent={tv ? 'white-subtle' : 'white'}
+              className={cn('rounded-full max-sm:min-w-40', lit)}
               leftIcon={<IoPlay className="text-xl" />}
               onClick={() => play()}
               {...holdPlay}
             >
-              <Trans>Play</Trans>
+              <PlayProgress
+                percent={resumeMs && target ? progressOf(target) : null}
+              >
+                {playLabel}
+              </PlayProgress>
             </Button>
           )}
           {playable && phone ? (
@@ -356,8 +544,9 @@ function HeroDetails({
             <Button
               data-ui="hero-action"
               data-name="info"
-              intent={playable ? 'gray-outline' : 'white'}
-              className="rounded-full"
+              data-focus={tv ? 'own' : undefined}
+              intent={tv ? 'white-subtle' : playable ? 'gray-outline' : 'white'}
+              className={cn('rounded-full', lit)}
               leftIcon={<BiInfoCircle className="text-xl" />}
               onClick={open}
             >
@@ -414,14 +603,14 @@ function useSwipeFade(
     const from = dots.findIndex((d) => d.hasAttribute('data-current'));
     const to = coming ? (from + coming + dots.length) % dots.length : -1;
     dots.forEach((dot, i) => {
-      // Between a dot's w-1.5 bg-white/40 and the current one's w-6 bg-white.
+      // Between a dot's w-1.5 bg-white/25 and the current one's w-6 bg-white/70.
       const lit = i === from ? 1 - shown : i === to ? shown : null;
       dot.style.transition = animate
         ? `width ${SETTLE_MS}ms ease-out, background-color ${SETTLE_MS}ms ease-out`
         : 'none';
       dot.style.width = lit === null ? '' : `${0.375 + 1.125 * lit}rem`;
       dot.style.backgroundColor =
-        lit === null ? '' : `rgb(255 255 255 / ${0.4 + 0.6 * lit})`;
+        lit === null ? '' : `rgb(255 255 255 / ${0.25 + 0.45 * lit})`;
     });
   };
 
@@ -650,6 +839,39 @@ function HeroTrailer({
   );
 }
 
+/** After the first screen's own pictures. */
+const WARM_AFTER_MS = 2000;
+
+/**
+ * Fetches each featured title's page in the background, one after another, so
+ * the hero shows its details at once as it turns to each, and More info opens
+ * with its pictures, faces and episodes in.
+ */
+function useWarmTitles(featured: BaseItemDto[]) {
+  const fetchPage = useLatest(useFetchPageAhead());
+  const latest = useLatest(featured);
+  const ids = featured.map((f) => f.Id ?? '').join(',');
+  React.useEffect(() => {
+    if (!ids) return;
+    let live = true;
+    const timer = setTimeout(async () => {
+      // The first shown decoded too, the rest only fetched, as decoded
+      // pictures take memory.
+      for (const [i, item] of latest.current.entries()) {
+        if (!live) return;
+        if (item.Id) await fetchPage.current(item.Id, undefined, i === 0);
+      }
+    }, WARM_AFTER_MS);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [ids, fetchPage, latest]);
+}
+
+/** The side a step's title comes in from; right to left, the next lies to the left. */
+const sideOf = (step: number) => (pageRtl() ? -step : step);
+
 /** A rotating feature of a few titles at the top of the home page. */
 export function Hero({
   items,
@@ -661,6 +883,9 @@ export function Hero({
   const { client } = useSession();
   const featured = items.filter((i) => backdropSrc(client, i));
   const [index, setIndex] = React.useState(0);
+  useWarmTitles(featured);
+  /** The side the title on show came in from: 1 the right, -1 the left, 0 by a swipe or at first. */
+  const [from, setFrom] = React.useState(0);
   useArtBackground(featured[index]);
   const [seconds] = useSetting(settings.interface.heroSeconds);
   const [paused, setPaused] = React.useState(false);
@@ -676,12 +901,15 @@ export function Hero({
   }, [chosen, index]);
   const swipe = useSwipeFade((step) => {
     setChosen(true);
+    // The swipe has faded it in already.
+    setFrom(0);
     setIndex((i) => (i + step + featured.length) % featured.length);
     setSlots(([prev, main, next]) =>
       step > 0 ? [main, next, prev] : [next, prev, main]
     );
   }, setDragging);
-  const swipeable = !currentHost().tv && featured.length > 1;
+  const tv = currentHost().tv;
+  const swipeable = !tv && featured.length > 1;
   const shown = usePageShown();
   const section = React.useRef<HTMLElement>(null);
   const [focused, setFocused] = React.useState(false);
@@ -696,7 +924,10 @@ export function Hero({
     if (el && swipeable) return claimSideSwipes(el);
   }, [loading, swipeable]);
 
-  React.useEffect(() => setIndex(0), [featured.length]);
+  React.useEffect(() => {
+    setIndex(0);
+    setFrom(0);
+  }, [featured.length]);
   React.useEffect(() => {
     if (
       paused ||
@@ -707,10 +938,10 @@ export function Hero({
       featured.length < 2
     )
       return;
-    const timer = setTimeout(
-      () => setIndex((i) => (i + 1) % featured.length),
-      seconds * 1000
-    );
+    const timer = setTimeout(() => {
+      setFrom(sideOf(1));
+      setIndex((i) => (i + 1) % featured.length);
+    }, seconds * 1000);
     return () => clearTimeout(timer);
   }, [
     index,
@@ -723,7 +954,10 @@ export function Hero({
     seconds,
   ]);
 
-  const landing = React.useRef<'first' | 'last' | null>(null);
+  /** The button focus lands on in the next title; -1 is the last. */
+  const landing = React.useRef<number | null>(null);
+  /** On a TV, the name of the button focus was on, to land on it again. */
+  const landingName = React.useRef<string | undefined>(undefined);
   const turn = (step: 1 | -1) => {
     const actions = [
       ...(section.current?.querySelectorAll<HTMLElement>(
@@ -731,10 +965,15 @@ export function Hero({
       ) ?? []),
     ];
     const at = actions.indexOf(keyboardFocus()!);
-    // From the first title, Left leaves for the navigation.
-    if (at < 0 || actions[at + step] || (step < 0 && !index)) return false;
-    landing.current = step > 0 ? 'first' : 'last';
+    // From the first title, Left leaves for the navigation. Side by side,
+    // Left and Right go along the buttons before they turn the title.
+    if (at < 0 || (!tv && actions[at + step]) || (step < 0 && !index))
+      return false;
+    // A TV's buttons stand in a column, and focus stays on the same one.
+    landing.current = tv ? at : step > 0 ? 0 : -1;
+    landingName.current = tv ? actions[at].dataset.name : undefined;
     setChosen(true);
+    setFrom(sideOf(step));
     setIndex((i) => (i + step + featured.length) % featured.length);
   };
   const turning = focused && featured.length > 1;
@@ -744,12 +983,18 @@ export function Hero({
   useAction('nav.left', () => turn(left), turning);
   React.useLayoutEffect(() => {
     const to = landing.current;
+    const name = landingName.current;
     landing.current = null;
+    landingName.current = undefined;
     const actions = section.current?.querySelectorAll<HTMLElement>(
       '[data-ui=hero-action]'
     );
-    const el = to === 'first' ? actions?.[0] : actions?.[actions.length - 1];
-    if (to && el) focusOn(el);
+    if (to === null || !actions?.length) return;
+    // The same button by name, as a title that can't play has fewer.
+    const el =
+      [...actions].find((a) => name && a.dataset.name === name) ??
+      actions[to < 0 ? actions.length - 1 : Math.min(to, actions.length - 1)];
+    focusOn(el);
   }, [index]);
 
   const trailer = useHeroTrailer(
@@ -820,7 +1065,11 @@ export function Hero({
               className={cn(slideClass(role), role && 'z-[1]')}
             >
               <BackdropFrame className="max-w-[calc(26rem*2.6)] sm:max-w-[calc(30rem*2.6)] lg:max-w-[calc(var(--hero-height)*2.6)]">
-                <Backdrops current={backdropSrc(client, item)} fade={!role} />
+                <Backdrops
+                  current={backdropSrc(client, item)}
+                  fade={!role}
+                  from={role ? 0 : from}
+                />
               </BackdropFrame>
             </div>
           ))}
@@ -839,6 +1088,8 @@ export function Hero({
             <HeroDetails
               item={item}
               overviewClass="line-clamp-2 sm:line-clamp-3 sm:text-base"
+              enter={role ? 0 : from}
+              live={!role}
             />
           </div>
         </div>
@@ -847,7 +1098,8 @@ export function Hero({
       {featured.length > 1 && (
         <div
           data-ui="hero-dots"
-          className="absolute bottom-6 end-4 flex gap-1.5 max-sm:inset-x-0 max-sm:justify-center lg:bottom-14"
+          // At the bottom, in the middle.
+          className="absolute inset-x-0 bottom-3 flex justify-center gap-4 lg:bottom-6"
         >
           {featured.map((f, i) => (
             <button
@@ -859,11 +1111,12 @@ export function Hero({
               aria-label={dotLabel(f)}
               onClick={() => {
                 setChosen(true);
+                if (i !== index) setFrom(sideOf(i > index ? 1 : -1));
                 setIndex(i);
               }}
               className={cn(
                 'h-1.5 rounded-full transition-all',
-                i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
+                i === index ? 'w-6 bg-white/70' : 'w-1.5 bg-white/25'
               )}
             />
           ))}
@@ -964,6 +1217,9 @@ function FollowDetails({ item }: { item: BaseItemDto }) {
       overviewClass="line-clamp-3 h-[3lh] sm:text-base"
       // On a TV it shows the card with focus, which Select already opens.
       actions={!currentHost().tv}
+      // Without its buttons it needn't find what they'd play for each card.
+      live={!currentHost().tv}
+      pending={details.isPending}
     />
   );
 }
@@ -1077,7 +1333,8 @@ export function FollowHero({
             {item ? (
               <FollowDetails item={item} />
             ) : loading ? (
-              <HeroTextSkeleton />
+              // On a TV it has no buttons, as FollowDetails shows none there.
+              <HeroTextSkeleton actions={!currentHost().tv} />
             ) : null}
           </div>
         </section>
